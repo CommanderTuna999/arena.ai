@@ -45,7 +45,7 @@ export interface Group {
   amp: number;
 }
 
-export type AbilityType = "swing" | "charge" | "shoot" | "nova" | "ring" | "pull" | "spit" | "cloud";
+export type AbilityType = "swing" | "charge" | "shoot" | "nova" | "ring" | "pull" | "spit" | "cloud" | "summon" | "blink" | "drain";
 export type ProjType = "bolt" | "missile" | "web" | "orb" | "wave" | "hook" | "glob";
 export interface AbilityDef {
   type: AbilityType;
@@ -58,7 +58,7 @@ export interface AbilityDef {
   maxS?: number;
   minP?: number;
   maxP?: number;
-  role?: "arm" | "mandible" | "tail";
+  role?: "arm" | "mandible" | "tail" | "leg" | "wing";
   needs?: string;
   n?: number;
   ns?: number;
@@ -96,6 +96,13 @@ export interface SpeciesDef {
   pack: number[];
   abilities: AbilityDef[];
   build: (b: Builder, tier: number) => Mount[];
+  /** zoneTier range this species spawns in (0 = outer/common, 5 = centre/mythical) */
+  minZone?: number;
+  maxZone?: number;
+  /** unique boss: at most one alive, centre only, mythical drops */
+  boss?: boolean;
+  /** its shields bounce player shots back */
+  reflectShell?: boolean;
 }
 
 interface Sec {
@@ -810,7 +817,612 @@ const SPECIES: SpeciesDef[] = [
       return [{ sec: el, host: iE, core: true }, { sec: pro, host: iP }, { sec: lan, host: iL }];
     },
   },
+
+  /* ================================================================
+     EXPANSION BESTIARY
+     ================================================================ */
+
+  /* 10 ─ WORKER ANT */
+  {
+    id: "workerant", name: "Worker Ant", hue: 22, flying: false, speed: 165, turn: 3.8, ranged: false, keep: 0, muzzle: 2.6,
+    armed: { gun: false, missile: false, shield: false }, pack: [4, 4, 3, 2, 1, 1], minZone: 0, maxZone: 2,
+    abilities: [
+      { type: "swing", name: "Mandible Crush", minTier: 1, cd: 2.1, wind: 0.4, dmg: 1.4, maxS: 2.9, role: "mandible", needs: "Mandible" },
+      { type: "summon", name: "Call Swarm", minTier: 2, cd: 15, wind: 0.7, dmg: 0, n: 2, maxS: 2 },
+      { type: "cloud", name: "Formic Haze", minTier: 3, cd: 10, wind: 0.6, dmg: 0.4, size: 2.6, slow: 0.6, maxS: 2.8 },
+    ],
+    build(b, t) {
+      const lg = 1 + (t >= 2 ? 1 : 0) + (t >= 3 ? 1 : 0), ed = t >= 3 ? 1 : 2;
+      return buildAnt(b, t, { gaster: [-1.2, 1.0, 0.8], tho: [0.55, 0.62, 0.48], hd: [1.5, 0.56, 0.5], legSplit: lg, plateLayers: 1 + (t >= 3 ? 1 : 0), edges: ed, mandible: 1, spikes: t >= 2 });
+    },
+  },
+
+  /* 11 ─ HONEYBEE */
+  {
+    id: "honeybee", name: "Honeybee", hue: 44, flying: true, speed: 175, turn: 3.6, ranged: false, keep: 0, muzzle: 1.9,
+    armed: { gun: false, missile: false, shield: false }, pack: [3, 3, 2, 1, 1, 1], minZone: 0, maxZone: 2,
+    abilities: [
+      { type: "spit", name: "Venom Sting", minTier: 1, cd: 4.5, wind: 0.4, dmg: 0.8, speed: 520, size: 1.2, poison: 0.3, maxP: 520 },
+      { type: "charge", name: "Sting Dive", minTier: 2, cd: 6, wind: 0.5, dmg: 1.5, speed: 850, dur: 0.4, poison: 0.25, minP: 150, maxP: 750 },
+      { type: "nova", name: "Pollen Burst", minTier: 3, cd: 11, wind: 0.8, dmg: 0.5, n: 10, ns: 1.4, speed: 420, life: 1.4, size: 5, poison: 0.18, kind: "bolt", maxP: 600 },
+    ],
+    build(b, t) {
+      const lg = 1 + (t >= 2 ? 1 : 0);
+      return buildFlyer(b, t, { abd: [-1.4, 1.15, 0.62], tho: [0.25, 0.62, 0.56], hd: [1.1, 0.44, 0.5], wingPairs: 1, wingLen: 1.35, legs: 3, legSplit: lg, stripes: 4 + t, stinger: true, pincer: true, plates: 1 + (t >= 3 ? 1 : 0) });
+    },
+  },
+
+  /* 12 ─ GRASSHOPPER */
+  {
+    id: "grasshopper", name: "Grasshopper", hue: 104, flying: false, speed: 155, turn: 3.2, ranged: false, keep: 0, muzzle: 2.4,
+    armed: { gun: false, missile: false, shield: false }, pack: [2, 2, 2, 1, 1, 1], minZone: 0, maxZone: 2,
+    abilities: [
+      { type: "charge", name: "Leaping Charge", minTier: 1, cd: 5.5, wind: 0.6, dmg: 1.8, speed: 980, dur: 0.45, minP: 180, maxP: 900 },
+      { type: "swing", name: "Kick", minTier: 2, cd: 3.4, wind: 0.35, dmg: 1.5, maxS: 3.1, role: "leg", needs: "Hind Leg" },
+      { type: "shoot", name: "Spit Seeds", minTier: 3, cd: 5, wind: 0.4, dmg: 0.5, n: 3, ns: 0.4, spread: 0.4, speed: 480, life: 1.3, size: 5, kind: "bolt", minP: 200, maxP: 800 },
+    ],
+    build(b, t) {
+      const lg = 1 + (t >= 2 ? 1 : 0);
+      return buildFlyer(b, t, { abd: [-1.5, 1.35, 0.55], tho: [0.2, 0.72, 0.5], hd: [1.25, 0.42, 0.46], wingPairs: 1, wingLen: 1.2, wingsOut: false, legs: 3, legSplit: lg, hind: 1.9, plates: 1, edges: t >= 3 ? 1 : 2, eyes: true });
+    },
+  },
+
+  /* 13 ─ COCKROACH */
+  {
+    id: "cockroach", name: "Cockroach", hue: 12, flying: false, speed: 190, turn: 3.5, ranged: false, keep: 0, muzzle: 2.4,
+    armed: { gun: false, missile: false, shield: false }, pack: [3, 3, 2, 2, 1, 1], minZone: 0, maxZone: 2,
+    abilities: [
+      { type: "charge", name: "Shell Bash", minTier: 1, cd: 4.5, wind: 0.5, dmg: 1.6, speed: 760, dur: 0.5, minP: 160, maxP: 700 },
+      { type: "ring", name: "Wing Flare", minTier: 2, cd: 9, wind: 0.7, dmg: 1, size: 4.5, speed: 460, maxS: 3.4 },
+      { type: "spit", name: "Scuttle Acid", minTier: 3, cd: 6, wind: 0.4, dmg: 0.5, speed: 460, size: 1.4, maxP: 700 },
+    ],
+    build(b, t) {
+      const lg = 1 + (t >= 2 ? 1 : 0) + (t >= 4 ? 1 : 0), ed = t >= 3 ? 1 : 2;
+      return buildBeetle(b, t, { abd: [-0.9, 1.5, 0.72], tho: [0.7, 0.85, 0.6], hd: [1.6, 0.5, 0.5], legSplit: lg, plateLayers: 2 + (t >= 3 ? 1 : 0), edges: ed, mandible: 0.8, antenna: true });
+    },
+  },
+
+  /* 14 ─ MOSQUITO */
+  {
+    id: "mosquito", name: "Mosquito", hue: 330, flying: true, speed: 220, turn: 4.2, ranged: false, keep: 0, muzzle: 2.2,
+    armed: { gun: false, missile: false, shield: false }, pack: [3, 3, 2, 2, 1, 1], minZone: 0, maxZone: 2,
+    abilities: [
+      { type: "drain", name: "Blood Drain", minTier: 1, cd: 5, wind: 0.5, dmg: 0.55, dur: 1.6, maxS: 2.4, maxP: 380 },
+      { type: "charge", name: "Dive", minTier: 2, cd: 6, wind: 0.4, dmg: 1.2, speed: 880, dur: 0.35, poison: 0.3, minP: 150, maxP: 700 },
+      { type: "nova", name: "Swarm Bite", minTier: 3, cd: 9, wind: 0.7, dmg: 0.4, n: 8, ns: 1.2, speed: 440, life: 1.3, size: 4, poison: 0.2, kind: "bolt", maxP: 520 },
+    ],
+    build(b, t) {
+      return buildFlyer(b, t, { abd: [-1.1, 0.95, 0.42], tho: [0.3, 0.5, 0.42], hd: [1.0, 0.36, 0.36], wingPairs: 1, wingLen: 1.15, wingWidth: 0.24, legs: 3, legSplit: 1 + (t >= 3 ? 1 : 0), stripe: false, proboscis: 0.85, plates: 1, edges: 2, eyes: true });
+    },
+  },
+
+  /* 15 ─ BOMBARDIER BEETLE */
+  {
+    id: "bombardier", name: "Bombardier Beetle", hue: 28, flying: false, speed: 120, turn: 2.9, ranged: true, keep: 300, muzzle: 2.8,
+    armed: { gun: true, missile: true, shield: false }, pack: [1, 1, 1, 1, 1, 1], minZone: 1, maxZone: 3,
+    abilities: [
+      { type: "spit", name: "Chemical Spray", minTier: 1, cd: 5, wind: 0.45, dmg: 0.7, speed: 520, size: 1.7, maxP: 640 },
+      { type: "cloud", name: "Acid Puddle", minTier: 2, cd: 9, wind: 0.5, dmg: 0.55, size: 3, slow: 0.7, atPlayer: true, maxP: 720 },
+      { type: "shoot", name: "Boiling Jet", minTier: 3, cd: 6, wind: 0.5, dmg: 0.55, n: 4, ns: 0.6, spread: 0.7, speed: 500, life: 1.3, size: 6, poison: 0.2, kind: "bolt", minP: 150, maxP: 720 },
+    ],
+    build(b, t) {
+      const pl = 1 + (t >= 3 ? 1 : 0), ed = t >= 3 ? 1 : 2;
+      return buildBeetle(b, t, { abd: [-0.85, 1.3, 1.0], tho: [0.7, 0.82, 0.78], hd: [1.55, 0.52, 0.56], legSplit: 1 + (t >= 2 ? 1 : 0), plateLayers: pl, edges: ed, mandible: 1.1, drumsticks: true });
+    },
+  },
+
+  /* 16 ─ RHINOCEROS BEETLE */
+  {
+    id: "rhino", name: "Rhinoceros Beetle", hue: 210, flying: false, speed: 105, turn: 2.2, ranged: false, keep: 0, muzzle: 2.9,
+    armed: { gun: true, missile: false, shield: true }, pack: [1, 1, 1, 1, 1, 1], minZone: 1, maxZone: 3,
+    abilities: [
+      { type: "charge", name: "Horn Charge", minTier: 1, cd: 7, wind: 0.9, dmg: 3.2, speed: 620, dur: 0.6, minP: 200, maxP: 800 },
+      { type: "swing", name: "Horn Toss", minTier: 2, cd: 3, wind: 0.5, dmg: 2.2, maxS: 3.4, role: "mandible", needs: "Mandible" },
+      { type: "ring", name: "Ground Slam", minTier: 3, cd: 10, wind: 0.9, dmg: 2, size: 5.5, speed: 420, maxS: 4 },
+    ],
+    build(b, t) {
+      const pl = 1 + (t >= 2 ? 1 : 0) + (t >= 4 ? 1 : 0), ed = t >= 3 ? 1 : 2;
+      return buildBeetle(b, t, { abd: [-0.75, 1.3, 1.05], tho: [0.72, 0.9, 0.85], hd: [1.65, 0.58, 0.62], legSplit: 1 + (t >= 2 ? 1 : 0) + (t >= 4 ? 1 : 0), plateLayers: pl, edges: ed, horn: 1.4 + 0.2 * t, hornFork: true, mandible: 1.2, eyes: true });
+    },
+  },
+
+  /* 17 ─ YELLOWJACKET */
+  {
+    id: "yellowjacket", name: "Yellowjacket", hue: 50, flying: true, speed: 200, turn: 3.9, ranged: true, keep: 300, muzzle: 2.0,
+    armed: { gun: true, missile: false, shield: false }, pack: [2, 2, 2, 1, 1, 1], minZone: 1, maxZone: 3,
+    abilities: [
+      { type: "shoot", name: "Venom Darts", minTier: 1, cd: 4, wind: 0.4, dmg: 0.65, n: 3, ns: 0.5, spread: 0.35, speed: 600, life: 1.4, size: 5, slow: 0.7, slowT: 1.2, poison: 0.2, kind: "bolt", minP: 180, maxP: 800 },
+      { type: "swing", name: "Stinger Thrust", minTier: 2, cd: 2.6, wind: 0.35, dmg: 1.8, maxS: 2.6, role: "tail", needs: "Stinger" },
+      { type: "charge", name: "Dive Bomb", minTier: 3, cd: 7, wind: 0.5, dmg: 1.8, speed: 900, dur: 0.45, poison: 0.25, minP: 150, maxP: 800 },
+    ],
+    build(b, t) {
+      return buildFlyer(b, t, { abd: [-1.55, 1.3, 0.68], tho: [0.15, 0.62, 0.58], hd: [1.05, 0.44, 0.5], wingPairs: 1, wingLen: 1.3, legs: 3, legSplit: 1 + (t >= 3 ? 1 : 0), stripes: 5 + t, stinger: true, plates: 1 + (t >= 3 ? 1 : 0), pincer: true });
+    },
+  },
+
+  /* 18 ─ LADYBUG */
+  {
+    id: "ladybug", name: "Ladybug", hue: 355, flying: true, speed: 135, turn: 3.0, ranged: true, keep: 280, muzzle: 2.0,
+    armed: { gun: false, missile: false, shield: true }, pack: [1, 1, 1, 1, 1, 1], minZone: 1, maxZone: 3,
+    abilities: [
+      { type: "cloud", name: "Spore Cloud", minTier: 1, cd: 8, wind: 0.6, dmg: 0.45, size: 2.9, slow: 0.6, maxS: 3.2 },
+      { type: "ring", name: "Repel Pulse", minTier: 2, cd: 8, wind: 0.7, dmg: 1.1, size: 5, speed: 440, maxS: 3.6 },
+      { type: "nova", name: "Spore Burst", minTier: 3, cd: 10, wind: 0.8, dmg: 0.4, n: 12, ns: 1.5, speed: 360, life: 1.6, size: 6, poison: 0.15, kind: "orb", homing: 0.6, maxP: 620 },
+    ],
+    build(b, t) {
+      const pl = 1 + (t >= 2 ? 1 : 0), ed = t >= 3 ? 1 : 2;
+      return buildBeetle(b, t, { abd: [-0.65, 1.35, 1.05], tho: [0.75, 0.75, 0.75], hd: [1.55, 0.48, 0.5], legs: 3, legSplit: 1 + (t >= 2 ? 1 : 0), round: true, plateLayers: pl, edges: ed, elytra: true, mandible: 0.7, antenna: true });
+    },
+  },
+
+  /* 19 ─ STAG BEETLE */
+  {
+    id: "stag", name: "Stag Beetle", hue: 20, flying: false, speed: 120, turn: 2.6, ranged: false, keep: 0, muzzle: 2.8,
+    armed: { gun: false, missile: false, shield: true }, pack: [1, 1, 1, 1, 1, 1], minZone: 1, maxZone: 3,
+    abilities: [
+      { type: "swing", name: "Pincer Grab", minTier: 1, cd: 2.8, wind: 0.5, dmg: 2.4, maxS: 3.2, role: "mandible", needs: "Pincer" },
+      { type: "pull", name: "Toss", minTier: 2, cd: 10, wind: 0.6, dmg: 0.7, speed: 780, minP: 220, maxP: 800 },
+      { type: "charge", name: "Goring Rush", minTier: 3, cd: 7, wind: 0.7, dmg: 2.6, speed: 700, dur: 0.55, minP: 200, maxP: 800 },
+    ],
+    build(b, t) {
+      const pl = 1 + (t >= 3 ? 1 : 0), ed = t >= 3 ? 1 : 2;
+      return buildBeetle(b, t, { abd: [-1.1, 1.35, 0.82], tho: [0.6, 0.85, 0.72], hd: [1.55, 0.55, 0.55], legSplit: 1 + (t >= 2 ? 1 : 0) + (t >= 4 ? 1 : 0), plateLayers: pl, edges: ed, pincer: 1.5 + 0.15 * t, eyes: true, horn: 0.5 });
+    },
+  },
+
+  /* 20 ─ CARPENTER ANT */
+  {
+    id: "carpenter", name: "Carpenter Ant", hue: 16, flying: false, speed: 135, turn: 3.0, ranged: false, keep: 0, muzzle: 2.8,
+    armed: { gun: true, missile: false, shield: true }, pack: [2, 2, 2, 1, 1, 1], minZone: 2, maxZone: 4,
+    abilities: [
+      { type: "swing", name: "Crushing Bite", minTier: 1, cd: 2.2, wind: 0.45, dmg: 2.2, maxS: 3, role: "mandible", needs: "Mandible" },
+      { type: "ring", name: "Quake Stomp", minTier: 2, cd: 9, wind: 0.8, dmg: 1.6, size: 5, speed: 440, maxS: 3.6 },
+      { type: "summon", name: "Call Colony", minTier: 3, cd: 16, wind: 0.8, dmg: 0, n: 3, maxS: 2.5 },
+    ],
+    build(b, t) {
+      const lg = 1 + (t >= 3 ? 1 : 0), ed = t >= 3 ? 1 : 2;
+      return buildAnt(b, t, { gaster: [-1.3, 1.05, 0.85], tho: [0.55, 0.7, 0.55], hd: [1.55, 0.62, 0.56], legSplit: lg, plateLayers: 2 + (t >= 4 ? 1 : 0), edges: ed, mandible: 1.5, spikes: t >= 2 });
+    },
+  },
+
+  /* 21 ─ CICADA */
+  {
+    id: "cicada", name: "Cicada", hue: 168, flying: true, speed: 140, turn: 3.0, ranged: true, keep: 340, muzzle: 1.8,
+    armed: { gun: false, missile: false, shield: true }, pack: [1, 1, 1, 1, 1, 1], minZone: 2, maxZone: 4,
+    abilities: [
+      { type: "ring", name: "Sonic Screech", minTier: 1, cd: 8, wind: 0.75, dmg: 1.4, size: 6, speed: 520, maxS: 4.2 },
+      { type: "nova", name: "Resonance", minTier: 2, cd: 10, wind: 0.8, dmg: 0.6, n: 14, ns: 1.6, speed: 380, life: 1.5, size: 7, kind: "wave", maxP: 600 },
+      { type: "cloud", name: "Chorus Field", minTier: 3, cd: 11, wind: 0.7, dmg: 0.5, size: 3.4, slow: 0.7, atPlayer: true, maxP: 800 },
+    ],
+    build(b, t) {
+      return buildFlyer(b, t, { abd: [-1.25, 1.15, 0.55], tho: [0.25, 0.7, 0.55], hd: [1.2, 0.55, 0.55], wingPairs: 1, wingLen: 1.6, wingWidth: 0.34, legs: 3, legSplit: 1 + (t >= 3 ? 1 : 0), plates: 1 + (t >= 2 ? 1 : 0), edges: t >= 3 ? 1 : 2, eyes: true });
+    },
+  },
+
+  /* 22 ─ ASSASSIN BUG */
+  {
+    id: "assassin", name: "Assassin Bug", hue: 340, flying: false, speed: 185, turn: 3.4, ranged: false, keep: 0, muzzle: 2.6,
+    armed: { gun: false, missile: false, shield: false }, pack: [1, 1, 1, 1, 1, 1], minZone: 2, maxZone: 4,
+    abilities: [
+      { type: "drain", name: "Piercing Proboscis", minTier: 1, cd: 5, wind: 0.45, dmg: 0.7, dur: 1.8, maxS: 2.6, maxP: 460 },
+      { type: "swing", name: "Fang Slash", minTier: 2, cd: 2.4, wind: 0.4, dmg: 2, maxS: 2.8, role: "mandible", needs: "Proboscis" },
+      { type: "charge", name: "Ambush Lunge", minTier: 3, cd: 6, wind: 0.5, dmg: 2.2, speed: 900, dur: 0.4, minP: 180, maxP: 700 },
+    ],
+    build(b, t) {
+      const ed = t >= 3 ? 1 : 2;
+      return buildBeetle(b, t, { abd: [-0.95, 0.95, 0.55], tho: [0.55, 0.55, 0.45], hd: [1.45, 0.4, 0.38], legs: 3, legSplit: 1 + (t >= 2 ? 1 : 0), plateLayers: 1 + (t >= 3 ? 1 : 0), edges: ed, snout: 1.1, mandible: 0.6, slim: true, eyes: true });
+    },
+  },
+
+  /* 23 ─ TIGER BEETLE */
+  {
+    id: "tiger", name: "Tiger Beetle", hue: 86, flying: false, speed: 230, turn: 4.0, ranged: false, keep: 0, muzzle: 2.7,
+    armed: { gun: false, missile: true, shield: false }, pack: [1, 1, 1, 1, 1, 1], minZone: 2, maxZone: 4,
+    abilities: [
+      { type: "charge", name: "Dash", minTier: 1, cd: 3.5, wind: 0.3, dmg: 1.4, speed: 1000, dur: 0.32, minP: 200, maxP: 900 },
+      { type: "charge", name: "Second Dash", minTier: 2, cd: 4, wind: 0.3, dmg: 1.5, speed: 1000, dur: 0.32, minP: 200, maxP: 900 },
+      { type: "swing", name: "Sickle Jaws", minTier: 3, cd: 2.2, wind: 0.35, dmg: 2.1, maxS: 2.8, role: "mandible", needs: "Mandible" },
+    ],
+    build(b, t) {
+      const ed = t >= 3 ? 1 : 2;
+      return buildBeetle(b, t, { abd: [-0.95, 1.15, 0.68], tho: [0.65, 0.72, 0.62], hd: [1.55, 0.55, 0.5], legs: 3, legSplit: 1 + (t >= 2 ? 1 : 0) + (t >= 4 ? 1 : 0), plateLayers: 1 + (t >= 3 ? 1 : 0), edges: ed, mandible: 1.3, slim: true, eyes: true, spikes: t >= 3 });
+    },
+  },
+
+  /* 24 ─ MOLE CRICKET */
+  {
+    id: "molecricket", name: "Mole Cricket", hue: 34, flying: false, speed: 130, turn: 3.0, ranged: false, keep: 0, muzzle: 2.8,
+    armed: { gun: false, missile: false, shield: true }, pack: [1, 1, 1, 1, 1, 1], minZone: 2, maxZone: 4,
+    abilities: [
+      { type: "blink", name: "Burrow Ambush", minTier: 1, cd: 8, wind: 0.6, dmg: 1.2, maxP: 700 },
+      { type: "swing", name: "Digger Claws", minTier: 2, cd: 2.6, wind: 0.45, dmg: 2, maxS: 3, role: "leg", needs: "Hind Leg" },
+      { type: "ring", name: "Earth Shock", minTier: 3, cd: 10, wind: 0.9, dmg: 1.8, size: 6, speed: 420, maxS: 4 },
+    ],
+    build(b, t) {
+      return buildFlyer(b, t, { abd: [-1.35, 1.3, 0.78], tho: [0.2, 0.78, 0.62], hd: [1.3, 0.52, 0.5], wingPairs: 0, legs: 3, legSplit: 1 + (t >= 2 ? 1 : 0), hind: 2.1, plates: 2, edges: t >= 3 ? 1 : 2, eyes: false });
+    },
+  },
+
+  /* 25 ─ KATYDID */
+  {
+    id: "katydid", name: "Katydid", hue: 118, flying: true, speed: 165, turn: 3.3, ranged: true, keep: 320, muzzle: 2.2,
+    armed: { gun: false, missile: false, shield: false }, pack: [1, 1, 1, 1, 1, 1], minZone: 2, maxZone: 5,
+    abilities: [
+      { type: "shoot", name: "Leaf Shards", minTier: 1, cd: 4.5, wind: 0.4, dmg: 0.7, n: 3, ns: 0.5, spread: 0.4, speed: 540, life: 1.5, size: 7, pierce: true, kind: "wave", minP: 180, maxP: 800 },
+      { type: "blink", name: "Camo Shift", minTier: 2, cd: 9, wind: 0.4, dmg: 0.6, maxP: 600 },
+      { type: "nova", name: "Shard Storm", minTier: 3, cd: 10, wind: 0.8, dmg: 0.5, n: 12, ns: 1.4, speed: 460, life: 1.3, size: 7, kind: "wave", maxP: 600 },
+    ],
+    build(b, t) {
+      return buildFlyer(b, t, { abd: [-1.5, 1.35, 0.5], tho: [0.2, 0.7, 0.48], hd: [1.22, 0.42, 0.44], wingPairs: 2, wingLen: 1.7, wingWidth: 0.3, legs: 3, legSplit: 1 + (t >= 3 ? 1 : 0), hind: 1.7, plates: 1, edges: 2, eyes: true });
+    },
+  },
+
+  /* 26 ─ DUNG BEETLE */
+  {
+    id: "dung", name: "Dung Beetle", hue: 32, flying: false, speed: 92, turn: 2.0, ranged: false, keep: 0, muzzle: 3.2,
+    armed: { gun: true, missile: false, shield: true }, pack: [1, 1, 1, 1, 1, 1], minZone: 3, maxZone: 5,
+    abilities: [
+      { type: "charge", name: "Rolling Slam", minTier: 1, cd: 8, wind: 1, dmg: 3.4, speed: 560, dur: 0.7, minP: 220, maxP: 900 },
+      { type: "spit", name: "Boulder Toss", minTier: 2, cd: 6, wind: 0.6, dmg: 0.9, speed: 420, size: 2.4, maxP: 800 },
+      { type: "ring", name: "Impact Wave", minTier: 3, cd: 11, wind: 1, dmg: 2.4, size: 7, speed: 400, maxS: 4.4 },
+    ],
+    build(b, t) {
+      const pl = 2 + (t >= 4 ? 1 : 0), ed = t >= 3 ? 1 : 2;
+      return buildBeetle(b, t, { abd: [-0.9, 1.6, 1.35], tho: [0.75, 1.0, 1.0], hd: [1.85, 0.6, 0.62], legs: 3, legSplit: 1 + (t >= 2 ? 1 : 0) + (t >= 3 ? 1 : 0), plateLayers: pl, edges: ed, horn: 0.8, mandible: 1.4, spikes: true, eyes: true });
+    },
+  },
+
+  /* 27 ─ ATLAS MOTH */
+  {
+    id: "atlas", name: "Atlas Moth", hue: 266, flying: true, speed: 115, turn: 2.4, ranged: true, keep: 420, muzzle: 1.6,
+    armed: { gun: false, missile: false, shield: true }, pack: [1, 1, 1, 1, 1, 1], minZone: 3, maxZone: 5,
+    abilities: [
+      { type: "ring", name: "Wind Gust", minTier: 1, cd: 8, wind: 0.8, dmg: 1.3, size: 7, speed: 480, maxS: 4.6 },
+      { type: "cloud", name: "Slow Powder", minTier: 2, cd: 10, wind: 0.7, dmg: 0.5, size: 4, slow: 0.8, atPlayer: true, maxP: 900 },
+      { type: "pull", name: "Downdraft", minTier: 3, cd: 13, wind: 0.7, dmg: 0.8, speed: 700, minP: 300, maxP: 900 },
+    ],
+    build(b, t) {
+      return buildFlyer(b, t, { abd: [-1.35, 1.1, 0.75], tho: [0.25, 0.75, 0.7], hd: [1.25, 0.45, 0.5], wingPairs: 2, wingLen: 2.4, wingWidth: 0.8, legs: 3, legSplit: 1 + (t >= 3 ? 1 : 0), plates: 1 + (t >= 3 ? 1 : 0), edges: 2, eyespots: true, antenna: true });
+    },
+  },
+
+  /* 28 ─ WEEVIL */
+  {
+    id: "weevil", name: "Weevil", hue: 196, flying: false, speed: 110, turn: 2.8, ranged: false, keep: 0, muzzle: 3.4,
+    armed: { gun: true, missile: false, shield: true }, pack: [1, 1, 1, 1, 1, 1], minZone: 3, maxZone: 5,
+    abilities: [
+      { type: "swing", name: "Drill Strike", minTier: 1, cd: 3, wind: 0.55, dmg: 2.6, maxS: 3.4, role: "mandible", needs: "Snout" },
+      { type: "charge", name: "Boring Charge", minTier: 2, cd: 8, wind: 0.8, dmg: 2.8, speed: 640, dur: 0.6, minP: 200, maxP: 800 },
+      { type: "ring", name: "Drill Shock", minTier: 3, cd: 10, wind: 0.9, dmg: 1.8, size: 6, speed: 440, maxS: 4 },
+    ],
+    build(b, t) {
+      const pl = 1 + (t >= 3 ? 1 : 0), ed = t >= 3 ? 1 : 2;
+      return buildBeetle(b, t, { abd: [-0.95, 1.25, 0.95], tho: [0.65, 0.8, 0.78], hd: [1.5, 0.5, 0.5], legs: 3, legSplit: 1 + (t >= 3 ? 1 : 0), plateLayers: pl, edges: ed, snout: 1.6, mandible: 0, horn: 0.4, eyes: true });
+    },
+  },
+
+  /* 29 ─ LOCUST */
+  {
+    id: "locust", name: "Locust", hue: 72, flying: true, speed: 205, turn: 3.4, ranged: false, keep: 0, muzzle: 2.6,
+    armed: { gun: true, missile: true, shield: false }, pack: [2, 2, 2, 2, 1, 1], minZone: 3, maxZone: 5,
+    abilities: [
+      { type: "charge", name: "Swarm Rush", minTier: 1, cd: 5, wind: 0.4, dmg: 1.5, speed: 950, dur: 0.4, minP: 180, maxP: 850 },
+      { type: "summon", name: "Summon Swarm", minTier: 2, cd: 14, wind: 0.6, dmg: 0, n: 3, maxS: 2.5 },
+      { type: "nova", name: "Wing Storm", minTier: 3, cd: 10, wind: 0.7, dmg: 0.5, n: 14, ns: 1.6, speed: 480, life: 1.4, size: 6, kind: "wave", maxP: 640 },
+    ],
+    build(b, t) {
+      return buildFlyer(b, t, { abd: [-1.5, 1.4, 0.6], tho: [0.2, 0.72, 0.55], hd: [1.25, 0.46, 0.48], wingPairs: 2, wingLen: 1.6, wingWidth: 0.3, legs: 3, legSplit: 1 + (t >= 2 ? 1 : 0), hind: 1.8, stripes: t >= 2 ? 3 : 0, plates: 1, edges: 2, mandible: 1, spikes: t >= 4 });
+    },
+  },
+
+  /* 30 ─ JEWEL BEETLE */
+  {
+    id: "jewel", name: "Jewel Beetle", hue: 152, flying: true, speed: 170, turn: 3.2, ranged: true, keep: 360, muzzle: 2.4,
+    armed: { gun: true, missile: true, shield: true }, pack: [1, 1, 1, 1, 1, 1], minZone: 4, maxZone: 5,
+    reflectShell: true,
+    abilities: [
+      { type: "shoot", name: "Prismatic Beam", minTier: 1, cd: 5, wind: 0.5, dmg: 1.1, n: 1, ns: 0.3, spread: 0.1, speed: 760, life: 1.5, size: 8, pierce: true, kind: "wave", minP: 200, maxP: 950 },
+      { type: "nova", name: "Refraction", minTier: 2, cd: 9, wind: 0.7, dmg: 0.7, n: 16, ns: 1.8, speed: 420, life: 1.7, size: 7, kind: "wave", maxP: 700 },
+      { type: "ring", name: "Prism Pulse", minTier: 3, cd: 11, wind: 0.8, dmg: 2, size: 6, speed: 480, maxS: 4 },
+    ],
+    build(b, t) {
+      const pl = 2 + (t >= 4 ? 1 : 0), ed = t >= 3 ? 1 : 2;
+      return buildBeetle(b, t, { abd: [-0.8, 1.35, 1.05], tho: [0.72, 0.88, 0.85], hd: [1.65, 0.55, 0.58], legs: 3, legSplit: 1 + (t >= 2 ? 1 : 0), plateLayers: pl, edges: ed, horn: 0.9, hornFork: true, mandible: 1.2, eyes: true, spikes: true, elytra: true, reflective: true });
+    },
+  },
+
+  /* 31 ─ WORLD SERPENT (boss) */
+  {
+    id: "serpent", name: "World Serpent", hue: 285, flying: false, speed: 340, turn: 2.6, ranged: false, keep: 0, muzzle: 3.0,
+    armed: { gun: true, missile: true, shield: true }, pack: [1, 1, 1, 1, 1, 1], minZone: 5, maxZone: 5, boss: true,
+    abilities: [
+      { type: "swing", name: "Tail Sweep", minTier: 1, cd: 4, wind: 0.8, dmg: 4.5, maxS: 5, role: "tail", needs: "Tail Barb" },
+      { type: "nova", name: "Venom Ring", minTier: 2, cd: 9, wind: 0.9, dmg: 0.9, n: 20, ns: 2, speed: 460, life: 1.8, size: 9, poison: 0.3, kind: "bolt", maxP: 900 },
+      { type: "charge", name: "Serpent Rush", minTier: 3, cd: 10, wind: 1, dmg: 4, speed: 760, dur: 0.9, minP: 400, maxP: 1400 },
+      { type: "spit", name: "Venom Glob", minTier: 4, cd: 7, wind: 0.6, dmg: 1.4, speed: 520, size: 3, maxP: 1000 },
+    ],
+    build(b, t) {
+      return buildSnake(b, t, 18 + 2 * t);
+    },
+  },
 ];
+
+
+
+/* ---------------- body-plan helper builders ---------------- */
+interface BeetleOpts {
+  abd?: [number, number, number];
+  tho?: [number, number, number];
+  hd?: [number, number, number];
+  legs?: number;
+  legSplit?: number;
+  plateLayers?: number;
+  edges?: number;
+  horn?: number;
+  hornFork?: boolean;
+  pincer?: number;
+  mandible?: number;
+  spikes?: boolean;
+  elytra?: boolean;
+  eyes?: boolean;
+  snout?: number;
+  antenna?: boolean;
+  drumsticks?: boolean;
+  slim?: boolean;
+  round?: boolean;
+  reflective?: boolean;
+}
+
+function buildBeetle(b: Builder, t: number, o: BeetleOpts = {}): Mount[] {
+  const [acx, arx, ary] = o.abd ?? [-0.8, 1.35, 1.1];
+  const [tcx, trx, tryv] = o.tho ?? [0.7, 0.8, 0.82];
+  const [hcx, hrx, hry] = o.hd ?? [1.6, 0.55, 0.6];
+  const abd: Sec = { cx: acx, cy: 0, rx: arx, ry: ary, n: 10 };
+  const tho: Sec = { cx: tcx, cy: 0, rx: trx, ry: tryv, n: 8 };
+  const hd: Sec = { cx: hcx, cy: 0, rx: hrx, ry: hry, n: 6 };
+  const iA = b.sec("Abdomen", abd, { hpM: 1.5 });
+  const iT = b.sec("Thorax", tho, { hpM: 1.3 });
+  const iH = b.sec("Head", hd);
+  b.link(iA, iT); b.link(iT, iH);
+  const legs = o.legs ?? 3;
+  const split = o.legSplit ?? 1 + (t >= 2 ? 1 : 0) + (t >= 4 ? 1 : 0);
+  for (let i = 0; i < legs; i++) {
+    const f = legs === 1 ? 0.5 : i / (legs - 1);
+    legPair(b, iT, tcx + trx * 0.5 - f * trx * 1.5, o.slim ? 0.4 : 0.52, [1.05 + f * 0.85, 0.95 + f * 1.05], [0.82, 0.92], o.slim ? 0.12 : 0.16, "Leg", { split, phase: i % 2 ? P : 0 });
+  }
+  b.core(tho, iT, [iA, iH]);
+  b.armor(abd, iA, { name: "Elytron Plate", layers: o.plateLayers ?? 1 + (t >= 3 ? 1 : 0), edges: o.edges ?? (t >= 3 ? 1 : 2), style: o.reflective ? 2 : undefined });
+  b.armor(tho, iT, { name: "Pronotum Plate", layers: 1, edges: o.edges ?? 2 });
+  b.armor(hd, iH, { name: "Cranial Plate", layers: 1, edges: 3 });
+  if (o.elytra) {
+    for (const side of [1, -1]) {
+      const wc = ell(acx + 0.05, ary * 0.5, arx * 0.72, ary * 0.34, 8);
+      b.add("armor", "Elytron", side > 0 ? wc : mirror(wc), { layer: 2.8, links: [iA], style: o.reflective ? 3 : 1, hpM: 1.2 });
+    }
+  }
+  if (o.pincer) {
+    const s = o.pincer;
+    for (const side of [1, -1]) {
+      const gi = b.group(hcx + hrx * 0.4, 0.2 * side, "mandible", side, 0.1, 0);
+      const m = saw(hcx + hrx * 0.4, 0.22, hcx + hrx * 0.4 + s, 0.06, 0.16, 0.07, 3 + Math.floor(t / 2), 0.15, -1);
+      b.add("arm", "Pincer", side > 0 ? m : mirror(m), { layer: 2, g: gi, links: [iH], hpM: 1.4 });
+    }
+  } else if (o.mandible !== 0) {
+    const sc = o.mandible ?? 1;
+    const x0 = hcx + hrx * 0.45;
+    mandibles(b, iH, x0, 0.18, [x0 - 0.05, 0.05, x0 + 0.35 * sc, 0.3 * sc, x0 + 0.85 * sc, 0.32 * sc, x0 + 0.55 * sc, 0.12, x0 + 0.1, 0.03], "Mandible", 1.1);
+  }
+  if (o.horn) {
+    const x0 = hcx + hrx * 0.35, len = o.horn;
+    if (o.hornFork) {
+      for (const side of [1, -1]) {
+        b.add("spike", "Forked Horn", [x0, 0.07 * side, x0 + len * 0.65, 0.3 * side, x0 + len, 0.14 * side, x0 + len * 0.35, 0], { layer: 3, links: [iH], hpM: 1.7 });
+      }
+    } else {
+      b.add("spike", "Horn", [x0, -0.16, x0 + len, 0, x0, 0.16], { layer: 3, links: [iH], hpM: 1.6 });
+    }
+  }
+  if (o.snout) {
+    const x0 = hcx + hrx * 0.7;
+    b.add("segment", "Snout", taper(x0, 0, x0 + o.snout, 0, hrx * 0.55, hrx * 0.2), { layer: 2, links: [iH], hpM: 1.3 });
+  }
+  if (o.eyes !== false) {
+    for (const side of [1, -1]) {
+      const e = ell(hcx + hrx * 0.35, hry * 0.55, 0.18, 0.16, 6);
+      b.add("armor", "Compound Eye", side > 0 ? e : mirror(e), { layer: 3, links: [iH], style: 2, hpM: 0.7 });
+    }
+  }
+  if (o.spikes !== false && t >= 2) b.spikes(abd, iA, { every: 2, len: 0.18 });
+  if (o.antenna !== false) antennae(b, iH, hcx + hrx * 0.7, 0.25, o.drumsticks ? [1.0, 0.6, 0.5] : [0.9, 0.4], o.drumsticks ? [0.4, 0.3, 0.25] : [0.5, 0.5], 0.045);
+  return [{ sec: abd, host: iA }, { sec: tho, host: iT, core: true }, { sec: hd, host: iH }];
+}
+
+interface AntOpts {
+  gaster?: [number, number, number];
+  petiole?: [number, number, number];
+  tho?: [number, number, number];
+  hd?: [number, number, number];
+  legs?: number;
+  legSplit?: number;
+  plateLayers?: number;
+  edges?: number;
+  mandible?: number;
+  spikes?: boolean;
+}
+
+function buildAnt(b: Builder, t: number, o: AntOpts = {}): Mount[] {
+  const [gcx, grx, gry] = o.gaster ?? [-1.15, 1.0, 0.82];
+  const [pcx, prx, pry] = o.petiole ?? [-0.2, 0.3, 0.28];
+  const [tcx, trx, tryv] = o.tho ?? [0.55, 0.65, 0.5];
+  const [hcx, hrx, hry] = o.hd ?? [1.55, 0.58, 0.52];
+  const gas: Sec = { cx: gcx, cy: 0, rx: grx, ry: gry, n: 10 };
+  const pet: Sec = { cx: pcx, cy: 0, rx: prx, ry: pry, n: 6 };
+  const tho: Sec = { cx: tcx, cy: 0, rx: trx, ry: tryv, n: 8 };
+  const hd: Sec = { cx: hcx, cy: 0, rx: hrx, ry: hry, n: 8 };
+  const iG = b.sec("Gaster", gas, { hpM: 1.4 });
+  const iP = b.sec("Petiole", pet, { hpM: 0.8, layer: 1.1 });
+  const iT = b.sec("Thorax", tho, { hpM: 1.3 });
+  const iH = b.sec("Head", hd);
+  b.link(iG, iP); b.link(iP, iT); b.link(iT, iH);
+  const legs = o.legs ?? 3;
+  const split = o.legSplit ?? 1 + (t >= 2 ? 1 : 0) + (t >= 4 ? 1 : 0);
+  for (let i = 0; i < legs; i++) {
+    const f = legs === 1 ? 0.5 : i / (legs - 1);
+    legPair(b, iT, tcx + trx * 0.7 - f * trx * 1.5, 0.32, [1.1 + f * 0.9, 1.0 + f * 1.2], [0.95, 1.1], 0.09, "Leg", { split, phase: f > 0.4 && f < 0.6 ? P : 0 });
+  }
+  b.core(tho, iT, [iP, iH]);
+  b.armor(gas, iG, { name: "Gaster Plate", layers: o.plateLayers ?? 1 + (t >= 3 ? 1 : 0), edges: o.edges ?? (t >= 3 ? 1 : 2) });
+  b.armor(tho, iT, { name: "Thorax Plate", layers: 1, edges: o.edges ?? 2 });
+  b.armor(hd, iH, { name: "Cranial Plate", layers: 1, edges: 4 });
+  const sc = o.mandible ?? 1.1;
+  for (const side of [1, -1]) {
+    const gi = b.group(hcx + hrx * 0.5, hrx * 0.5 * side, "mandible", side, 0.1, 0);
+    const m = saw(hcx + hrx * 0.5, hrx * 0.55, hcx + hrx * 0.5 + 1.0 * sc, hrx * 0.2, 0.14, 0.07, 3, 0.15, -1);
+    b.add("arm", "Mandible", side > 0 ? m : mirror(m), { layer: 2, g: gi, links: [iH], hpM: 1.3 });
+  }
+  antennae(b, iH, hcx + hrx * 0.9, hrx * 0.6, [1.0, 0.2], [0.8, 0.8], 0.045);
+  if (o.spikes) b.spikes(gas, iG, { every: 2, len: 0.18 });
+  return [{ sec: gas, host: iG }, { sec: tho, host: iT, core: true }];
+}
+
+interface FlyerOpts {
+  abd?: [number, number, number];
+  tho?: [number, number, number];
+  hd?: [number, number, number];
+  wingPairs?: number;
+  wingLen?: number;
+  wingWidth?: number;
+  wingsOut?: boolean;
+  legs?: number;
+  legSplit?: number;
+  stripes?: number;
+  stripe?: boolean;
+  stinger?: boolean;
+  pincer?: boolean;
+  plates?: number;
+  edges?: number;
+  hind?: number;
+  eyes?: boolean;
+  antenna?: boolean;
+  proboscis?: number;
+  mandible?: number;
+  spikes?: boolean;
+  eyespots?: boolean;
+}
+
+function buildFlyer(b: Builder, t: number, o: FlyerOpts = {}): Mount[] {
+  const [acx, arx, ary] = o.abd ?? [-1.45, 1.25, 0.66];
+  const [tcx, trx, tryv] = o.tho ?? [0.2, 0.65, 0.6];
+  const [hcx, hrx, hry] = o.hd ?? [1.1, 0.45, 0.52];
+  const abd: Sec = { cx: acx, cy: 0, rx: arx, ry: ary, n: 8 };
+  const tho: Sec = { cx: tcx, cy: 0, rx: trx, ry: tryv, n: 8 };
+  const hd: Sec = { cx: hcx, cy: 0, rx: hrx, ry: hry, n: 8 };
+  const iA = b.sec("Abdomen", abd, { hpM: 1.4 });
+  const iT = b.sec("Thorax", tho, { hpM: 1.3 });
+  const iH = b.sec("Head", hd);
+  b.link(iA, iT); b.link(iT, iH);
+  const legs = o.legs ?? 3;
+  const split = o.legSplit ?? 1 + (t >= 3 ? 1 : 0);
+  for (let i = 0; i < legs; i++) {
+    const f = legs === 1 ? 0.5 : i / (legs - 1);
+    if (o.hind && i === legs - 1) {
+      legPair(b, iA, acx + arx * 0.35, 0.45, [1.9, 2.5], [1.0, 1.2 * o.hind], 0.2, "Hind Leg", { split, phase: P, amp: 0.26 });
+      continue;
+    }
+    legPair(b, iT, tcx + trx * 0.6 - f * trx * 1.4, 0.36, [1.1 + f * 0.8, 0.9 + f * 1.2], [0.5, 0.6], 0.07, "Leg", { split, phase: i % 2 ? P : 0 });
+  }
+  b.core(tho, iT, [iA, iH]);
+  b.armor(abd, iA, { name: "Abdomen Plate", layers: o.plates ?? 1, edges: o.edges ?? (t >= 3 ? 1 : 2) });
+  b.armor(tho, iT, { name: "Thorax Plate", layers: 1, edges: o.edges ?? 2 });
+  b.armor(hd, iH, { name: "Cranial Plate", layers: 1, edges: 4 });
+  const stripes = o.stripe === false ? 0 : o.stripes ?? 0;
+  if (stripes > 0) {
+    for (let i = 0; i < stripes; i++) {
+      const xa = acx - arx * 0.92 + ((arx * 1.84) * i) / stripes;
+      const xb = acx - arx * 0.92 + ((arx * 1.84) * (i + 1)) / stripes;
+      const top: number[] = [], bot: number[] = [];
+      for (let k = 0; k <= 3; k++) {
+        const x = xa + ((xb - xa) * k) / 3;
+        const u = (x - acx) / arx;
+        const hy = ary * 0.98 * Math.sqrt(Math.max(0.02, 1 - u * u));
+        top.push(x, hy);
+        bot.unshift(x, -hy);
+      }
+      b.add("armor", "Abdomen Band", [...top, ...bot], { layer: 4, links: [iA], style: i % 2 ? 1 : 2, hpM: 1.1 });
+    }
+  }
+  const pairs = o.wingPairs ?? 1;
+  if (pairs > 0 && o.wingsOut !== false) {
+    for (const side of [1, -1]) {
+      for (let k = 0; k < pairs; k++) {
+        const ax = tcx + trx * 0.3 - k * trx * 0.5, ay = tryv * 0.55;
+        const ang = 1.45 + k * 0.3;
+        const len = (o.wingLen ?? 1.6) * (1 - k * 0.18);
+        const wid = o.wingWidth ?? 0.33;
+        const poly = ell(ax + Math.cos(ang) * len * 0.85, ay + Math.sin(ang) * len * 0.85, len, wid, 8, ang);
+        const w = wingPart(b, iT, ax, ay, side, poly, k ? "Hindwing" : "Forewing", 0.2, k * 1.7 + (side > 0 ? 0 : P));
+        if (o.eyespots && k === 0 && t >= 1) wingSub(b, w, iT, 0, 0, side, ax + Math.cos(ang) * len * 0.9, ay + Math.sin(ang) * len * 0.9, wid * 0.7, wid * 0.55, ang, "Eyespot", 2);
+        if (t >= 3) wingSub(b, w, iT, 0, 0, side, ax + Math.cos(ang) * len * 1.2, ay + Math.sin(ang) * len * 1.2, wid * 0.6, wid * 0.4, ang, "Wing Vein Plate", 1);
+      }
+    }
+  }
+  if (o.stinger) {
+    b.add("spike", "Stinger", [acx - arx * 0.85, -0.16, acx - arx * 1.7, 0, acx - arx * 0.85, 0.16], { layer: 2, links: [iA], hpM: 1.3 });
+  }
+  if (o.proboscis) {
+    const x0 = hcx + hrx * 0.6;
+    b.add("spike", "Proboscis", taper(x0, 0, x0 + o.proboscis, 0, 0.09, 0.03), { layer: 2, links: [iH], hpM: 1 });
+  }
+  if (o.pincer) mandibles(b, iH, hcx + hrx * 0.5, 0.18, [hcx + hrx * 0.4, 0.05, hcx + hrx * 0.8, 0.28, hcx + hrx * 1.3, 0.24, hcx + hrx * 1.0, 0.1, hcx + hrx * 0.6, 0.03], "Mandible", 1.1);
+  if (o.mandible) { const x0 = hcx + hrx * 0.45, sc = o.mandible; mandibles(b, iH, x0, 0.18, [x0 - 0.05, 0.05, x0 + 0.35 * sc, 0.3 * sc, x0 + 0.85 * sc, 0.32 * sc, x0 + 0.55 * sc, 0.12, x0 + 0.1, 0.03], "Mandible", 1.1); }
+  if (o.eyes !== false) antennae(b, iH, hcx + hrx * 0.7, 0.2, [0.9, 0.4], [0.5, 0.5], 0.04);
+  if (o.spikes || t >= 2) b.spikes(abd, iA, { every: 2, len: 0.16 });
+  return [{ sec: abd, host: iA }, { sec: tho, host: iT, core: true }];
+}
+
+function buildSnake(b: Builder, t: number, n: number): Mount[] {
+  const L = 2.8 + 0.075 * n;
+  const sp = L / n;
+  const ids: number[] = [];
+  const secs: Sec[] = [];
+  for (let i = 0; i < n; i++) {
+    const f = i / (n - 1);
+    const cx = -L / 2 + sp * (i + 0.5);
+    const ry = i === n - 1 ? 0.72 : 0.3 + 0.36 * Math.sin(Math.PI * Math.min(1, f * 1.1));
+    const s: Sec = { cx, cy: 0, rx: sp * 0.8, ry, n: i === n - 1 ? 8 : 6 };
+    secs.push(s);
+    ids.push(b.sec(i === n - 1 ? "Head" : "Body Segment", s, { style: i % 2, hpM: i === n - 1 ? 2.2 : 1.7 }));
+    if (i > 0) b.link(ids[i - 1], ids[i]);
+  }
+  const c = Math.floor(n * 0.4);
+  b.core(secs[c], ids[c], [ids[c - 1], ids[c + 1]]);
+  for (let i = 0; i < n; i++) {
+    b.armor(secs[i], ids[i], { name: i === n - 1 ? "Cranial Plate" : i === c ? "Heart Guard" : "Scale Plate", layers: i === c ? 1 : t >= 3 ? 2 : 1, edges: 3, style: i % 2 });
+  }
+  for (let i = 2; i < n - 2; i += 3) b.spikes(secs[i], ids[i], { every: 2, len: 0.34 });
+  const h = secs[n - 1], hi = ids[n - 1];
+  mandibles(b, hi, h.cx + h.rx * 0.5, 0.3, [h.cx + h.rx * 0.5, 0.1, h.cx + h.rx * 0.95, 0.55, h.cx + h.rx * 1.55, 0.68, h.cx + h.rx * 2.0, 0.3, h.cx + h.rx * 1.2, 0.22], "Fang", 1.9);
+  for (const side of [1, -1]) {
+    const e = ell(h.cx + h.rx * 0.25, 0.5 * side, 0.26, 0.2, 6);
+    b.add("armor", "Serpent Eye", side > 0 ? e : mirror(e), { layer: 4, links: [hi], style: 2, hpM: 1 });
+  }
+  const tail = secs[0];
+  b.add("spike", "Tail Barb", [tail.cx - tail.rx * 0.9, -0.22, tail.cx - tail.rx * 1.9, 0, tail.cx - tail.rx * 0.9, 0.22], { layer: 2, links: [ids[0]], hpM: 1.3 });
+  // fins along the back
+  for (let i = 3; i < n - 2; i += 4) b.spikes(secs[i], ids[i], { every: 1, len: 0.5 });
+  return [{ sec: h, host: hi, core: true }, { sec: secs[c], host: ids[c] }];
+}
+
+/* species id → spawn zone range (existing roster) */
+const ZONES: Record<string, [number, number]> = {
+  dragonfly: [0, 4], scorpion: [0, 3], spider: [0, 4], moth: [0, 4], mantis: [0, 4],
+  centipede: [0, 3], wasp: [0, 4], beetle: [0, 5], ant: [0, 4], firefly: [1, 5],
+};
+for (const sp of SPECIES) {
+  const z = ZONES[sp.id];
+  if (z) { sp.minZone = z[0]; sp.maxZone = z[1]; }
+  else { sp.minZone ??= 0; sp.maxZone ??= 5; }
+}
 
 export const SPECIES_LIST = SPECIES;
 export const SPECIES_COUNT = SPECIES.length;

@@ -101,10 +101,61 @@ export function render(g: Game, ctx: CanvasRenderingContext2D) {
     }
   }
 
+  /* ---- gravity wells ---- */
+  for (const wl of g.wells) {
+    const f = clamp(wl.life / wl.max, 0, 1);
+    const gr = ctx.createRadialGradient(wl.x, wl.y, 4, wl.x, wl.y, wl.r);
+    gr.addColorStop(0, `rgba(196,92,255,${0.35 * f})`);
+    gr.addColorStop(0.6, `rgba(120,40,220,${0.12 * f})`);
+    gr.addColorStop(1, "rgba(20,0,40,0)");
+    ctx.fillStyle = gr;
+    ctx.beginPath(); ctx.arc(wl.x, wl.y, wl.r, 0, TAU); ctx.fill();
+    ctx.strokeStyle = `rgba(196,92,255,${0.8 * f})`; ctx.lineWidth = 3 / z;
+    ctx.setLineDash([14 / z, 10 / z]); ctx.lineDashOffset = -t * 60 / z;
+    ctx.beginPath(); ctx.arc(wl.x, wl.y, wl.r * (0.4 + 0.6 * (1 - f)), 0, TAU); ctx.stroke();
+    ctx.setLineDash([]); ctx.lineDashOffset = 0;
+    for (let k = 0; k < 5; k++) {
+      const a = t * 2.4 + (k / 5) * TAU;
+      const rr = wl.r * (0.25 + 0.65 * ((t * 0.5 + k / 5) % 1));
+      ctx.strokeStyle = `rgba(220,150,255,${0.5 * f})`; ctx.lineWidth = 2 / z;
+      ctx.beginPath(); ctx.moveTo(wl.x + Math.cos(a) * rr, wl.y + Math.sin(a) * rr); ctx.lineTo(wl.x + Math.cos(a) * (rr + 26), wl.y + Math.sin(a) * (rr + 26)); ctx.stroke();
+    }
+  }
+
   /* ---- loose components ---- */
   for (const c of g.comps) {
     if (c.x + c.r < vx0 || c.x - c.r > vx1 || c.y + c.r < vy0 || c.y - c.r > vy1) continue;
     drawComp(g, ctx, c, z, t);
+  }
+
+  /* ---- magnet field ---- */
+  if (g.stats.magnet > 0) {
+    const mpl = g.player;
+    for (const c of g.comps) {
+      if (c.hooks.length || c.c.mass >= 14) continue;
+      const d = Math.hypot(c.x - mpl.x, c.y - mpl.y);
+      if (d > g.stats.magnetRange) continue;
+      ctx.strokeStyle = `rgba(255,225,77,${0.06 + 0.28 * (1 - d / g.stats.magnetRange)})`;
+      ctx.lineWidth = 1.2 / z; ctx.setLineDash([8 / z, 10 / z]); ctx.lineDashOffset = -t * 40 / z;
+      ctx.beginPath(); ctx.moveTo(c.x, c.y); ctx.lineTo(mpl.x, mpl.y); ctx.stroke();
+      ctx.setLineDash([]); ctx.lineDashOffset = 0;
+    }
+    ctx.strokeStyle = "rgba(255,225,77,0.05)"; ctx.lineWidth = 1 / z;
+    ctx.beginPath(); ctx.arc(g.player.x, g.player.y, g.stats.magnetRange, 0, TAU); ctx.stroke();
+  }
+
+  /* ---- mines ---- */
+  for (const m of g.mines) {
+    const armed = m.arm <= 0;
+    const pulse = 0.5 + 0.5 * Math.sin(t * (armed ? 9 : 4) + m.x);
+    ctx.save(); ctx.translate(m.x, m.y); ctx.rotate(t * 0.8);
+    hexPath(ctx, 0, 0, 11, 0);
+    ctx.fillStyle = armed ? "rgba(255,120,60,0.35)" : "rgba(120,120,120,0.25)"; ctx.fill();
+    ctx.strokeStyle = armed ? `rgba(255,170,80,${0.5 + 0.5 * pulse})` : "rgba(160,160,160,0.5)";
+    ctx.lineWidth = 2 / z; ctx.shadowColor = "#ffb04d"; ctx.shadowBlur = armed ? 12 : 0;
+    ctx.stroke(); ctx.shadowBlur = 0;
+    ctx.restore();
+    if (armed) { ctx.strokeStyle = `rgba(255,140,80,${0.16 + 0.1 * pulse})`; ctx.lineWidth = 1 / z; ctx.beginPath(); ctx.arc(m.x, m.y, m.r, 0, TAU); ctx.stroke(); }
   }
 
   /* ---- ropes (under ship, over comps) ---- */
@@ -175,10 +226,14 @@ export function render(g: Game, ctx: CanvasRenderingContext2D) {
   /* ---- player bullets & beams ---- */
   ctx.lineCap = "round";
   for (const b of g.bullets) {
-    if (b.kind === 1) {
-      ctx.fillStyle = "#ffb04d"; ctx.shadowColor = "#ffb04d"; ctx.shadowBlur = 10;
+    if (b.kind === 1 || b.kind === 3) {
+      const col = b.kind === 3 ? "#ffd24d" : "#ffb04d";
+      ctx.fillStyle = col; ctx.shadowColor = col; ctx.shadowBlur = 10;
       ctx.save(); ctx.translate(b.x, b.y); ctx.rotate(Math.atan2(b.vy, b.vx));
       ctx.beginPath(); ctx.moveTo(10, 0); ctx.lineTo(-7, -5); ctx.lineTo(-3, 0); ctx.lineTo(-7, 5); ctx.closePath(); ctx.fill();
+      if (b.kind === 3) {
+        ctx.beginPath(); ctx.arc(-10, 0, 3.5, 0, TAU); ctx.fill();
+      }
       ctx.restore(); ctx.shadowBlur = 0;
       continue;
     }
@@ -213,6 +268,38 @@ export function render(g: Game, ctx: CanvasRenderingContext2D) {
     ctx.fillStyle = "rgba(255,170,230,0.9)";
     ctx.font = `${12 / z}px ui-monospace, monospace`; ctx.textAlign = "center";
     ctx.fillText(o.name, o.x, o.y - 30);
+  }
+
+  /* ---- drones ---- */
+  if (!pl.dead) {
+    for (const d of g.drones) {
+      const dx = pl.x + Math.cos(d.a) * d.r, dy = pl.y + Math.sin(d.a) * d.r;
+      ctx.save(); ctx.translate(dx, dy); ctx.rotate(d.a + Math.PI / 2);
+      ctx.fillStyle = "rgba(125,255,212,0.18)"; ctx.strokeStyle = "#7dffb4"; ctx.lineWidth = 2 / z;
+      ctx.shadowColor = "#7dffb4"; ctx.shadowBlur = 10;
+      ctx.beginPath(); ctx.moveTo(8, 0); ctx.lineTo(-5, 6); ctx.lineTo(-5, -6); ctx.closePath();
+      ctx.fill(); ctx.stroke(); ctx.shadowBlur = 0;
+      ctx.restore();
+      ctx.strokeStyle = "rgba(125,255,212,0.18)"; ctx.lineWidth = 1 / z;
+      ctx.beginPath(); ctx.moveTo(pl.x, pl.y); ctx.lineTo(dx, dy); ctx.stroke();
+    }
+  }
+
+  /* ---- lock-on ---- */
+  if (g.lock) {
+    const [lx, ly] = pw(g.lock.e, g.lock.part);
+    const r = Math.max(18, g.lock.part.r * 0.9);
+    const a = 0.55 + 0.45 * Math.sin(t * 8);
+    ctx.strokeStyle = `rgba(255,60,90,${a})`; ctx.lineWidth = 2.5 / z; ctx.shadowColor = "#ff3d73"; ctx.shadowBlur = 12;
+    for (let k = 0; k < 4; k++) {
+      const an = (k / 4) * TAU + Math.PI / 4;
+      ctx.beginPath();
+      ctx.moveTo(lx + Math.cos(an) * r, ly + Math.sin(an) * r);
+      ctx.lineTo(lx + Math.cos(an) * (r + 10), ly + Math.sin(an) * (r + 10));
+      ctx.stroke();
+    }
+    ctx.beginPath(); ctx.arc(lx, ly, r + 4, 0, TAU); ctx.globalAlpha = 0.35; ctx.stroke(); ctx.globalAlpha = 1;
+    ctx.shadowBlur = 0;
   }
 
   /* ---- player ---- */
@@ -407,6 +494,16 @@ function drawPlayer(g: Game, ctx: CanvasRenderingContext2D, z: number, t: number
     hexPath(ctx, p.x, p.y, SHIP_R + 14, t * 0.8);
     ctx.stroke(); ctx.fillStyle = `rgba(110,230,255,${0.04 + 0.06 * f})`; ctx.fill(); ctx.shadowBlur = 0;
   }
+  if (p.barrier > 0 && p.barrierMax > 0) {
+    const f = p.barrier / p.barrierMax;
+    ctx.strokeStyle = `rgba(120,220,255,${0.35 + 0.5 * f})`; ctx.lineWidth = 4 / z; ctx.shadowColor = "#4dd2ff"; ctx.shadowBlur = 16;
+    ctx.beginPath(); ctx.arc(p.x, p.y, SHIP_R + 22 + 3 * Math.sin(t * 8), 0, TAU); ctx.stroke();
+    ctx.fillStyle = `rgba(120,220,255,${0.05 + 0.08 * f})`; ctx.fill(); ctx.shadowBlur = 0;
+  }
+  if (p.overT > 0) {
+    ctx.strokeStyle = "rgba(255,225,77,0.7)"; ctx.lineWidth = 2 / z;
+    ctx.beginPath(); ctx.arc(p.x, p.y, SHIP_R + 18, 0, TAU); ctx.stroke();
+  }
   if (p.tpT > 0) {
     const f = 1 - p.tpT / Math.max(0.1, st.tpTime);
     ctx.strokeStyle = "#c77dff"; ctx.lineWidth = 3 / z; ctx.shadowColor = "#c77dff"; ctx.shadowBlur = 14;
@@ -467,6 +564,27 @@ function drawEnemy(g: Game, ctx: CanvasRenderingContext2D, e: Enemy, z: number, 
     if (gr && gr.ang !== 0) ctx.restore();
   }
   ctx.restore();
+
+  // status auras
+  if (e.slowT > 0) {
+    ctx.strokeStyle = "rgba(255,122,217,0.55)"; ctx.lineWidth = 2 / z;
+    ctx.setLineDash([10 / z, 8 / z]); ctx.lineDashOffset = t * 30 / z;
+    ctx.beginPath(); ctx.arc(e.x, e.y, e.radius + 14, 0, TAU); ctx.stroke();
+    ctx.setLineDash([]); ctx.lineDashOffset = 0;
+  }
+  if (e.melt > 0.05) {
+    ctx.strokeStyle = `rgba(120,255,90,${0.15 + 0.35 * Math.min(1, e.melt)})`; ctx.lineWidth = 3 / z;
+    ctx.beginPath(); ctx.arc(e.x, e.y, e.radius + 6, 0, TAU); ctx.stroke();
+  }
+  if (e.stun > 0) {
+    ctx.strokeStyle = "rgba(255,225,77,0.5)"; ctx.lineWidth = 2 / z;
+    ctx.beginPath(); ctx.arc(e.x, e.y, e.radius + 20, 0, TAU); ctx.stroke();
+    for (let k = 0; k < 3; k++) {
+      const an = t * 4 + (k / 3) * TAU;
+      ctx.beginPath(); ctx.moveTo(e.x + Math.cos(an) * (e.radius + 12), e.y + Math.sin(an) * (e.radius + 12));
+      ctx.lineTo(e.x + Math.cos(an) * (e.radius + 20), e.y + Math.sin(an) * (e.radius + 20)); ctx.stroke();
+    }
+  }
 
   // shields
   for (const s of e.shields) {

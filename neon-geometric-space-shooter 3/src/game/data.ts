@@ -112,7 +112,7 @@ export const UP_CATS: { id: UpCat; name: string; color: string }[] = [
 export const upgradeCost = (u: UpgradeDef, level: number) => Math.round(u.base * Math.pow(u.growth, level));
 
 /* ---------- crafting ---------- */
-export type Slot = "weapon" | "shield" | "armor" | "optics" | "utility";
+export type Slot = "weapon" | "shield" | "armor" | "optics" | "utility" | "ability";
 export interface Recipe {
   id: string;
   name: string;
@@ -120,25 +120,77 @@ export interface Recipe {
   desc: string;
   difficulty: number;
   n: number;
-  need?: { cats: Category[]; count: number };
+  need?: { cats?: Category[]; count: number };
+  species?: { names: string[]; count: number };
+  /** rough per-shot damage (as a multiple of base cannon damage) and cooldown, for weapons & abilities */
+  wpn?: { dmg: number; cd: number };
 }
 
 export const RECIPES: Recipe[] = [
-  { id: "pulse", name: "Pulse Turret", slot: "weapon", difficulty: 1, n: 3, desc: "Auto-targeting turret. Fires at the nearest enemy piece on its own." },
-  { id: "scatter", name: "Scatter Driver", slot: "weapon", difficulty: 2, n: 4, need: { cats: ["limb", "plate"], count: 1 }, desc: "Short-range shotgun burst on your fire button." },
-  { id: "missile", name: "Seeker Pod", slot: "weapon", difficulty: 3, n: 5, need: { cats: ["weapon", "shield"], count: 1 }, desc: "Launches homing missiles with splash damage." },
-  { id: "lance", name: "Arc Lance", slot: "weapon", difficulty: 4, n: 6, need: { cats: ["core"], count: 1 }, desc: "Piercing beam that melts through armour layers." },
+  /* ---------------- weapons ---------------- */
+  { id: "pulse", name: "Pulse Turret", slot: "weapon", difficulty: 1, n: 3, wpn: { dmg: 0.6, cd: 0.45 }, desc: "Auto-targeting turret. Fires at the nearest enemy piece on its own." },
+  { id: "scatter", name: "Scatter Driver", slot: "weapon", difficulty: 2, n: 4, need: { cats: ["limb", "plate"], count: 1 }, wpn: { dmg: 0.55, cd: 0.75 }, desc: "Short-range shotgun burst on your fire button." },
+  { id: "missile", name: "Seeker Pod", slot: "weapon", difficulty: 3, n: 5, need: { cats: ["weapon", "shield"], count: 1 }, wpn: { dmg: 2.2, cd: 1.5 }, desc: "Launches homing missiles with splash damage." },
+  { id: "lance", name: "Arc Lance", slot: "weapon", difficulty: 4, n: 6, need: { cats: ["core"], count: 1 }, wpn: { dmg: 0.45, cd: 0.12 }, desc: "Piercing beam that melts through armour layers." },
+  { id: "homing", name: "Homing Missile Launcher", slot: "weapon", difficulty: 3, n: 5, need: { cats: ["weapon"], count: 1 }, species: { names: ["Bombardier Beetle", "Yellowjacket"], count: 1 }, wpn: { dmg: 3.1, cd: 1.8 }, desc: "Hold fire on a piece to lock it. Missiles track the lock and detonate on impact." },
+  { id: "bypass", name: "Shield-Bypass Laser", slot: "weapon", difficulty: 5, n: 7, need: { cats: ["core", "weapon"], count: 1 }, species: { names: ["Jewel Beetle", "Firefly"], count: 1 }, wpn: { dmg: 0.5, cd: 0.1 }, desc: "Continuous beam that ignores enemy shield generators and burns straight into plates." },
+  { id: "hmg", name: "Heavy Machine Gun", slot: "weapon", difficulty: 2, n: 4, need: { cats: ["weapon", "limb"], count: 1 }, wpn: { dmg: 0.32, cd: 0.08 }, desc: "Very high rate of fire, wide spray, long reload between bursts." },
+  { id: "emp", name: "EMP Cannon", slot: "weapon", difficulty: 4, n: 6, need: { cats: ["core", "shield"], count: 1 }, species: { names: ["Cicada", "Firefly"], count: 1 }, wpn: { dmg: 1.4, cd: 2.6 }, desc: "Pulse that stuns every enemy within a wide radius." },
+  { id: "cutter", name: "Plasma Cutter", slot: "weapon", difficulty: 3, n: 5, need: { cats: ["plate", "weapon"], count: 1 }, wpn: { dmg: 1.1, cd: 0.18 }, desc: "Short, searing plasma arc that shreds plates at point-blank range." },
+  { id: "acid", name: "Acid Sprayer", slot: "weapon", difficulty: 3, n: 5, need: { cats: ["body", "limb"], count: 1 }, species: { names: ["Soldier Ant", "Worker Ant", "Bombardier Beetle"], count: 1 }, wpn: { dmg: 0.3, cd: 0.16 }, desc: "Cone of corrosive globs. Melts armour so every following hit lands harder." },
+  { id: "chain", name: "Chain Lightning", slot: "weapon", difficulty: 4, n: 6, need: { cats: ["core", "wing"], count: 1 }, species: { names: ["Firefly", "Jewel Beetle"], count: 1 }, wpn: { dmg: 1.6, cd: 0.8 }, desc: "Arcs between up to five nearby pieces, losing power with every jump." },
+  { id: "flak", name: "Flak Cannon", slot: "weapon", difficulty: 3, n: 5, need: { cats: ["plate", "body"], count: 1 }, wpn: { dmg: 1.3, cd: 0.9 }, desc: "Lobs airburst shells that detonate near the target point." },
+  { id: "rail", name: "Rail Sniper", slot: "weapon", difficulty: 5, n: 7, need: { cats: ["core", "weapon"], count: 1 }, species: { names: ["Tiger Beetle", "Assassin Bug"], count: 1 }, wpn: { dmg: 2.4, cd: 1.4 }, desc: "Hypervelocity slug that pierces the whole enemy line." },
+  { id: "gravity", name: "Gravity Bomb", slot: "weapon", difficulty: 5, n: 7, need: { cats: ["core", "body"], count: 1 }, species: { names: ["Dung Beetle", "Atlas Moth"], count: 1 }, wpn: { dmg: 2.8, cd: 3.2 }, desc: "Collapses a gravity well that drags enemies in, then implodes." },
+  { id: "mines", name: "Mine Layer", slot: "weapon", difficulty: 2, n: 4, need: { cats: ["plate", "weapon"], count: 1 }, species: { names: ["Weevil", "Scarab"], count: 1 }, wpn: { dmg: 2.5, cd: 1.1 }, desc: "Drops proximity mines behind you that shred anything that follows." },
+  { id: "drones", name: "Swarm Drones", slot: "weapon", difficulty: 4, n: 6, need: { cats: ["wing", "core"], count: 1 }, species: { names: ["Honeybee", "Yellowjacket", "Hornet"], count: 1 }, wpn: { dmg: 0.4, cd: 0.55 }, desc: "Deploys two orbiting drones that fire at nearby enemies." },
+  { id: "venom", name: "Venom Injector", slot: "weapon", difficulty: 3, n: 5, need: { cats: ["limb", "weapon"], count: 1 }, species: { names: ["Assassin Bug", "Wasp", "Mosquito"], count: 1 }, wpn: { dmg: 0.45, cd: 0.35 }, desc: "Fast darts that inject a stacking venom that eats enemies from inside." },
+  { id: "sonic", name: "Sonic Disruptor", slot: "weapon", difficulty: 4, n: 6, need: { cats: ["wing", "core"], count: 1 }, species: { names: ["Cicada", "Katydid", "Locust"], count: 1 }, wpn: { dmg: 0.6, cd: 1.6 }, desc: "Cone of concussive sound that stuns and shoves everything in front of you." },
+  { id: "cluster", name: "Cluster Rockets", slot: "weapon", difficulty: 5, n: 7, need: { cats: ["weapon", "shield"], count: 1 }, species: { names: ["Bombardier Beetle", "Rhinoceros Beetle"], count: 1 }, wpn: { dmg: 1.7, cd: 2.2 }, desc: "Rockets that burst into a shower of bomblets on impact." },
+
+  /* ---------------- shields ---------------- */
   { id: "deflector", name: "Deflector Array", slot: "shield", difficulty: 1, n: 3, desc: "Large shield pool that recharges after a short delay." },
   { id: "absorber", name: "Absorber Core", slot: "shield", difficulty: 2, n: 4, need: { cats: ["plate"], count: 1 }, desc: "Smaller shield that recharges extremely fast." },
   { id: "reflector", name: "Mirror Barrier", slot: "shield", difficulty: 3, n: 5, need: { cats: ["shield", "core", "wing"], count: 1 }, desc: "Shield that reflects enemy bolts back at them." },
+  { id: "kinetic", name: "Kinetic Barrier", slot: "shield", difficulty: 2, n: 4, need: { cats: ["plate", "body"], count: 1 }, desc: "Heavy barrier that flattens all incoming damage while it holds." },
+  { id: "phase", name: "Phase Shield", slot: "shield", difficulty: 4, n: 6, need: { cats: ["wing", "core"], count: 1 }, species: { names: ["Cicada", "Atlas Moth"], count: 1 }, desc: "Flickers out of phase, dodging a share of every incoming hit." },
+  { id: "ward", name: "Regenerating Ward", slot: "shield", difficulty: 3, n: 5, need: { cats: ["body"], count: 1 }, species: { names: ["Ladybug", "Firefly"], count: 1 }, desc: "Modest shield that knits itself back together almost immediately." },
+  { id: "shell", name: "Reactive Shell", slot: "shield", difficulty: 4, n: 6, need: { cats: ["plate", "shield"], count: 1 }, species: { names: ["Rhinoceros Beetle", "Cockroach"], count: 1 }, desc: "When the shield collapses it detonates, shredding nearby enemies." },
+  { id: "overcharge", name: "Overcharge Shield", slot: "shield", difficulty: 5, n: 7, need: { cats: ["core", "shield"], count: 1 }, species: { names: ["Jewel Beetle", "Firefly"], count: 1 }, desc: "Enormous shield pool with a very slow recharge." },
+  { id: "nullfield", name: "Null Field", slot: "shield", difficulty: 5, n: 7, need: { cats: ["core", "wing"], count: 1 }, species: { names: ["Moth", "Atlas Moth"], count: 1 }, desc: "Periodically swallows every enemy projectile that touches it." },
+  { id: "prismatic", name: "Prismatic Barrier", slot: "shield", difficulty: 5, n: 7, need: { cats: ["wing", "shield", "core"], count: 1 }, species: { names: ["Jewel Beetle"], count: 1 }, desc: "Reflects bolts, dodges hits and adds a solid shield pool." },
+
+  /* ---------------- armour ---------------- */
   { id: "plating", name: "Hull Plating Kit", slot: "armor", difficulty: 1, n: 3, need: { cats: ["plate", "body"], count: 1 }, desc: "Adds a large chunk of extra hull." },
   { id: "reactive", name: "Reactive Lattice", slot: "armor", difficulty: 3, n: 5, need: { cats: ["plate"], count: 2 }, desc: "Cuts all incoming damage." },
   { id: "thorn", name: "Thorn Mesh", slot: "armor", difficulty: 2, n: 4, need: { cats: ["limb"], count: 1 }, desc: "When hit, emits a shockwave that damages nearby enemy pieces." },
+  { id: "chitin", name: "Chitin Plating", slot: "armor", difficulty: 2, n: 4, need: { cats: ["plate"], count: 1 }, species: { names: ["Cockroach", "Worker Ant"], count: 1 }, desc: "Light chitin layers: extra hull and a little flat damage reduction." },
+  { id: "carapace", name: "Carapace Shell", slot: "armor", difficulty: 3, n: 5, need: { cats: ["plate", "body"], count: 1 }, species: { names: ["Rhinoceros Beetle", "Dung Beetle", "Scarab"], count: 1 }, desc: "Massive hull bonus at the cost of top speed." },
+  { id: "nanoweave", name: "Nano-weave Mesh", slot: "armor", difficulty: 4, n: 6, need: { cats: ["wing", "body"], count: 1 }, species: { names: ["Atlas Moth", "Widow Spider"], count: 1 }, desc: "Self-repairing weave that continuously regenerates hull." },
+  { id: "ablative", name: "Ablative Coating", slot: "armor", difficulty: 3, n: 5, need: { cats: ["plate", "shield"], count: 1 }, species: { names: ["Cockroach", "Weevil"], count: 1 }, desc: "Sacrificial coating that absorbs a big share of every hit." },
+  { id: "titan", name: "Titan Frame", slot: "armor", difficulty: 5, n: 7, need: { cats: ["body", "plate"], count: 2 }, species: { names: ["Dung Beetle", "World Serpent"], count: 1 }, desc: "Colossal armour frame: the biggest hull bonus in the game, heavy as lead." },
+  { id: "exoskeleton", name: "Exoskeleton Rig", slot: "armor", difficulty: 3, n: 5, need: { cats: ["limb"], count: 2 }, species: { names: ["Grasshopper", "Tiger Beetle", "Mole Cricket"], count: 1 }, desc: "Servo-assisted exoskeleton: agility and acceleration instead of bulk." },
+  { id: "venomguard", name: "Venom Guard", slot: "armor", difficulty: 4, n: 6, need: { cats: ["plate", "limb"], count: 1 }, species: { names: ["Assassin Bug", "Yellowjacket", "Centipede"], count: 1 }, desc: "Neutralises toxins and adds a small hull bonus." },
+  { id: "scalemail", name: "Scale Mail", slot: "armor", difficulty: 4, n: 6, need: { cats: ["plate", "wing"], count: 1 }, species: { names: ["World Serpent", "Jewel Beetle", "Ladybug"], count: 1 }, desc: "Overlapping scales: solid hull and all-round damage reduction." },
+
+  /* ---------------- optics / utility ---------------- */
   { id: "lens", name: "Wide-Field Optics", slot: "optics", difficulty: 2, n: 4, need: { cats: ["wing", "core"], count: 1 }, desc: "Unlocks mouse-wheel zoom out. Better efficiency zooms further." },
   { id: "recall", name: "Recall Beacon", slot: "utility", difficulty: 4, n: 6, need: { cats: ["core"], count: 1 }, desc: "Press T to channel a teleport back to base." },
+  { id: "magnet", name: "Component Magnet", slot: "utility", difficulty: 3, n: 5, need: { cats: ["core", "body"], count: 1 }, species: { names: ["Worker Ant", "Honeybee"], count: 1 }, desc: "Passively drags loose components toward your ship from a wide radius." },
+
+  /* ---------------- active abilities (Z / X / C / V / F) ---------------- */
+  { id: "ab_emp", name: "EMP Burst", slot: "ability", difficulty: 3, n: 5, need: { cats: ["core", "shield"], count: 1 }, species: { names: ["Cicada", "Firefly"], count: 1 }, desc: "Discharges an electromagnetic ring that stuns every enemy around you." },
+  { id: "ab_salvo", name: "Missile Salvo", slot: "ability", difficulty: 4, n: 6, need: { cats: ["weapon"], count: 1 }, desc: "Fires a full ring of homing missiles at nearby enemies." },
+  { id: "ab_repair", name: "Nano Repair Field", slot: "ability", difficulty: 3, n: 5, need: { cats: ["body", "core"], count: 1 }, species: { names: ["Worker Ant", "Carpenter Ant"], count: 1 }, desc: "Instantly restores a large chunk of hull and tops up your shield." },
+  { id: "ab_blink", name: "Phase Blink", slot: "ability", difficulty: 4, n: 6, need: { cats: ["wing", "core"], count: 1 }, species: { names: ["Cicada", "Katydid", "Mantis"], count: 1 }, desc: "Teleports you a long way in the direction you are facing." },
+  { id: "ab_barrier", name: "Aegis Barrier", slot: "ability", difficulty: 3, n: 5, need: { cats: ["shield"], count: 1 }, desc: "Projects a temporary overshield that absorbs damage before your hull." },
+  { id: "ab_overdrive", name: "Overdrive", slot: "ability", difficulty: 5, n: 7, need: { cats: ["core", "weapon"], count: 1 }, species: { names: ["Tiger Beetle", "Hornet"], count: 1 }, desc: "Overclocks your weapons: far more damage and fire rate for a few seconds." },
+  { id: "ab_timewarp", name: "Time Warp", slot: "ability", difficulty: 5, n: 7, need: { cats: ["core", "wing"], count: 1 }, species: { names: ["Atlas Moth", "Luna Moth"], count: 1 }, desc: "Warps local time, slowing every enemy nearby to a crawl." },
+  { id: "ab_shockwave", name: "Shockwave", slot: "ability", difficulty: 4, n: 6, need: { cats: ["plate", "body"], count: 1 }, species: { names: ["Dung Beetle", "Scarab"], count: 1 }, desc: "Blasts everything around you outward and tears it apart." },
 ];
+
 export const RECIPE_BY_ID: Record<string, Recipe> = Object.fromEntries(RECIPES.map((r) => [r.id, r]));
-export const SLOT_NAME: Record<Slot, string> = { weapon: "Weapon", shield: "Shield", armor: "Armour", optics: "Optics", utility: "Utility" };
+export const SLOT_NAME: Record<Slot, string> = { weapon: "Weapon", shield: "Shield", armor: "Armour", optics: "Optics", utility: "Utility", ability: "Ability" };
 
 export function craftEfficiency(r: Recipe, comps: Comp[]) {
   if (!comps.length) return 0;
@@ -149,9 +201,13 @@ export function craftEfficiency(r: Recipe, comps: Comp[]) {
 
 export function recipeProblem(r: Recipe, comps: Comp[]): string | null {
   if (comps.length !== r.n) return `Needs exactly ${r.n} components`;
-  if (r.need) {
-    const have = comps.filter((c) => r.need!.cats.includes(KIND_CAT[c.kind])).length;
+  if (r.need?.cats) {
+    const have = comps.filter((c) => r.need!.cats!.includes(KIND_CAT[c.kind])).length;
     if (have < r.need.count) return `Needs ${r.need.count}x ${r.need.cats.map((c) => CAT_NAME[c]).join("/")}`;
+  }
+  if (r.species) {
+    const have = comps.filter((c) => r.species!.names.includes(c.species)).length;
+    if (have < r.species.count) return `Needs ${r.species.count}x part from ${r.species.names.join(" / ")}`;
   }
   return null;
 }
@@ -169,6 +225,34 @@ export interface Equip {
   utility: string | null;
 }
 
+/* ---------- active abilities ---------- */
+export const ABILITY_KEYS = ["Z", "X", "C", "V", "F"] as const;
+/** one of the five hotbar slots; holds a crafted ability item id or null */
+export type ActiveAbilitySlot = string | null;
+export const ABILITY_CODES = ["KeyZ", "KeyX", "KeyC", "KeyV", "KeyF"] as const;
+
+export interface AbilitySpec {
+  id: string;
+  name: string;
+  desc: string;
+  cd: number;
+  dur: number;
+  icon: string;
+  color: string;
+}
+
+export const ABILITY_LIST: AbilitySpec[] = [
+  { id: "ab_emp", name: "EMP Burst", desc: "Stuns every enemy within 760 units for 2.6s.", cd: 14, dur: 2.6, icon: "◉", color: "#7df9ff" },
+  { id: "ab_salvo", name: "Missile Salvo", desc: "Launches 10 homing missiles at the nearest enemies.", cd: 12, dur: 0, icon: "➤", color: "#ffb04d" },
+  { id: "ab_repair", name: "Nano Repair", desc: "Restores 35% hull and refills 60% of your shield.", cd: 22, dur: 0, icon: "✚", color: "#7dffb4" },
+  { id: "ab_blink", name: "Phase Blink", desc: "Teleports 520 units along your heading.", cd: 9, dur: 0, icon: "⟫", color: "#c77dff" },
+  { id: "ab_barrier", name: "Aegis Barrier", desc: "Absorbs damage with a temporary 2.5s overshield.", cd: 18, dur: 2.5, icon: "⬡", color: "#4dd2ff" },
+  { id: "ab_overdrive", name: "Overdrive", desc: "+120% damage and +80% fire rate for 6s.", cd: 26, dur: 6, icon: "⚡", color: "#ffe14d" },
+  { id: "ab_timewarp", name: "Time Warp", desc: "Slows all enemies within 900 units by 75% for 4s.", cd: 24, dur: 4, icon: "◷", color: "#ff7ad9" },
+  { id: "ab_shockwave", name: "Shockwave", desc: "Deals heavy damage and knocks enemies away from you.", cd: 16, dur: 0, icon: "◎", color: "#ff6b81" },
+];
+export const ABILITY_BY_ID: Record<string, AbilitySpec> = Object.fromEntries(ABILITY_LIST.map((a) => [a.id, a]));
+
 /* ---------- save ---------- */
 export interface SaveData {
   v: number;
@@ -182,14 +266,16 @@ export interface SaveData {
   inventory: Comp[];
   crafted: Crafted[];
   equip: Equip;
+  abilitySlots: ActiveAbilitySlot[];
   autoSell: boolean;
 }
 
 export function newSave(): SaveData {
   return {
-    v: 1, ts: Date.now(), name: "Pilot-" + Math.floor(1000 + Math.random() * 9000),
+    v: 2, ts: Date.now(), name: "Pilot-" + Math.floor(1000 + Math.random() * 9000),
     credits: 60, earned: 0, kills: 0, seq: 1, upgrades: {}, inventory: [], crafted: [],
-    equip: { weapon: [null, null, null], shield: null, armor: null, optics: null, utility: null }, autoSell: false,
+    equip: { weapon: [null, null, null], shield: null, armor: null, optics: null, utility: null },
+    abilitySlots: [null, null, null, null, null], autoSell: false,
   };
 }
 
@@ -197,13 +283,16 @@ export function migrate(raw: unknown): SaveData {
   const d = newSave();
   if (!raw || typeof raw !== "object") return d;
   const r = raw as Partial<SaveData>;
+  const abilitySlots = [0, 1, 2, 3, 4].map((i) => r.abilitySlots?.[i] ?? null);
   return {
     ...d,
     ...r,
+    v: 2,
     upgrades: { ...(r.upgrades ?? {}) },
     inventory: Array.isArray(r.inventory) ? r.inventory : [],
     crafted: Array.isArray(r.crafted) ? r.crafted : [],
     equip: { ...d.equip, ...(r.equip ?? {}), weapon: [0, 1, 2].map((i) => r.equip?.weapon?.[i] ?? null) },
+    abilitySlots,
   };
 }
 
@@ -211,13 +300,16 @@ export function migrate(raw: unknown): SaveData {
 export interface Stats {
   dmg: number; rate: number; barrels: number; pierce: number; crit: number; breaker: number; coreMul: number; frag: number;
   bulletSpeed: number; bulletRange: number;
-  hull: number; regen: number; armor: number; reactive: number; thorn: number;
+  hull: number; regen: number; armor: number; reactive: number; thorn: number; poisonResist: number;
   shieldMax: number; shieldRegen: number; shieldDelay: number; reflect: boolean; dampers: number;
+  dodge: number; kinetic: number; novaOnHit: number; nullField: number;
   thrust: number; accel: number; boostMul: number; boostRegen: number; hasBoost: boolean;
   hCount: number; hStr: number; hRange: number; hHp: number; hSpeed: number; towRelief: number;
   sellMul: number; dropChance: number; luck: number; cargo: number;
   zoomMin: number; tpTime: number; tpCd: number;
+  magnet: number; magnetRange: number;
   weapons: { rid: string; eff: number }[];
+  abilities: { rid: string; eff: number }[];
 }
 
 export function computeStats(s: SaveData): Stats {
@@ -231,29 +323,67 @@ export function computeStats(s: SaveData): Stats {
   let reflect = false;
   let reactive = 0;
   let thorn = 0;
+  let armor = 0.035 * L("armor");
+  let regen = 0.005 * L("regen");
+  let dodge = 0;
+  let kinetic = 0;
+  let novaOnHit = 0;
+  let nullField = 0;
+  let poisonResist = 0;
+  let thrust = 450 + 40 * L("thrust");
+  let accel = 1500 + 200 * L("handling");
   const weapons: { rid: string; eff: number }[] = [];
 
   for (const wid of s.equip.weapon) {
     const it = find(wid);
     if (it) weapons.push({ rid: it.rid, eff: it.eff });
   }
+  const abilities: { rid: string; eff: number }[] = [];
+  for (const aid of s.abilitySlots) {
+    const it = find(aid);
+    if (it && RECIPE_BY_ID[it.rid]?.slot === "ability") abilities.push({ rid: it.rid, eff: it.eff });
+  }
+
   const sh = find(s.equip.shield);
   if (sh) {
-    if (sh.rid === "deflector") { shieldMax += hull * 0.45 * sh.eff; }
-    if (sh.rid === "absorber") { shieldMax += hull * 0.22 * sh.eff; shieldRegen = 0.5; shieldDelay = 1.6; }
-    if (sh.rid === "reflector") { shieldMax += hull * 0.32 * sh.eff; reflect = true; }
+    const f = sh.eff;
+    switch (sh.rid) {
+      case "deflector": shieldMax += hull * 0.45 * f; break;
+      case "absorber": shieldMax += hull * 0.22 * f; shieldRegen = 0.5; shieldDelay = 1.6; break;
+      case "reflector": shieldMax += hull * 0.32 * f; reflect = true; break;
+      case "kinetic": shieldMax += hull * 0.38 * f; kinetic = clamp(0.3 * f, 0.1, 0.6); break;
+      case "phase": shieldMax += hull * 0.25 * f; dodge = clamp(0.12 * f, 0, 0.5); break;
+      case "ward": shieldMax += hull * 0.3 * f; shieldRegen = 0.9; shieldDelay = 1.2; break;
+      case "shell": shieldMax += hull * 0.2 * f; novaOnHit = f; break;
+      case "overcharge": shieldMax += hull * 0.7 * f; shieldRegen = 0.07; shieldDelay = 8; break;
+      case "nullfield": shieldMax += hull * 0.35 * f; nullField = f; break;
+      case "prismatic": shieldMax += hull * 0.4 * f; reflect = true; dodge += clamp(0.05 * f, 0, 0.3); break;
+    }
   }
   const ar = find(s.equip.armor);
   if (ar) {
-    if (ar.rid === "plating") hull *= 1 + 0.35 * ar.eff;
-    if (ar.rid === "reactive") reactive = clamp(0.12 * ar.eff, 0, 0.6);
-    if (ar.rid === "thorn") { thorn = ar.eff; hull *= 1 + 0.1 * ar.eff; }
+    const f = ar.eff;
+    switch (ar.rid) {
+      case "plating": hull *= 1 + 0.35 * f; break;
+      case "reactive": reactive = clamp(0.12 * f, 0, 0.6); break;
+      case "thorn": { thorn = f; hull *= 1 + 0.1 * f; break; }
+      case "chitin": hull *= 1 + 0.25 * f; armor += 0.02 * f; break;
+      case "carapace": hull *= 1 + 0.55 * f; thrust *= 1 - clamp(0.06 * f, 0, 0.35); break;
+      case "nanoweave": hull *= 1 + 0.12 * f; regen += 0.004 * f; break;
+      case "ablative": reactive += clamp(0.08 * f, 0, 0.5); break;
+      case "titan": hull *= 1 + 0.9 * f; thrust *= 1 - clamp(0.12 * f, 0, 0.5); break;
+      case "exoskeleton": thrust *= 1 + 0.12 * f; accel *= 1 + 0.1 * f; break;
+      case "venomguard": poisonResist = clamp(0.2 * f, 0, 0.9); hull *= 1 + 0.08 * f; break;
+      case "scalemail": armor += 0.03 * f; hull *= 1 + 0.18 * f; break;
+    }
   }
   const op = find(s.equip.optics);
   const zoomMin = op ? clamp(1 / (1 + 0.4 * op.eff), 0.28, 1) : 1;
   const ut = find(s.equip.utility);
   const tpTime = ut && ut.rid === "recall" ? clamp(6 / (0.6 + 0.5 * ut.eff), 2, 6) : 0;
   const tpCd = ut && ut.rid === "recall" ? clamp(100 / (0.5 + 0.5 * ut.eff), 20, 100) : 0;
+  const magnet = ut && ut.rid === "magnet" ? 1 : 0;
+  const magnetRange = magnet ? 420 + 320 * ut!.eff : 0;
 
   return {
     dmg: baseDmg,
@@ -267,17 +397,22 @@ export function computeStats(s: SaveData): Stats {
     bulletSpeed: 900 * (1 + 0.1 * L("velocity")),
     bulletRange: 760 * (1 + 0.08 * L("velocity")),
     hull,
-    regen: 0.005 * L("regen"),
-    armor: 0.035 * L("armor"),
+    regen,
+    armor,
     reactive,
     thorn,
+    poisonResist,
     shieldMax,
     shieldRegen,
     shieldDelay,
     reflect,
     dampers: 0.12 * L("dampers"),
-    thrust: 450 + 40 * L("thrust"),
-    accel: 1500 + 200 * L("handling"),
+    dodge,
+    kinetic,
+    novaOnHit,
+    nullField,
+    thrust,
+    accel,
     boostMul: 1.7 + 0.1 * Math.max(0, L("boost") - 1),
     boostRegen: 14 + 3 * L("boost"),
     hasBoost: L("boost") > 0,
@@ -294,6 +429,9 @@ export function computeStats(s: SaveData): Stats {
     zoomMin,
     tpTime,
     tpCd,
+    magnet,
+    magnetRange,
     weapons,
+    abilities,
   };
 }

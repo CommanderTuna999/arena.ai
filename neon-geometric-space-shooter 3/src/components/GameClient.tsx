@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Game, type Hud } from "@/game/engine";
 import { render } from "@/game/render";
 import {
-  CAT_NAME, KIND_CAT, RARITIES, RECIPES, RECIPE_BY_ID, SLOT_NAME, UPGRADES, UP_CATS, craftEfficiency, migrate, newSave, recipeProblem, upgradeCost,
+  ABILITY_LIST, CAT_NAME, KIND_CAT, RARITIES, RECIPES, RECIPE_BY_ID, SLOT_NAME, UPGRADES, UP_CATS, craftEfficiency, migrate, newSave, recipeProblem, upgradeCost,
   type Comp, type Recipe, type SaveData, type Slot, type UpCat,
 } from "@/game/data";
 import { clamp, fmtNum } from "@/game/math";
@@ -46,10 +46,14 @@ export default function GameClient() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const gameRef = useRef<Game | null>(null);
   const [hud, setHud] = useState<Hud | null>(null);
+  const [game, setGame] = useState<Game | null>(null);
   const [menu, setMenu] = useState(false);
   const [help, setHelp] = useState(false);
+  const [adminOpen, setAdminOpen] = useState(false);
   const menuRef = useRef(false);
-  menuRef.current = menu;
+  const adminRef = useRef(false);
+  useEffect(() => { menuRef.current = menu; }, [menu]);
+  useEffect(() => { adminRef.current = adminOpen; }, [adminOpen]);
 
   useEffect(() => {
     let raf = 0;
@@ -65,6 +69,7 @@ export default function GameClient() {
       const ctx = canvas.getContext("2d")!;
       const game = new Game(save, pid);
       gameRef.current = game;
+      setGame(game);
       if (!localStorage.getItem("neon-hive-help")) setHelp(true);
 
       const resize = () => {
@@ -87,8 +92,9 @@ export default function GameClient() {
           if (game.nearBase()) { game.blur(); setMenu(true); }
           return;
         }
-        if (e.code === "Escape") { setMenu(false); return; }
-        if (menuRef.current) return;
+        if (e.code === "Backquote") { e.preventDefault(); setMenu(false); setAdminOpen((v) => !v); game.blur(); return; }
+        if (e.code === "Escape") { setMenu(false); setAdminOpen(false); return; }
+        if (menuRef.current || adminRef.current) return;
         if (!e.repeat) game.keyDown(e.code);
         else game.input.keys.add(e.code);
       };
@@ -142,14 +148,14 @@ export default function GameClient() {
   }, []);
 
   const closeHelp = () => { localStorage.setItem("neon-hive-help", "1"); setHelp(false); };
-  const game = gameRef.current;
 
   return (
     <div className="fixed inset-0 select-none overflow-hidden bg-[#04050c] font-mono text-cyan-100">
       <canvas ref={canvasRef} className="block cursor-crosshair" />
       <div className="pointer-events-none fixed inset-0" style={{ background: "radial-gradient(ellipse at center, transparent 55%, rgba(0,0,10,0.65) 100%)" }} />
       {!hud && <div className="absolute inset-0 grid place-items-center text-xl tracking-[0.4em] text-cyan-300">LOADING SAVE…</div>}
-      {hud && game && <Hud_ hud={hud} onOpen={() => { game.blur(); setMenu(true); }} onHelp={() => setHelp(true)} />}
+      {hud && game && <Hud_ hud={hud} onOpen={() => { game.blur(); setAdminOpen(false); setMenu(true); }} onHelp={() => setHelp(true)} onAdmin={() => { game.blur(); setMenu(false); setAdminOpen(true); }} />}
+      {hud && game && adminOpen && <AdminPanel game={game} hud={hud} onClose={() => setAdminOpen(false)} />}
       {hud && game && menu && <Hangar game={game} hud={hud} onClose={() => setMenu(false)} />}
       {help && <Help onClose={closeHelp} />}
     </div>
@@ -167,8 +173,9 @@ function Bar({ v, max, color, label, h = 10 }: { v: number; max: number; color: 
   );
 }
 
-function Hud_({ hud, onOpen, onHelp }: { hud: Hud; onOpen: () => void; onHelp: () => void }) {
+function Hud_({ hud, onOpen, onHelp, onAdmin }: { hud: Hud; onOpen: () => void; onHelp: () => void; onAdmin: () => void }) {
   const hpCol = hud.hp / hud.maxHp > 0.5 ? "#2dffa0" : hud.hp / hud.maxHp > 0.25 ? "#ffd24d" : "#ff4d6d";
+  const [selAb, setSelAb] = useState<number | null>(null);
   return (
     <>
       <div className="pointer-events-none absolute left-3 top-3 flex flex-col gap-1.5">
@@ -198,6 +205,36 @@ function Hud_({ hud, onOpen, onHelp }: { hud: Hud; onOpen: () => void; onHelp: (
 
       <div className="pointer-events-none absolute left-1/2 top-2 -translate-x-1/2 text-[11px] text-cyan-300/70">
         ● {hud.online} pilot{hud.online === 1 ? "" : "s"} online · {hud.fps} fps{hud.zoomOn ? " · wheel = zoom" : ""}
+        {hud.overdrive && <span className="ml-2 font-bold text-yellow-300">⚡ OVERDRIVE</span>}
+        {hud.admin.on && <span className="ml-2 font-bold text-fuchsia-300">ADMIN</span>}
+      </div>
+
+      {/* ability hotbar */}
+      <div className="pointer-events-none absolute right-3 top-1/2 flex -translate-y-1/2 flex-col gap-2">
+        {hud.abilities.map((a, i) => {
+          const frac = a.empty ? 0 : clamp(a.cd / Math.max(0.01, a.max), 0, 1);
+          return (
+            <button
+              key={a.key}
+              onClick={() => setSelAb(selAb === i ? null : i)}
+              className="pointer-events-auto relative grid h-12 w-12 place-items-center rounded-sm border bg-black/60 text-lg"
+              style={{ borderColor: a.empty ? "rgba(255,255,255,0.15)" : a.ready ? a.color : "rgba(255,255,255,0.2)", color: a.empty ? "#475569" : a.color, boxShadow: a.ready && !a.empty ? `0 0 12px ${a.color}66` : undefined }}
+              title={a.name}
+            >
+              <span className="pointer-events-none absolute left-0.5 top-0 text-[8px] font-bold text-white/60">{a.key}</span>
+              <span className="leading-none">{a.icon}</span>
+              {!a.empty && frac > 0 && (
+                <span className="pointer-events-none absolute inset-0 grid place-items-center bg-black/70 text-[10px] font-bold text-white/80">{Math.ceil(a.cd)}</span>
+              )}
+            </button>
+          );
+        })}
+        {selAb !== null && hud.abilities[selAb] && (
+          <div className="w-44 rounded-sm border border-cyan-300/40 bg-black/80 p-2 text-[10px] leading-tight text-cyan-100">
+            <div className="font-bold" style={{ color: hud.abilities[selAb].color }}>{hud.abilities[selAb].name}</div>
+            <div className="text-white/60">[{hud.abilities[selAb].key}] {hud.abilities[selAb].ready ? "ready" : `recharging ${Math.ceil(hud.abilities[selAb].cd)}s`}</div>
+          </div>
+        )}
       </div>
 
       <div className="pointer-events-none absolute bottom-3 left-3 flex flex-col gap-1">
@@ -207,6 +244,8 @@ function Hud_({ hud, onOpen, onHelp }: { hud: Hud; onOpen: () => void; onHelp: (
       </div>
 
       <div className="absolute bottom-3 right-3 flex items-center gap-2">
+        {hud.lock && <span className="rounded-sm border border-red-400/70 bg-black/70 px-2 py-1 text-[10px] font-bold text-red-300">◎ LOCK</span>}
+        <button onClick={onAdmin} className="rounded-sm border border-fuchsia-300/50 bg-black/60 px-2 py-1 text-xs text-fuchsia-200 hover:bg-fuchsia-400/20" title="Admin panel (`)">` ADMIN</button>
         <button onClick={onHelp} className="rounded-sm border border-cyan-300/40 bg-black/60 px-2 py-1 text-xs text-cyan-200 hover:bg-cyan-400/20">? CONTROLS</button>
       </div>
 
@@ -239,6 +278,8 @@ function Help({ onClose }: { onClose: () => void }) {
     ["T", "Recall beacon (craftable)"],
     ["E", "Open hangar at your base"],
     ["Mouse wheel", "Zoom out (craftable optics)"],
+    ["Z X C V F", "Fire equipped active abilities"],
+    ["` (backtick)", "Admin panel (infinite resources)"],
   ];
   return (
     <div className="absolute inset-0 z-50 grid place-items-center bg-black/70 p-4">
@@ -251,7 +292,8 @@ function Help({ onClose }: { onClose: () => void }) {
         <ul className="mt-4 list-disc space-y-1 pl-5 text-xs text-cyan-100/80">
           <li>Destroyed pieces drop components. Harpoon them and tow them into the <b className="text-yellow-300">yellow hex</b> at your hangar.</li>
           <li>Too heavy? Stronger cables, more harpoons on one part, or a better winch help. Overloaded cables snap.</li>
-          <li>Sell components for credits or store them to craft weapons, shields, armour, optics and a teleporter.</li>
+          <li>Sell components for credits or store them to craft weapons, shields, armour, optics, utilities and active abilities.</li>
+          <li>Enemies only use their abilities at higher tiers, and the biggest creatures turn slowly — flank them. Deep toward the centre lurks the World Serpent.</li>
           <li>Danger rises toward the centre of the map: bigger, deadlier, more layered enemies. Your progress autosaves.</li>
         </ul>
         <button onClick={onClose} className="mt-5 w-full rounded-sm border-2 border-cyan-300 bg-cyan-400/20 py-2 font-bold tracking-widest text-cyan-100 hover:bg-cyan-400/40">LAUNCH</button>
@@ -351,6 +393,10 @@ function stars(n: number) { return "★".repeat(n) + "☆".repeat(5 - n); }
 function effectText(game: Game, r: Recipe, eff: number) {
   const st = game.stats;
   const e = eff;
+  if (r.slot === "ability") {
+    const spec = ABILITY_LIST.find((a) => a.id === r.id);
+    if (spec) return `${spec.desc} · ${(spec.cd / (0.7 + 0.3 * e)).toFixed(0)}s cooldown`;
+  }
   switch (r.id) {
     case "pulse": return `Auto turret: ${fmtNum(st.dmg * 0.6 * e)} dmg every 0.45s`;
     case "scatter": return `6 pellets x ${fmtNum(st.dmg * 0.55 * e)} dmg`;
@@ -364,7 +410,23 @@ function effectText(game: Game, r: Recipe, eff: number) {
     case "thorn": return `Hit shockwave ${fmtNum(st.dmg * 3 * e)} dmg, +${Math.round(10 * e)}% hull`;
     case "lens": return `Zoom out to ${clamp(1 / (1 + 0.4 * e), 0.28, 1).toFixed(2)}x`;
     case "recall": return `Channel ${clamp(6 / (0.6 + 0.5 * e), 2, 6).toFixed(1)}s, cooldown ${Math.round(clamp(100 / (0.5 + 0.5 * e), 20, 100))}s`;
-    default: return "";
+    case "magnet": return `Pulls loose parts from ${Math.round(420 + 320 * e)} units`;
+    case "kinetic": return `+${fmtNum(st.hull * 0.38 * e)} shield, -${Math.round(clamp(30 * e, 10, 60))}% damage while it holds`;
+    case "phase": return `+${fmtNum(st.hull * 0.25 * e)} shield, ${Math.round(clamp(12 * e, 0, 50))}% dodge`;
+    case "ward": return `+${fmtNum(st.hull * 0.3 * e)} shield with near-instant recharge`;
+    case "shell": return `+${fmtNum(st.hull * 0.2 * e)} shield, explodes when it breaks`;
+    case "overcharge": return `+${fmtNum(st.hull * 0.7 * e)} shield, very slow recharge`;
+    case "nullfield": return `+${fmtNum(st.hull * 0.35 * e)} shield, swallows enemy shots`;
+    case "prismatic": return `+${fmtNum(st.hull * 0.4 * e)} shield, reflects bolts + dodge`;
+    case "chitin": return `+${Math.round(25 * e)}% hull, -${(2 * e).toFixed(1)}% extra`;
+    case "carapace": return `+${Math.round(55 * e)}% hull, slower engines`;
+    case "nanoweave": return `+${(0.4 * e).toFixed(1)}%/s hull regen, +${Math.round(12 * e)}% hull`;
+    case "ablative": return `-${Math.round(clamp(8 * e, 0, 50))}% damage taken`;
+    case "titan": return `+${Math.round(90 * e)}% hull, much slower`;
+    case "exoskeleton": return `+${Math.round(12 * e)}% thrust, +${Math.round(10 * e)}% accel`;
+    case "venomguard": return `${Math.round(clamp(20 * e, 0, 90))}% poison resist, +${Math.round(8 * e)}% hull`;
+    case "scalemail": return `+${Math.round(18 * e)}% hull, -${(3 * e).toFixed(1)}% damage`;
+    default: return r.wpn ? `${fmtNum(st.dmg * r.wpn.dmg * e)} dmg · ${(r.wpn.cd / (0.7 + 0.3 * e)).toFixed(2)}s` : r.desc;
   }
 }
 
@@ -383,7 +445,14 @@ function Craft({ game }: { game: Game }) {
     const sorted = [...inv].sort((a, b) => b.tier - a.tier || b.mass - a.mass);
     const pick: Comp[] = [];
     if (r.need) {
-      for (const c of sorted) if (pick.length < r.need.count && r.need.cats.includes(KIND_CAT[c.kind])) pick.push(c);
+      for (const c of sorted) if (pick.length < r.need.count && r.need.cats?.includes(KIND_CAT[c.kind])) pick.push(c);
+    }
+      if (r.species) {
+      let have = pick.filter((c) => r.species!.names.includes(c.species)).length;
+      for (const c of sorted) {
+        if (have >= r.species.count || pick.length >= r.n) break;
+        if (r.species.names.includes(c.species) && !pick.includes(c)) { pick.push(c); have++; }
+      }
     }
     for (const c of sorted) if (pick.length < r.n && !pick.includes(c)) pick.push(c);
     setSel(pick.map((c) => c.id));
@@ -392,7 +461,7 @@ function Craft({ game }: { game: Game }) {
     const res = game.craft(rid, sel);
     if (res) setMsg(res); else { setMsg(`Crafted ${r.name}!`); setSel([]); }
   };
-  const slots: Slot[] = ["weapon", "shield", "armor", "optics", "utility"];
+  const slots: Slot[] = ["weapon", "shield", "armor", "optics", "utility", "ability"];
   return (
     <div className="grid gap-3 md:grid-cols-[260px_1fr]">
       <div className="space-y-2">
@@ -416,7 +485,8 @@ function Craft({ game }: { game: Game }) {
           </div>
           <div className="text-xs text-white/70">{r.desc}</div>
           <div className="mt-1 text-xs text-cyan-200">
-            Needs {r.n} components{r.need ? ` (at least ${r.need.count}x ${r.need.cats.map((c) => CAT_NAME[c]).join(" or ")})` : ""}.
+            Needs {r.n} components{r.need ? ` (at least ${r.need.count}x ${(r.need.cats ?? []).map((c) => CAT_NAME[c]).join(" or ")})` : ""}
+            {r.species ? ` · ${r.species.count}x from ${r.species.names.join(" / ")}` : ""}.
           </div>
           <div className="mt-2 text-sm">
             Efficiency: <b className={eff >= 1.2 ? "text-emerald-300" : "text-yellow-200"}>{chosen.length ? `${Math.round(eff * 100)}%` : "—"}</b>
@@ -426,9 +496,9 @@ function Craft({ game }: { game: Game }) {
           <div className="mt-2 flex items-center gap-2">
             <button onClick={autoFill} className="rounded-sm border border-cyan-300/60 px-3 py-1 text-xs font-bold text-cyan-200 hover:bg-cyan-400/20">AUTO-FILL BEST</button>
             <button onClick={() => setSel([])} className="rounded-sm border border-white/20 px-3 py-1 text-xs text-white/70 hover:bg-white/10">CLEAR</button>
-            <button disabled={!!problem} onClick={doCraft} className={`ml-auto rounded-sm border-2 px-5 py-1.5 text-sm font-black tracking-widest ${problem ? "border-white/10 text-white/30" : "border-yellow-300 bg-yellow-300/20 text-yellow-100 hover:bg-yellow-300/40"}`}>CRAFT</button>
+            <button disabled={!!problem && !game.admin.components} onClick={doCraft} className={`ml-auto rounded-sm border-2 px-5 py-1.5 text-sm font-black tracking-widest ${problem ? "border-white/10 text-white/30" : "border-yellow-300 bg-yellow-300/20 text-yellow-100 hover:bg-yellow-300/40"}`}>CRAFT</button>
           </div>
-          <div className="mt-1 text-xs text-red-300">{problem && chosen.length > 0 ? problem : ""}{msg && <span className="text-emerald-300"> {msg}</span>}</div>
+          <div className="mt-1 text-xs text-red-300">{problem && (chosen.length > 0 || !game.admin.components) ? problem : ""}{game.admin.components && <span className="text-fuchsia-300"> admin: free crafting</span>}{msg && <span className="text-emerald-300"> {msg}</span>}</div>
         </div>
         <div className="mb-1 mt-3 text-[10px] font-bold tracking-widest text-white/50">SELECT COMPONENTS ({sel.length}/{r.n})</div>
         {inv.length === 0 && <div className="text-sm text-white/50">No components stored. Harpoon drops back to base first!</div>}
@@ -436,13 +506,14 @@ function Craft({ game }: { game: Game }) {
           {inv.map((c) => {
             const on = sel.includes(c.id);
             const col = RARITIES[c.tier].color;
-            const need = r.need?.cats.includes(KIND_CAT[c.kind]);
+            const need = !!r.need?.cats?.includes(KIND_CAT[c.kind]) || !!r.species?.names.includes(c.species);
             return (
               <button key={c.id} onClick={() => toggle(c.id)} className="flex items-center gap-2 rounded-sm border p-1.5 text-left" style={{ borderColor: on ? "#ffe14d" : col + "66", background: on ? "rgba(255,225,77,0.15)" : "rgba(255,255,255,0.03)" }}>
                 <CompIcon c={c} size={36} />
                 <div className="min-w-0 text-[10px] leading-tight">
                   <div className="truncate font-bold" style={{ color: col }}>{c.name}</div>
                   <div className="text-white/50">{RARITIES[c.tier].name} · {CAT_NAME[KIND_CAT[c.kind]]}{need ? " ✓" : ""}</div>
+                  {r.species?.names.includes(c.species) && <div className="truncate text-fuchsia-300/80">required species</div>}
                 </div>
               </button>
             );
@@ -491,29 +562,34 @@ function Storage({ game }: { game: Game }) {
   );
 }
 
-function Loadout({ game }: { game: Game }) {
-  const save = game.save;
-  const items = save.crafted;
-  const opts = (slot: Slot) => items.filter((i) => RECIPE_BY_ID[i.rid]?.slot === slot);
-  const label = (id: string) => { const it = items.find((i) => i.id === id)!; return `${RECIPE_BY_ID[it.rid].name} (${Math.round(it.eff * 100)}%)`; };
-  const SlotSel = ({ slot, idx, value, title }: { slot: Slot; idx: number; value: string | null; title: string }) => (
+function SlotSel({ game, slot, idx, value, title }: { game: Game; slot: Slot; idx: number; value: string | null; title: string }) {
+  const items = game.save.crafted;
+  const opts = items.filter((i) => RECIPE_BY_ID[i.rid]?.slot === slot);
+  return (
     <div className="flex items-center gap-2 rounded-sm border border-white/15 bg-white/[0.03] p-2 text-xs">
       <div className="w-24 font-bold text-cyan-200">{title}</div>
       <select value={value ?? ""} onChange={(e) => game.equip(slot, idx, e.target.value || null)} className="min-w-0 flex-1 rounded-sm border border-white/20 bg-black px-1 py-1">
         <option value="">— empty —</option>
-        {opts(slot).map((i) => <option key={i.id} value={i.id}>{label(i.id)}</option>)}
+        {opts.map((i) => <option key={i.id} value={i.id}>{RECIPE_BY_ID[i.rid].name} ({Math.round(i.eff * 100)}%)</option>)}
       </select>
     </div>
   );
+}
+
+function Loadout({ game }: { game: Game }) {
+  const save = game.save;
+  const items = save.crafted;
   return (
     <div className="grid gap-3 md:grid-cols-2">
       <div className="space-y-1.5">
         <div className="text-[10px] font-bold tracking-widest text-white/50">EQUIPPED</div>
-        {[0, 1, 2].map((i) => <SlotSel key={i} slot="weapon" idx={i} value={save.equip.weapon[i]} title={`Weapon ${i + 1}`} />)}
-        <SlotSel slot="shield" idx={0} value={save.equip.shield} title="Shield" />
-        <SlotSel slot="armor" idx={0} value={save.equip.armor} title="Armour" />
-        <SlotSel slot="optics" idx={0} value={save.equip.optics} title="Optics" />
-        <SlotSel slot="utility" idx={0} value={save.equip.utility} title="Utility" />
+        {[0, 1, 2].map((i) => <SlotSel key={i} game={game} slot="weapon" idx={i} value={save.equip.weapon[i]} title={`Weapon ${i + 1}`} />)}
+        <SlotSel game={game} slot="shield" idx={0} value={save.equip.shield} title="Shield" />
+        <SlotSel game={game} slot="armor" idx={0} value={save.equip.armor} title="Armour" />
+        <SlotSel game={game} slot="optics" idx={0} value={save.equip.optics} title="Optics" />
+        <SlotSel game={game} slot="utility" idx={0} value={save.equip.utility} title="Utility" />
+        <div className="mt-2 text-[10px] font-bold tracking-widest text-white/50">ACTIVE ABILITIES</div>
+        {["Z", "X", "C", "V", "F"].map((k, i) => <SlotSel key={k} game={game} slot="ability" idx={i} value={save.abilitySlots[i]} title={`[${k}] Ability`} />)}
         <div className="mt-2 rounded-sm border border-white/10 p-2 text-[11px] text-white/60">
           Hull {fmtNum(game.stats.hull)} · Shield {fmtNum(game.stats.shieldMax)} · Damage taken -{Math.round((1 - (1 - game.stats.armor) * (1 - game.stats.reactive)) * 100)}% · Zoom {game.stats.zoomMin.toFixed(2)}x
         </div>
@@ -567,6 +643,46 @@ function Settings({ game }: { game: Game }) {
           <div className="flex items-center gap-2 text-xs text-red-300">Really wipe everything? <button onClick={reset} className="rounded-sm border border-red-400 bg-red-500/30 px-3 py-1 font-bold">YES, WIPE</button><button onClick={() => setConfirm(false)} className="rounded-sm border border-white/30 px-3 py-1">Cancel</button></div>
         )}
       </div>
+    </div>
+  );
+}
+
+/* ---------------------------------------------------------------- Admin */
+function AdminPanel({ game, hud, onClose }: { game: Game; hud: Hud; onClose: () => void }) {
+  const a = hud.admin;
+  const rows: [keyof typeof a, string, string][] = [
+    ["credits", "Infinite Credits", "Upgrades cost nothing and crafting stays affordable."],
+    ["health", "Infinite Health", "Hull and shield are pinned at maximum."],
+    ["damage", "Infinite Damage", "Every shot deals 100x damage."],
+    ["components", "Infinite Components", "Craft anything without spending components."],
+  ];
+  return (
+    <div className="absolute left-3 top-24 z-40 w-72 rounded-md border border-fuchsia-400/60 bg-[#0b0714]/95 p-3 text-xs shadow-[0_0_30px_rgba(255,122,217,0.25)]">
+      <div className="flex items-center justify-between">
+        <div className="text-sm font-black tracking-[0.25em] text-fuchsia-300">ADMIN</div>
+        <button onClick={onClose} className="rounded-sm border border-white/25 px-2 py-0.5 text-[10px] text-white/70 hover:bg-white/10">CLOSE [`]</button>
+      </div>
+      <label className="mt-2 flex cursor-pointer items-center justify-between rounded-sm border border-fuchsia-300/30 bg-fuchsia-500/10 px-2 py-1.5">
+        <span className="font-bold text-fuchsia-200">Enable admin mode</span>
+        <input type="checkbox" checked={a.on} onChange={(e) => game.setAdmin("on", e.target.checked)} />
+      </label>
+      <div className={`mt-2 space-y-1 ${a.on ? "" : "opacity-50"}`}>
+        {rows.map(([key, label, desc]) => (
+          <label key={key} className="flex cursor-pointer items-start gap-2 rounded-sm border border-white/10 bg-white/[0.03] p-1.5" title={desc}>
+            <input type="checkbox" className="mt-0.5" disabled={!a.on} checked={a[key]} onChange={(e) => game.setAdmin(key, e.target.checked)} />
+            <span>
+              <span className="block font-bold text-white/85">{label}</span>
+              <span className="block text-[10px] leading-tight text-white/45">{desc}</span>
+            </span>
+          </label>
+        ))}
+      </div>
+      <div className="mt-2 flex gap-2">
+        <button onClick={() => game.adminAll(true)} className="flex-1 rounded-sm border border-fuchsia-300/50 bg-fuchsia-400/15 px-2 py-1 text-[10px] font-bold text-fuchsia-200 hover:bg-fuchsia-400/30">ALL ON</button>
+        <button onClick={() => game.adminAll(false)} className="flex-1 rounded-sm border border-white/20 px-2 py-1 text-[10px] text-white/70 hover:bg-white/10">ALL OFF</button>
+      </div>
+      <button onClick={() => game.adminCredits(1_000_000)} className="mt-2 w-full rounded-sm border border-yellow-300 bg-yellow-300/15 px-2 py-1 text-[11px] font-black text-yellow-200 hover:bg-yellow-300/30">+1,000,000 CR</button>
+      <div className="mt-2 text-[9px] leading-tight text-white/35">Session-only sandbox flags. Nothing here is saved to your pilot.</div>
     </div>
   );
 }
