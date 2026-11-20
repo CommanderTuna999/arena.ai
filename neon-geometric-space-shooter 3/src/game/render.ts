@@ -1,5 +1,5 @@
 import { TAU, clamp, fmtNum } from "./math";
-import { BASE, CAT_NAME, KIND_CAT, RARITIES, SHIP_R, WORLD_R, ZONE_EDGES } from "./data";
+import { BASE, CAT_NAME, KIND_CAT, RARITIES, SHIP_R, WEAPON_RANGE, WEAPON_TINT, WORLD_R, ZONE_EDGES } from "./data";
 import { N_ROPE, type Enemy, type Game, type LComp } from "./engine";
 
 function bend(e: Enemy, p: { seg: number }) {
@@ -87,6 +87,25 @@ export function render(g: Game, ctx: CanvasRenderingContext2D) {
   ctx.shadowBlur = 0;
 
   drawBase(g, ctx, z, t);
+
+  /* ---- weapon range overlay (settings → showRanges) ---- */
+  if (g.save.showRanges && !g.player.dead) {
+    const px = g.player.x, py = g.player.y;
+    const seen = new Set<string>();
+    for (const w of g.stats.weapons) {
+      if (!w.rid || seen.has(w.rid)) continue;
+      seen.add(w.rid);
+      const rr = WEAPON_RANGE[w.rid] ?? 600;
+      const col = WEAPON_TINT[w.rid] ?? "#7df9ff";
+      ctx.fillStyle = col + "0d";
+      ctx.beginPath(); ctx.arc(px, py, rr, 0, TAU); ctx.fill();
+      ctx.strokeStyle = col + "59";
+      ctx.lineWidth = 1.6 / z;
+      ctx.setLineDash([16 / z, 14 / z]);
+      ctx.beginPath(); ctx.arc(px, py, rr, 0, TAU); ctx.stroke();
+      ctx.setLineDash([]);
+    }
+  }
 
   /* ---- puddles ---- */
   for (const q of g.puddles) {
@@ -627,19 +646,38 @@ function drawEnemy(g: Game, ctx: CanvasRenderingContext2D, e: Enemy, z: number, 
   }
   ctx.restore();
 
-  // armour plating: thin grey shell, one ring per layer
-  for (let i = 0; i < e.shells.length; i++) {
-    const rr = e.shellR + i * 6;
-    const f = clamp(e.shells[i].hp / Math.max(1, e.shells[i].max), 0, 1);
-    const hit = e.shellHit > 0 ? 0.25 : 0;
-    ctx.beginPath(); ctx.arc(e.x, e.y, rr, 0, TAU);
-    ctx.strokeStyle = `rgba(176,188,200,${0.22 + 0.35 * f + hit})`;
-    ctx.lineWidth = (2.2 + hit * 4) / z;
-    if (i === e.shells.length - 1) { ctx.shadowColor = "#c3ccd6"; ctx.shadowBlur = 8; }
-    ctx.stroke();
-    ctx.shadowBlur = 0;
-    ctx.beginPath(); ctx.arc(e.x, e.y, rr - 2.5, 0, TAU);
-    ctx.strokeStyle = `rgba(120,132,144,${0.12 + 0.15 * f})`; ctx.lineWidth = 1 / z; ctx.stroke();
+  // armour plating: a thick grey layer that follows every part outline
+  if (e.shells.length) {
+    for (let si = 0; si < e.shells.length; si++) {
+      const f = clamp(e.shells[si].hp / Math.max(1, e.shells[si].max), 0, 1);
+      const hit = e.shellHit > 0 ? 0.22 : 0;
+      const grow = 3.5 + si * 3.5;
+      ctx.fillStyle = `rgba(150,160,172,${0.12 + 0.16 * f + hit * 0.4})`;
+      ctx.strokeStyle = `rgba(198,208,220,${0.34 + 0.4 * f + hit})`;
+      ctx.lineWidth = (2.4 + si * 1.6) / z;
+      if (si === e.shells.length - 1) { ctx.shadowColor = "#c3ccd6"; ctx.shadowBlur = 7; }
+      for (const idx of e.order) {
+        const p = e.parts[idx];
+        if (!p.alive) continue;
+        const gr = p.g >= 0 ? e.groups[p.g] : null;
+        if (gr && gr.ang !== 0) { ctx.save(); ctx.translate(gr.px, gr.py); ctx.rotate(gr.ang); ctx.translate(-gr.px, -gr.py); }
+        const bo = bend(e, p);
+        if (bo !== 0) { ctx.save(); ctx.translate(0, bo); }
+        const k = 1 + grow / Math.max(1, p.r);
+        ctx.beginPath();
+        for (let i = 0; i < p.poly.length; i += 2) {
+          const vx = p.cx + (p.poly[i] - p.cx) * k;
+          const vy = p.cy + (p.poly[i + 1] - p.cy) * k;
+          if (i === 0) ctx.moveTo(vx, vy); else ctx.lineTo(vx, vy);
+        }
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        if (bo !== 0) ctx.restore();
+        if (gr && gr.ang !== 0) ctx.restore();
+      }
+      ctx.shadowBlur = 0;
+    }
   }
 
   // status auras

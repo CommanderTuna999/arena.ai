@@ -9,6 +9,7 @@ export interface SettingsPanelProps {
   save: SaveData;
   onAutoFire: (v: boolean) => void;
   onShowCompInfo: (v: boolean) => void;
+  onShowRanges: (v: boolean) => void;
   onAutoSell: (v: boolean) => void;
   onName: (v: string) => void;
   onReset: () => void;
@@ -19,7 +20,7 @@ export interface SettingsPanelProps {
  * All player-facing settings in one place. Used by the title screen and by the
  * in-game gear / Nest → SYSTEM tab, so both always expose the same options.
  */
-export default function SettingsPanel({ save, onAutoFire, onShowCompInfo, onAutoSell, onName, onReset, onRestore }: SettingsPanelProps) {
+export default function SettingsPanel({ save, onAutoFire, onShowCompInfo, onShowRanges, onAutoSell, onName, onReset, onRestore }: SettingsPanelProps) {
   const [name, setName] = useState(save.name);
   const [confirm, setConfirm] = useState(false);
   const [code, setCode] = useState("");
@@ -79,6 +80,12 @@ export default function SettingsPanel({ save, onAutoFire, onShowCompInfo, onAuto
           hint="Hover a loose component to see its name, rarity, value and mass."
           checked={save.showCompInfo}
           onChange={onShowCompInfo}
+        />
+        <Toggle
+          label="Weapon range circles"
+          hint="Draw a faint coloured ring for each fitted weapon's engagement range."
+          checked={save.showRanges}
+          onChange={onShowRanges}
         />
         <Toggle
           label="Auto-sell docked components"

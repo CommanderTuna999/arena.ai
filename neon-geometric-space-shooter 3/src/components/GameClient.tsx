@@ -10,6 +10,7 @@ import {
 } from "@/game/data";
 import { clamp, fmtNum } from "@/game/math";
 import SettingsPanel from "@/components/SettingsPanel";
+import RecipeIcon from "@/components/RecipeIcon";
 
 const SAVE_KEY = "neon-hive-save-v1";
 const PID_KEY = "neon-hive-pid";
@@ -460,7 +461,7 @@ function effectText(game: Game, r: Recipe, eff: number) {
     case "plating": return `+${Math.round(35 * e)}% max hull`;
     case "reactive": return `-${Math.round(clamp(12 * e, 0, 60))}% damage taken`;
     case "thorn": return `Hit shockwave ${fmtNum(st.dmg * 3 * e)} dmg, +${Math.round(10 * e)}% hull`;
-    case "lens": return `Zoom out to ${clamp(1 / (1 + 0.4 * e), 0.28, 1).toFixed(2)}x`;
+    case "lens": return `Zoom out to ${clamp(1 / (1 + 2.8 * e), 0.04, 1).toFixed(2)}x (${Math.round(1 / clamp(1 / (1 + 2.8 * e), 0.04, 1))}x range)`;
     case "recall": return `Channel ${clamp(6 / (0.6 + 0.5 * e), 2, 6).toFixed(1)}s, cooldown ${Math.round(clamp(100 / (0.5 + 0.5 * e), 20, 100))}s`;
     case "magnet": return `Pulls loose parts from ${Math.round(420 + 320 * e)} units`;
     case "kinetic": return `+${fmtNum(st.hull * 0.38 * e)} shield, -${Math.round(clamp(30 * e, 10, 60))}% damage while it holds`;
@@ -521,9 +522,12 @@ function Craft({ game }: { game: Game }) {
           <div key={s}>
             <div className="mb-1 text-[10px] font-bold tracking-widest text-white/50">{SLOT_NAME[s].toUpperCase()}</div>
             {RECIPES.filter((x) => x.slot === s).map((x) => (
-              <button key={x.id} onClick={() => { setRid(x.id); setSel([]); setMsg(""); }} className={`mb-1 block w-full rounded-sm border px-2 py-1.5 text-left text-xs ${rid === x.id ? "border-yellow-300 bg-yellow-300/15" : "border-white/15 hover:bg-white/10"}`}>
-                <div className="flex justify-between"><span className="font-bold text-cyan-100">{x.name}</span><span className="text-yellow-300">{stars(x.difficulty)}</span></div>
-                <div className="text-[10px] text-white/50">{x.n} components</div>
+              <button key={x.id} onClick={() => { setRid(x.id); setSel([]); setMsg(""); }} className={`mb-1 flex w-full items-center gap-2 rounded-sm border px-2 py-1.5 text-left text-xs ${rid === x.id ? "border-yellow-300 bg-yellow-300/15" : "border-white/15 hover:bg-white/10"}`}>
+                <RecipeIcon id={x.id} slot={x.slot} size={34} />
+                <div className="min-w-0 flex-1">
+                  <div className="flex justify-between gap-1"><span className="truncate font-bold text-cyan-100">{x.name}</span><span className="shrink-0 text-yellow-300">{stars(x.difficulty)}</span></div>
+                  <div className="text-[10px] text-white/50">{x.n} components</div>
+                </div>
               </button>
             ))}
           </div>
@@ -531,9 +535,12 @@ function Craft({ game }: { game: Game }) {
       </div>
       <div>
         <div className="rounded-sm border border-yellow-300/40 bg-yellow-300/5 p-3">
-          <div className="flex items-center justify-between">
-            <div className="text-lg font-black text-yellow-200">{r.name}</div>
-            <div className="text-yellow-300">Difficulty {stars(r.difficulty)}</div>
+          <div className="flex items-center gap-3">
+            <RecipeIcon id={r.id} slot={r.slot} size={54} />
+            <div className="min-w-0 flex-1">
+              <div className="text-lg font-black leading-tight text-yellow-200">{r.name}</div>
+              <div className="text-yellow-300">Difficulty {stars(r.difficulty)}</div>
+            </div>
           </div>
           <div className="text-xs text-white/70">{r.desc}</div>
           <div className="mt-1 text-xs text-cyan-200">
@@ -677,6 +684,7 @@ function Settings({ game }: { game: Game }) {
       save={game.save}
       onAutoFire={(v) => { game.setAutoFire(v); }}
       onShowCompInfo={(v) => { game.setShowCompInfo(v); }}
+      onShowRanges={(v) => { game.setShowRanges(v); }}
       onAutoSell={(v) => { game.setAutoSell(v); }}
       onName={(v) => { game.setName(v); }}
       onReset={() => apply(() => game.hardReset(newSave()))}

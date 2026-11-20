@@ -108,18 +108,22 @@ export default function StartScreen() {
             PLAY
           </button>
 
-          <div className="mt-5 flex items-center gap-7">
+          <div className="mt-5 flex items-center gap-3">
             <button
               onClick={() => setSettings(true)}
-              className="flex items-center gap-1.5 text-[10px] font-bold tracking-[0.25em] text-white/40 transition hover:text-cyan-200"
+              aria-label="Settings"
+              title="Settings"
+              className="grid h-11 w-11 place-items-center rounded-sm border border-white/20 bg-black/40 text-cyan-100/60 transition hover:border-cyan-300/60 hover:bg-cyan-400/10 hover:text-cyan-200"
             >
-              <GearIcon /> SETTINGS
+              <GearIcon />
             </button>
             <button
               onClick={() => setChanges(true)}
-              className="flex items-center gap-1.5 text-[10px] font-bold tracking-[0.25em] text-white/40 transition hover:text-cyan-200"
+              aria-label="Changelog"
+              title="Changelog"
+              className="grid h-11 w-11 place-items-center rounded-sm border border-white/20 bg-black/40 text-cyan-100/60 transition hover:border-cyan-300/60 hover:bg-cyan-400/10 hover:text-cyan-200"
             >
-              <ListIcon /> CHANGELOG
+              <DocIcon />
             </button>
           </div>
         </div>
@@ -135,6 +139,7 @@ export default function StartScreen() {
             save={save}
             onAutoFire={(v) => persist({ ...save, autoFire: v, ts: Date.now() })}
             onShowCompInfo={(v) => persist({ ...save, showCompInfo: v, ts: Date.now() })}
+            onShowRanges={(v) => persist({ ...save, showRanges: v, ts: Date.now() })}
             onAutoSell={(v) => persist({ ...save, autoSell: v, ts: Date.now() })}
             onName={(v) => { persist({ ...save, name: v, ts: Date.now() }); setTypedName(v); }}
             onReset={() => { persist(newSave()); setTypedName(""); }}
@@ -165,17 +170,19 @@ function Modal({ title, onClose, children }: { title: string; onClose: () => voi
 
 function GearIcon() {
   return (
-    <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="1.7">
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.6">
       <circle cx="12" cy="12" r="3.2" />
       <path d="M12 2.8v2.4M12 18.8v2.4M2.8 12h2.4M18.8 12h2.4M5.5 5.5l1.7 1.7M16.8 16.8l1.7 1.7M18.5 5.5l-1.7 1.7M7.2 16.8l-1.7 1.7" />
     </svg>
   );
 }
 
-function ListIcon() {
+function DocIcon() {
   return (
-    <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="1.7">
-      <path d="M4 6.5h16M4 12h16M4 17.5h10" />
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round">
+      <path d="M6 2.8h7.4L18 7.4v13.8H6z" />
+      <path d="M13.2 3v4.6H18" />
+      <path d="M8.6 12h6.8M8.6 15.2h6.8M8.6 18.4h4.2" />
     </svg>
   );
 }

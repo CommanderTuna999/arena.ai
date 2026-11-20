@@ -8,7 +8,7 @@
  *   CHANGELOG and mirror the details in docs/CHANGELOG.md.
  */
 
-export const VERSION = "1.2";
+export const VERSION = "1.3";
 
 export interface ChangeEntry {
   version: string;
@@ -19,6 +19,20 @@ export interface ChangeEntry {
 }
 
 export const CHANGELOG: ChangeEntry[] = [
+  {
+    version: "1.3",
+    date: "20 Nov 2026",
+    title: "Crowded rings, huge cores, clearer guns",
+    points: [
+      "Settings and changelog on the title screen are now icon buttons.",
+      "Outer zones spawn far more enemies, with a separate cap for every zone.",
+      "At least a few enemies are kept inside the view at all times.",
+      "Cores are 10x larger; armour plating now hugs every part outline in grey.",
+      "Wide-Field Optics zoom out seven times further.",
+      "Auto-fire never shoots off-screen; every weapon has its own range.",
+      "New setting: coloured weapon range circles. Crafting menu has item art.",
+    ],
+  },
   {
     version: "1.2",
     date: "20 Nov 2026",

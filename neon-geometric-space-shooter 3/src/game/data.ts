@@ -228,6 +228,43 @@ export const RECIPES: Recipe[] = [
 ];
 
 export const RECIPE_BY_ID: Record<string, Recipe> = Object.fromEntries(RECIPES.map((r) => [r.id, r]));
+
+/* ---------- weapon engagement ranges ----------
+ * Range is a role, not a flat number: cutters and shotguns fight at knife range,
+ * machine guns hold the mid line, and the rail gun is the long-range option.
+ * fireWeapons() and the range overlay both read this table, so the circles the
+ * player sees are exactly the distances the guns will shoot.
+ * Auto-fire additionally refuses targets outside the visible screen.
+ */
+export const WEAPON_RANGE: Record<string, number> = {
+  cutter: 190,
+  lance: 330,
+  acid: 400,
+  scatter: 420,
+  sonic: 470,
+  pulse: 560,
+  venom: 560,
+  emp: 560,
+  hmg: 650,
+  bypass: 700,
+  chain: 780,
+  flak: 800,
+  gravity: 800,
+  mines: 800,
+  missile: 850,
+  homing: 900,
+  cluster: 950,
+  rail: 1150,
+};
+
+/** Range-circle colour by weapon role (also used in the crafting icons). */
+export const WEAPON_TINT: Record<string, string> = {
+  cutter: "#ff5c8a", lance: "#7df9ff", bypass: "#7df9ff", rail: "#7df9ff", emp: "#7df9ff", chain: "#7df9ff", sonic: "#7df9ff",
+  pulse: "#ffd24d", scatter: "#ffd24d", hmg: "#ffd24d", flak: "#ffd24d",
+  missile: "#ff7a5c", cluster: "#ff7a5c", mines: "#ff7a5c", gravity: "#ff7a5c",
+  acid: "#9dff6a", venom: "#9dff6a",
+  homing: "#ff5cf0",
+};
 export const SLOT_NAME: Record<Slot, string> = { weapon: "Weapon", shield: "Shield", armor: "Armour", optics: "Optics", utility: "Utility", ability: "Ability" };
 
 export function craftEfficiency(r: Recipe, comps: Comp[]) {
@@ -295,6 +332,7 @@ export const ABILITY_BY_ID: Record<string, AbilitySpec> = Object.fromEntries(ABI
  * Persistent player settings (see Nest / Settings panel):
  *   autoFire     — crafted weapons fire on their own when a target is in range (default true)
  *   showCompInfo — hover tooltip on loose components: name, rarity, value, mass (default true)
+ *   showRanges   — translucent coloured circles showing each fitted weapon's range (default false)
  *   autoSell     — sell docked components automatically
  * Version history lives in src/game/changelog.ts (semantic: 1.x features, 1.0.x fixes).
  */
@@ -316,6 +354,8 @@ export interface SaveData {
   autoFire: boolean;
   /** show name, rarity, value and mass when hovering a loose component */
   showCompInfo: boolean;
+  /** draw a translucent coloured ring for every fitted weapon's range */
+  showRanges: boolean;
 }
 
 export function newSave(): SaveData {
@@ -323,7 +363,7 @@ export function newSave(): SaveData {
     v: 2, ts: Date.now(), name: "",
     credits: 60, earned: 0, kills: 0, seq: 1, upgrades: {}, inventory: [], crafted: [],
     equip: { weapon: [null, null, null], shield: null, armor: null, optics: null, utility: null },
-    abilitySlots: [null, null, null, null, null], autoSell: false, autoFire: true, showCompInfo: true,
+    abilitySlots: [null, null, null, null, null], autoSell: false, autoFire: true, showCompInfo: true, showRanges: false,
   };
 }
 
@@ -345,6 +385,7 @@ export function migrate(raw: unknown): SaveData {
     abilitySlots,
     autoFire: r.autoFire ?? true,
     showCompInfo: r.showCompInfo ?? true,
+    showRanges: r.showRanges ?? false,
   };
 }
 
@@ -473,7 +514,7 @@ export function computeStats(s: SaveData): Stats {
     }
   }
   const op = find(s.equip.optics);
-  const zoomMin = op ? clamp(1 / (1 + 0.4 * op.eff), 0.28, 1) : 1;
+  const zoomMin = op ? clamp(1 / (1 + 2.8 * op.eff), 0.04, 1) : 1;
   const ut = find(s.equip.utility);
   const tpTime = ut && ut.rid === "recall" ? clamp(6 / (0.6 + 0.5 * ut.eff), 2, 6) : 0;
   const tpCd = ut && ut.rid === "recall" ? clamp(100 / (0.5 + 0.5 * ut.eff), 20, 100) : 0;

@@ -1,7 +1,7 @@
 import { TAU, angDiff, clamp, distToPoly, hash2, lerp, mulberry32, pointInPoly } from "./math";
 import {
   ABILITY_BY_ID, BASE, DMG_MUL, HP_MUL, KIND_CAT, RECIPE_BY_ID, SHIP_R, UPGRADES, WORLD_R, compMass, compValue, computeStats, craftEfficiency,
-  recipeProblem, upgradeCost, zoneTier, type Comp, type PartKind, type SaveData, type Slot, type Stats,
+  recipeProblem, upgradeCost, zoneTier, WEAPON_RANGE, type Comp, type PartKind, type SaveData, type Slot, type Stats,
 } from "./data";
 import { SPECIES_LIST, buildEnemy, type AbilityDef, type Group, type Part, type ProjType, type SpeciesDef } from "./enemies";
 
@@ -10,25 +10,30 @@ import { SPECIES_LIST, buildEnemy, type AbilityDef, type Group, type Part, type 
  *   Base cannon      : st.dmg per shot, rate 4 + 0.7/level, 1 + barrels shots.
  *   Crafted weapons  : fully automatic; damage = st.dmg * multiplier * efficiency.
  *                      B / AUTO pill toggles the rack (persisted in save.autoFire).
+ *                      Each weapon has its own range (data.ts WEAPON_RANGE); auto-fire
+ *                      never targets anything outside the current view.
  *   Precision missiles: right-click marks a part; kind-4 bullets ignore all collision
  *                      and hit that part for 3.1x base damage. Re-marking resets reload.
  *   Plating          : tier 3/4/5 get 1/2/3 shells of 5*HP_MUL[tier] HP. Kinetic and
  *                      explosive hits deal 30%; laser and shock deal 0 and are stopped.
- *   Spawning         : uniform 1 enemy per 1,500u chunk in every zone, hard cap 36,
- *                      chunk pass every 1.0s, no spawns within 1,200u of the player.
- *                      Every zone has the same spawn pressure; the core only feels
- *                      emptier because its enemies are physically far larger.
+ *   Spawning         : per-zone density/cap [2.6/56, 2.2/50, 1.8/44, 1.4/38, 1.1/32,
+ *                      0.9/28] per 1,500u chunk, chunk pass every 1.0s. A top-up pass
+ *                      refills to ~85% of the local cap, and a visibility floor keeps
+ *                      at least 4 enemies inside the view in the outer/mid rings
+ *                      (2 in the deep rings).
  *   Body wave        : parts tagged seg >= 0 shift laterally by
  *                      amp * sin(walk*speed - seg*k); used for centipede and snake.
  * ------------------------------------------------------------------------- */
 export const CH = 1500;
 export const N_ROPE = 22;
-/* Spawn pressure: enemies per 1,500u chunk. Deliberately identical in every zone —
- * the outer rings are not treated as a quiet tutorial, and the core is not thinned
- * out by hand. Deep zones feel emptier only because their enemies are much larger.
- * MAX_ENEMIES is the lag guard: the chunk pass stops adding once it is reached. */
-const DENS = [1, 1, 1, 1, 1, 1];
-const MAX_ENEMIES = 36;
+/* Spawn pressure, indexed by zone tier (0 = outer/common … 5 = mythical core).
+ * Early rings are crowded on purpose — players should always see a few enemies —
+ * and every zone has its own population cap so the lag guard scales with the tier.
+ * ZONE_DENS is enemies per 1,500u chunk per chunk pass. */
+const ZONE_DENS = [2.6, 2.2, 1.8, 1.4, 1.1, 0.9];
+const ZONE_CAP = [56, 50, 44, 38, 32, 28];
+/** absolute ceiling across every zone; only a safety net */
+const HARD_MAX = 60;
 /** shells shave 70% off kinetic hits; lasers and shockwaves do nothing to them */
 const SHELL_TAKE = 0.3;
 /** The segmented snake boss is disabled for now; the species stays in the bestiary. */
@@ -345,6 +350,7 @@ export class Game {
   setName(n: string) { this.save.name = n.slice(0, 16); this.markDirty(); }
   setAutoFire(v: boolean) { this.autoFire = v; this.save.autoFire = v; this.markDirty(); this.rev++; }
   setShowCompInfo(v: boolean) { this.save.showCompInfo = v; this.markDirty(); this.rev++; }
+  setShowRanges(v: boolean) { this.save.showRanges = v; this.markDirty(); this.rev++; }
   /** loose component under the mouse (for the hover tooltip) */
   compUnderCursor(): LComp | null {
     const [mx, my] = this.mouseWorld();
@@ -866,7 +872,7 @@ export class Game {
       tags, shields: [], weaponParts, shieldParts, dist: 9999, contactCd: 0, hasChange: false,
       dot: 0, dotT: 0, melt: 0, slowT: 0, slowF: 1,
       shells: Array.from({ length: tier >= 3 && !spd.bodyWave ? tier - 2 : 0 }, () => ({ hp: 5 * HP_MUL[tier], max: 5 * HP_MUL[tier] })),
-      shellHit: 0, shellR: b.radius + 10,
+      shellHit: 0, shellR: b.radius + 6,
       bend: spd.bodyWave ? { amp: spd.bodyWave.amp * b.size, k: spd.bodyWave.k, speed: spd.bodyWave.speed } : null,
     };
   }
@@ -875,11 +881,12 @@ export class Game {
     const ccx = (cx + 0.5) * CH, ccy = (cy + 0.5) * CH;
     if (Math.hypot(ccx, ccy) > WORLD_R + 300) return;
     const zt = zoneTier(Math.hypot(ccx, ccy));
-    const room = this.enemies.length < MAX_ENEMIES;
-    let n = room ? Math.floor(DENS[zt]) : 0;
-    if (room && rng() < DENS[zt] - n) n++;
+    const cap = Math.min(HARD_MAX, ZONE_CAP[zt]);
+    const room = this.enemies.length < cap;
+    let n = room ? Math.floor(ZONE_DENS[zt]) : 0;
+    if (room && rng() < ZONE_DENS[zt] - n) n++;
     for (let i = 0; i < n; i++) {
-      if (this.enemies.length >= MAX_ENEMIES) break;
+      if (this.enemies.length >= cap) break;
       const x = cx * CH + rng() * CH, y = cy * CH + rng() * CH;
       const d = Math.hypot(x, y);
       const rolls = [rng(), rng(), rng(), rng()];
@@ -892,7 +899,7 @@ export class Game {
       const spi = pickSpecies(x, y, () => rolls[1], z2);
       const pack = SPECIES_LIST[spi].pack[tier];
       for (let k = 0; k < pack; k++) {
-        if (this.enemies.length >= MAX_ENEMIES) break;
+        if (this.enemies.length >= cap) break;
         const ox = k === 0 ? 0 : Math.cos(k * 2.4) * (80 + k * 40), oy = k === 0 ? 0 : Math.sin(k * 2.4) * (80 + k * 40);
         this.enemies.push(this.makeEnemy(spi, tier, x + ox, y + oy, key, hash2(cx + k, cy + i, 5)));
       }
@@ -921,10 +928,69 @@ export class Game {
       if (Math.max(Math.abs(a - pcx), Math.abs(b - pcy)) > 3) this.chunks.delete(key);
     }
     this.enemies = this.enemies.filter((e) => this.chunks.has(e.chunk) || (e.aggro && e.dist < 4000));
+    this.topUp();
+    this.ensureNearby();
+  }
+
+  /** Refill the local population toward ~85% of the player's zone cap. */
+  private topUp() {
+    const p = this.player;
+    const zt = zoneTier(Math.hypot(p.x, p.y));
+    const target = Math.round(ZONE_CAP[zt] * 0.85);
+    const add = Math.min(3, target - this.enemies.length);
+    if (add <= 0) return;
+    const keys = [...this.chunks];
+    if (!keys.length) return;
+    for (let k = 0; k < add; k++) {
+      if (this.enemies.length >= HARD_MAX) return;
+      const key = keys[Math.floor(Math.random() * keys.length)];
+      const [cx, cy] = key.split(",").map(Number);
+      for (let tries = 0; tries < 8; tries++) {
+        const x = cx * CH + Math.random() * CH, y = cy * CH + Math.random() * CH;
+        if (Math.hypot(x, y) > WORLD_R - 250) continue;
+        if (Math.hypot(x - BASE.x, y - BASE.y) < BASE.safe + 350) continue;
+        if (Math.hypot(x - p.x, y - p.y) < 900) continue;
+        const z2 = zoneTier(Math.hypot(x, y));
+        const tier = Math.max(0, z2 - (Math.random() < 0.55 ? 0 : 1));
+        this.enemies.push(this.makeEnemy(pickSpecies(x, y, Math.random, z2), tier, x, y, key, hash2(cx + tries, cy, 21)));
+        break;
+      }
+    }
+  }
+
+  /** Keep a few enemies inside the player's view, even after a killing spree. */
+  private ensureNearby() {
+    const p = this.player;
+    const zt = zoneTier(Math.hypot(p.x, p.y));
+    const want = zt >= 4 ? 2 : 4;
+    const viewR = this.viewRadius();
+    let have = 0;
+    for (const e of this.enemies) if (!e.dead && Math.hypot(e.x - p.x, e.y - p.y) < viewR * 1.05) have++;
+    let need = want - have;
+    if (need <= 0) return;
+    const base = clamp(viewR * 0.78, 300, 2200);
+    while (need-- > 0 && this.enemies.length < HARD_MAX) {
+      for (let tries = 0; tries < 8; tries++) {
+        const a = Math.random() * TAU;
+        const d = base * (0.8 + Math.random() * 0.4);
+        const x = p.x + Math.cos(a) * d, y = p.y + Math.sin(a) * d;
+        if (Math.hypot(x, y) > WORLD_R - 250) continue;
+        if (Math.hypot(x - BASE.x, y - BASE.y) < BASE.safe + 350) continue;
+        const z2 = zoneTier(Math.hypot(x, y));
+        const key = `${Math.floor(x / CH)},${Math.floor(y / CH)}`;
+        this.enemies.push(this.makeEnemy(pickSpecies(x, y, Math.random, z2), Math.max(0, z2 - 1), x, y, key, hash2(x | 0, y | 0, 31)));
+        break;
+      }
+    }
   }
 
   /* ---------------- enemies: part damage ---------------- */
   partAt(e: Enemy, lx: number, ly: number): Part | null {
+    /* The core is deliberately huge now, so it can overlap smaller parts.
+     * Prefer any ordinary part under the cursor and fall back to the core:
+     * the big core stays selectable where it sticks out, without stealing
+     * clicks aimed at a leg or plate drawn on top of it. */
+    let coreHit: Part | null = null;
     for (let k = e.order.length - 1; k >= 0; k--) {
       const p = e.parts[e.order[k]];
       if (!p.alive) continue;
@@ -940,9 +1006,11 @@ export class Game {
       if (p.seg >= 0 && e.bend) y -= this.bendOff(e, p);
       const ddx = x - p.cx, ddy = y - p.cy;
       if (ddx * ddx + ddy * ddy > p.r * p.r) continue;
-      if (pointInPoly(x, y, p.poly)) return p;
+      if (!pointInPoly(x, y, p.poly)) continue;
+      if (p.kind === "core") { coreHit = p; continue; }
+      return p;
     }
-    return null;
+    return coreHit;
   }
   integrity(e: Enemy) {
     let cur = 0, max = 0;
@@ -1924,6 +1992,9 @@ export class Game {
     this.burst(x, y, color, 18, 6, 380);
     this.shake = Math.max(this.shake, 8);
   }
+  /** visible radius in world units (half the screen diagonal at the current zoom) */
+  viewRadius() { return Math.hypot(this.w, this.h) / 2 / Math.max(0.04, this.cam.z); }
+
   /* Every crafted weapon is automatic: it picks its own target and fires when
    * something is in range. B (or the AUTO button) disables the whole rack.
    * Damage is always st.dmg (base cannon) * weapon multiplier * efficiency, so
@@ -1931,6 +2002,8 @@ export class Game {
   private fireWeapons(dt: number, base: number) {
     const p = this.player, st = this.stats;
     if (!this.autoFire || p.dead) return;
+    const view = this.viewRadius() * 0.95;
+    const R = (id: string) => Math.min(WEAPON_RANGE[id] ?? 600, view);
     if (p.wCd.length < st.weapons.length) p.wCd = [...p.wCd, ...new Array(st.weapons.length - p.wCd.length).fill(0)];
     st.weapons.forEach((w, i) => {
       p.wCd[i] -= dt;
@@ -1947,14 +2020,14 @@ export class Game {
       const aim = (t: Enemy) => Math.atan2(t.y - oy, t.x - ox);
       switch (w.rid) {
         case "pulse": {
-          const t = this.nearestEnemy(p.x, p.y, 650);
+          const t = this.nearestEnemy(p.x, p.y, R("pulse"));
           if (!t) return;
           p.wCd[i] = cd(0.45);
           shot(ox, oy, aim(t), 1100, 0.8, dmg * 0.6 * eff, 0);
           break;
         }
         case "scatter": {
-          const t = this.nearestEnemy(p.x, p.y, 470);
+          const t = this.nearestEnemy(p.x, p.y, R("scatter"));
           if (!t) return;
           p.wCd[i] = cd(0.75);
           const a0 = aim(t);
@@ -1962,14 +2035,14 @@ export class Game {
           break;
         }
         case "missile": {
-          const t = this.nearestEnemy(p.x, p.y, 1000);
+          const t = this.nearestEnemy(p.x, p.y, R("missile"));
           if (!t) return;
           p.wCd[i] = cd(1.5);
           for (let k = 0; k < 2; k++) shot(ox, oy, aim(t) + (k ? 0.4 : -0.4), 260, 3.2, dmg * 2.2 * eff, 1, { target: t });
           break;
         }
         case "lance": {
-          const t = this.nearestEnemy(p.x, p.y, 420);
+          const t = this.nearestEnemy(p.x, p.y, R("lance"));
           if (!t) return;
           p.wCd[i] = cd(0.12);
           this.beam(p.x, p.y, aim(t), 320 + 80 * eff, dmg * 0.22 * eff, 2 + Math.floor(eff));
@@ -1978,41 +2051,42 @@ export class Game {
         case "homing": {
           const lock = this.lock;
           if (!lock || lock.e.dead || !lock.part.alive) return;
+          if (Math.hypot(lock.e.x - p.x, lock.e.y - p.y) > R("homing")) return;
           const wpos = this.partWorld(lock.e, lock.part);
           p.wCd[i] = cd(1.7);
           shot(ox, oy, Math.atan2(wpos[1] - oy, wpos[0] - ox), 360, 4.4, dmg * 3.1 * eff, 4, { lockE: lock.e, lockP: lock.part });
           break;
         }
         case "bypass": {
-          const t = this.nearestEnemy(p.x, p.y, 820);
+          const t = this.nearestEnemy(p.x, p.y, R("bypass"));
           if (!t) return;
           p.wCd[i] = cd(0.1);
           this.beam(p.x, p.y, aim(t), 420 + 90 * eff, dmg * 0.16 * eff, 3, true);
           break;
         }
         case "hmg": {
-          const t = this.nearestEnemy(p.x, p.y, 780);
+          const t = this.nearestEnemy(p.x, p.y, R("hmg"));
           if (!t) return;
           p.wCd[i] = cd(0.075);
           shot(ox, oy, aim(t) + (Math.random() - 0.5) * 0.13, 1150, 0.55, dmg * 0.1 * eff, 0);
           break;
         }
         case "emp": {
-          const t = this.nearestEnemy(p.x, p.y, 640);
+          const t = this.nearestEnemy(p.x, p.y, R("emp"));
           if (!t) return;
           p.wCd[i] = cd(2.6);
           this.empBlast(p.x, p.y, 620, 1.8, dmg * 1.4 * eff);
           break;
         }
         case "cutter": {
-          const t = this.nearestEnemy(p.x, p.y, 250);
+          const t = this.nearestEnemy(p.x, p.y, R("cutter"));
           if (!t) return;
           p.wCd[i] = cd(0.18);
           this.beam(p.x, p.y, aim(t), 175 + 20 * eff, dmg * 1.1 * eff, 1 + Math.floor(eff));
           break;
         }
         case "acid": {
-          const t = this.nearestEnemy(p.x, p.y, 460);
+          const t = this.nearestEnemy(p.x, p.y, R("acid"));
           if (!t) return;
           p.wCd[i] = cd(0.16);
           const a0 = aim(t);
@@ -2020,7 +2094,7 @@ export class Game {
           break;
         }
         case "chain": {
-          let cur = this.nearestEnemy(p.x, p.y, 900);
+          let cur = this.nearestEnemy(p.x, p.y, R("chain"));
           if (!cur) return;
           p.wCd[i] = cd(0.8);
           const seen = new Set<number>();
@@ -2040,7 +2114,7 @@ export class Game {
           break;
         }
         case "flak": {
-          const t = this.nearestEnemy(p.x, p.y, 950);
+          const t = this.nearestEnemy(p.x, p.y, R("flak"));
           if (!t) return;
           p.wCd[i] = cd(0.9);
           const d0 = Math.hypot(t.x - ox, t.y - oy);
@@ -2048,7 +2122,7 @@ export class Game {
           break;
         }
         case "rail": {
-          const t = this.nearestEnemy(p.x, p.y, 1400);
+          const t = this.nearestEnemy(p.x, p.y, R("rail"));
           if (!t) return;
           p.wCd[i] = cd(1.4);
           this.beam(p.x, p.y, aim(t), 1500, dmg * 2.4 * eff, 12, true);
@@ -2056,7 +2130,7 @@ export class Game {
           break;
         }
         case "gravity": {
-          const t = this.nearestEnemy(p.x, p.y, 900);
+          const t = this.nearestEnemy(p.x, p.y, R("gravity"));
           if (!t) return;
           p.wCd[i] = cd(3.2);
           const [gx, gy] = clampWorld(t.x, t.y);
@@ -2064,7 +2138,7 @@ export class Game {
           break;
         }
         case "mines": {
-          const t = this.nearestEnemy(p.x, p.y, 900);
+          const t = this.nearestEnemy(p.x, p.y, R("mines"));
           if (!t) return;
           p.wCd[i] = cd(1.1);
           const ang = base + Math.PI;
@@ -2074,7 +2148,7 @@ export class Game {
         case "drones":
           break;
         case "venom": {
-          const t = this.nearestEnemy(p.x, p.y, 700);
+          const t = this.nearestEnemy(p.x, p.y, R("venom"));
           if (!t) return;
           p.wCd[i] = cd(0.35);
           const a0 = aim(t);
@@ -2082,7 +2156,7 @@ export class Game {
           break;
         }
         case "sonic": {
-          const t = this.nearestEnemy(p.x, p.y, 600);
+          const t = this.nearestEnemy(p.x, p.y, R("sonic"));
           if (!t) return;
           p.wCd[i] = cd(1.6);
           for (const e of this.enemies) {
@@ -2100,7 +2174,7 @@ export class Game {
           break;
         }
         case "cluster": {
-          const t = this.nearestEnemy(p.x, p.y, 1100);
+          const t = this.nearestEnemy(p.x, p.y, R("cluster"));
           if (!t) return;
           p.wCd[i] = cd(2.2);
           shot(ox, oy, aim(t), 280, 3.2, dmg * 1.7 * eff, 1, { target: t, split: 4 });

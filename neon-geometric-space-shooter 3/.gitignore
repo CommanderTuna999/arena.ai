@@ -4,3 +4,5 @@ out/
 build/
 *.tsbuildinfo
 .env*.local
+downloads/
+public/*.zip

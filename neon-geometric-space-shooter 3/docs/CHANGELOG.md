@@ -3,6 +3,74 @@
 Everything below is implemented in the current build. Numbers are the actual constants used by
 the simulation, not design targets.
 
+## 0. v1.3 — crowd, cores, plating and firing discipline
+
+### Title screen
+- SETTINGS and CHANGELOG are now **icon buttons** (gear, document) rather than text links, each
+  44×44 with an accessible label. The wordmark, name field, PLAY and version are unchanged.
+
+### Spawn pressure, per zone
+| Zone tier | 0 outer | 1 | 2 | 3 | 4 | 5 core |
+| --- | --- | --- | --- | --- | --- | --- |
+| Enemies per 1,500u chunk | 2.6 | 2.2 | 1.8 | 1.4 | 1.1 | 0.9 |
+| Population cap | 56 | 50 | 44 | 38 | 32 | 28 |
+
+- `ZONE_DENS` / `ZONE_CAP` in `engine.ts`; `HARD_MAX = 60` is only a safety net.
+- A **top-up pass** every chunk tick refills toward ~85% of the player's zone cap, so killing does
+  not leave the ring empty.
+- A **visibility floor** (`ensureNearby`) keeps at least **4** enemies inside the view in tiers 0–3
+  and **2** in tiers 4–5, spawned at ~78% of the view radius instead of the old 1,200u exclusion
+  for this specific case.
+- Measured in the harness: rim / mid / core = **54 / 35 / 29** enemies, and 4 visible within the
+  screen at the rim.
+
+### Cores and plating
+- Core radius is multiplied by **√10**, i.e. **10× the area**, without changing any other part.
+  Cores draw beneath the body (layer 0) and `partAt` prefers non-core parts, so the big core does
+  not steal clicks aimed at legs or plates; its exposed edges are still selectable.
+- Plating is no longer a circle. Every shell layer expands each live part polygon by
+  `3.5 + 3.5·layer` world units, filled grey with a matching thick stroke — an extra grey copy of
+  the component outline. The hit shell remains a body-sized ring (`b.radius + 6`).
+
+### Weapons, view and ranges
+- Auto-fire targets only what is on screen: `viewRadius = hypot(w,h)/2 / zoom`, with ranges clamped
+  to 95% of it.
+- Weapon ranges now live in `WEAPON_RANGE` (`data.ts`) and are role-based:
+
+| Role | Weapons | Range |
+| --- | --- | --- |
+| Point blank | Plasma Cutter | 190 |
+| Short beam | Arc Lance | 330 |
+| Short spray | Acid Sprayer | 400 |
+| Shotgun | Scatter Driver | 420 |
+| Brawler | Sonic Emitter | 470 |
+| Standard turret | Pulse Turret, Venom Injector, EMP Cannon | 560 |
+| Mid machine gun | Heavy Machine Gun | 650 |
+| Bypass | Shield-Bypass Laser | 700 |
+| Chain | Chain Lightning | 780 |
+| Area | Flak, Gravity Well, Mine Layer | 800 |
+| Missile | Seeker Pod | 850 |
+| Precision | Homing Missile Launcher | 900 |
+| Cluster | Cluster Pod | 950 |
+| Sniper | Rail Driver | 1150 |
+
+- New save setting **`showRanges`** (default off) draws a faint filled circle plus dashed rim in the
+  weapon's role colour for every fitted weapon.
+
+### Optics
+- Wide-Field Optics zoom term raised 7×: `zoomMin = clamp(1/(1 + 2.8·eff), 0.04, 1)` (was
+  `0.4` / `0.28`). Maximum zoom-out range is therefore 25× the default view instead of 3.6×.
+
+### Crafting visuals
+- `RecipeIcon.tsx` draws an actual SVG silhouette for every recipe: turrets, scatter barrels,
+  missile pods, beams and rails, EMP rings, cutters, acid nozzles, chain lightning, flak, gravity
+  wells, mines, drones, sonic arcs, shields, layered plate, optics and abilities. Icons appear in
+  the recipe list (34px) and the detail header (54px), tinted by weapon role.
+
+### Portable build
+- `scripts/export-static.sh` produces a static `out/` and zips it with `serve.py` and `PLAY.txt`.
+  The zip has no API routes: progress is localStorage + save codes, and the shared map is off.
+
 ## 0. Title screen, settings, changelog and versioning (v1.2)
 
 - **Title screen is the loading screen.** `WOFGUE.IO` is the whole design: a very large, tightly
@@ -111,20 +179,11 @@ and every ability scales with base damage and overdrive.
 
 ## 4. Spawn pressure
 
-| Zone tier | 0 (outer) | 1 | 2 | 3 | 4 | 5 (core) |
-| --- | --- | --- | --- | --- | --- | --- |
-| Enemies per 1,500u chunk | 1.0 | 1.0 | 1.0 | 1.0 | 1.0 | 1.0 |
-
-- **Every zone spawns at the same pressure.** The outer rings are no longer quieter than the core,
-  and the core is no longer hand-thinned: `DENS = [1,1,1,1,1,1]` in `engine.ts`.
-- Deep zones *feel* emptier only because their enemies are physically far larger; the spawn rules
-  are identical. The live population is what changes, not the per-chunk rate.
-- Hard population cap: **36** — the chunk pass simply stops adding enemies once 36 are alive, which
-  is the lag guard on phones.
-- Chunk evaluation every **1.0s**; chunks still spawn in a 5×5 neighbourhood.
-- Spawns never occur within 1,200u of the player or 350u outside the base safe zone.
-- Boss respawn timer stays **120s** on every spawn path; the snake is off (`SNAKE_ENABLED=false`),
-  so the cap is never exceeded by a boss.
+Per-zone densities and caps are listed in section 0 (v1.3). In short: the outer rings are the
+busiest (2.6 enemies/chunk, cap 56), the core is the calmest (0.9/chunk, cap 28), a top-up pass
+refills to ~85% of the local cap, and a visibility floor guarantees 2–4 enemies on screen. Spawns
+still avoid the base safe zone and usually the area within 1,200u of the player (the visibility
+floor may place one at the edge of the screen).
 
 ## 5. Serpentine bodies
 
