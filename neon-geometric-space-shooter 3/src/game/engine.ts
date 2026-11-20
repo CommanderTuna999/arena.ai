@@ -2532,6 +2532,7 @@ export class Game {
     }
     this.enemies = [];
     this.eprojs = [];
+    this.baseShots = [];
     this.puddles = [];
     this.rings = [];
     this.burst(BASE.x, BASE.y, "#ffd24d", 90, 14, 1200);
