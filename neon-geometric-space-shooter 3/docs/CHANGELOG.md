@@ -3,6 +3,19 @@
 Everything below is implemented in the current build. Numbers are the actual constants used by
 the simulation, not design targets.
 
+## 0. Title screen, settings, changelog and versioning (v1.2)
+
+- **Title screen is the loading screen.** `WOFGUE.IO` is the whole design: a very large, tightly
+  tracked wordmark (`clamp(2.9rem, 14.5vw, 10.5rem)`) with a neon glow, modelled on florr.io's
+  full-screen logo. There is no callsign label and no tagline — only the wordmark, the name field,
+  PLAY, the SETTINGS / CHANGELOG links and the version at the bottom.
+- **Neon grid backdrop** (`Backdrop.tsx`, a canvas): the same 100u/500u grid the game draws, at
+  92/460 screen pixels with a slow drift, a cyan central glow and a vignette. Small geometric
+  insects (beetles, moths, centipedes, mantises, 7–20 px) drift across it with a soft pulse and
+  wrap at the edges. `prefers-reduced-motion` freezes the animation.
+- The grid and insects are cosmetic only: `pointer-events: none`, `aria-hidden`, and no link to
+  the simulation.
+
 ## 0. Title screen, settings, changelog and versioning (v1.1)
 
 - **Wofgue.io start screen** (`/`): the title, a callsign field on top (pre-filled when a name is
@@ -100,12 +113,18 @@ and every ability scales with base damage and overdrive.
 
 | Zone tier | 0 (outer) | 1 | 2 | 3 | 4 | 5 (core) |
 | --- | --- | --- | --- | --- | --- | --- |
-| Enemies per 1,500u chunk | 0.42 | 0.36 | 0.30 | 0.24 | 0.19 | 0.15 |
+| Enemies per 1,500u chunk | 1.0 | 1.0 | 1.0 | 1.0 | 1.0 | 1.0 |
 
-- Hard population cap: **18** (a boss may make it 19).
-- Chunk evaluation every **1.3s** (was 0.4s); chunks still spawn a 5×5 neighbourhood.
+- **Every zone spawns at the same pressure.** The outer rings are no longer quieter than the core,
+  and the core is no longer hand-thinned: `DENS = [1,1,1,1,1,1]` in `engine.ts`.
+- Deep zones *feel* emptier only because their enemies are physically far larger; the spawn rules
+  are identical. The live population is what changes, not the per-chunk rate.
+- Hard population cap: **36** — the chunk pass simply stops adding enemies once 36 are alive, which
+  is the lag guard on phones.
+- Chunk evaluation every **1.0s**; chunks still spawn in a 5×5 neighbourhood.
 - Spawns never occur within 1,200u of the player or 350u outside the base safe zone.
-- Boss respawn timer set to **120s** on every spawn path (chunk or timed).
+- Boss respawn timer stays **120s** on every spawn path; the snake is off (`SNAKE_ENABLED=false`),
+  so the cap is never exceeded by a boss.
 
 ## 5. Serpentine bodies
 

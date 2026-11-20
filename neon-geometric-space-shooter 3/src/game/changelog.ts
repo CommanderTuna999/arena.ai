@@ -8,7 +8,7 @@
  *   CHANGELOG and mirror the details in docs/CHANGELOG.md.
  */
 
-export const VERSION = "1.1";
+export const VERSION = "1.2";
 
 export interface ChangeEntry {
   version: string;
@@ -19,6 +19,18 @@ export interface ChangeEntry {
 }
 
 export const CHANGELOG: ChangeEntry[] = [
+  {
+    version: "1.2",
+    date: "20 Nov 2026",
+    title: "Bigger title, denser world",
+    points: [
+      "Title screen rebuilt: a huge WOFGUE.IO wordmark over the game's neon grid.",
+      "Small geometric insects drift across the title background.",
+      "Removed the callsign label and the tagline — just the name field and Play.",
+      "Every zone now spawns at the same rate; the population cap is 36.",
+      "Deeper zones feel emptier only because their enemies are far larger.",
+    ],
+  },
   {
     version: "1.1",
     date: "20 Nov 2026",

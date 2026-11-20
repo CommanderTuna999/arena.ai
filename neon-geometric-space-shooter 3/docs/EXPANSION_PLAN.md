@@ -81,7 +81,7 @@ A second pass reworked combat and tone; see `docs/CHANGELOG.md` for the full tab
   lance damage was cut sharply.
 - **Armour plating** for epic+ enemies: 1/2/3 thin grey shells, 30% kinetic damage taken, complete
   immunity to lasers and shockwaves; precision missiles bypass it.
-- Spawn density cut ~4x with a hard cap of 18 and slower chunk evaluation.
+- Spawn density raised to a uniform 1 enemy per chunk in every zone, hard-capped at 36.
 - Centipede and snake got true segmented bodies with a travelling wave; the snake is now called
   **Snake** and is roughly five times longer; the centipede is roughly 2.5× longer and curves.
 - All bar text, "CRIPPLED"/"IMMOBILISED", base "HANGAR" lettering and harpoon status words removed.

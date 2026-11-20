@@ -6,6 +6,7 @@ import { migrate, newSave, type SaveData } from "@/game/data";
 import { VERSION } from "@/game/changelog";
 import SettingsPanel from "@/components/SettingsPanel";
 import ChangelogPanel from "@/components/ChangelogPanel";
+import Backdrop from "@/components/Backdrop";
 
 const SAVE_KEY = "neon-hive-save-v1";
 
@@ -66,7 +67,7 @@ export default function StartScreen() {
   const play = () => {
     const n = name.trim().slice(0, 16);
     if (!n) {
-      setErr("Enter a callsign to play.");
+      setErr("Enter a name to play.");
       inputRef.current?.focus();
       return;
     }
@@ -75,58 +76,56 @@ export default function StartScreen() {
   };
 
   return (
-    <main className="relative flex min-h-[100dvh] w-full flex-col items-center justify-center overflow-x-hidden overflow-y-auto bg-[#04050c] px-5 py-10 text-slate-100">
-      <div className="pointer-events-none fixed inset-0 -z-10">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_12%,rgba(77,255,210,0.16),transparent_55%),radial-gradient(circle_at_12%_85%,rgba(196,92,255,0.12),transparent_45%),radial-gradient(circle_at_90%_75%,rgba(255,61,115,0.1),transparent_42%)]" />
-        <div className="absolute inset-0 bg-[linear-gradient(rgba(125,249,255,0.045)_1px,transparent_1px),linear-gradient(90deg,rgba(125,249,255,0.045)_1px,transparent_1px)] bg-[size:52px_52px] [mask-image:radial-gradient(ellipse_at_center,black,transparent_75%)]" />
-      </div>
+    <main className="relative flex min-h-[100dvh] w-full flex-col items-center justify-center overflow-hidden bg-[#04050c] px-6 py-12 text-slate-100">
+      <Backdrop />
 
-      <div className="w-full max-w-sm text-center">
-        <h1 className="select-none text-[clamp(2.75rem,14vw,4.5rem)] font-black leading-none tracking-tight text-white">
-          Wofgue<span className="text-cyan-300 drop-shadow-[0_0_28px_rgba(77,255,210,0.45)]">.io</span>
+      <div className="relative z-10 flex w-full flex-col items-center">
+        <h1 className="select-none whitespace-nowrap text-center text-[clamp(2.9rem,14.5vw,10.5rem)] font-black uppercase leading-[0.82] tracking-[-0.055em] text-white [text-shadow:0_0_16px_rgba(125,249,255,0.35),0_0_70px_rgba(77,255,210,0.28),0_0_140px_rgba(77,255,210,0.16)]">
+          WOFGUE<span className="text-cyan-300">.IO</span>
         </h1>
-        <p className="mt-2 text-[9px] tracking-[0.42em] text-cyan-200/45">GEOMETRIC HUNTING GROUND</p>
 
-        <div className="mt-9 text-left">
-          <label htmlFor="callsign" className="mb-1.5 block text-[10px] font-bold tracking-[0.3em] text-white/45">CALLSIGN</label>
+        <div className="mt-10 flex w-full max-w-[19rem] flex-col items-center sm:mt-12">
           <input
-            id="callsign"
+            id="name"
             ref={inputRef}
+            aria-label="Name"
             value={name}
             maxLength={16}
             autoComplete="nickname"
+            autoCapitalize="off"
+            spellCheck={false}
             onChange={(e) => { setTypedName(e.target.value); setErr(""); }}
             onKeyDown={(e) => { if (e.key === "Enter") play(); }}
-            placeholder="enter your name"
-            className="h-12 w-full rounded-sm border border-white/20 bg-black/60 px-3 text-center text-base tracking-wide text-cyan-100 outline-none transition placeholder:text-white/25 focus:border-cyan-300/70 focus:bg-black/80"
+            placeholder="name"
+            className="h-11 w-full border-b border-white/25 bg-transparent px-2 text-center text-lg tracking-[0.18em] text-cyan-50 outline-none transition placeholder:tracking-[0.2em] placeholder:text-white/30 focus:border-cyan-300"
           />
-          {err && <div className="mt-1.5 text-center text-[11px] text-red-300">{err}</div>}
-        </div>
+          {err && <div className="mt-2 text-[11px] text-red-300">{err}</div>}
 
-        <button
-          onClick={play}
-          className="mt-4 h-14 w-full rounded-sm border-2 border-cyan-300 bg-cyan-400/20 text-lg font-black tracking-[0.3em] text-white shadow-[0_0_32px_rgba(77,255,210,0.35)] transition hover:bg-cyan-400/35 active:scale-[0.99]"
-        >
-          PLAY
-        </button>
+          <button
+            onClick={play}
+            className="mt-5 h-14 w-full rounded-sm border-2 border-cyan-300 bg-cyan-400/15 text-xl font-black tracking-[0.45em] text-white shadow-[0_0_34px_rgba(77,255,210,0.32)] transition hover:bg-cyan-400/30 active:scale-[0.99]"
+          >
+            PLAY
+          </button>
 
-        <div className="mt-3 flex items-center justify-center gap-2">
-          <button
-            onClick={() => setSettings(true)}
-            className="flex h-10 flex-1 items-center justify-center gap-1.5 rounded-sm border border-white/20 bg-black/40 text-[11px] font-bold tracking-widest text-cyan-100/70 transition hover:border-cyan-300/50 hover:text-cyan-100"
-          >
-            <GearIcon /> SETTINGS
-          </button>
-          <button
-            onClick={() => setChanges(true)}
-            className="flex h-10 flex-1 items-center justify-center gap-1.5 rounded-sm border border-white/20 bg-black/40 text-[11px] font-bold tracking-widest text-cyan-100/70 transition hover:border-cyan-300/50 hover:text-cyan-100"
-          >
-            <ListIcon /> CHANGELOG
-          </button>
+          <div className="mt-5 flex items-center gap-7">
+            <button
+              onClick={() => setSettings(true)}
+              className="flex items-center gap-1.5 text-[10px] font-bold tracking-[0.25em] text-white/40 transition hover:text-cyan-200"
+            >
+              <GearIcon /> SETTINGS
+            </button>
+            <button
+              onClick={() => setChanges(true)}
+              className="flex items-center gap-1.5 text-[10px] font-bold tracking-[0.25em] text-white/40 transition hover:text-cyan-200"
+            >
+              <ListIcon /> CHANGELOG
+            </button>
+          </div>
         </div>
       </div>
 
-      <div className="pointer-events-none absolute inset-x-0 bottom-4 text-center text-[10px] tracking-[0.25em] text-white/25">
+      <div className="pointer-events-none absolute inset-x-0 bottom-4 z-10 text-center text-[10px] tracking-[0.25em] text-white/25">
         v{VERSION}
       </div>
 

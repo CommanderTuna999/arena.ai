@@ -14,17 +14,21 @@ import { SPECIES_LIST, buildEnemy, type AbilityDef, type Group, type Part, type 
  *                      and hit that part for 3.1x base damage. Re-marking resets reload.
  *   Plating          : tier 3/4/5 get 1/2/3 shells of 5*HP_MUL[tier] HP. Kinetic and
  *                      explosive hits deal 30%; laser and shock deal 0 and are stopped.
- *   Spawning         : densities [0.42,0.36,0.3,0.24,0.19,0.15] per chunk, cap 18,
- *                      chunk pass every 1.3s, no spawns within 1,200u of the player.
+ *   Spawning         : uniform 1 enemy per 1,500u chunk in every zone, hard cap 36,
+ *                      chunk pass every 1.0s, no spawns within 1,200u of the player.
+ *                      Every zone has the same spawn pressure; the core only feels
+ *                      emptier because its enemies are physically far larger.
  *   Body wave        : parts tagged seg >= 0 shift laterally by
  *                      amp * sin(walk*speed - seg*k); used for centipede and snake.
  * ------------------------------------------------------------------------- */
 export const CH = 1500;
 export const N_ROPE = 22;
-/* spawn pressure: enemies per 1500u chunk, by zone tier.
- * Lowered ~4x from the original build and hard-capped, so the world has room. */
-const DENS = [0.42, 0.36, 0.3, 0.24, 0.19, 0.15];
-const MAX_ENEMIES = 18;
+/* Spawn pressure: enemies per 1,500u chunk. Deliberately identical in every zone —
+ * the outer rings are not treated as a quiet tutorial, and the core is not thinned
+ * out by hand. Deep zones feel emptier only because their enemies are much larger.
+ * MAX_ENEMIES is the lag guard: the chunk pass stops adding once it is reached. */
+const DENS = [1, 1, 1, 1, 1, 1];
+const MAX_ENEMIES = 36;
 /** shells shave 70% off kinetic hits; lasers and shockwaves do nothing to them */
 const SHELL_TAKE = 0.3;
 /** The segmented snake boss is disabled for now; the species stays in the bestiary. */
@@ -2265,7 +2269,7 @@ export class Game {
 
     // world
     this.chunkT -= dt;
-    if (this.chunkT <= 0) { this.chunkT = 1.3; this.manageChunks(); }
+    if (this.chunkT <= 0) { this.chunkT = 1.0; this.manageChunks(); }
     this.updateEnemies(dt);
     this.updateEProjs(dt);
     this.updateBullets(dt);
