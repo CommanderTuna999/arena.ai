@@ -61,6 +61,17 @@ export default function GameClient() {
     if (g) { g.persist(true); void g.pushServer(); }
     router.push("/");
   };
+  /* Losing the nest ends the run: the engine has already applied the penalties
+   * and saved them, so all that is left is the ride back to the title screen. */
+  useEffect(() => {
+    if (!hud?.baseLost) return;
+    const t = setTimeout(() => {
+      const g = gameRef2.current;
+      if (g) { g.persist(true); void g.pushServer(); }
+      router.push("/");
+    }, 3000);
+    return () => clearTimeout(t);
+  }, [hud?.baseLost, router]);
   const [menu, setMenu] = useState(false);
   const [help, setHelp] = useState(false);
   const [adminOpen, setAdminOpen] = useState(false);
@@ -241,6 +252,12 @@ function Hud_({ hud, onOpen, onHelp, onAdmin, onSettings, onBestiary, onHome, on
         <Bar v={hud.hp} max={hud.maxHp} color={hpCol} h={12} />
         {hud.maxShield > 0 && <Bar v={hud.shield} max={hud.maxShield} color="#4dd2ff" h={8} />}
         {hud.hasBoost && <Bar v={hud.boost} max={100} color="#ff9d4d" h={6} />}
+        {(hud.baseNear || hud.baseHp < hud.baseMaxHp) && !hud.baseLost && (
+          <div className="flex items-center gap-1.5" title="Nest integrity">
+            <span className="text-[11px] leading-none text-emerald-300 drop-shadow-[0_0_6px_#4dffd2]">⬢</span>
+            <Bar v={hud.baseHp} max={hud.baseMaxHp} color={hud.baseHp / hud.baseMaxHp > 0.5 ? "#4dffd2" : hud.baseHp / hud.baseMaxHp > 0.25 ? "#ffd24d" : "#ff4d6d"} h={7} />
+          </div>
+        )}
         <div className="mt-1 flex items-center gap-2 text-sm font-bold text-yellow-300 drop-shadow-[0_0_8px_rgba(255,225,77,0.7)]">
           <span className="inline-block h-3 w-3 rotate-45 border border-yellow-300 bg-yellow-300/30" /> {fmtNum(hud.credits)} CR
         </div>
@@ -274,6 +291,11 @@ function Hud_({ hud, onOpen, onHelp, onAdmin, onSettings, onBestiary, onHome, on
       {hud.discovery && (
         <div className="pointer-events-none absolute left-1/2 top-12 z-20 -translate-x-1/2 rounded-sm border border-yellow-300/70 bg-black/80 px-4 py-1.5 text-center text-sm font-black tracking-wide text-yellow-200 shadow-[0_0_24px_rgba(255,225,77,0.35)]">
           New enemy discovered: {hud.discovery.name}!
+        </div>
+      )}
+      {hud.baseUnderAttack && !hud.baseLost && (
+        <div className="pointer-events-none absolute left-1/2 top-[4.5rem] z-20 -translate-x-1/2 animate-pulse rounded-sm border border-orange-400/80 bg-black/80 px-4 py-1 text-center text-[11px] font-black tracking-[0.22em] text-orange-300 shadow-[0_0_22px_rgba(255,140,80,0.4)]">
+          ⬢ NEST UNDER ATTACK
         </div>
       )}
 
@@ -323,7 +345,16 @@ function Hud_({ hud, onOpen, onHelp, onAdmin, onSettings, onBestiary, onHome, on
           </svg>
         </button>
       )}
-      {hud.dead && (
+      {hud.baseLost && (
+        <div className="pointer-events-none absolute inset-0 z-40 grid place-items-center bg-[#180404]/85">
+          <div className="max-w-[92vw] text-center">
+            <div className="text-4xl font-black tracking-[0.28em] text-red-400 drop-shadow-[0_0_26px_#ff2d55] sm:text-6xl">NEST DESTROYED</div>
+            <div className="mt-4 text-sm font-bold text-orange-200 sm:text-base">ALL STORED COMPONENTS LOST · HALF YOUR CREDITS INCINERATED</div>
+            <div className="mt-2 text-xs tracking-[0.18em] text-white/45">THE SWARM IS ASH · RETURNING TO TITLE {Math.max(1, Math.ceil(hud.baseLostT))}…</div>
+          </div>
+        </div>
+      )}
+      {hud.dead && !hud.baseLost && (
         <div className="pointer-events-none absolute inset-0 grid place-items-center bg-red-950/40">
           <div className="text-center">
             <div className="text-4xl font-black tracking-[0.3em] text-red-400 drop-shadow-[0_0_20px_#ff2d55]">CORE DESTROYED</div>
@@ -351,6 +382,7 @@ function Help({ onClose }: { onClose: () => void }) {
     ["SHIFT", "Afterburner (upgrade)"],
     ["T", "Recall beacon (craftable)"],
     ["E", "Open the nest at your base"],
+    ["Nest cannon", "Auto-fires a slow siege shell; it kills epics but not legendaries"],
     ["Mouse wheel", "Zoom out (craftable optics)"],
     ["Z X C V F", "Fire equipped active abilities"],
     ["` (backtick)", "Admin panel (infinite resources)"],

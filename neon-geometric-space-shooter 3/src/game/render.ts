@@ -256,6 +256,24 @@ export function render(g: Game, ctx: CanvasRenderingContext2D) {
     ctx.shadowBlur = 0;
   }
 
+  /* ---- nest siege shells ---- */
+  for (const s of g.baseShots) {
+    if (s.x < vx0 || s.x > vx1 || s.y < vy0 || s.y > vy1) continue;
+    const ang = Math.atan2(s.vy, s.vx);
+    ctx.save(); ctx.translate(s.x, s.y); ctx.rotate(ang);
+    ctx.strokeStyle = "rgba(255,150,70,0.30)"; ctx.lineWidth = 9 / z;
+    ctx.beginPath(); ctx.moveTo(-10, 0); ctx.lineTo(-74, 0); ctx.stroke();
+    ctx.strokeStyle = "rgba(255,225,150,0.55)"; ctx.lineWidth = 3 / z;
+    ctx.beginPath(); ctx.moveTo(-10, 0); ctx.lineTo(-96, 0); ctx.stroke();
+    ctx.shadowColor = "#ffd24d"; ctx.shadowBlur = 20;
+    ctx.fillStyle = "#ffe9a6";
+    ctx.beginPath(); ctx.moveTo(16, 0); ctx.lineTo(-8, -8); ctx.lineTo(-2, 0); ctx.lineTo(-8, 8); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = "#fffdf2";
+    ctx.beginPath(); ctx.arc(4, 0, 4.5, 0, TAU); ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.restore();
+  }
+
   /* ---- player bullets & beams ---- */
   ctx.lineCap = "round";
   for (const b of g.bullets) {
@@ -442,10 +460,21 @@ function drawCompTooltip(g: Game, ctx: CanvasRenderingContext2D, c: LComp) {
 
 function drawBase(g: Game, ctx: CanvasRenderingContext2D, z: number, t: number) {
   const { x, y, r, dock, safe } = BASE;
+  const lost = g.baseLost;
   ctx.setLineDash([24 / z, 24 / z]);
   ctx.strokeStyle = "rgba(90,255,170,0.2)"; ctx.lineWidth = 3 / z;
   ctx.beginPath(); ctx.arc(x, y, safe, 0, TAU); ctx.stroke();
   ctx.setLineDash([]);
+  /* defence cannon reach (and the 40% extended leash where enemies turn on the nest) */
+  if (!lost && Math.hypot(g.player.x - x, g.player.y - y) < BASE.aggroR * 2.4) {
+    ctx.setLineDash([14 / z, 22 / z]);
+    ctx.lineDashOffset = -t * 24 / z;
+    ctx.strokeStyle = "rgba(255,176,77,0.20)"; ctx.lineWidth = 2.5 / z;
+    ctx.beginPath(); ctx.arc(x, y, BASE.turretR, 0, TAU); ctx.stroke();
+    ctx.strokeStyle = "rgba(255,107,61,0.10)"; ctx.lineWidth = 1.8 / z;
+    ctx.beginPath(); ctx.arc(x, y, BASE.aggroR, 0, TAU); ctx.stroke();
+    ctx.setLineDash([]); ctx.lineDashOffset = 0;
+  }
   const gr = ctx.createRadialGradient(x, y, 20, x, y, r);
   gr.addColorStop(0, "rgba(40,255,200,0.22)");
   gr.addColorStop(1, "rgba(40,160,255,0.05)");
@@ -486,7 +515,106 @@ function drawBase(g: Game, ctx: CanvasRenderingContext2D, z: number, t: number) 
     hexPath(ctx, x + Math.cos(a) * 12, y + Math.sin(a) * 12, 6, a);
     ctx.fillStyle = "rgba(255,225,77,0.75)"; ctx.fill();
   }
+  if (lost) {
+    /* gutted wreck: dark plates, embers, no cannon */
+    hexPath(ctx, x, y, r * 0.9, Math.PI / 6);
+    ctx.fillStyle = "rgba(20,10,8,0.92)"; ctx.fill();
+    ctx.strokeStyle = "rgba(255,90,60,0.55)"; ctx.lineWidth = 4 / z; ctx.stroke();
+    ctx.strokeStyle = `rgba(255,120,60,${0.25 + 0.25 * Math.sin(t * 9)})`; ctx.lineWidth = 2 / z;
+    for (let i = 0; i < 7; i++) {
+      const a = i * 2.3 + 0.4, r0 = r * 0.18, r1 = r * (0.5 + (i % 3) * 0.16);
+      ctx.beginPath();
+      ctx.moveTo(x + Math.cos(a) * r0, y + Math.sin(a) * r0);
+      ctx.lineTo(x + Math.cos(a + 0.22) * r1, y + Math.sin(a + 0.22) * r1);
+      ctx.lineTo(x + Math.cos(a + 0.1) * r1 * 0.8, y + Math.sin(a + 0.1) * r1 * 0.8);
+      ctx.stroke();
+    }
+    for (let i = 0; i < 5; i++) {
+      const a = t * 1.4 + i * 1.7;
+      ctx.fillStyle = `rgba(255,${120 + i * 15},60,${0.25 + 0.3 * Math.abs(Math.sin(t * 3 + i))})`;
+      ctx.beginPath(); ctx.arc(x + Math.cos(a) * r * 0.45, y + Math.sin(a) * r * 0.45, 3 + (i % 2) * 2, 0, TAU); ctx.fill();
+    }
+  } else {
+    drawTurret(g, ctx, z, t, x, y);
+    /* integrity ring: full teal → amber → red */
+    const frac = clamp(g.baseHp / Math.max(1, g.baseMaxHp), 0, 1);
+    const col = frac > 0.5 ? "#4dffd2" : frac > 0.25 ? "#ffd24d" : "#ff4d6d";
+    ctx.lineWidth = 9 / z;
+    ctx.strokeStyle = "rgba(0,0,0,0.55)";
+    ctx.beginPath(); ctx.arc(x, y, r + 20, 0, TAU); ctx.stroke();
+    ctx.strokeStyle = col;
+    ctx.beginPath(); ctx.arc(x, y, r + 20, -Math.PI / 2, -Math.PI / 2 + TAU * frac); ctx.stroke();
+    if (g.baseFlash > 0) {
+      ctx.globalAlpha = clamp(g.baseFlash / 0.22, 0, 1) * 0.45;
+      ctx.fillStyle = "#ff9d6e";
+      hexPath(ctx, x, y, r, Math.PI / 6); ctx.fill();
+      ctx.globalAlpha = 1;
+    }
+  }
   void g;
+}
+
+/* Heavy siege cannon on the nest. The barrel physically kicks back on every
+ * shot, the mount glows hotter as it charges, and the muzzle flash is huge. */
+function drawTurret(g: Game, ctx: CanvasRenderingContext2D, z: number, t: number, x: number, y: number) {
+  const T = g.turret;
+  const recoil = T.recoil * 36;
+  const charge = clamp(1 - T.cd / 7, 0, 1);
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(T.a);
+  // shadow / mount
+  ctx.fillStyle = "rgba(4,10,16,0.95)";
+  hexPath(ctx, 0, 0, 46, 0); ctx.fill();
+  ctx.strokeStyle = "rgba(125,249,255,0.7)"; ctx.lineWidth = 3 / z;
+  hexPath(ctx, 0, 0, 46, 0); ctx.stroke();
+  // charge arc
+  ctx.strokeStyle = `rgba(255,${176 - 60 * charge},${77 + 90 * (1 - charge)},${0.45 + 0.45 * charge})`;
+  ctx.lineWidth = 4 / z;
+  ctx.beginPath(); ctx.arc(0, 0, 38, -Math.PI / 2, -Math.PI / 2 + TAU * charge); ctx.stroke();
+  // barrel
+  const back = 18 - recoil, tip = 164 - recoil;
+  ctx.fillStyle = "#0a1622";
+  ctx.strokeStyle = "#7df9ff";
+  ctx.lineWidth = 2.5 / z;
+  ctx.beginPath();
+  ctx.moveTo(back, -19); ctx.lineTo(tip, -12); ctx.lineTo(tip, 12); ctx.lineTo(back, 19); ctx.closePath();
+  ctx.fill(); ctx.stroke();
+  // hot inner line
+  ctx.strokeStyle = `rgba(255,${140 + 90 * charge},80,${0.3 + 0.6 * charge})`;
+  ctx.lineWidth = 3 / z;
+  ctx.beginPath(); ctx.moveTo(back + 12, 0); ctx.lineTo(tip - 8, 0); ctx.stroke();
+  // muzzle brake
+  ctx.fillStyle = "#122434"; ctx.strokeStyle = "#9dfcff"; ctx.lineWidth = 2 / z;
+  ctx.fillRect(tip - 4, -17, 18, 34); ctx.strokeRect(tip - 4, -17, 18, 34);
+  // recoil rails / venting
+  ctx.strokeStyle = "rgba(157,180,201,0.5)"; ctx.lineWidth = 1.5 / z;
+  for (let i = 0; i < 3; i++) {
+    ctx.beginPath(); ctx.moveTo(8 - recoil * 0.5, -26 - i * 5); ctx.lineTo(26 - recoil * 0.5, -26 - i * 5); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(8 - recoil * 0.5, 26 + i * 5); ctx.lineTo(26 - recoil * 0.5, 26 + i * 5); ctx.stroke();
+  }
+  // muzzle flash
+  if (T.flash > 0) {
+    const f = clamp(T.flash / 0.24, 0, 1);
+    const mx = tip + 22;
+    const gr = ctx.createRadialGradient(mx, 0, 2, mx, 0, 70 * f + 20);
+    gr.addColorStop(0, `rgba(255,255,240,${0.9 * f})`);
+    gr.addColorStop(0.35, `rgba(255,210,77,${0.7 * f})`);
+    gr.addColorStop(1, "rgba(255,110,60,0)");
+    ctx.fillStyle = gr;
+    ctx.beginPath(); ctx.arc(mx, 0, 70 * f + 20, 0, TAU); ctx.fill();
+    ctx.strokeStyle = `rgba(255,240,200,${0.8 * f})`; ctx.lineWidth = 3 / z;
+    for (let i = 0; i < 6; i++) {
+      const a = (i / 6) * TAU + Math.random() * 0.3;
+      ctx.beginPath(); ctx.moveTo(mx, 0); ctx.lineTo(mx + Math.cos(a) * (46 + 30 * f), Math.sin(a) * (46 + 30 * f)); ctx.stroke();
+    }
+  }
+  ctx.restore();
+  // turret base glow (world space, unrotated)
+  ctx.strokeStyle = `rgba(255,176,77,${0.16 + 0.25 * T.recoil})`;
+  ctx.lineWidth = 2 / z;
+  ctx.beginPath(); ctx.arc(x, y, 52 + 10 * T.recoil, 0, TAU); ctx.stroke();
+  void t;
 }
 
 function drawComp(g: Game, ctx: CanvasRenderingContext2D, c: LComp, z: number, t: number) {

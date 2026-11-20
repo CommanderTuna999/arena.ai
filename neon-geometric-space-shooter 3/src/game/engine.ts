@@ -1,6 +1,6 @@
 import { TAU, angDiff, clamp, distToPoly, hash2, lerp, mulberry32, pointInPoly } from "./math";
 import {
-  ABILITY_BY_ID, BASE, DMG_MUL, HP_MUL, KIND_CAT, RECIPE_BY_ID, SHIP_R, UPGRADES, WORLD_R, compMass, compValue, computeStats, craftEfficiency,
+  ABILITY_BY_ID, BASE, BASE_MAX_HP, BASE_RING, BASE_TAKE, DMG_MUL, HP_MUL, KIND_CAT, RECIPE_BY_ID, SHIP_R, UPGRADES, WORLD_R, compMass, compValue, computeStats, craftEfficiency,
   recipeProblem, upgradeCost, zoneTier, WEAPON_DMG, WEAPON_RANGE, type Comp, type DmgKind, type PartKind, type SaveData, type Slot, type Stats,
 } from "./data";
 import { SPECIES_LIST, buildEnemy, type AbilityDef, type Group, type Part, type ProjType, type SpeciesDef } from "./enemies";
@@ -43,6 +43,8 @@ const SHELL_TAKE = 0.3;
 const SNAKE_ENABLED = false;
 const BOSS_SP = SNAKE_ENABLED ? SPECIES_LIST.findIndex((s) => s.boss) : -1;
 const KIND_DROP: Record<PartKind, number> = { core: 1, segment: 1, armor: 0.8, leg: 0.6, arm: 1, wing: 0.6, weapon: 1.4, shield: 1.4, spike: 0.35 };
+/** last nest position this browser session, so consecutive runs never overlap */
+let lastBasePos: { x: number; y: number } | null = null;
 
 /* ---------------- entity types ---------------- */
 export interface Act { i: number; def: AbilityDef; t: number; ph: number; hit: boolean; dir: number; fired: boolean }
@@ -69,6 +71,8 @@ export interface Enemy {
   shellR: number;
   /** serpentine body wave (null for ordinary species) */
   bend: { amp: number; k: number; speed: number } | null;
+  /** distance to the nest (recomputed every frame for base defence) */
+  bdist: number;
 }
 export interface ShellLayer { hp: number; max: number }
 export type DmgSrc = "kinetic" | "laser" | "shock" | "explosive" | "missile" | "dot";
@@ -84,6 +88,8 @@ export interface Bullet {
 export interface EProj {
   x: number; y: number; vx: number; vy: number; life: number; dmg: number; r: number; hue: number; type: ProjType;
   homing: number; slow: number; slowT: number; poison: number; pierce: boolean; hp: number; speed: number; src: Enemy | null; puddle: { r: number; dps: number; slow: number } | null;
+  /** aimed at the nest instead of the player (ignores the ship entirely) */
+  tgtBase?: boolean;
 }
 export interface Particle { x: number; y: number; vx: number; vy: number; rot: number; vr: number; life: number; max: number; size: number; shape: number; color: string; fill: boolean }
 export interface Puddle { x: number; y: number; r: number; life: number; max: number; arm: number; dps: number; slow: number; hue: number }
@@ -103,6 +109,13 @@ export interface Mine { x: number; y: number; vx: number; vy: number; arm: numbe
 export interface Drone { a: number; r: number; cd: number }
 export interface Well { x: number; y: number; life: number; max: number; dmg: number; r: number }
 export interface LockOn { e: Enemy; part: Part; t: number }
+/** slow heavy shell lobbed by the nest's defence cannon */
+export interface BaseShot {
+  x: number; y: number; vx: number; vy: number; life: number; target: Enemy | null; trail: number; dmg: number;
+}
+export interface TurretState {
+  a: number; cd: number; recoil: number; flash: number; target: Enemy | null;
+}
 export interface AdminState { on: boolean; credits: boolean; health: boolean; damage: boolean; components: boolean }
 
 export interface HudAbility { key: string; name: string; icon: string; color: string; cd: number; max: number; ready: boolean; active: boolean; empty: boolean }
@@ -124,6 +137,7 @@ export interface Hud {
   online: number; zoomOn: boolean; inv: number; cargo: number; hold: number; rev: number; zoom: number; fps: number;
   abilities: HudAbility[]; admin: AdminState; lock: boolean; autoFire: boolean; overdrive: boolean;
   discovery: { name: string; t: number } | null;
+  baseHp: number; baseMaxHp: number; baseLost: boolean; baseLostT: number; baseNear: boolean; baseUnderAttack: boolean;
 }
 
 export function biomeWeights(x: number, y: number): number[] {
@@ -202,6 +216,16 @@ export class Game {
   mines: Mine[] = [];
   drones: Drone[] = [];
   wells: Well[] = [];
+  /** nest defence: the slow siege cannon and the shells it throws */
+  turret: TurretState = { a: -Math.PI / 2, cd: 1.5, recoil: 0, flash: 0, target: null };
+  baseShots: BaseShot[] = [];
+  baseHp = BASE_MAX_HP;
+  baseMaxHp = BASE_MAX_HP;
+  baseLost = false;
+  baseLostT = 0;
+  baseFlash = 0;
+  baseHitT = 0;
+  private baseAlarmCd = 0;
   admin: AdminState = { on: false, credits: false, health: false, damage: false, components: false };
   autoFire = true;
   private bossT = 12;
@@ -223,6 +247,7 @@ export class Game {
   constructor(save: SaveData, pid: string) {
     this.save = save;
     this.pid = pid;
+    this.placeBase();
     this.stats = computeStats(save);
     this.player = {
       x: BASE.x, y: BASE.y - 200, vx: 0, vy: 0, a: -Math.PI / 2, hp: this.stats.hull, shield: this.stats.shieldMax, boost: 100, boosting: false,
@@ -236,6 +261,23 @@ export class Game {
     this.cam.y = this.player.y;
   }
 
+  /** Move the nest to a fresh spot in the outer ring before the run starts.
+   *  It never lands in an inner zone (that would put the shop next to mythicals)
+   *  and always stays clear of the world edge. */
+  private placeBase() {
+    let x = BASE.x, y = BASE.y;
+    for (let tries = 0; tries < 60; tries++) {
+      const a = Math.random() * TAU;
+      const rr = BASE_RING.min + Math.random() * (BASE_RING.max - BASE_RING.min);
+      x = Math.cos(a) * rr; y = Math.sin(a) * rr;
+      if (!lastBasePos || Math.hypot(x - lastBasePos.x, y - lastBasePos.y) > 3000) break;
+    }
+    BASE.x = x; BASE.y = y;
+    lastBasePos = { x, y };
+    this.cam.x = x;
+    this.cam.y = y - 120;
+  }
+
   /* ---------------- misc helpers ---------------- */
   resize(w: number, h: number, dpr: number) { this.w = w; this.h = h; this.dpr = dpr; }
   toast(msg: string, color = "#7df9ff") {
@@ -245,8 +287,8 @@ export class Game {
   mouseWorld(): [number, number] {
     return [this.cam.x + (this.input.mx - this.w / 2) / this.cam.z, this.cam.y + (this.input.my - this.h / 2) / this.cam.z];
   }
-  nearBase() { return Math.hypot(this.player.x - BASE.x, this.player.y - BASE.y) < BASE.r + 40; }
-  inSafe() { return Math.hypot(this.player.x - BASE.x, this.player.y - BASE.y) < BASE.r + 90; }
+  nearBase() { return !this.baseLost && Math.hypot(this.player.x - BASE.x, this.player.y - BASE.y) < BASE.r + 40; }
+  inSafe() { return !this.baseLost && Math.hypot(this.player.x - BASE.x, this.player.y - BASE.y) < BASE.r + 90; }
   markDirty() { this.dirty = true; this.rev++; this.save.ts = Date.now(); }
   setAdmin(k: keyof AdminState, v: boolean) {
     (this.admin as unknown as Record<string, boolean>)[k] = v;
@@ -881,7 +923,7 @@ export class Game {
       speed: spd.speed * (1 + 0.04 * tier), turn: spd.turn / ((1 + tier * 1.05) * (1 + b.radius / (b.size * 6))), mobility: 1, legCount: b.legCount, wingCount: b.wingCount,
       abil, abilCd: abil.map(() => 1 + Math.random() * 3), gap: 1, act: null, stun: 0, wander: { x, y, t: 0 }, roleGroups,
       walk: Math.random() * 6, dead: false, eDmg: 8 * DMG_MUL[tier], keep: spd.keep + b.radius * 0.9, strafe: Math.random() < 0.5 ? 1 : -1, strafeT: 2,
-      tags, shields: [], weaponParts, shieldParts, dist: 9999, contactCd: 0, hasChange: false, gen: 0,
+      tags, shields: [], weaponParts, shieldParts, dist: 9999, bdist: 9999, contactCd: 0, hasChange: false, gen: 0,
       dot: 0, dotT: 0, melt: 0, slowT: 0, slowF: 1,
       shells: Array.from({ length: tier >= 2 && !spd.bodyWave ? tier - 1 : 0 }, () => ({ hp: 5 * HP_MUL[tier], max: 5 * HP_MUL[tier] })),
       shellHit: 0, shellR: b.radius + 6,
@@ -939,7 +981,7 @@ export class Game {
       const [a, b] = key.split(",").map(Number);
       if (Math.max(Math.abs(a - pcx), Math.abs(b - pcy)) > 3) this.chunks.delete(key);
     }
-    this.enemies = this.enemies.filter((e) => this.chunks.has(e.chunk) || (e.aggro && e.dist < 4000));
+    this.enemies = this.enemies.filter((e) => this.chunks.has(e.chunk) || (e.aggro && e.dist < 4000) || Math.hypot(e.x - BASE.x, e.y - BASE.y) < BASE.aggroR + 600);
     this.topUp();
     this.ensureNearby();
   }
@@ -1263,22 +1305,36 @@ export class Game {
     const p = this.player, st = this.stats;
     for (let i = this.eprojs.length - 1; i >= 0; i--) {
       const pr = this.eprojs[i];
+      if (!pr) continue;
       pr.life -= dt;
+      const tx = pr.tgtBase ? BASE.x : p.x, ty = pr.tgtBase ? BASE.y : p.y;
       if (pr.type === "missile") {
-        const want = Math.atan2(p.y - pr.y, p.x - pr.x), cur = Math.atan2(pr.vy, pr.vx);
+        const want = Math.atan2(ty - pr.y, tx - pr.x), cur = Math.atan2(pr.vy, pr.vx);
         const na = cur + clamp(angDiff(cur, want), -pr.homing * dt, pr.homing * dt);
         const sp = Math.min(pr.speed, Math.hypot(pr.vx, pr.vy) + 260 * dt);
         pr.vx = Math.cos(na) * sp; pr.vy = Math.sin(na) * sp;
         if (Math.random() < 0.6) this.addParticle(pr.x, pr.y, 0, 0, "#ffb04d", 3, 0.3, 3, false);
       } else if (pr.homing > 0) {
-        const want = Math.atan2(p.y - pr.y, p.x - pr.x), cur = Math.atan2(pr.vy, pr.vx);
+        const want = Math.atan2(ty - pr.y, tx - pr.x), cur = Math.atan2(pr.vy, pr.vx);
         const na = cur + clamp(angDiff(cur, want), -pr.homing * dt, pr.homing * dt);
         const sp = Math.hypot(pr.vx, pr.vy);
         pr.vx = Math.cos(na) * sp; pr.vy = Math.sin(na) * sp;
       }
       pr.x += pr.vx * dt; pr.y += pr.vy * dt;
       let dead = pr.life <= 0;
-      if (!dead && pr.type !== "glob" && !p.dead) {
+      if (!dead && pr.tgtBase) {
+        /* base-targeted shots ignore the ship completely */
+        const db = Math.hypot(pr.x - BASE.x, pr.y - BASE.y);
+        if (db < BASE.r * 0.82 + pr.r) {
+          this.hurtBase(pr.dmg, pr.src);
+          this.burst(pr.x, pr.y, `hsl(${pr.hue},100%,66%)`, pr.type === "missile" ? 12 : 5, 4, 220);
+          if (pr.type === "missile") this.ringFx(pr.x, pr.y, 90, "#ffb04d", 500);
+          /* the killing hit wipes the projectile list: stop walking it */
+          if (this.baseLost) return;
+          dead = true;
+        }
+      }
+      if (!dead && !pr.tgtBase && pr.type !== "glob" && !p.dead) {
         const dd = Math.hypot(pr.x - p.x, pr.y - p.y);
         if (dd < pr.r + SHIP_R) {
           if (st.nullField > 0 && p.shield > 0 && p.nullCd <= 0 && Math.random() < 0.35 + 0.3 * st.nullField) {
@@ -1620,7 +1676,7 @@ export class Game {
     return false;
   }
 
-  private updateEnemy(e: Enemy, dt: number, dx: number, dy: number, dist: number) {
+  private updateEnemy(e: Enemy, dt: number, dx: number, dy: number, dist: number, baseEngaged: boolean) {
     const p = this.player;
     for (const q of e.parts) { if (q.hurt > 0) q.hurt -= dt; if (q.barT > 0) q.barT -= dt; }
     if (e.barT > 0) e.barT -= dt;
@@ -1637,12 +1693,14 @@ export class Game {
     const safe = this.inSafe() || p.dead;
     // higher tiers refuse to let you disengage: bigger aggro radius and a much longer leash
     const aggroR = (650 + Math.min(e.radius, 700) * 1.2) * (1 + 0.12 * e.tier);
-    if (!e.aggro) { if (!safe && dist < aggroR) e.aggro = true; }
+    if (baseEngaged) e.aggro = true;
+    else if (!e.aggro) { if (!safe && dist < aggroR) e.aggro = true; }
     else if (safe || dist > aggroR * (2.4 + 0.6 * e.tier)) e.aggro = false;
     for (let i = 0; i < e.abilCd.length; i++) if (e.abilCd[i] > 0) e.abilCd[i] -= dt;
     if (e.gap > 0) e.gap -= dt;
 
     const toP = Math.atan2(dy, dx);
+    const toB = Math.atan2(BASE.y - e.y, BASE.x - e.x);
     const sp = e.speed * e.mobility * (e.slowT > 0 ? e.slowF : 1) * (e.aggro && e.tier >= 3 ? 1 + 0.03 * e.tier : 1);
     const moving = Math.hypot(e.vx, e.vy) / (e.speed + 1);
     e.walk += dt * (3 + moving * 9);
@@ -1679,22 +1737,23 @@ export class Game {
       const g = e.groups[q.g];
       const w = this.partWorld(e, q);
       const wx = w[0], wy = w[1];
-      if (e.aggro && !p.dead) {
-        const aim = Math.atan2(p.y - wy, p.x - wx);
+      if (baseEngaged || (e.aggro && !p.dead)) {
+        const aimX = baseEngaged ? BASE.x : p.x, aimY = baseEngaged ? BASE.y : p.y;
+        const aim = Math.atan2(aimY - wy, aimX - wx);
         const rel = angDiff(e.a, aim);
         g.ang += clamp(angDiff(g.ang, rel), -2.2 * dt, 2.2 * dt);
         q.cd -= dt;
-        const dd = Math.hypot(p.x - wx, p.y - wy);
+        const dd = Math.hypot(aimX - wx, aimY - wy);
         const range = q.wpn === "gun" ? 900 : 1150;
         if (q.cd <= 0 && dd < range && Math.abs(angDiff(g.ang, rel)) < 0.22 && e.stun <= 0) {
           const dir = e.a + g.ang;
           const mx = wx + Math.cos(dir) * q.muzzle, my = wy + Math.sin(dir) * q.muzzle;
           if (q.wpn === "gun") {
             q.cd = (1.1 + Math.random() * 0.6) / (1 + 0.04 * e.tier);
-            this.eprojs.push({ x: mx, y: my, vx: Math.cos(dir) * 560, vy: Math.sin(dir) * 560, life: 1.9, dmg: e.eDmg * 0.4, r: 5 + e.tier, hue: 8, type: "bolt", homing: 0, slow: 0, slowT: 0, poison: 0, pierce: false, hp: 1, speed: 560, src: e, puddle: null });
+            this.eprojs.push({ x: mx, y: my, vx: Math.cos(dir) * 560, vy: Math.sin(dir) * 560, life: 1.9, dmg: e.eDmg * 0.4, r: 5 + e.tier, hue: 8, type: "bolt", homing: 0, slow: 0, slowT: 0, poison: 0, pierce: false, hp: 1, speed: 560, src: e, puddle: null, tgtBase: baseEngaged });
           } else {
             q.cd = 4.5 + Math.random() * 1.5;
-            this.eprojs.push({ x: mx, y: my, vx: Math.cos(dir) * 200, vy: Math.sin(dir) * 200, life: 5, dmg: e.eDmg * 1.1, r: 8 + e.tier * 1.5, hue: 25, type: "missile", homing: 2.0, slow: 0, slowT: 0, poison: 0, pierce: false, hp: 1, speed: 330, src: e, puddle: null });
+            this.eprojs.push({ x: mx, y: my, vx: Math.cos(dir) * 200, vy: Math.sin(dir) * 200, life: 5, dmg: e.eDmg * 1.1, r: 8 + e.tier * 1.5, hue: 25, type: "missile", homing: 2.0, slow: 0, slowT: 0, poison: 0, pierce: false, hp: 1, speed: 330, src: e, puddle: null, tgtBase: baseEngaged });
           }
           this.burst(mx, my, "#ff9d4d", 3, 3, 140);
         }
@@ -1706,10 +1765,22 @@ export class Game {
     let faceTo = e.a;
     let turnMul = 0.3 + 0.7 * e.mobility;
     if (e.stun > 0) { e.stun -= dt; e.vx *= Math.exp(-4 * dt); e.vy *= Math.exp(-4 * dt); }
-    else if (e.act) {
+    else if (e.act && !baseEngaged) {
       this.runAct(e, dt, toP, dist);
     } else {
-      if (e.aggro && !p.dead) {
+      if (baseEngaged) {
+        /* the nest is the juicier target: close in and chew on its hull */
+        e.act = null;
+        faceTo = toB;
+        const bd = Math.hypot(BASE.x - e.x, BASE.y - e.y);
+        const stop = BASE.r + Math.min(e.radius, 320) * 0.45 + 10;
+        if (bd > stop) {
+          /* a swarm charging the nest moves much faster than one stalking the player */
+          const bsp = sp * 2.6;
+          const f = Math.max(0, Math.cos(angDiff(e.a, toB)));
+          tvx = Math.cos(e.a) * bsp * f; tvy = Math.sin(e.a) * bsp * f;
+        }
+      } else if (e.aggro && !p.dead) {
         const weave = e.bend ? Math.sin(this.t * (e.spd.boss ? 1.7 : 2.6) + e.id) * (e.spd.boss ? 0.22 : 0.12) : 0;
         faceTo = toP + weave;
         const nx = dx / (dist || 1), ny = dy / (dist || 1);
@@ -1747,12 +1818,25 @@ export class Game {
       e.vx += (tvx - e.vx) * k; e.vy += (tvy - e.vy) * k;
     }
     if (!e.act || e.act.def.type === "charge") { /* turning handled by act for others */ }
-    if (!e.act) e.a += clamp(angDiff(e.a, faceTo), -e.turn * turnMul * dt, e.turn * turnMul * dt);
+    /* insects charging the nest pivot fast — otherwise slow walkers waste the
+     * whole approach turning while the cannon picks them off */
+    const turnRate = baseEngaged ? Math.max(e.turn * turnMul, 1.6) : e.turn * turnMul;
+    if (!e.act) e.a += clamp(angDiff(e.a, faceTo), -turnRate * dt, turnRate * dt);
     e.x += e.vx * dt; e.y += e.vy * dt;
 
-    // keep out of base safe zone
+    // keep out of the nest's docking apron (base attackers are exempt)
     const bd = Math.hypot(e.x - BASE.x, e.y - BASE.y);
-    if (bd < BASE.safe) { e.x += ((e.x - BASE.x) / (bd || 1)) * 220 * dt; e.y += ((e.y - BASE.y) / (bd || 1)) * 220 * dt; }
+    if (!baseEngaged && bd < BASE.safe) { e.x += ((e.x - BASE.x) / (bd || 1)) * 220 * dt; e.y += ((e.y - BASE.y) / (bd || 1)) * 220 * dt; }
+
+    // gnawing on the nest
+    if (baseEngaged && this.baseHp > 0) {
+      const reach = BASE.r + Math.min(e.radius, 320) * 0.55 + 20;
+      if (bd < reach && e.contactCd <= 0) {
+        e.contactCd = 0.7;
+        this.hurtBase(e.eDmg * 0.25, e);
+        this.burst(BASE.x + Math.cos(toB + Math.PI) * BASE.r * 0.9, BASE.y + Math.sin(toB + Math.PI) * BASE.r * 0.9, "#ffb04d", 5, 4, 220);
+      }
+    }
 
     // contact with player
     if (!p.dead && dist < e.radius + SHIP_R + 30 && !this.inSafe()) {
@@ -1766,6 +1850,7 @@ export class Game {
   }
 
   private updateEnemies(dt: number) {
+    if (this.baseLost) return;
     const p = this.player;
     // boss availability: one at a time, only while the player is in the mythical core
     this.bossT -= dt;
@@ -1778,11 +1863,15 @@ export class Game {
       this.toast("A SNAKE EMERGES", "#c45cff");
       this.shake = Math.max(this.shake, 16);
     }
+    const baseAlive = !this.baseLost;
     for (const e of this.enemies) {
+      if (e.dead) continue;
       const dx = p.x - e.x, dy = p.y - e.y;
       e.dist = Math.hypot(dx, dy);
-      if (e.dist > 3800 && !e.aggro) continue;
-      this.updateEnemy(e, dt, dx, dy, e.dist);
+      e.bdist = Math.hypot(BASE.x - e.x, BASE.y - e.y);
+      const baseEngaged = baseAlive && e.bdist < BASE.aggroR;
+      if (e.dist > 3800 && !e.aggro && !baseEngaged) continue;
+      this.updateEnemy(e, dt, dx, dy, e.dist, baseEngaged);
     }
     // separation
     const n = this.enemies.length;
@@ -2287,6 +2376,175 @@ export class Game {
     }
   }
 
+  /* ---------------- nest defence ---------------- */
+  /** Apply damage to the nest. Low tiers barely scratch the hull; epics and up
+   *  tear through it, which is why one legendary can end a run. */
+  hurtBase(dmg: number, src: Enemy | null) {
+    if (this.baseLost) return;
+    const tier = clamp(src?.tier ?? 0, 0, 5);
+    const dealt = dmg * BASE_TAKE[tier];
+    if (dealt <= 0) return;
+    this.baseHp -= dealt;
+    this.baseFlash = 0.22;
+    this.baseHitT = 7;
+    this.shake = Math.max(this.shake, Math.min(12, 2 + tier * 2));
+    if (this.baseAlarmCd <= 0 && tier >= 2) {
+      this.baseAlarmCd = 20;
+      this.toast("The nest is under attack!", "#ff9d6e");
+    }
+    if (this.baseHp <= 0) this.destroyBase();
+  }
+
+  /** Slow siege cannon: it tracks one target at a time and hits like a meteor. */
+  private updateTurret(dt: number) {
+    const T = this.turret;
+    T.cd -= dt;
+    T.recoil = Math.max(0, T.recoil - dt * 2.2);
+    T.flash = Math.max(0, T.flash - dt);
+    if (this.baseLost) { T.target = null; return; }
+    const cur = T.target;
+    if (!cur || cur.dead || !this.enemies.includes(cur) || Math.hypot(cur.x - BASE.x, cur.y - BASE.y) > BASE.turretR * 1.05) {
+      T.target = this.nearestEnemy(BASE.x, BASE.y, BASE.turretR);
+    }
+    const target = T.target;
+    if (!target) return;
+    const want = Math.atan2(target.y - BASE.y, target.x - BASE.x);
+    T.a += clamp(angDiff(T.a, want), -1.8 * dt, 1.8 * dt);
+    if (T.cd > 0 || Math.abs(angDiff(T.a, want)) > 0.07) return;
+    this.fireTurret(target, want);
+  }
+
+  private fireTurret(target: Enemy, want: number) {
+    const T = this.turret;
+    const speed = 650;
+    const dist = Math.hypot(target.x - BASE.x, target.y - BASE.y);
+    const lt = clamp(dist / speed, 0, 1.4);
+    const tx = target.x + target.vx * lt * 0.55, ty = target.y + target.vy * lt * 0.55;
+    const a = Math.atan2(ty - BASE.y, tx - BASE.x);
+    T.a = a;
+    T.cd = 7;
+    T.recoil = 1;
+    T.flash = 0.24;
+    const muzzle = 200;
+    const mx = BASE.x + Math.cos(a) * muzzle, my = BASE.y + Math.sin(a) * muzzle;
+    this.baseShots.push({ x: mx, y: my, vx: Math.cos(a) * speed, vy: Math.sin(a) * speed, life: 4.2, target, trail: 0, dmg: 120_000 });
+    /* the recoil is the whole point: a hard camera kick, a blast ring and a
+     * cloud of vented plasma behind the barrel */
+    /* the kick is felt when the player is close enough to see the cannon */
+    const near = Math.hypot(this.player.x - BASE.x, this.player.y - BASE.y) < 4000;
+    this.shake = Math.max(this.shake, near ? 26 : 3);
+    this.ringFx(BASE.x, BASE.y, BASE.r * 1.7, "#ffb04d", 1000);
+    this.ringFx(mx, my, 160, "#ffe9a6", 700);
+    this.burst(mx, my, "#ffd24d", 26, 7, 520);
+    this.burst(mx, my, "#ff7a5c", 14, 9, 360);
+    for (let i = 0; i < 10; i++) {
+      const ba = a + Math.PI + (Math.random() - 0.5) * 0.9;
+      this.addParticle(mx + Math.cos(ba) * 30, my + Math.sin(ba) * 30, Math.cos(ba) * (120 + Math.random() * 260), Math.sin(ba) * (120 + Math.random() * 260), "#9db4c9", 4 + Math.random() * 5, 0.8, 4, false);
+    }
+    void want;
+  }
+
+  private updateBaseShots(dt: number) {
+    for (let i = this.baseShots.length - 1; i >= 0; i--) {
+      const s = this.baseShots[i];
+      s.life -= dt;
+      if (s.target && s.target.dead) s.target = null;
+      if (!s.target) s.target = this.nearestEnemy(s.x, s.y, 700);
+      if (s.target) {
+        const want = Math.atan2(s.target.y - s.y, s.target.x - s.x), cur = Math.atan2(s.vy, s.vx);
+        const na = cur + clamp(angDiff(cur, want), -2.2 * dt, 2.2 * dt);
+        const sp = Math.hypot(s.vx, s.vy);
+        s.vx = Math.cos(na) * sp; s.vy = Math.sin(na) * sp;
+      }
+      s.x += s.vx * dt; s.y += s.vy * dt;
+      s.trail += dt;
+      if (s.trail > 0.03) {
+        s.trail = 0;
+        this.addParticle(s.x, s.y, -s.vx * 0.06, -s.vy * 0.06, Math.random() < 0.5 ? "#ffd24d" : "#ff7a5c", 5, 0.45, 2, true);
+      }
+      const t = s.target;
+      if (t && !t.dead && Math.hypot(t.x - s.x, t.y - s.y) < Math.max(34, Math.min(t.radius, 420) * 0.55) + 22) {
+        this.turretImpact(t, s.x, s.y);
+        this.baseShots.splice(i, 1);
+        continue;
+      }
+      if (s.life <= 0) {
+        this.ringFx(s.x, s.y, 120, "#ffb04d", 600);
+        this.burst(s.x, s.y, "#ff9d4d", 12, 5, 320);
+        this.baseShots.splice(i, 1);
+      }
+    }
+  }
+
+  /** A turret shell burns straight through plating and shields. Anything up to
+   *  epic tier is simply incinerated; legendary+ only loses a chunk of hull. */
+  private turretImpact(e: Enemy | null, x: number, y: number) {
+    if (!e || e.dead) return;
+    e.melt = Math.max(e.melt, 0.9);
+    e.shells.length = 0;
+    e.aggro = true;
+    this.ringFx(x, y, Math.max(140, Math.min(e.radius, 900) * 0.6), "#ffd24d", 1100);
+    this.ringFx(x, y, Math.max(200, Math.min(e.radius, 900) * 0.9), "#ff7a5c", 800);
+    this.burst(x, y, "#ffd24d", 30, 8, 460);
+    this.burst(x, y, "#ff6b3d", 18, 10, 300);
+    this.shake = Math.max(this.shake, 20);
+    if (e.tier <= 3) {
+      /* incinerated in a single flash of ash */
+      this.killEnemy(e, x, y);
+      return;
+    }
+    const alive = e.parts.filter((q) => q.alive);
+    let total = 0;
+    for (const q of alive) total += q.hp;
+    if (total <= 0) { this.killEnemy(e, x, y); return; }
+    const frac = Math.min(1, 120_000 / total);
+    for (const q of alive) {
+      q.hp -= q.hp * frac;
+      q.hurt = 0.16; q.barT = 4;
+      if (q.hp <= 0) this.breakPart(e, q, false);
+    }
+    e.barT = 4;
+  }
+
+  /** The nest is gone: burn the swarm, lose the cargo, lose half the credits. */
+  private destroyBase() {
+    if (this.baseLost) return;
+    this.baseLost = true;
+    this.baseLostT = 3.4;
+    this.baseHp = 0;
+    this.baseFlash = 1;
+    this.turret.target = null;
+    this.turret.cd = 1e9;
+    this.shake = 46;
+    /* penalties */
+    const lostInv = this.save.inventory.length;
+    this.save.inventory = [];
+    const lostCr = Math.ceil(this.save.credits / 2);
+    this.save.credits = Math.max(0, this.save.credits - lostCr);
+    this.comps = [];
+    this.holdComp = null;
+    for (const h of this.harpoons) if (h.state !== 0) this.retract(h);
+    /* the blast vaporises every insect in the world */
+    for (const e of this.enemies) {
+      e.dead = true;
+      for (const q of e.parts) q.alive = false;
+      if (Math.random() < 0.6) this.burst(e.x, e.y, "#ffb04d", 6, 6, 280);
+    }
+    this.enemies = [];
+    this.eprojs = [];
+    this.puddles = [];
+    this.rings = [];
+    this.burst(BASE.x, BASE.y, "#ffd24d", 90, 14, 1200);
+    this.burst(BASE.x, BASE.y, "#ff6b3d", 60, 18, 900);
+    for (let i = 0; i < 5; i++) this.ringFx(BASE.x, BASE.y, BASE.r * (2.2 + i * 1.8), i % 2 ? "#ffd24d" : "#ff7a5c", 1200);
+    this.toast(`NEST DESTROYED — ${lostInv} stored component${lostInv === 1 ? "" : "s"} lost`, "#ff6b81");
+    this.toast(`Half your credits went up with it (-${lostCr.toLocaleString()} CR)`, "#ffd24d");
+    this.markDirty();
+    this.persist(true);
+    void this.pushServer();
+  }
+
+
   /* ---------------- main update ---------------- */
   update(dtRaw: number) {
     const dt = Math.min(dtRaw, 0.05);
@@ -2369,11 +2627,24 @@ export class Game {
       this.firePlayer(dt);
     }
 
+    // nest timers, repair and the siege cannon
+    if (this.baseLostT > 0) this.baseLostT = Math.max(0, this.baseLostT - dt);
+    if (this.baseFlash > 0) this.baseFlash -= dt;
+    if (this.baseHitT > 0) this.baseHitT -= dt;
+    if (this.baseAlarmCd > 0) this.baseAlarmCd -= dt;
+    if (!this.baseLost) {
+      if (this.baseHitT <= 0 && this.baseHp < this.baseMaxHp) this.baseHp = Math.min(this.baseMaxHp, this.baseHp + this.baseMaxHp * 0.02 * dt);
+      this.updateTurret(dt);
+    }
+    this.updateBaseShots(dt);
+
     // world
-    this.chunkT -= dt;
-    if (this.chunkT <= 0) { this.chunkT = 1.0; this.manageChunks(); }
-    this.updateEnemies(dt);
-    this.updateEProjs(dt);
+    if (!this.baseLost) {
+      this.chunkT -= dt;
+      if (this.chunkT <= 0) { this.chunkT = 1.0; this.manageChunks(); }
+      this.updateEnemies(dt);
+      this.updateEProjs(dt);
+    }
     this.updateBullets(dt);
     this.updateComps(dt);
     this.updateHarpoons(dt);
@@ -2468,6 +2739,9 @@ export class Game {
       dead: p.dead, respawn: p.respawn, x: p.x, y: p.y, online: this.online, zoomOn: st.zoomMin < 1, inv: this.save.inventory.length, cargo: st.cargo,
       hold: this.input.rHold / 0.6, rev: this.rev, zoom: this.zoom, fps: this.fps,
       discovery: this.discovery ? { name: this.discovery.name, t: this.discovery.t } : null,
+      baseHp: this.baseHp, baseMaxHp: this.baseMaxHp, baseLost: this.baseLost, baseLostT: this.baseLostT,
+      baseNear: !this.baseLost && Math.hypot(p.x - BASE.x, p.y - BASE.y) < BASE.aggroR,
+      baseUnderAttack: !this.baseLost && this.enemies.some((e) => !e.dead && e.bdist < BASE.aggroR && (e.tier >= 2 || this.baseHp < this.baseMaxHp * 0.92)),
       abilities: ["Z", "X", "C", "V", "F"].map((key, i) => {
         const a = this.abilityAt(i);
         if (!a) return { key, name: "— empty —", icon: "·", color: "#64748b", cd: 0, max: 1, ready: false, active: false, empty: true };

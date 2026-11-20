@@ -3,6 +3,44 @@
 Everything below is implemented in the current build. Numbers are the actual constants used by
 the simulation, not design targets.
 
+## 0. v1.6 — nest siege cannon and a destructible base
+
+### Siege cannon
+- The nest now carries a permanently fitted cannon. Stats: **range 1,600u**, shell speed 650,
+  **7-second reload**, 1.8 rad/s traverse. It picks the nearest enemy in range and holds that
+  target until it dies or leaves the leash.
+- One shell **incinerates any enemy of epic tier or below** outright, burning through plating and
+  energy shields (it is a physical incendiary shell, not an energy weapon).
+- Legendary and mythical enemies only lose a proportional chunk of hull (120,000 damage spread over
+  their remaining parts), so they cannot be held off — one legendary reaches the nest in a few
+  seconds and ends the run.
+- Recoil is deliberately huge: the barrel slides back 36u, a hot muzzle flash and six spikes
+  appear, a shock ring leaves the nest, the mount ring expands, plasma vents behind the barrel and
+  the camera kicks 26 (scaled down when the player is far away).
+- Only one shell is in flight at a time because the 7s reload is longer than the ~2.5s flight.
+
+### Base aggro and destruction
+- Enemies whose centre is within `turretR × 1.4 = 2,240u` of the nest switch their target to the
+  nest and ignore the ship completely (their shots carry a `tgtBase` flag and only collide with the
+  nest). They charge at **2.6× normal speed**, then ram and fire at the hull.
+- The nest has **600 integrity**. Incoming damage scales by attacker tier:
+  common ×0, uncommon ×0.01, rare ×0.4, epic ×1, legendary ×1.6, mythical ×2.4. Ambient trash
+  therefore cannot erode it; one epic that reaches the hull does ~140 dps, two epics overwhelm the
+  cannon's one-target-at-a-time 7s cycle, and a legendary/mythical kills it in about 2 seconds.
+- Integrity regenerates 2%/s after 7 seconds without a hit. A slim teal `⬢` bar joins the player
+  bars while the nest is nearby or damaged, and `⬢ NEST UNDER ATTACK` appears when rare+ enemies
+  are inside the leash.
+- At zero integrity: every enemy in the world is vaporised, all loose and stored components are
+  lost (`save.inventory = []`), half the credits are removed, the penalties are saved immediately,
+  and after a 3-second `NEST DESTROYED` overlay the client routes back to the title screen. The
+  next run places the nest elsewhere.
+
+### Nest placement
+- `BASE_RING` is 13,900–15,300u — the same outer (common) ring, never an inner zone and never near
+  the world edge. A module-level last position guarantees consecutive runs are at least 3,000u
+  apart. The camera, player spawn, docking, recall, safe zone, spawning exclusion and minimap dot
+  all read the mutated `BASE` position.
+
 ## 0. v1.5 — moth lag, bestiary hover cards, visible loadout
 
 ### White moth lag

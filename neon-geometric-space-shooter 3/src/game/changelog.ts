@@ -8,7 +8,7 @@
  *   CHANGELOG and mirror the details in docs/CHANGELOG.md.
  */
 
-export const VERSION = "1.5";
+export const VERSION = "1.6";
 
 export interface ChangeEntry {
   version: string;
@@ -19,6 +19,19 @@ export interface ChangeEntry {
 }
 
 export const CHANGELOG: ChangeEntry[] = [
+  {
+    version: "1.6",
+    date: "20 Nov 2026",
+    title: "Nest siege cannon and a destructible base",
+    points: [
+      "The nest mounts a slow siege cannon: one shell incinerates any enemy up to epic tier.",
+      "Every shot kicks the barrel back hard, with a muzzle blast, plasma vent and camera shake.",
+      "Insects inside 1.4x the cannon's reach charge the nest and ignore your ship.",
+      "The nest has hull integrity; legendaries and mythicals tear through it in seconds.",
+      "If the nest dies, every stored component and half your credits are lost, the blast kills every insect and the run ends at the title screen.",
+      "The nest now appears in a different spot in the outer ring on every run.",
+    ],
+  },
   {
     version: "1.5",
     date: "20 Nov 2026",
