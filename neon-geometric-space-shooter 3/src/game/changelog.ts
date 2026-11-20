@@ -8,7 +8,7 @@
  *   CHANGELOG and mirror the details in docs/CHANGELOG.md.
  */
 
-export const VERSION = "1.4";
+export const VERSION = "1.5";
 
 export interface ChangeEntry {
   version: string;
@@ -19,6 +19,17 @@ export interface ChangeEntry {
 }
 
 export const CHANGELOG: ChangeEntry[] = [
+  {
+    version: "1.5",
+    date: "20 Nov 2026",
+    title: "Moth lag, roomier bestiary, visible loadout",
+    points: [
+      "Fixed the massive lag around the big white moth (huge shield/part blurs).",
+      "Bestiary is larger and scrolls; hover cards pop up over the entry.",
+      "Weapons, shields, armour, optics and utilities now show on the player hull.",
+      "Added glow, charge and shield-arc effects to fitted hardware.",
+    ],
+  },
   {
     version: "1.4",
     date: "20 Nov 2026",

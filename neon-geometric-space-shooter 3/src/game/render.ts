@@ -573,6 +573,113 @@ function drawShipShape(ctx: CanvasRenderingContext2D, color: string, alpha: numb
   ctx.shadowBlur = 0; ctx.globalAlpha = 1;
 }
 
+const WEAPON_ART: Record<string, { color: string; kind: "gun" | "pod" | "beam" | "special" }> = {
+  pulse: { color: "#7dffb4", kind: "gun" },
+  scatter: { color: "#ffd24d", kind: "gun" },
+  hmg: { color: "#ffb04d", kind: "gun" },
+  flak: { color: "#ff9d6e", kind: "gun" },
+  missile: { color: "#ff7a5c", kind: "pod" },
+  homing: { color: "#ff5cf0", kind: "pod" },
+  cluster: { color: "#ff9d4d", kind: "pod" },
+  mines: { color: "#c3ccd6", kind: "pod" },
+  lance: { color: "#7df9ff", kind: "beam" },
+  bypass: { color: "#b7ff7d", kind: "beam" },
+  rail: { color: "#ffe9a6", kind: "beam" },
+  cutter: { color: "#ff8ad6", kind: "beam" },
+  chain: { color: "#c77dff", kind: "special" },
+  emp: { color: "#8ad8ff", kind: "special" },
+  gravity: { color: "#b18cff", kind: "special" },
+  sonic: { color: "#c0ffff", kind: "special" },
+  acid: { color: "#9dff6a", kind: "special" },
+  venom: { color: "#7dffb4", kind: "special" },
+  drones: { color: "#7dffb4", kind: "pod" },
+};
+
+const SHIELD_ART: Record<string, string> = {
+  deflector: "#7df9ff", absorber: "#45ff8a", reflector: "#c45cff", kinetic: "#ffd24d", phase: "#ff7ad9",
+  ward: "#8ad8ff", shell: "#ffb04d", overcharge: "#ffe14d", nullfield: "#9dff6a", prismatic: "#e5a8ff",
+};
+
+const ARMOR_ART: Record<string, string> = {
+  plating: "#c3ccd6", reactive: "#ffb04d", thorn: "#ff7a5c", chitin: "#7dffb4", carapace: "#ffe14d",
+  nanoweave: "#9dff6a", ablative: "#8ad8ff", titan: "#c45cff", exoskeleton: "#ff9d6e", venomguard: "#7dffb4", scalemail: "#ffd24d",
+};
+
+function equipped(g: Game, slot: "shield" | "armor" | "optics" | "utility") {
+  const id = g.save.equip[slot];
+  return id ? g.save.crafted.find((c) => c.id === id) ?? null : null;
+}
+
+/** Physical weapon hardware mounted on the hull, one silhouette per weapon. */
+function drawWeaponMount(ctx: CanvasRenderingContext2D, rid: string, x: number, y: number, flip: number, t: number, i: number) {
+  const art = WEAPON_ART[rid] ?? { color: "#ff9d6e", kind: "gun" as const };
+  const c = art.color;
+  const pulse = 0.55 + 0.45 * Math.sin(t * 3 + i * 2);
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale(1, flip);
+  ctx.lineWidth = 1.6;
+  ctx.strokeStyle = c;
+  ctx.fillStyle = "rgba(8,16,26,0.95)";
+  ctx.shadowColor = c;
+  ctx.shadowBlur = 7;
+  if (art.kind === "beam") {
+    const long = rid === "rail" ? 19 : rid === "lance" ? 12 : 9;
+    ctx.beginPath(); ctx.roundRect(-3, -2.1, long, 4.2, 1.5); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = c; ctx.globalAlpha = 0.35 + 0.4 * pulse;
+    ctx.beginPath(); ctx.rect(long - 2, -1, 3, 2); ctx.fill();
+    ctx.globalAlpha = 1;
+    if (rid === "cutter") { ctx.beginPath(); ctx.moveTo(long, -4); ctx.lineTo(long + 5, 0); ctx.lineTo(long, 4); ctx.stroke(); }
+  } else if (art.kind === "pod") {
+    ctx.beginPath(); ctx.roundRect(-3, -4.2, 9, 8.4, 1.5); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = c;
+    for (let k = -1; k <= 1; k += 2) { ctx.globalAlpha = 0.55 + 0.35 * pulse; ctx.beginPath(); ctx.arc(7, k * 2.2, 1.1, 0, TAU); ctx.fill(); }
+    ctx.globalAlpha = 1;
+  } else if (art.kind === "special") {
+    ctx.beginPath(); ctx.arc(-1, 0, 4.2, 0, TAU); ctx.fill(); ctx.stroke();
+    ctx.beginPath();
+    if (rid === "chain") { ctx.moveTo(2, -3); ctx.lineTo(6, 0); ctx.lineTo(3, 0); ctx.lineTo(7, 3.5); }
+    else if (rid === "emp") { ctx.arc(1, 0, 5.5, -0.9, 0.9); }
+    else if (rid === "acid" || rid === "venom") { ctx.moveTo(3, -2.4); ctx.lineTo(8, -1.2); ctx.lineTo(8, 1.2); ctx.lineTo(3, 2.4); }
+    else { ctx.arc(0, 0, 6.4, 0, TAU); }
+    ctx.stroke();
+  } else {
+    const barrels = rid === "hmg" ? 3 : rid === "scatter" ? 3 : 1;
+    for (let b = 0; b < barrels; b++) {
+      const oy = barrels === 1 ? 0 : (b - 1) * 2.2;
+      ctx.beginPath(); ctx.roundRect(-3, oy - 1, rid === "scatter" ? 6 : 10, 2, 1); ctx.fill(); ctx.stroke();
+    }
+    ctx.fillStyle = c; ctx.globalAlpha = 0.4 + 0.4 * pulse;
+    ctx.beginPath(); ctx.arc(rid === "scatter" ? 5 : 8, 0, 1.1, 0, TAU); ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+  ctx.shadowBlur = 0;
+  ctx.restore();
+}
+
+/** Armour shows up as plates bolted onto the hull, coloured by recipe. */
+function drawArmorVisual(ctx: CanvasRenderingContext2D, rid: string, eff: number, t: number) {
+  const c = ARMOR_ART[rid] ?? "#c3ccd6";
+  const thick = rid === "titan" ? 4.4 : rid === "carapace" ? 3.8 : 2.6;
+  ctx.save();
+  ctx.strokeStyle = c;
+  ctx.fillStyle = c + "22";
+  ctx.lineWidth = thick;
+  ctx.shadowColor = c; ctx.shadowBlur = 6;
+  ctx.beginPath();
+  ctx.moveTo(-9, -13.4); ctx.lineTo(6, -15.2); ctx.lineTo(9, -8); ctx.lineTo(-4, -7.4); ctx.closePath();
+  ctx.moveTo(-9, 13.4); ctx.lineTo(6, 15.2); ctx.lineTo(9, 8); ctx.lineTo(-4, 7.4); ctx.closePath();
+  ctx.fill(); ctx.stroke();
+  // dorsal ridge grows with efficiency
+  const ridge = 3 + Math.min(6, eff * 2);
+  ctx.globalAlpha = 0.5 + 0.3 * Math.sin(t * 2);
+  ctx.beginPath(); ctx.moveTo(-16, 0); ctx.lineTo(-8, -ridge); ctx.lineTo(-2, 0); ctx.lineTo(-8, ridge); ctx.closePath();
+  ctx.fillStyle = c + "55"; ctx.fill(); ctx.stroke();
+  ctx.globalAlpha = 1;
+  ctx.shadowBlur = 0;
+  ctx.restore();
+}
+
 function drawPlayer(g: Game, ctx: CanvasRenderingContext2D, z: number, t: number) {
   const p = g.player, st = g.stats;
   ctx.save();
@@ -586,18 +693,50 @@ function drawPlayer(g: Game, ctx: CanvasRenderingContext2D, z: number, t: number
     ctx.shadowBlur = 0;
   }
   drawShipShape(ctx, p.flash > 0 ? "#ff6b81" : "#7df9ff", 1, z);
-  // turrets
-  st.weapons.forEach((w, i) => {
-    const side = i === 1 ? -1 : 1;
-    ctx.fillStyle = w.rid === "pulse" ? "#7dffb4" : w.rid === "missile" ? "#ffb04d" : w.rid === "lance" ? "#e5a8ff" : "#ff9d6e";
-    ctx.beginPath(); ctx.arc(2, 12 * side, 3.5, 0, TAU); ctx.fill();
+
+  /* ---- fitted hardware ---- */
+  const armor = equipped(g, "armor");
+  if (armor) drawArmorVisual(ctx, armor.rid, armor.eff, t);
+  const slots: [number, number][] = [[0, -11.5], [0, 11.5], [-7, 0]];
+  st.weapons.slice(0, 3).forEach((w, i) => {
+    const [wx, wy] = slots[i] ?? [0, 0];
+    drawWeaponMount(ctx, w.rid, wx, wy, wy < 0 ? -1 : 1, t, i);
   });
+  // shield emitters
+  const shield = equipped(g, "shield");
+  if (shield) {
+    const sc = SHIELD_ART[shield.rid] ?? "#7df9ff";
+    ctx.fillStyle = sc; ctx.shadowColor = sc; ctx.shadowBlur = 8;
+    for (const sy of [-1, 1]) {
+      ctx.globalAlpha = 0.55 + 0.35 * Math.sin(t * 3 + sy);
+      ctx.beginPath(); ctx.arc(-4, sy * 5.5, 1.8, 0, TAU); ctx.fill();
+    }
+    ctx.globalAlpha = 1; ctx.shadowBlur = 0;
+  }
+  // optics lens + utility pod
+  if (equipped(g, "optics")) {
+    ctx.strokeStyle = "#9dff6a"; ctx.lineWidth = 1.3;
+    ctx.beginPath(); ctx.arc(13, 0, 2.6, 0, TAU); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(15, 0); ctx.lineTo(18, 0); ctx.stroke();
+  }
+  if (equipped(g, "utility")) {
+    ctx.fillStyle = "#c0a8ff"; ctx.shadowColor = "#c0a8ff"; ctx.shadowBlur = 7;
+    ctx.beginPath(); ctx.arc(-13, 0, 2, 0, TAU); ctx.fill(); ctx.shadowBlur = 0;
+  }
   ctx.restore();
+
   if (st.shieldMax > 0 && p.shield > 0) {
     const f = p.shield / st.shieldMax;
-    ctx.strokeStyle = `rgba(110,230,255,${0.2 + 0.5 * f})`; ctx.lineWidth = 2 / z; ctx.shadowColor = "#7df9ff"; ctx.shadowBlur = 10;
+    const sc = shield ? SHIELD_ART[shield.rid] ?? "#7df9ff" : "#7df9ff";
+    ctx.strokeStyle = sc; ctx.globalAlpha = 0.2 + 0.5 * f; ctx.lineWidth = 2 / z;
+    ctx.shadowColor = sc; ctx.shadowBlur = 10;
     hexPath(ctx, p.x, p.y, SHIP_R + 14, t * 0.8);
-    ctx.stroke(); ctx.fillStyle = `rgba(110,230,255,${0.04 + 0.06 * f})`; ctx.fill(); ctx.shadowBlur = 0;
+    ctx.stroke(); ctx.fillStyle = sc; ctx.globalAlpha = 0.04 + 0.06 * f; ctx.fill();
+    ctx.globalAlpha = 0.5 + 0.35 * Math.sin(t * 4);
+    for (const dir of [1, -1]) {
+      ctx.beginPath(); ctx.arc(p.x, p.y, SHIP_R + 20, t * dir * 1.1, t * dir * 1.1 + 1.1); ctx.stroke();
+    }
+    ctx.globalAlpha = 1; ctx.shadowBlur = 0;
   }
   if (p.barrier > 0 && p.barrierMax > 0) {
     const f = p.barrier / p.barrierMax;
@@ -652,7 +791,11 @@ function drawEnemy(g: Game, ctx: CanvasRenderingContext2D, e: Enemy, z: number, 
     ctx.globalAlpha = 0.62 + 0.38 * hf;
     ctx.fillStyle = hurt ? "rgba(255,255,255,0.85)" : p.fill;
     ctx.fill();
-    if (p.glow) { ctx.shadowColor = p.stroke; ctx.shadowBlur = p.kind === "core" ? 22 : 12; }
+    if (p.glow) {
+      ctx.shadowColor = p.stroke;
+      /* huge parts (giant cores, atlas wings) make canvas blur brutally slow */
+      ctx.shadowBlur = p.r * z > 160 ? 0 : p.kind === "core" ? 22 : 12;
+    }
     else if (big && p.r * z > 14) { ctx.save(); ctx.globalAlpha = 0.12; ctx.strokeStyle = p.stroke; ctx.lineWidth = lw * 3.2; ctx.stroke(); ctx.restore(); }
     ctx.strokeStyle = hurt ? "#ffffff" : p.stroke;
     ctx.lineWidth = lw * (p.kind === "core" ? 1.6 : 1);
@@ -682,7 +825,6 @@ function drawEnemy(g: Game, ctx: CanvasRenderingContext2D, e: Enemy, z: number, 
       ctx.fillStyle = `rgba(138,148,162,${0.3 + 0.2 * f + hit * 0.3})`;
       ctx.strokeStyle = `rgba(208,216,226,${0.55 + 0.3 * f + hit})`;
       ctx.lineWidth = 2.6 / z;
-      ctx.shadowColor = "#c3ccd6"; ctx.shadowBlur = si === e.shells.length - 1 ? 8 : 0;
       for (const idx of e.order) {
         const p = e.parts[idx];
         if (!p.alive) continue;
@@ -703,7 +845,6 @@ function drawEnemy(g: Game, ctx: CanvasRenderingContext2D, e: Enemy, z: number, 
         if (bo !== 0) ctx.restore();
         if (gr && gr.ang !== 0) ctx.restore();
       }
-      ctx.shadowBlur = 0;
     }
   }
 
@@ -733,12 +874,16 @@ function drawEnemy(g: Game, ctx: CanvasRenderingContext2D, e: Enemy, z: number, 
     const p = s.part;
     const f = p.shieldHp / p.shieldMax;
     const hit = p.shieldHit > 2.8 ? 1 : 0;
+    const blurry = s.r * z < 180; // canvas shadows on huge hexes are extremely slow
     hexPath(ctx, s.x, s.y, s.r, t * 0.3);
     ctx.fillStyle = `rgba(70,210,255,${0.05 + 0.08 * f + hit * 0.12})`; ctx.fill();
     ctx.strokeStyle = `rgba(125,240,255,${0.35 + 0.5 * f})`; ctx.lineWidth = (2 + hit * 3) / z;
-    ctx.shadowColor = "#7df9ff"; ctx.shadowBlur = 12; ctx.stroke(); ctx.shadowBlur = 0;
-    hexPath(ctx, s.x, s.y, s.r * 0.92, -t * 0.3);
-    ctx.strokeStyle = "rgba(125,240,255,0.18)"; ctx.lineWidth = 1 / z; ctx.stroke();
+    if (blurry) { ctx.shadowColor = "#7df9ff"; ctx.shadowBlur = 12; }
+    ctx.stroke(); ctx.shadowBlur = 0;
+    if (blurry) {
+      hexPath(ctx, s.x, s.y, s.r * 0.92, -t * 0.3);
+      ctx.strokeStyle = "rgba(125,240,255,0.18)"; ctx.lineWidth = 1 / z; ctx.stroke();
+    }
   }
 }
 

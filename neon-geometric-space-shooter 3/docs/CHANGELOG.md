@@ -3,6 +3,35 @@
 Everything below is implemented in the current build. Numbers are the actual constants used by
 the simulation, not design targets.
 
+## 0. v1.5 — moth lag, bestiary hover cards, visible loadout
+
+### White moth lag
+- The tier-5 moths (Luna Moth, Atlas Moth) carry three shield generators with projected radii of
+  650–780 units. Each hex used `shadowBlur`, and the huge core used a 22px glow. Canvas shadows on
+  paths that large are software-blurred every frame and caused the visible stall.
+- Guards: shield shadows are only used when `radius × zoom < 180`; the inner shield hex is skipped
+  for big shields. Part glow is skipped when `part.r × zoom > 160`. Plating draws no shadows at all.
+- Large enemies still render the same silhouettes, just without the multi-thousand-pixel blur passes.
+
+### Bestiary
+- Modal widened to `min(97vw, 74rem)` and the whole card area is a single `overflow-y-auto`
+  `overscroll-contain` pane, so it scrolls on every screen size.
+- Cards are larger (`7.4rem`, 62px art) and the six rarity pips are thicker.
+- Hovering (or focusing/tapping) a card opens a floating detail card **beside that entry** instead
+  of a fixed bottom panel: name, family, best rarity, field note, parts/hull/speed/turn/pack/zones,
+  abilities and rarity-coloured drops. Undiscovered species still show a black silhouette and no
+  stats. The popover is viewport-clamped and `pointer-events: none`.
+
+### Player hardware
+- `drawPlayer` now reads the equipped crafted items and draws each one:
+  - **Weapons** (up to 3): guns (single/triple barrels), missile/utility pods, beam emitters
+    (rail is longest), and special emitters, each in its role colour with a pulsing muzzle glow.
+  - **Armour**: side plates plus a dorsal ridge, thickness and colour by recipe (titan/carapace are
+    visibly heavier).
+  - **Shield**: emitter dots and a coloured bubble + two counter-rotating arcs, colour by shield id.
+  - **Optics**: a small lens at the nose. **Utility**: a glowing pod at the tail.
+- Engine flame, overdrive ring and hit flash are unchanged; all fitted effects animate with `t`.
+
 ## 0. v1.4 — bestiary, damage types and visible plating
 
 ### Saving when leaving a run
