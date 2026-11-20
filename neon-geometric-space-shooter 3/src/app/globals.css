@@ -1,0 +1,23 @@
+@import "tailwindcss";
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: #04050c;
+  overscroll-behavior: none;
+}
+
+select,
+input,
+button {
+  font-family: inherit;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(125, 249, 255, 0.3);
+}
