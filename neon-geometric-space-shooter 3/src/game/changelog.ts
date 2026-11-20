@@ -8,7 +8,7 @@
  *   CHANGELOG and mirror the details in docs/CHANGELOG.md.
  */
 
-export const VERSION = "1.6.1";
+export const VERSION = "1.7";
 
 export interface ChangeEntry {
   version: string;
@@ -19,6 +19,19 @@ export interface ChangeEntry {
 }
 
 export const CHANGELOG: ChangeEntry[] = [
+  {
+    version: "1.7",
+    date: "20 Nov 2026",
+    title: "Hex turrets, legendary siege shells and a 120s repair lockout",
+    points: [
+      "Enemies now switch to the nest at 1,760u — just 10% past the cannon's 1,600u reach.",
+      "Six small turrets ride the nest's hex pylons, spinning to Track and firing weak, fast tracers at anything within 850u.",
+      "The siege cannon stays offline until a rare or better enters range. Its shell now one-shots legendaries; mythicals survive at 45% hull.",
+      "Enemies finished mostly by the nest or its turrets drop no components at all.",
+      "The nest only repairs after 120 seconds without taking damage.",
+      "One hex turret is destroyed for every sixth of the nest's integrity lost; the HUD shows the remaining turrets.",
+    ],
+  },
   {
     version: "1.6.1",
     date: "20 Nov 2026",

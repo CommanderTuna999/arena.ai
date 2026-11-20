@@ -253,9 +253,18 @@ function Hud_({ hud, onOpen, onHelp, onAdmin, onSettings, onBestiary, onHome, on
         {hud.maxShield > 0 && <Bar v={hud.shield} max={hud.maxShield} color="#4dd2ff" h={8} />}
         {hud.hasBoost && <Bar v={hud.boost} max={100} color="#ff9d4d" h={6} />}
         {(hud.baseNear || hud.baseHp < hud.baseMaxHp) && !hud.baseLost && (
-          <div className="flex items-center gap-1.5" title="Nest integrity">
+          <div className="flex items-center gap-1.5" title={`Nest integrity · ${hud.baseTurrets.filter(Boolean).length}/6 defence turrets`}>
             <span className="text-[11px] leading-none text-emerald-300 drop-shadow-[0_0_6px_#4dffd2]">⬢</span>
             <Bar v={hud.baseHp} max={hud.baseMaxHp} color={hud.baseHp / hud.baseMaxHp > 0.5 ? "#4dffd2" : hud.baseHp / hud.baseMaxHp > 0.25 ? "#ffd24d" : "#ff4d6d"} h={7} />
+            <span className="flex gap-0.5">
+              {hud.baseTurrets.map((alive, i) => (
+                <span
+                  key={i}
+                  className="h-1.5 w-1.5 rounded-[1px]"
+                  style={{ background: alive ? "#4dffd2" : "#4a1c24", boxShadow: alive ? "0 0 4px #4dffd2" : "none" }}
+                />
+              ))}
+            </span>
           </div>
         )}
         <div className="mt-1 flex items-center gap-2 text-sm font-bold text-yellow-300 drop-shadow-[0_0_8px_rgba(255,225,77,0.7)]">
@@ -382,7 +391,8 @@ function Help({ onClose }: { onClose: () => void }) {
     ["SHIFT", "Afterburner (upgrade)"],
     ["T", "Recall beacon (craftable)"],
     ["E", "Open the nest at your base"],
-    ["Nest cannon", "Auto-fires a slow siege shell; it kills epics but not legendaries"],
+    ["Nest cannon", "Stays offline until rare+ enters range; one-shots legendaries, mythicals lose 55% hull"],
+    ["Hex turrets", "Six fast, weak point-defence turrets; one dies for every 1/6 of nest integrity lost"],
     ["Mouse wheel", "Zoom out (craftable optics)"],
     ["Z X C V F", "Fire equipped active abilities"],
     ["` (backtick)", "Admin panel (infinite resources)"],
@@ -401,6 +411,7 @@ function Help({ onClose }: { onClose: () => void }) {
           <li>Too heavy? Stronger cables, more harpoons on one part, or a better winch help. Overloaded cables snap.</li>
           <li>Sell components for credits or store them to craft weapons, shields, armour, optics, utilities and active abilities.</li>
           <li>Rare and above enemies wear grey armour layers around their parts; the deeper the zone, the more layers. Energy shields (blue hexes) swallow lasers and shock completely, but solid rounds pass through them.</li>
+          <li>The nest only repairs after <b className="text-cyan-200">120s</b> without damage. Enemies finished mostly by the nest or its hex turrets drop no components.</li>
           <li>Hover a loose component to read its name, rarity, value and mass. Turn that off in ⚙ SETTINGS.</li>
           <li>Danger rises toward the centre of the map: bigger, deadlier, more layered enemies. Your progress autosaves.</li>
         </ul>

@@ -8,6 +8,10 @@ import { SPECIES_LIST, buildEnemy, type AbilityDef, type Group, type Part, type 
 /* ---------------------------------------------------------------------------
  * COMBAT & WORLD REFERENCE (live constants)
  *   Base cannon      : st.dmg per shot, rate 4 + 0.7/level, 1 + barrels shots.
+ *   Nest defences    : siege cannon sleeps until a rare+ target enters 1,600u and
+ *                      one-shots up to legendary; six hex turrets fire fast weak
+ *                      tracers to 850u. One turret dies per 1/6 nest integrity,
+ *                      and the nest repairs only after 120s without damage.
  *   Crafted weapons  : fully automatic; damage = st.dmg * multiplier * efficiency.
  *                      B / AUTO pill toggles the rack (persisted in save.autoFire).
  *                      Each weapon has its own range (data.ts WEAPON_RANGE); auto-fire
@@ -39,6 +43,16 @@ const ZONE_CAP = [56, 48, 40, 22, 18, 15];
 const HARD_MAX = 60;
 /** shells shave 70% off kinetic hits; lasers and shockwaves do nothing to them */
 const SHELL_TAKE = 0.3;
+/* Nest defence tuning. The siege shell one-shots up to legendary; mythicals lose
+ * a fixed chunk so they stay a genuine end-game threat. */
+const SHELL_DMG = 2_500_000;
+const MYTHIC_SHELL_FRAC = 0.55;
+const BASE_REPAIR_IDLE = 120;
+/* six point-defence turrets on the outer hex ring */
+const MINI_COUNT = 6;
+const MINI_DMG = 18;
+const MINI_CD = 0.24;
+const MINI_SPEED = 1450;
 /** The segmented snake boss is disabled for now; the species stays in the bestiary. */
 const SNAKE_ENABLED = false;
 const BOSS_SP = SNAKE_ENABLED ? SPECIES_LIST.findIndex((s) => s.boss) : -1;
@@ -73,6 +87,9 @@ export interface Enemy {
   bend: { amp: number; k: number; speed: number } | null;
   /** distance to the nest (recomputed every frame for base defence) */
   bdist: number;
+  /** running damage totals, used to deny drops to base-only kills */
+  dmgTaken: number;
+  baseDmg: number;
 }
 export interface ShellLayer { hp: number; max: number }
 export type DmgSrc = "kinetic" | "laser" | "shock" | "explosive" | "missile" | "dot";
@@ -97,7 +114,7 @@ export interface Ring { x: number; y: number; r: number; max: number; speed: num
 export interface DebrisPiece { poly: number[]; stroke: string; fill: string }
 export interface Debris { x: number; y: number; vx: number; vy: number; rot: number; vr: number; life: number; max: number; pieces: DebrisPiece[] }
 export interface Beam { x1: number; y1: number; x2: number; y2: number; life: number; color?: string }
-export interface LComp { id: number; c: Comp; x: number; y: number; vx: number; vy: number; a: number; va: number; r: number; hooks: number[]; stress: number; ttl: number; born: number }
+export interface LComp { id: number; c: Comp; x: number; y: number; vx: number; vy: number; a: number; va: number; r: number; hooks: number[]; stress: number; ttl: number; born: number; srcId: number }
 export interface RopeNode { x: number; y: number; px: number; py: number }
 export interface Harpoon {
   slot: number; state: 0 | 1 | 2 | 3; hx: number; hy: number; hvx: number; hvy: number; nodes: RopeNode[];
@@ -115,6 +132,14 @@ export interface BaseShot {
 }
 export interface TurretState {
   a: number; cd: number; recoil: number; flash: number; target: Enemy | null;
+}
+/** one of the six small point-defence turrets riding the nest's hex ring */
+export interface MiniTurret {
+  a: number; cd: number; alive: boolean; target: Enemy | null; recoil: number; flash: number;
+}
+/** fast, weak tracer fired by a point-defence turret */
+export interface BaseBolt {
+  x: number; y: number; vx: number; vy: number; life: number; dmg: number; target: Enemy | null; trail: number;
 }
 export interface AdminState { on: boolean; credits: boolean; health: boolean; damage: boolean; components: boolean }
 
@@ -138,6 +163,8 @@ export interface Hud {
   abilities: HudAbility[]; admin: AdminState; lock: boolean; autoFire: boolean; overdrive: boolean;
   discovery: { name: string; t: number } | null;
   baseHp: number; baseMaxHp: number; baseLost: boolean; baseLostT: number; baseNear: boolean; baseUnderAttack: boolean;
+  /** alive state of the six hex point-defence turrets */
+  baseTurrets: boolean[];
 }
 
 export function biomeWeights(x: number, y: number): number[] {
@@ -219,12 +246,19 @@ export class Game {
   /** nest defence: the slow siege cannon and the shells it throws */
   turret: TurretState = { a: -Math.PI / 2, cd: 1.5, recoil: 0, flash: 0, target: null };
   baseShots: BaseShot[] = [];
+  miniTurrets: MiniTurret[] = Array.from({ length: MINI_COUNT }, (_, i) => ({
+    a: Math.PI / 6 + (i / MINI_COUNT) * TAU, cd: 0.18 + i * 0.05, alive: true, target: null, recoil: 0, flash: 0,
+  }));
+  baseBolts: BaseBolt[] = [];
   baseHp = BASE_MAX_HP;
   baseMaxHp = BASE_MAX_HP;
   baseLost = false;
   baseLostT = 0;
   baseFlash = 0;
   baseHitT = 0;
+  /** cumulative integrity damage; one turret dies per sixth of max HP */
+  private baseDamageTaken = 0;
+  private miniLost = 0;
   private baseAlarmCd = 0;
   admin: AdminState = { on: false, credits: false, health: false, damage: false, components: false };
   autoFire = true;
@@ -881,10 +915,12 @@ export class Game {
     return this._w;
   }
   /** plating takes the hit instead of the body. Returns true if it absorbed it. */
-  private shellHit(e: Enemy, dmg: number, src: DmgSrc) {
+  private shellHit(e: Enemy, dmg: number, src: DmgSrc, fromBase = false) {
     const layer = e.shells[e.shells.length - 1];
     if (!layer) return false;
     const dealt = src === "laser" || src === "shock" ? 0 : dmg * SHELL_TAKE;
+    const before = layer.hp;
+    this.trackDamage(e, Math.min(dealt, Math.max(0, before)), fromBase);
     layer.hp -= dealt;
     e.shellHit = 0.12;
     e.aggro = true;
@@ -924,6 +960,7 @@ export class Game {
       abil, abilCd: abil.map(() => 1 + Math.random() * 3), gap: 1, act: null, stun: 0, wander: { x, y, t: 0 }, roleGroups,
       walk: Math.random() * 6, dead: false, eDmg: 8 * DMG_MUL[tier], keep: spd.keep + b.radius * 0.9, strafe: Math.random() < 0.5 ? 1 : -1, strafeT: 2,
       tags, shields: [], weaponParts, shieldParts, dist: 9999, bdist: 9999, contactCd: 0, hasChange: false, gen: 0,
+      dmgTaken: 0, baseDmg: 0,
       dot: 0, dotT: 0, melt: 0, slowT: 0, slowF: 1,
       shells: Array.from({ length: tier >= 2 && !spd.bodyWave ? tier - 1 : 0 }, () => ({ hp: 5 * HP_MUL[tier], max: 5 * HP_MUL[tier] })),
       shellHit: 0, shellR: b.radius + 6,
@@ -1040,10 +1077,9 @@ export class Game {
 
   /* ---------------- enemies: part damage ---------------- */
   partAt(e: Enemy, lx: number, ly: number): Part | null {
-    /* The core is deliberately huge now, so it can overlap smaller parts.
-     * Prefer any ordinary part under the cursor and fall back to the core:
-     * the big core stays selectable where it sticks out, without stealing
-     * clicks aimed at a leg or plate drawn on top of it. */
+    /* Cores are compact and drawn under the body, so they only peek through
+     * gaps. Prefer any ordinary part under the cursor and fall back to the
+     * core so it stays selectable where it is exposed. */
     let coreHit: Part | null = null;
     for (let k = e.order.length - 1; k >= 0; k--) {
       const p = e.parts[e.order[k]];
@@ -1071,12 +1107,24 @@ export class Game {
     for (const p of e.parts) { max += p.maxHp; if (p.alive) cur += p.hp; }
     return max > 0 ? cur / max : 0;
   }
-  damagePart(e: Enemy, p: Part, dmg: number, wx: number, wy: number, src: DmgSrc = "kinetic") {
+  /** Record who actually removed hull. Base kills are checked at drop time. */
+  private trackDamage(e: Enemy, dealt: number, fromBase: boolean) {
+    const d = Math.max(0, dealt);
+    if (d <= 0) return;
+    e.dmgTaken += d;
+    if (fromBase) e.baseDmg += d;
+  }
+  /** true when the nest's defences (cannon or point turrets) did most of the work */
+  private baseMajority(e: Enemy) {
+    return e.baseDmg > 0 && e.baseDmg * 2 > e.dmgTaken;
+  }
+  damagePart(e: Enemy, p: Part, dmg: number, wx: number, wy: number, src: DmgSrc = "kinetic", fromBase = false) {
     void src;
+    this.trackDamage(e, Math.min(dmg, Math.max(0, p.hp)), fromBase);
     p.hp -= dmg; p.hurt = 0.1; p.barT = 3.5; e.barT = 4;
     e.aggro = true;
     if (wx !== 0 || wy !== 0) for (let i = 0; i < 2; i++) this.addParticle(wx, wy, (Math.random() - 0.5) * 220, (Math.random() - 0.5) * 220, p.stroke, 2.5, 0.25, Math.floor(Math.random() * 3));
-    if (p.hp <= 0 && p.alive) this.breakPart(e, p, true);
+    if (p.hp <= 0 && p.alive) this.breakPart(e, p, !fromBase);
   }
   private refreshMobility(e: Enemy) {
     if (e.spd.id === "serpent") { e.mobility = 1; return; } // snakes have no legs to lose
@@ -1151,6 +1199,14 @@ export class Game {
   private killEnemy(e: Enemy, x: number, y: number) {
     if (e.dead) return;
     e.dead = true;
+    /* Base-majority kills leave nothing behind. Scrub loose pieces that broke
+     * off this enemy earlier in the fight as well. */
+    if (this.baseMajority(e)) {
+      for (let i = this.comps.length - 1; i >= 0; i--) {
+        const c = this.comps[i];
+        if (c.srcId === e.id && !c.hooks.length) this.comps.splice(i, 1);
+      }
+    }
     if (e.spd.boss) {
       this.bossT = 150;
       this.toast("THE WORLD SERPENT IS SLAIN", "#c54cff");
@@ -1187,6 +1243,8 @@ export class Game {
     return r;
   }
   private maybeDrop(e: Enemy, p: Part, x: number, y: number, mul = 1) {
+    /* No salvage when the nest did most of the damage. */
+    if (this.baseMajority(e)) return;
     const isCore = p.kind === "core";
     const boss = !!e.spd.boss;
     const chance = boss ? 1 : isCore ? 0.92 : this.stats.dropChance * KIND_DROP[p.kind] * Math.min(1, 40 / e.parts.length) * mul;
@@ -1198,7 +1256,7 @@ export class Game {
       mass: compMass(p.area), hue: e.spd.hue, value: compValue(p.area, tier, p.kind),
     };
     const a = Math.random() * TAU, s = 60 + Math.random() * 120;
-    this.comps.push({ id: this.idc++, c: comp, x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, a: e.a, va: (Math.random() - 0.5) * 3, r: p.r, hooks: [], stress: 0, ttl: 160, born: this.t });
+    this.comps.push({ id: this.idc++, c: comp, x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, a: e.a, va: (Math.random() - 0.5) * 3, r: p.r, hooks: [], stress: 0, ttl: 160, born: this.t, srcId: e.id });
     if (this.comps.length > 90) {
       const i = this.comps.findIndex((c) => !c.hooks.length);
       if (i >= 0) this.comps.splice(i, 1);
@@ -2012,10 +2070,10 @@ export class Game {
       }
     }
   }
-  private nearestEnemy(x: number, y: number, range: number): Enemy | null {
+  private nearestEnemy(x: number, y: number, range: number, minTier = 0): Enemy | null {
     let best: Enemy | null = null, bd = range;
     for (const e of this.enemies) {
-      if (e.dead) continue;
+      if (e.dead || e.tier < minTier) continue;
       const d = Math.hypot(e.x - x, e.y - y) - Math.min(e.radius, 500) * 0.6;
       if (d < bd) { bd = d; best = e; }
     }
@@ -2385,8 +2443,11 @@ export class Game {
     const dealt = dmg * BASE_TAKE[tier];
     if (dealt <= 0) return;
     this.baseHp -= dealt;
+    this.baseDamageTaken += dealt;
     this.baseFlash = 0.22;
-    this.baseHitT = 7;
+    /* the nest only starts repairing after two full minutes without a hit */
+    this.baseHitT = BASE_REPAIR_IDLE;
+    this.syncMiniLoss();
     this.shake = Math.max(this.shake, Math.min(12, 2 + tier * 2));
     if (this.baseAlarmCd <= 0 && tier >= 2) {
       this.baseAlarmCd = 20;
@@ -2395,7 +2456,8 @@ export class Game {
     if (this.baseHp <= 0) this.destroyBase();
   }
 
-  /** Slow siege cannon: it tracks one target at a time and hits like a meteor. */
+  /** Slow siege cannon: it only powers up for rare+ targets, tracks one at a
+   *  time and hits like a meteor. */
   private updateTurret(dt: number) {
     const T = this.turret;
     T.cd -= dt;
@@ -2403,8 +2465,8 @@ export class Game {
     T.flash = Math.max(0, T.flash - dt);
     if (this.baseLost) { T.target = null; return; }
     const cur = T.target;
-    if (!cur || cur.dead || !this.enemies.includes(cur) || Math.hypot(cur.x - BASE.x, cur.y - BASE.y) > BASE.turretR * 1.05) {
-      T.target = this.nearestEnemy(BASE.x, BASE.y, BASE.turretR);
+    if (!cur || cur.dead || !this.enemies.includes(cur) || cur.tier < 2 || Math.hypot(cur.x - BASE.x, cur.y - BASE.y) > BASE.turretR * 1.05) {
+      T.target = this.nearestEnemy(BASE.x, BASE.y, BASE.turretR, 2);
     }
     const target = T.target;
     if (!target) return;
@@ -2412,6 +2474,108 @@ export class Game {
     T.a += clamp(angDiff(T.a, want), -1.8 * dt, 1.8 * dt);
     if (T.cd > 0 || Math.abs(angDiff(T.a, want)) > 0.07) return;
     this.fireTurret(target, want);
+  }
+
+  /** World position of hex turret i on the nest ring. */
+  private miniPos(i: number): [number, number] {
+    const a = Math.PI / 6 + (i / MINI_COUNT) * TAU;
+    return [BASE.x + Math.cos(a) * BASE.r, BASE.y + Math.sin(a) * BASE.r];
+  }
+
+  /** Kill one point-defence turret; called as the nest crosses each 1/6 HP mark. */
+  private breakMini(i: number) {
+    const T = this.miniTurrets[i];
+    if (!T || !T.alive) return;
+    T.alive = false; T.target = null;
+    const [x, y] = this.miniPos(i);
+    this.ringFx(x, y, 130, "#7df9ff", 700);
+    this.burst(x, y, "#7df9ff", 18, 5, 360);
+    this.burst(x, y, "#ff9d4d", 12, 7, 280);
+    this.shake = Math.max(this.shake, 8);
+  }
+
+  /** One turret goes down for every sixth of maximum integrity lost. */
+  private syncMiniLoss() {
+    const down = Math.min(MINI_COUNT, Math.floor(this.baseDamageTaken / (this.baseMaxHp / MINI_COUNT)));
+    while (this.miniLost < down) this.breakMini(this.miniLost++);
+  }
+
+  /** Six fast, weak point-defence turrets; they engage anything in their reach. */
+  private updateMiniTurrets(dt: number) {
+    for (let i = 0; i < this.miniTurrets.length; i++) {
+      const T = this.miniTurrets[i];
+      if (!T.alive) continue;
+      T.cd -= dt;
+      T.recoil = Math.max(0, T.recoil - dt * 7);
+      T.flash = Math.max(0, T.flash - dt);
+      const [x, y] = this.miniPos(i);
+      const cur = T.target;
+      if (!cur || cur.dead || !this.enemies.includes(cur) || Math.hypot(cur.x - x, cur.y - y) > BASE.smallR * 1.2) {
+        T.target = this.nearestEnemy(x, y, BASE.smallR);
+      }
+      const target = T.target;
+      if (!target) { T.a += dt * 0.7; continue; }
+      const want = Math.atan2(target.y - y, target.x - x);
+      T.a += clamp(angDiff(T.a, want), -5 * dt, 5 * dt);
+      if (T.cd > 0 || Math.abs(angDiff(T.a, want)) > 0.12) continue;
+      this.fireMini(i, T, target, x, y);
+    }
+  }
+
+  private fireMini(i: number, T: MiniTurret, target: Enemy, x: number, y: number) {
+    const dist = Math.hypot(target.x - x, target.y - y);
+    const lt = clamp(dist / MINI_SPEED, 0, 1);
+    const a = Math.atan2(target.y + target.vy * lt * 0.6 - y, target.x + target.vx * lt * 0.6 - x);
+    T.a = a; T.cd = MINI_CD; T.recoil = 1; T.flash = 0.09;
+    const muzzle = 26;
+    this.baseBolts.push({
+      x: x + Math.cos(a) * muzzle, y: y + Math.sin(a) * muzzle,
+      vx: Math.cos(a) * MINI_SPEED, vy: Math.sin(a) * MINI_SPEED,
+      life: 0.85, dmg: MINI_DMG, target, trail: 0,
+    });
+    void i;
+  }
+
+  private updateBaseBolts(dt: number) {
+    for (let i = this.baseBolts.length - 1; i >= 0; i--) {
+      const b = this.baseBolts[i];
+      b.life -= dt;
+      if (b.target && (b.target.dead || !this.enemies.includes(b.target))) b.target = null;
+      b.x += b.vx * dt; b.y += b.vy * dt;
+      b.trail += dt;
+      if (b.trail > 0.035) {
+        b.trail = 0;
+        this.addParticle(b.x, b.y, -b.vx * 0.04, -b.vy * 0.04, "#9dfcff", 2.5, 0.2, 2, true);
+      }
+      const t = b.target;
+      if (t && !t.dead && Math.hypot(t.x - b.x, t.y - b.y) < Math.min(t.radius, 420) * 0.55 + 10) {
+        this.miniImpact(t, b.x, b.y, b.dmg);
+        this.baseBolts.splice(i, 1);
+        continue;
+      }
+      if (b.life <= 0) this.baseBolts.splice(i, 1);
+    }
+  }
+
+  private miniImpact(e: Enemy, x: number, y: number, dmg: number) {
+    if (e.dead) return;
+    e.aggro = true;
+    this.burst(x, y, "#7df9ff", 6, 3, 220);
+    if (e.shells.length) { this.shellHit(e, dmg, "kinetic", true); return; }
+    const ca = Math.cos(e.a), sa = Math.sin(e.a);
+    const lx = (x - e.x) * ca + (y - e.y) * sa;
+    const ly = -(x - e.x) * sa + (y - e.y) * ca;
+    let p = this.partAt(e, lx, ly);
+    if (!p || !p.alive) {
+      let bd = Infinity;
+      p = null;
+      for (const q of e.parts) {
+        if (!q.alive) continue;
+        const d = Math.hypot(q.cx - lx, q.cy - ly);
+        if (d < bd) { bd = d; p = q; }
+      }
+    }
+    if (p) this.damagePart(e, p, dmg, x, y, "kinetic", true);
   }
 
   private fireTurret(target: Enemy, want: number) {
@@ -2427,7 +2591,7 @@ export class Game {
     T.flash = 0.24;
     const muzzle = 200;
     const mx = BASE.x + Math.cos(a) * muzzle, my = BASE.y + Math.sin(a) * muzzle;
-    this.baseShots.push({ x: mx, y: my, vx: Math.cos(a) * speed, vy: Math.sin(a) * speed, life: 4.2, target, trail: 0, dmg: 120_000 });
+    this.baseShots.push({ x: mx, y: my, vx: Math.cos(a) * speed, vy: Math.sin(a) * speed, life: 4.2, target, trail: 0, dmg: SHELL_DMG });
     /* the recoil is the whole point: a hard camera kick, a blast ring and a
      * cloud of vented plasma behind the barrel */
     /* the kick is felt when the player is close enough to see the cannon */
@@ -2449,7 +2613,7 @@ export class Game {
       const s = this.baseShots[i];
       s.life -= dt;
       if (s.target && s.target.dead) s.target = null;
-      if (!s.target) s.target = this.nearestEnemy(s.x, s.y, 700);
+      if (!s.target) s.target = this.nearestEnemy(s.x, s.y, 700, 2);
       if (s.target) {
         const want = Math.atan2(s.target.y - s.y, s.target.x - s.x), cur = Math.atan2(s.vy, s.vx);
         const na = cur + clamp(angDiff(cur, want), -2.2 * dt, 2.2 * dt);
@@ -2476,8 +2640,8 @@ export class Game {
     }
   }
 
-  /** A turret shell burns straight through plating and shields. Anything up to
-   *  epic tier is simply incinerated; legendary+ only loses a chunk of hull. */
+  /** A siege shell burns straight through plating and shields. It one-shots
+   *  anything up to legendary; a mythical loses a fixed 55% of its hull. */
   private turretImpact(e: Enemy | null, x: number, y: number) {
     if (!e || e.dead) return;
     e.melt = Math.max(e.melt, 0.9);
@@ -2488,18 +2652,20 @@ export class Game {
     this.burst(x, y, "#ffd24d", 30, 8, 460);
     this.burst(x, y, "#ff6b3d", 18, 10, 300);
     this.shake = Math.max(this.shake, 20);
-    if (e.tier <= 3) {
-      /* incinerated in a single flash of ash */
-      this.killEnemy(e, x, y);
-      return;
-    }
     const alive = e.parts.filter((q) => q.alive);
     let total = 0;
     for (const q of alive) total += q.hp;
-    if (total <= 0) { this.killEnemy(e, x, y); return; }
-    const frac = Math.min(1, 120_000 / total);
+    if (e.tier <= 4 || total <= 0) {
+      /* rare, epic and legendary are incinerated in a single flash of ash */
+      this.trackDamage(e, total, true);
+      this.killEnemy(e, x, y);
+      return;
+    }
+    /* mythicals survive, but only just */
+    const removed = total * MYTHIC_SHELL_FRAC;
+    this.trackDamage(e, removed, true);
     for (const q of alive) {
-      q.hp -= q.hp * frac;
+      q.hp -= q.hp * MYTHIC_SHELL_FRAC;
       q.hurt = 0.16; q.barT = 4;
       if (q.hp <= 0) this.breakPart(e, q, false);
     }
@@ -2515,6 +2681,8 @@ export class Game {
     this.baseFlash = 1;
     this.turret.target = null;
     this.turret.cd = 1e9;
+    for (const T of this.miniTurrets) { T.alive = false; T.target = null; }
+    this.baseBolts = [];
     this.shake = 46;
     /* penalties */
     const lostInv = this.save.inventory.length;
@@ -2636,8 +2804,10 @@ export class Game {
     if (!this.baseLost) {
       if (this.baseHitT <= 0 && this.baseHp < this.baseMaxHp) this.baseHp = Math.min(this.baseMaxHp, this.baseHp + this.baseMaxHp * 0.02 * dt);
       this.updateTurret(dt);
+      this.updateMiniTurrets(dt);
     }
     this.updateBaseShots(dt);
+    this.updateBaseBolts(dt);
 
     // world
     if (!this.baseLost) {
@@ -2743,6 +2913,7 @@ export class Game {
       baseHp: this.baseHp, baseMaxHp: this.baseMaxHp, baseLost: this.baseLost, baseLostT: this.baseLostT,
       baseNear: !this.baseLost && Math.hypot(p.x - BASE.x, p.y - BASE.y) < BASE.aggroR,
       baseUnderAttack: !this.baseLost && this.enemies.some((e) => !e.dead && e.bdist < BASE.aggroR && (e.tier >= 2 || this.baseHp < this.baseMaxHp * 0.92)),
+      baseTurrets: this.miniTurrets.map((T) => T.alive),
       abilities: ["Z", "X", "C", "V", "F"].map((key, i) => {
         const a = this.abilityAt(i);
         if (!a) return { key, name: "— empty —", icon: "·", color: "#64748b", cd: 0, max: 1, ready: false, active: false, empty: true };

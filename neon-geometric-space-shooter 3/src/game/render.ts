@@ -274,6 +274,19 @@ export function render(g: Game, ctx: CanvasRenderingContext2D) {
     ctx.restore();
   }
 
+  /* ---- point-defence tracers ---- */
+  for (const b of g.baseBolts) {
+    if (b.x < vx0 || b.x > vx1 || b.y < vy0 || b.y > vy1) continue;
+    const ang = Math.atan2(b.vy, b.vx);
+    ctx.save(); ctx.translate(b.x, b.y); ctx.rotate(ang);
+    ctx.strokeStyle = "rgba(125,249,255,0.45)"; ctx.lineWidth = 2.5 / z;
+    ctx.beginPath(); ctx.moveTo(-18, 0); ctx.lineTo(-2, 0); ctx.stroke();
+    ctx.fillStyle = "#d8feff"; ctx.shadowColor = "#7df9ff"; ctx.shadowBlur = 8;
+    ctx.beginPath(); ctx.arc(0, 0, 2.6, 0, TAU); ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.restore();
+  }
+
   /* ---- player bullets & beams ---- */
   ctx.lineCap = "round";
   for (const b of g.bullets) {
@@ -465,7 +478,7 @@ function drawBase(g: Game, ctx: CanvasRenderingContext2D, z: number, t: number) 
   ctx.strokeStyle = "rgba(90,255,170,0.2)"; ctx.lineWidth = 3 / z;
   ctx.beginPath(); ctx.arc(x, y, safe, 0, TAU); ctx.stroke();
   ctx.setLineDash([]);
-  /* defence cannon reach (and the 40% extended leash where enemies turn on the nest) */
+  /* defence cannon reach (and the 10% leash where enemies turn on the nest) */
   if (!lost && Math.hypot(g.player.x - x, g.player.y - y) < BASE.aggroR * 2.4) {
     ctx.setLineDash([14 / z, 22 / z]);
     ctx.lineDashOffset = -t * 24 / z;
@@ -494,18 +507,44 @@ function drawBase(g: Game, ctx: CanvasRenderingContext2D, z: number, t: number) 
   ctx.setLineDash([]); ctx.lineDashOffset = 0;
   hexPath(ctx, x, y, dock * 0.55, -t * 0.3);
   ctx.strokeStyle = "rgba(255,225,77,0.4)"; ctx.lineWidth = 2 / z; ctx.stroke();
-  // pylons
+  // six hex pylons, each carrying a small rotating point-defence turret
   for (let i = 0; i < 6; i++) {
     const a = Math.PI / 6 + (i / 6) * TAU;
     const px = x + Math.cos(a) * r, py = y + Math.sin(a) * r;
+    const T = g.miniTurrets[i];
+    const alive = !lost && (!T || T.alive);
     hexPath(ctx, px, py, 26, t * 0.4 * (i % 2 ? 1 : -1));
-    ctx.fillStyle = "rgba(10,40,50,0.95)"; ctx.fill();
-    ctx.strokeStyle = "#7df9ff"; ctx.lineWidth = 3 / z; ctx.stroke();
-    hexPath(ctx, px, py, 10, 0);
-    ctx.fillStyle = "#4dffd2"; ctx.fill();
+    ctx.fillStyle = alive ? "rgba(10,40,50,0.95)" : "rgba(26,12,10,0.95)"; ctx.fill();
+    ctx.strokeStyle = alive ? "#7df9ff" : "rgba(255,90,60,0.55)";
+    ctx.lineWidth = 3 / z; ctx.stroke();
+    if (alive) {
+      hexPath(ctx, px, py, 10, 0);
+      ctx.fillStyle = "#4dffd2"; ctx.fill();
+    } else {
+      ctx.strokeStyle = `rgba(255,${110 + 40 * Math.sin(t * 7 + i)},60,0.55)`;
+      ctx.lineWidth = 2 / z;
+      ctx.beginPath(); ctx.arc(px, py, 8, 0.4, 2.2); ctx.stroke();
+    }
     // light spokes
     ctx.strokeStyle = "rgba(125,249,255,0.25)"; ctx.lineWidth = 1.5 / z;
     ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(x, y); ctx.stroke();
+    if (alive && T) {
+      ctx.save();
+      ctx.translate(px, py); ctx.rotate(T.a);
+      const kick = T.recoil * 5;
+      ctx.fillStyle = "#0a1a22"; ctx.strokeStyle = "#9dfcff"; ctx.lineWidth = 2 / z;
+      ctx.beginPath();
+      ctx.moveTo(7 - kick, -6); ctx.lineTo(34 - kick, -3.2); ctx.lineTo(34 - kick, 3.2); ctx.lineTo(7 - kick, 6); ctx.closePath();
+      ctx.fill(); ctx.stroke();
+      ctx.strokeStyle = "rgba(255,210,120,0.65)"; ctx.lineWidth = 1.4 / z;
+      ctx.beginPath(); ctx.moveTo(10 - kick, 0); ctx.lineTo(31 - kick, 0); ctx.stroke();
+      if (T.flash > 0) {
+        const f = clamp(T.flash / 0.09, 0, 1);
+        ctx.fillStyle = `rgba(190,255,255,${0.8 * f})`;
+        ctx.beginPath(); ctx.arc(36 - kick, 0, 5 + 5 * f, 0, TAU); ctx.fill();
+      }
+      ctx.restore();
+    }
   }
   // minimal nest sigil: a hex with three cells, no lettering
   hexPath(ctx, x, y, 30, 0);
@@ -558,11 +597,13 @@ function drawBase(g: Game, ctx: CanvasRenderingContext2D, z: number, t: number) 
  * shot, the mount glows hotter as it charges, and the muzzle flash is huge. */
 function drawTurret(g: Game, ctx: CanvasRenderingContext2D, z: number, t: number, x: number, y: number) {
   const T = g.turret;
+  const online = !!T.target;
   const recoil = T.recoil * 36;
-  const charge = clamp(1 - T.cd / 7, 0, 1);
+  const charge = online ? clamp(1 - T.cd / 7, 0, 1) : 0;
   ctx.save();
   ctx.translate(x, y);
   ctx.rotate(T.a);
+  ctx.globalAlpha = online ? 1 : 0.55;
   // shadow / mount
   ctx.fillStyle = "rgba(4,10,16,0.95)";
   hexPath(ctx, 0, 0, 46, 0); ctx.fill();
@@ -609,6 +650,7 @@ function drawTurret(g: Game, ctx: CanvasRenderingContext2D, z: number, t: number
       ctx.beginPath(); ctx.moveTo(mx, 0); ctx.lineTo(mx + Math.cos(a) * (46 + 30 * f), Math.sin(a) * (46 + 30 * f)); ctx.stroke();
     }
   }
+  ctx.globalAlpha = 1;
   ctx.restore();
   // turret base glow (world space, unrotated)
   ctx.strokeStyle = `rgba(255,176,77,${0.16 + 0.25 * T.recoil})`;

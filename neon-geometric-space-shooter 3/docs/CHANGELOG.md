@@ -29,6 +29,46 @@ the simulation, not design targets.
 - Cores stay on layer 0, underneath the body, so segments and plating draw over them and the core
   only shows through gaps.
 
+## 0. v1.7 — hex point turrets, legendary siege shells, 120s repair lockout
+
+### Aggro leash
+- `BASE.aggroR` is now **1,760u**, exactly `turretR × 1.1` (1,600 × 1.1). Mobs switch from the
+  player to the nest only when they are already inside the siege cannon's envelope, instead of the
+  old 2,240u (×1.4). The orange leash ring and the "NEST UNDER ATTACK" check both use the new value.
+
+### Six hex point-defence turrets
+- Six small turrets sit on the existing hex pylons at `BASE.r` (260u), one every 60°.
+- Each turret spins up toward its target (5 rad/s), idles by slowly rotating, and fires a fast
+  (`1,450u/s`) cyan tracer every **0.24s** for **18 damage** at anything inside **850u**
+  (`BASE.smallR`). Tracers lead moving targets, last 0.85s and hit plating before hull.
+- Point-turret damage is physical/kinetic: armour shells absorb 30%, shields still ignore it.
+- They do **not** wake the siege cannon; the cannon only reacts to rare+ enemies.
+- Every sixth of the nest's **maximum** integrity lost destroys one turret (`baseDamageTaken`
+  divided by `baseMaxHp / 6`). A 100-damage chunk kills one, three 100-damage chunks kill three,
+  and all six are gone when the nest dies. Damage is cumulative, so repairs never bring a turret
+  back. The HUD draws six teal pips beside the nest bar.
+
+### Siege cannon: rare+ gate and legendary kills
+- The cannon now acquires only `tier >= 2` (rare, epic, legendary, mythical) targets. Common and
+  uncommon enemies never cause it to power up, and in-flight shells retarget only rare+ enemies.
+- A shell strips all plating and shields, then **one-shots everything up to legendary** (tier 4).
+  It no longer stops at epic.
+- **Mythicals** (tier 5) lose a fixed **55% of current hull** per shell, so they survive one hit at
+  45% and remain an end-game threat.
+- The cannon still has 1,600u range, 7s reload, one shell in flight, 1.8 rad/s traverse, and the
+  same heavy recoil/muzzle effects. It renders dimmed while no rare+ target is in range.
+
+### No salvage from base kills
+- Every enemy tracks `dmgTaken` and `baseDmg`. Base cannon damage (full hull value for one-shots,
+  actual hull removed for mythical chunks) and point-turret damage are attributed to the nest.
+- `maybeDrop` returns immediately when `baseDmg × 2 > dmgTaken` (strict majority). Loose parts that
+  already broke off that enemy are scrubbed from the world when it dies, so a base-majority kill
+  leaves nothing behind. Player-majority kills still drop normally.
+
+### Repair lockout
+- Any hit that deals integrity damage sets `baseHitT = 120`; the 2%/s repair only starts once that
+  timer reaches zero. Low-tier hits that deal 0 damage do not reset it.
+
 ## 0. v1.6 — nest siege cannon and a destructible base
 
 ### Siege cannon
