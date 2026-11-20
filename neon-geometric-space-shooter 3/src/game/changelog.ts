@@ -8,7 +8,7 @@
  *   CHANGELOG and mirror the details in docs/CHANGELOG.md.
  */
 
-export const VERSION = "1.3";
+export const VERSION = "1.4";
 
 export interface ChangeEntry {
   version: string;
@@ -19,6 +19,20 @@ export interface ChangeEntry {
 }
 
 export const CHANGELOG: ChangeEntry[] = [
+  {
+    version: "1.4",
+    date: "20 Nov 2026",
+    title: "Bestiary, damage types and grey plating",
+    points: [
+      "Returning home now saves the run before leaving.",
+      "Summoning insects can no longer clone themselves forever.",
+      "Armour is a solid grey layer around parts; higher rarities get more layers.",
+      "Energy shields block energy completely, but physical rounds pass through.",
+      "Weapons show their damage type; attacks look different by type.",
+      "New bestiary (bee button) with families, stats, drops and silhouettes.",
+      "Rail reload 30% slower, deep-zone spawns 60% lower, zoom 30% shorter.",
+    ],
+  },
   {
     version: "1.3",
     date: "20 Nov 2026",

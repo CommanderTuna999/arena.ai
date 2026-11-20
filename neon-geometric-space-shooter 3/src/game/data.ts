@@ -265,6 +265,49 @@ export const WEAPON_TINT: Record<string, string> = {
   acid: "#9dff6a", venom: "#9dff6a",
   homing: "#ff5cf0",
 };
+
+/* ---------- damage types ----------
+ * Every weapon deals exactly one kind; shields and armour list what they block.
+ * Enemy energy shields stop energy/shock/thermal completely but physical rounds
+ * (kinetic, explosive, corrosive) pass straight through them.
+ */
+export type DmgKind = "kinetic" | "energy" | "explosive" | "shock" | "corrosive" | "thermal" | "physical";
+export interface DmgInfo { name: string; color: string; note: string }
+export const DMG_INFO: Record<DmgKind, DmgInfo> = {
+  kinetic: { name: "Kinetic", color: "#ffd24d", note: "solid rounds; plating reduces it to 30%" },
+  energy: { name: "Energy", color: "#7df9ff", note: "lasers and beams; plating blocks it, energy shields block it" },
+  explosive: { name: "Explosive", color: "#ff7a5c", note: "blast damage; plating reduces it to 30%" },
+  shock: { name: "Shock", color: "#c77dff", note: "electrical arcs; plating blocks it, energy shields block it" },
+  corrosive: { name: "Corrosive", color: "#9dff6a", note: "acid; melts plating and bypasses energy shields" },
+  thermal: { name: "Thermal", color: "#ff8ad6", note: "plasma heat; energy shields block it" },
+  physical: { name: "Physical", color: "#c3ccd6", note: "blunt impacts and collisions" },
+};
+
+export const WEAPON_DMG: Record<string, DmgKind> = {
+  pulse: "energy", scatter: "kinetic", missile: "explosive", lance: "energy", homing: "explosive",
+  bypass: "energy", hmg: "kinetic", emp: "shock", cutter: "thermal", acid: "corrosive", chain: "shock",
+  flak: "explosive", rail: "kinetic", gravity: "shock", mines: "explosive", drones: "kinetic",
+  venom: "corrosive", sonic: "shock", cluster: "explosive",
+};
+
+/** What a crafted item deals, or which damage kinds it blocks. */
+export function damageProfile(r: Recipe): { deals?: DmgKind; blocks?: DmgKind[] } {
+  if (r.slot === "weapon") return { deals: WEAPON_DMG[r.id] ?? "kinetic" };
+  if (r.slot === "shield") {
+    const blocks: DmgKind[] = ["energy", "thermal"];
+    if (["kinetic", "phase", "ward", "reflector", "prismatic", "nullfield"].includes(r.id)) blocks.push("kinetic");
+    if (["kinetic", "prismatic"].includes(r.id)) blocks.push("explosive");
+    return { blocks };
+  }
+  if (r.slot === "armor") {
+    const blocks: DmgKind[] = ["kinetic", "physical"];
+    if (["ablative", "nanoweave", "scalemail"].includes(r.id)) blocks.push("explosive");
+    if (["titan", "carapace", "chitin"].includes(r.id)) blocks.push("corrosive");
+    return { blocks };
+  }
+  if (r.slot === "ability") return { deals: r.id.includes("shockwave") ? "physical" : r.id.includes("overdrive") ? "kinetic" : "shock" };
+  return {};
+}
 export const SLOT_NAME: Record<Slot, string> = { weapon: "Weapon", shield: "Shield", armor: "Armour", optics: "Optics", utility: "Utility", ability: "Ability" };
 
 export function craftEfficiency(r: Recipe, comps: Comp[]) {
@@ -356,6 +399,8 @@ export interface SaveData {
   showCompInfo: boolean;
   /** draw a translucent coloured ring for every fitted weapon's range */
   showRanges: boolean;
+  /** bestiary: species id -> highest tier defeated (missing = never seen) */
+  bestiary: Record<string, number>;
 }
 
 export function newSave(): SaveData {
@@ -363,7 +408,7 @@ export function newSave(): SaveData {
     v: 2, ts: Date.now(), name: "",
     credits: 60, earned: 0, kills: 0, seq: 1, upgrades: {}, inventory: [], crafted: [],
     equip: { weapon: [null, null, null], shield: null, armor: null, optics: null, utility: null },
-    abilitySlots: [null, null, null, null, null], autoSell: false, autoFire: true, showCompInfo: true, showRanges: false,
+    abilitySlots: [null, null, null, null, null], autoSell: false, autoFire: true, showCompInfo: true, showRanges: false, bestiary: {},
   };
 }
 
@@ -386,6 +431,7 @@ export function migrate(raw: unknown): SaveData {
     autoFire: r.autoFire ?? true,
     showCompInfo: r.showCompInfo ?? true,
     showRanges: r.showRanges ?? false,
+    bestiary: { ...(r.bestiary ?? {}) },
   };
 }
 
@@ -514,7 +560,7 @@ export function computeStats(s: SaveData): Stats {
     }
   }
   const op = find(s.equip.optics);
-  const zoomMin = op ? clamp(1 / (1 + 2.8 * op.eff), 0.04, 1) : 1;
+  const zoomMin = op ? clamp(1 / (1 + 1.96 * op.eff), 0.056, 1) : 1;
   const ut = find(s.equip.utility);
   const tpTime = ut && ut.rid === "recall" ? clamp(6 / (0.6 + 0.5 * ut.eff), 2, 6) : 0;
   const tpCd = ut && ut.rid === "recall" ? clamp(100 / (0.5 + 0.5 * ut.eff), 20, 100) : 0;

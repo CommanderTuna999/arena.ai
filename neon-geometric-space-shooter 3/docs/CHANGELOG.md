@@ -3,6 +3,59 @@
 Everything below is implemented in the current build. Numbers are the actual constants used by
 the simulation, not design targets.
 
+## 0. v1.4 — bestiary, damage types and visible plating
+
+### Saving when leaving a run
+- The HUD home button now writes the local save and pushes the server save **before** routing to `/`.
+- The title screen's local-save store compares the raw `localStorage` string on every render instead of
+  keeping a stale module cache, so the just-finished run cannot be overwritten by pre-run progress.
+- `pagehide` / unmount still call `beaconSave()` as a second line of defence.
+
+### Summon cap
+- `summon` children carry a `gen` counter. Only `gen < 2` enemies can summon, broods are capped at 4
+  per cast, and the global `HARD_MAX` is respected. No more infinite clone explosions.
+
+### Plating
+- Layers per tier: **2 → 1, 3 → 2, 4 → 3, 5 → 4** (`tier - 1`, no longer `tier - 2`).
+- Every layer is a solid grey expanded copy of each part polygon (`+3 + 4.5·layer` world units), drawn
+  outermost-first with a light rim, so armoured enemies read as a thick grey shell rather than a
+  hairline. The old "plating cracked / stripped" toasts are gone — the layers disappearing is the
+  feedback.
+- Hit shell stays `radius + 6`.
+
+### Damage types and shields
+- `DmgKind`: kinetic, energy, explosive, shock, corrosive, thermal, physical; `DMG_INFO` carries name
+  and colour, `WEAPON_DMG` maps every weapon, `damageProfile()` lists what an item deals or blocks.
+- Crafting detail shows `DEALS …` / `BLOCKS …` badges. Shields block energy/thermal (and kinetic on
+  kinetic/phase/ward/reflector/prismatic/nullfield); armour blocks kinetic/physical plus variants.
+- Enemy energy shields (blue hexes) now **stop energy, shock and thermal completely** and take no
+  damage from them. Kinetic, explosive and corrosive rounds pass through and hit the body. Beam
+  weapons follow the same rule unless the weapon is a bypass laser.
+- Visual language per type: yellow tracers (kinetic), cyan bolts with white cores (energy), green
+  globs (corrosive), violet zig-zags (shock), wide pink streaks (thermal), orange missiles
+  (explosive). Beams carry their own colour: cyan lance, pink cutter, green bypass, pale gold rail,
+  violet chain lightning.
+
+### Rail, spawns, zoom
+- Rail reload `1.4s → 1.82s` (30% slower).
+- Zone tiers 3–5 densities cut 60%: `1.4/1.1/0.9 → 0.56/0.44/0.36`; caps `38/32/28 → 22/18/15`.
+  Tiers 0–2 keep `2.6/2.2/1.8` and caps `56/48/40`.
+- Optics nerfed 30%: `1/(1 + 1.96·eff)`, floor `0.056` (was `2.8` / `0.04`).
+
+### HUD and bestiary
+- Home, settings, admin, controls and the new bestiary button live in the **top-left** row; the
+  health/shield/boost stack starts below them (`top-16`).
+- Every enabled button scales up 5.5% on hover and dips on press (`globals.css`).
+- Bestiary modal: seven families (ants/bees/wasps, beetles, moths/drifters, leapers, hunters, long
+  ones, legends). Each species is a real SVG of its built body plan; undiscovered species are black
+  silhouettes labelled `???`. Rarity pips (six) fill as higher-tier versions are killed.
+- Hovering an entry shows parts, hull, speed, turn, pack, zones, unlocked abilities, a handwritten
+  field note, and a drop table with each drop chip coloured by the rarity it rolls.
+- First kill of a species records `save.bestiary[species] = tier` and shows the top-of-screen banner
+  **New enemy discovered: Name!** for five seconds.
+- Unique bosses are excluded from the ordinary species lottery (they only spawn through the boss
+  pass, which is still disabled while `SNAKE_ENABLED = false`).
+
 ## 0. v1.3 — crowd, cores, plating and firing discipline
 
 ### Title screen

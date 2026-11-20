@@ -1,7 +1,7 @@
 import { TAU, angDiff, clamp, distToPoly, hash2, lerp, mulberry32, pointInPoly } from "./math";
 import {
   ABILITY_BY_ID, BASE, DMG_MUL, HP_MUL, KIND_CAT, RECIPE_BY_ID, SHIP_R, UPGRADES, WORLD_R, compMass, compValue, computeStats, craftEfficiency,
-  recipeProblem, upgradeCost, zoneTier, WEAPON_RANGE, type Comp, type PartKind, type SaveData, type Slot, type Stats,
+  recipeProblem, upgradeCost, zoneTier, WEAPON_DMG, WEAPON_RANGE, type Comp, type DmgKind, type PartKind, type SaveData, type Slot, type Stats,
 } from "./data";
 import { SPECIES_LIST, buildEnemy, type AbilityDef, type Group, type Part, type ProjType, type SpeciesDef } from "./enemies";
 
@@ -14,8 +14,11 @@ import { SPECIES_LIST, buildEnemy, type AbilityDef, type Group, type Part, type 
  *                      never targets anything outside the current view.
  *   Precision missiles: right-click marks a part; kind-4 bullets ignore all collision
  *                      and hit that part for 3.1x base damage. Re-marking resets reload.
- *   Plating          : tier 3/4/5 get 1/2/3 shells of 5*HP_MUL[tier] HP. Kinetic and
- *                      explosive hits deal 30%; laser and shock deal 0 and are stopped.
+ *   Plating          : tier 2/3/4/5 get 1/2/3/4 grey layers of 5*HP_MUL[tier] HP.
+ *                      Kinetic and explosive hits deal 30%; laser and shock deal 0.
+ *                      Layers are drawn as solid grey copies of the part outlines.
+ *   Energy shields   : blue hexes stop energy/shock/thermal completely and take no
+ *                      damage from them; kinetic/explosive/corrosive pass through.
  *   Spawning         : per-zone density/cap [2.6/56, 2.2/50, 1.8/44, 1.4/38, 1.1/32,
  *                      0.9/28] per 1,500u chunk, chunk pass every 1.0s. A top-up pass
  *                      refills to ~85% of the local cap, and a visibility floor keeps
@@ -30,8 +33,8 @@ export const N_ROPE = 22;
  * Early rings are crowded on purpose — players should always see a few enemies —
  * and every zone has its own population cap so the lag guard scales with the tier.
  * ZONE_DENS is enemies per 1,500u chunk per chunk pass. */
-const ZONE_DENS = [2.6, 2.2, 1.8, 1.4, 1.1, 0.9];
-const ZONE_CAP = [56, 50, 44, 38, 32, 28];
+const ZONE_DENS = [2.6, 2.2, 1.8, 0.56, 0.44, 0.36];
+const ZONE_CAP = [56, 48, 40, 22, 18, 15];
 /** absolute ceiling across every zone; only a safety net */
 const HARD_MAX = 60;
 /** shells shave 70% off kinetic hits; lasers and shockwaves do nothing to them */
@@ -56,7 +59,9 @@ export interface Enemy {
   tags: Record<string, number>; shields: ShieldInfo[]; weaponParts: number[]; shieldParts: number[];
   dist: number; contactCd: number; hasChange: boolean;
   dot: number; dotT: number; melt: number; slowT: number; slowF: number;
-  /** outer armour plating, one entry per layer (epic = 1, legendary = 2, mythical = 3) */
+  /** summon generation: 0 = natural spawn, children are +1 (hard stop at 2) */
+  gen: number;
+  /** outer armour plating, one entry per layer (higher tiers get more) */
   shells: ShellLayer[];
   /** plating hit flash timer */
   shellHit: number;
@@ -70,6 +75,8 @@ export type DmgSrc = "kinetic" | "laser" | "shock" | "explosive" | "missile" | "
 export interface Bullet {
   x: number; y: number; vx: number; vy: number; life: number; dmg: number; pierce: number; hit: number[];
   kind: 0 | 1 | 2 | 3 | 4; target: Enemy | null; crit: boolean;
+  /** what kind of damage this round carries (drives visuals + shield rules) */
+  elem?: DmgKind;
   dot?: number; melt?: number; split?: number; flak?: boolean;
   /** kind 4 (precision missile): exact enemy piece it was fired at */
   lockE?: Enemy; lockP?: Part;
@@ -83,7 +90,7 @@ export interface Puddle { x: number; y: number; r: number; life: number; max: nu
 export interface Ring { x: number; y: number; r: number; max: number; speed: number; dmg: number; hit: boolean; color: string; hurts: boolean }
 export interface DebrisPiece { poly: number[]; stroke: string; fill: string }
 export interface Debris { x: number; y: number; vx: number; vy: number; rot: number; vr: number; life: number; max: number; pieces: DebrisPiece[] }
-export interface Beam { x1: number; y1: number; x2: number; y2: number; life: number }
+export interface Beam { x1: number; y1: number; x2: number; y2: number; life: number; color?: string }
 export interface LComp { id: number; c: Comp; x: number; y: number; vx: number; vy: number; a: number; va: number; r: number; hooks: number[]; stress: number; ttl: number; born: number }
 export interface RopeNode { x: number; y: number; px: number; py: number }
 export interface Harpoon {
@@ -116,6 +123,7 @@ export interface Hud {
   tp: { has: boolean; ch: number; cd: number; max: number }; dead: boolean; respawn: number; x: number; y: number;
   online: number; zoomOn: boolean; inv: number; cargo: number; hold: number; rev: number; zoom: number; fps: number;
   abilities: HudAbility[]; admin: AdminState; lock: boolean; autoFire: boolean; overdrive: boolean;
+  discovery: { name: string; t: number } | null;
 }
 
 export function biomeWeights(x: number, y: number): number[] {
@@ -137,6 +145,9 @@ function pickSpecies(x: number, y: number, rng: () => number, zone: number) {
   const w = biomeWeights(x, y);
   for (let i = 0; i < w.length; i++) {
     const sp = SPECIES_LIST[i];
+    /* unique bosses never enter the ordinary species lottery; they are spawned
+     * only by the dedicated boss pass (disabled while SNAKE_ENABLED is false) */
+    if (sp.boss) { w[i] = 0; continue; }
     if (zone < (sp.minZone ?? 0) || zone > (sp.maxZone ?? 5)) w[i] = 0;
   }
   let tot = 0;
@@ -179,6 +190,8 @@ export class Game {
   harpoons: Harpoon[] = [];
   others: Other[] = [];
   toasts: Toast[] = [];
+  /** newly discovered species banner, shown at the top of the screen */
+  discovery: { name: string; t: number } | null = null;
   chunks = new Set<string>();
   shake = 0;
   tintHue = 190;
@@ -839,7 +852,6 @@ export class Game {
       this.ringFx(e.x, e.y, e.shellR + 10, "#c3ccd6", 520);
       this.burst(e.x, e.y, "#9aa7b4", 16, 5, 300);
       this.shake = Math.max(this.shake, 6);
-      this.toast(n ? "Plating cracked — another layer" : "Plating stripped", "#c3ccd6");
     }
     return true;
   }
@@ -869,9 +881,9 @@ export class Game {
       speed: spd.speed * (1 + 0.04 * tier), turn: spd.turn / ((1 + tier * 1.05) * (1 + b.radius / (b.size * 6))), mobility: 1, legCount: b.legCount, wingCount: b.wingCount,
       abil, abilCd: abil.map(() => 1 + Math.random() * 3), gap: 1, act: null, stun: 0, wander: { x, y, t: 0 }, roleGroups,
       walk: Math.random() * 6, dead: false, eDmg: 8 * DMG_MUL[tier], keep: spd.keep + b.radius * 0.9, strafe: Math.random() < 0.5 ? 1 : -1, strafeT: 2,
-      tags, shields: [], weaponParts, shieldParts, dist: 9999, contactCd: 0, hasChange: false,
+      tags, shields: [], weaponParts, shieldParts, dist: 9999, contactCd: 0, hasChange: false, gen: 0,
       dot: 0, dotT: 0, melt: 0, slowT: 0, slowF: 1,
-      shells: Array.from({ length: tier >= 3 && !spd.bodyWave ? tier - 2 : 0 }, () => ({ hp: 5 * HP_MUL[tier], max: 5 * HP_MUL[tier] })),
+      shells: Array.from({ length: tier >= 2 && !spd.bodyWave ? tier - 1 : 0 }, () => ({ hp: 5 * HP_MUL[tier], max: 5 * HP_MUL[tier] })),
       shellHit: 0, shellR: b.radius + 6,
       bend: spd.bodyWave ? { amp: spd.bodyWave.amp * b.size, k: spd.bodyWave.k, speed: spd.bodyWave.speed } : null,
     };
@@ -1103,6 +1115,11 @@ export class Game {
       this.shake = Math.max(this.shake, 24);
     }
     this.save.kills++;
+    const firstSeen = this.save.bestiary[e.spd.id] === undefined;
+    if (firstSeen || (this.save.bestiary[e.spd.id] ?? -1) < e.tier) this.save.bestiary[e.spd.id] = e.tier;
+    if (firstSeen) {
+      this.discovery = { name: e.spd.name, t: 5 };
+    }
     this.dirty = true;
     let i = 0;
     for (const q of e.parts) {
@@ -1473,12 +1490,18 @@ export class Game {
         turnTo(0.4); damp(4);
         if (!a.fired && a.t >= d.wind) {
           a.fired = true;
-          const n = Math.min(6, Math.max(1, Math.round((d.n ?? 1) * (0.7 + 0.25 * e.tier))));
-          for (let k = 0; k < n; k++) {
-            const ang = (k / n) * TAU + Math.random() * 0.4;
-            const child = this.makeEnemy(e.sp, Math.max(0, e.tier - 1), e.x + Math.cos(ang) * e.radius * 0.9, e.y + Math.sin(ang) * e.radius * 0.9, e.chunk, (Math.random() * 1e9) | 0);
-            child.aggro = true;
-            this.enemies.push(child);
+          /* Summons are capped hard: children cannot summon again (gen 2), and the
+           * brood never pushes the world past the global ceiling. */
+          if (e.gen < 2) {
+            const room = Math.max(0, HARD_MAX - this.enemies.length);
+            const n = Math.min(room, 4, Math.max(1, Math.round((d.n ?? 1) * (0.7 + 0.25 * e.tier))));
+            for (let k = 0; k < n; k++) {
+              const ang = (k / Math.max(1, n)) * TAU + Math.random() * 0.4;
+              const child = this.makeEnemy(e.sp, Math.max(0, e.tier - 1), e.x + Math.cos(ang) * e.radius * 0.9, e.y + Math.sin(ang) * e.radius * 0.9, e.chunk, (Math.random() * 1e9) | 0);
+              child.gen = e.gen + 1;
+              child.aggro = true;
+              this.enemies.push(child);
+            }
           }
           this.ringFx(e.x, e.y, e.radius * 2.2, `hsl(${e.spd.hue},100%,68%)`, 520);
         }
@@ -1807,16 +1830,17 @@ export class Game {
         if (s.part.alive && s.part.shieldHp > 0) {
           const sx = b.x - s.x, sy = b.y - s.y;
           if (sx * sx + sy * sy < s.r * s.r) {
+            const energy = b.elem === "energy" || b.elem === "shock" || b.elem === "thermal";
+            if (!energy) break; // physical rounds pass straight through energy shields
             if (e.spd.reflectShell) {
               this.eprojs.push({ x: b.x, y: b.y, vx: -b.vx * 0.9, vy: -b.vy * 0.9, life: 1.5, dmg: b.dmg * 0.6, r: 6, hue: e.spd.hue, type: "bolt", homing: 0, slow: 0, slowT: 0, poison: 0, pierce: false, hp: 1, speed: 620, src: e, puddle: null });
               this.ringFx(b.x, b.y, 46, "#7df9ff", 400);
               return true;
             }
-            s.part.shieldHp -= b.dmg * (b.kind === 1 ? 1.5 : 1);
             s.part.shieldHit = 3;
             e.aggro = true; e.barT = 3;
-            this.addParticle(b.x, b.y, (Math.random() - 0.5) * 200, (Math.random() - 0.5) * 200, "#7df9ff", 3, 0.3, 2, false);
-            if (s.part.shieldHp <= 0) { s.part.shieldHp = 0; s.part.shieldDown = 7; this.ringFx(s.x, s.y, s.r, "#7df9ff", 800); this.burst(s.x, s.y, "#7df9ff", 14, 6, 300); }
+            this.addParticle(b.x, b.y, (Math.random() - 0.5) * 200, (Math.random() - 0.5) * 200, "#7df9ff", 4, 0.35, 3, false);
+            this.ringFx(b.x, b.y, 40, "#7df9ff", 500);
             return true;
           }
         }
@@ -1908,7 +1932,7 @@ export class Game {
     }
     return best;
   }
-  private beam(x: number, y: number, ang: number, len: number, dmg: number, pierce: number, bypass = false) {
+  private beam(x: number, y: number, ang: number, len: number, dmg: number, pierce: number, bypass = false, src: DmgSrc = "laser", color = "#baffff") {
     const st = this.stats;
     const hits = new Set<number>();
     const cos = Math.cos(ang), sin = Math.sin(ang);
@@ -1927,8 +1951,10 @@ export class Game {
         }
         if (!bypass) for (const s of e.shields) {
           if (s.part.alive && s.part.shieldHp > 0 && (bx - s.x) ** 2 + (by - s.y) ** 2 < s.r * s.r) {
-            s.part.shieldHp -= dmg; s.part.shieldHit = 3;
-            if (s.part.shieldHp <= 0) { s.part.shieldHp = 0; s.part.shieldDown = 7; }
+            const energy = src === "laser" || src === "shock";
+            if (!energy) break; // physical beams ignore energy shields
+            s.part.shieldHit = 3;
+            this.ringFx(bx, by, 42, "#7df9ff", 520);
             endLen = d; break outer;
           }
         }
@@ -1946,7 +1972,7 @@ export class Game {
         if (pierced > pierce) { endLen = d; break outer; }
       }
     }
-    this.beams.push({ x1: x, y1: y, x2: x + cos * endLen, y2: y + sin * endLen, life: 0.12 });
+    this.beams.push({ x1: x, y1: y, x2: x + cos * endLen, y2: y + sin * endLen, life: 0.12, color });
   }
 
   private firePlayer(dt: number) {
@@ -2015,9 +2041,10 @@ export class Game {
       const oy = p.y + Math.sin(base + Math.PI / 2) * 14 * side;
       const dmg = st.dmg * (p.overT > 0 ? 2.2 : 1) * this.dmgMul();
       const shot = (x: number, y: number, ang: number, sp: number, life: number, d: number, kind: Bullet["kind"], extra: Partial<Bullet> = {}) => {
-        this.bullets.push({ x, y, vx: Math.cos(ang) * sp, vy: Math.sin(ang) * sp, life, dmg: d, pierce: 0, hit: [], kind, target: null, crit: false, ...extra });
+        this.bullets.push({ x, y, vx: Math.cos(ang) * sp, vy: Math.sin(ang) * sp, life, dmg: d, pierce: 0, hit: [], kind, target: null, crit: false, elem, ...extra });
       };
       const aim = (t: Enemy) => Math.atan2(t.y - oy, t.x - ox);
+      const elem = WEAPON_DMG[w.rid] ?? "kinetic";
       switch (w.rid) {
         case "pulse": {
           const t = this.nearestEnemy(p.x, p.y, R("pulse"));
@@ -2045,7 +2072,7 @@ export class Game {
           const t = this.nearestEnemy(p.x, p.y, R("lance"));
           if (!t) return;
           p.wCd[i] = cd(0.12);
-          this.beam(p.x, p.y, aim(t), 320 + 80 * eff, dmg * 0.22 * eff, 2 + Math.floor(eff));
+          this.beam(p.x, p.y, aim(t), 320 + 80 * eff, dmg * 0.22 * eff, 2 + Math.floor(eff), false, "laser", "#7df9ff");
           break;
         }
         case "homing": {
@@ -2061,7 +2088,7 @@ export class Game {
           const t = this.nearestEnemy(p.x, p.y, R("bypass"));
           if (!t) return;
           p.wCd[i] = cd(0.1);
-          this.beam(p.x, p.y, aim(t), 420 + 90 * eff, dmg * 0.16 * eff, 3, true);
+          this.beam(p.x, p.y, aim(t), 420 + 90 * eff, dmg * 0.16 * eff, 3, true, "laser", "#b7ff7d");
           break;
         }
         case "hmg": {
@@ -2082,7 +2109,7 @@ export class Game {
           const t = this.nearestEnemy(p.x, p.y, R("cutter"));
           if (!t) return;
           p.wCd[i] = cd(0.18);
-          this.beam(p.x, p.y, aim(t), 175 + 20 * eff, dmg * 1.1 * eff, 1 + Math.floor(eff));
+          this.beam(p.x, p.y, aim(t), 175 + 20 * eff, dmg * 1.1 * eff, 1 + Math.floor(eff), false, "laser", "#ff8ad6");
           break;
         }
         case "acid": {
@@ -2105,7 +2132,7 @@ export class Game {
             const q = alive[Math.floor(Math.random() * alive.length)];
             if (!q) break;
             const wq = this.partWorld(cur, q);
-            this.beams.push({ x1: sx, y1: sy, x2: wq[0], y2: wq[1], life: 0.12 });
+            this.beams.push({ x1: sx, y1: sy, x2: wq[0], y2: wq[1], life: 0.12, color: "#c77dff" });
             this.damagePart(cur, q, dmg * 1.6 * eff * Math.pow(0.75, k), wq[0], wq[1], "shock");
             sx = wq[0]; sy = wq[1];
             seen.add(cur.id);
@@ -2124,8 +2151,8 @@ export class Game {
         case "rail": {
           const t = this.nearestEnemy(p.x, p.y, R("rail"));
           if (!t) return;
-          p.wCd[i] = cd(1.4);
-          this.beam(p.x, p.y, aim(t), 1500, dmg * 2.4 * eff, 12, true);
+          p.wCd[i] = cd(1.82);
+          this.beam(p.x, p.y, aim(t), 1500, dmg * 2.4 * eff, 12, true, "kinetic", "#ffe9a6");
           this.shake = Math.max(this.shake, 5);
           break;
         }
@@ -2264,6 +2291,7 @@ export class Game {
   update(dtRaw: number) {
     const dt = Math.min(dtRaw, 0.05);
     this.t += dt;
+    if (this.discovery) { this.discovery.t -= dt; if (this.discovery.t <= 0) this.discovery = null; }
     this.fpsAcc += dtRaw; this.fpsN++;
     if (this.fpsAcc > 0.5) { this.fps = Math.round(this.fpsN / this.fpsAcc); this.fpsAcc = 0; this.fpsN = 0; }
     const p = this.player, st = this.stats, k = this.input.keys;
@@ -2439,6 +2467,7 @@ export class Game {
       tp: { has: st.tpTime > 0, ch: p.tpT > 0 ? 1 - p.tpT / st.tpTime : 0, cd: p.tpCd, max: st.tpCd },
       dead: p.dead, respawn: p.respawn, x: p.x, y: p.y, online: this.online, zoomOn: st.zoomMin < 1, inv: this.save.inventory.length, cargo: st.cargo,
       hold: this.input.rHold / 0.6, rev: this.rev, zoom: this.zoom, fps: this.fps,
+      discovery: this.discovery ? { name: this.discovery.name, t: this.discovery.t } : null,
       abilities: ["Z", "X", "C", "V", "F"].map((key, i) => {
         const a = this.abilityAt(i);
         if (!a) return { key, name: "— empty —", icon: "·", color: "#64748b", cd: 0, max: 1, ready: false, active: false, empty: true };

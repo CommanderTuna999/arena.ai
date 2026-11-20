@@ -275,15 +275,42 @@ export function render(g: Game, ctx: CanvasRenderingContext2D) {
       ctx.restore(); ctx.shadowBlur = 0;
       continue;
     }
-    ctx.strokeStyle = b.crit ? "#ffe14d" : b.kind === 2 ? "#ff9d6e" : "#9ffcff";
-    ctx.shadowColor = ctx.strokeStyle; ctx.shadowBlur = 8;
-    ctx.lineWidth = (b.crit ? 4 : 3) ;
-    ctx.beginPath(); ctx.moveTo(b.x, b.y); ctx.lineTo(b.x - b.vx * 0.022, b.y - b.vy * 0.022); ctx.stroke();
+    const el = b.elem ?? "kinetic";
+    const col = b.crit ? "#ffe14d" : el === "energy" ? "#7df9ff" : el === "corrosive" ? "#9dff6a" : el === "thermal" ? "#ff8ad6" : el === "shock" ? "#c77dff" : el === "explosive" ? "#ff9d4d" : "#ffd24d";
+    ctx.strokeStyle = col; ctx.fillStyle = col;
+    ctx.shadowColor = col; ctx.shadowBlur = 10;
+    if (el === "corrosive") {
+      ctx.beginPath(); ctx.arc(b.x, b.y, 4, 0, TAU); ctx.fill();
+      ctx.globalAlpha = 0.5; ctx.beginPath(); ctx.arc(b.x - b.vx * 0.012, b.y - b.vy * 0.012, 2.4, 0, TAU); ctx.fill(); ctx.globalAlpha = 1;
+    } else if (el === "shock") {
+      ctx.lineWidth = 2.2;
+      ctx.beginPath(); ctx.moveTo(b.x, b.y);
+      ctx.lineTo(b.x - b.vx * 0.008 + 4, b.y - b.vy * 0.008 - 4);
+      ctx.lineTo(b.x - b.vx * 0.016 - 3, b.y - b.vy * 0.016 + 3);
+      ctx.lineTo(b.x - b.vx * 0.026, b.y - b.vy * 0.026);
+      ctx.stroke();
+    } else if (el === "energy") {
+      ctx.lineWidth = 4;
+      ctx.beginPath(); ctx.moveTo(b.x, b.y); ctx.lineTo(b.x - b.vx * 0.02, b.y - b.vy * 0.02); ctx.stroke();
+      ctx.fillStyle = "#ffffff";
+      ctx.beginPath(); ctx.arc(b.x, b.y, 2.2, 0, TAU); ctx.fill();
+    } else if (el === "thermal") {
+      ctx.lineWidth = 5;
+      ctx.beginPath(); ctx.moveTo(b.x, b.y); ctx.lineTo(b.x - b.vx * 0.03, b.y - b.vy * 0.03); ctx.stroke();
+      ctx.globalAlpha = 0.5; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(b.x, b.y); ctx.lineTo(b.x - b.vx * 0.045, b.y - b.vy * 0.045); ctx.stroke(); ctx.globalAlpha = 1;
+    } else {
+      ctx.lineWidth = (b.crit ? 4 : 3);
+      ctx.beginPath(); ctx.moveTo(b.x, b.y); ctx.lineTo(b.x - b.vx * 0.022, b.y - b.vy * 0.022); ctx.stroke();
+    }
   }
   ctx.shadowBlur = 0;
   for (const bm of g.beams) {
-    ctx.strokeStyle = `rgba(190,255,255,${bm.life / 0.12})`; ctx.lineWidth = 5; ctx.shadowColor = "#7df9ff"; ctx.shadowBlur = 16;
+    const c = bm.color ?? "#baffff";
+    ctx.globalAlpha = clamp(bm.life / 0.12, 0, 1);
+    ctx.strokeStyle = c; ctx.lineWidth = 5; ctx.shadowColor = c; ctx.shadowBlur = 18;
     ctx.beginPath(); ctx.moveTo(bm.x1, bm.y1); ctx.lineTo(bm.x2, bm.y2); ctx.stroke();
+    ctx.globalAlpha = 1;
   }
   ctx.shadowBlur = 0;
 
@@ -646,16 +673,16 @@ function drawEnemy(g: Game, ctx: CanvasRenderingContext2D, e: Enemy, z: number, 
   }
   ctx.restore();
 
-  // armour plating: a thick grey layer that follows every part outline
+  // armour plating: solid grey layers wrapped around every part outline
   if (e.shells.length) {
-    for (let si = 0; si < e.shells.length; si++) {
+    for (let si = e.shells.length - 1; si >= 0; si--) {
       const f = clamp(e.shells[si].hp / Math.max(1, e.shells[si].max), 0, 1);
-      const hit = e.shellHit > 0 ? 0.22 : 0;
-      const grow = 3.5 + si * 3.5;
-      ctx.fillStyle = `rgba(150,160,172,${0.12 + 0.16 * f + hit * 0.4})`;
-      ctx.strokeStyle = `rgba(198,208,220,${0.34 + 0.4 * f + hit})`;
-      ctx.lineWidth = (2.4 + si * 1.6) / z;
-      if (si === e.shells.length - 1) { ctx.shadowColor = "#c3ccd6"; ctx.shadowBlur = 7; }
+      const hit = e.shellHit > 0 ? 0.25 : 0;
+      const grow = 3 + si * 4.5;
+      ctx.fillStyle = `rgba(138,148,162,${0.3 + 0.2 * f + hit * 0.3})`;
+      ctx.strokeStyle = `rgba(208,216,226,${0.55 + 0.3 * f + hit})`;
+      ctx.lineWidth = 2.6 / z;
+      ctx.shadowColor = "#c3ccd6"; ctx.shadowBlur = si === e.shells.length - 1 ? 8 : 0;
       for (const idx of e.order) {
         const p = e.parts[idx];
         if (!p.alive) continue;

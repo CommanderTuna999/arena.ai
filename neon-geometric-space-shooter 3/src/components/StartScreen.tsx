@@ -16,6 +16,7 @@ const SAVE_KEY = "neon-hive-save-v1";
  */
 const SERVER_SAVE = newSave();
 let clientSave: SaveData | null = null;
+let clientRaw: string | null = null;
 const listeners = new Set<() => void>();
 
 function readLocal(): SaveData {
@@ -27,13 +28,21 @@ function readLocal(): SaveData {
 }
 
 function currentSave(): SaveData {
-  if (!clientSave) clientSave = readLocal();
+  /* Always compare against the stored string: the game writes the save while
+   * unmounting on the way back to this screen, and a stale module-level cache
+   * used to resurrect pre-run progress (wiping the run on the next PLAY). */
+  let raw: string | null = null;
+  try { raw = localStorage.getItem(SAVE_KEY); } catch { /* storage may be unavailable */ }
+  if (!clientSave || raw !== clientRaw) {
+    clientRaw = raw;
+    clientSave = readLocal();
+  }
   return clientSave;
 }
 
 function storeSave(save: SaveData) {
   clientSave = save;
-  try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch { /* ignore */ }
+  try { clientRaw = JSON.stringify(save); localStorage.setItem(SAVE_KEY, clientRaw); } catch { /* ignore */ }
   listeners.forEach((l) => l());
 }
 
@@ -42,6 +51,7 @@ function subscribe(listener: () => void) {
   const onStorage = (e: StorageEvent) => {
     if (e.key !== SAVE_KEY) return;
     clientSave = null;
+    clientRaw = null;
     listener();
   };
   window.addEventListener("storage", onStorage);

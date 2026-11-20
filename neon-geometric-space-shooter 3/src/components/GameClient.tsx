@@ -1,16 +1,17 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Game, type Hud } from "@/game/engine";
 import { render } from "@/game/render";
 import {
-  ABILITY_LIST, CAT_NAME, KIND_CAT, RARITIES, RECIPES, RECIPE_BY_ID, SLOT_NAME, UPGRADES, UP_CATS, craftEfficiency, migrate, newSave, recipeProblem, upgradeCost,
+  ABILITY_LIST, CAT_NAME, DMG_INFO, KIND_CAT, RARITIES, RECIPES, RECIPE_BY_ID, SLOT_NAME, UPGRADES, UP_CATS, craftEfficiency, damageProfile, migrate, newSave, recipeProblem, upgradeCost,
   type Comp, type Recipe, type SaveData, type Slot, type UpCat,
 } from "@/game/data";
 import { clamp, fmtNum } from "@/game/math";
 import SettingsPanel from "@/components/SettingsPanel";
 import RecipeIcon from "@/components/RecipeIcon";
+import Bestiary, { BeeIcon } from "@/components/Bestiary";
 
 const SAVE_KEY = "neon-hive-save-v1";
 const PID_KEY = "neon-hive-pid";
@@ -46,20 +47,33 @@ async function loadSave(pid: string): Promise<SaveData> {
 }
 
 export default function GameClient() {
+  const router = useRouter();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const gameRef = useRef<Game | null>(null);
   const [hud, setHud] = useState<Hud | null>(null);
   const [game, setGame] = useState<Game | null>(null);
+  const gameRef2 = useRef<Game | null>(null);
+  useEffect(() => { gameRef2.current = game; }, [game]);
+
+  /** Leave the run, but never lose the run: write the local save before routing. */
+  const goHome = () => {
+    const g = gameRef2.current;
+    if (g) { g.persist(true); void g.pushServer(); }
+    router.push("/");
+  };
   const [menu, setMenu] = useState(false);
   const [help, setHelp] = useState(false);
   const [adminOpen, setAdminOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [bestiaryOpen, setBestiaryOpen] = useState(false);
   const menuRef = useRef(false);
   const adminRef = useRef(false);
   const settingsRef = useRef(false);
+  const bestiaryRef = useRef(false);
   useEffect(() => { menuRef.current = menu; }, [menu]);
   useEffect(() => { adminRef.current = adminOpen; }, [adminOpen]);
   useEffect(() => { settingsRef.current = settingsOpen; }, [settingsOpen]);
+  useEffect(() => { bestiaryRef.current = bestiaryOpen; }, [bestiaryOpen]);
 
   useEffect(() => {
     let raf = 0;
@@ -99,8 +113,8 @@ export default function GameClient() {
           return;
         }
         if (e.code === "Backquote") { e.preventDefault(); setMenu(false); setAdminOpen((v) => !v); game.blur(); return; }
-        if (e.code === "Escape") { setMenu(false); setAdminOpen(false); setSettingsOpen(false); return; }
-        if (menuRef.current || adminRef.current || settingsRef.current) return;
+        if (e.code === "Escape") { setMenu(false); setAdminOpen(false); setSettingsOpen(false); setBestiaryOpen(false); return; }
+        if (menuRef.current || adminRef.current || settingsRef.current || bestiaryRef.current) return;
         if (!e.repeat) game.keyDown(e.code);
         else game.input.keys.add(e.code);
       };
@@ -160,9 +174,10 @@ export default function GameClient() {
       <canvas ref={canvasRef} className="block cursor-crosshair" />
       <div className="pointer-events-none fixed inset-0" style={{ background: "radial-gradient(ellipse at center, transparent 55%, rgba(0,0,10,0.65) 100%)" }} />
       {!hud && <div className="absolute inset-0 grid place-items-center text-xl tracking-[0.4em] text-cyan-300">LOADING SAVE…</div>}
-      {hud && game && <Hud_ hud={hud} onOpen={() => { game.blur(); setAdminOpen(false); setMenu(true); }} onHelp={() => setHelp(true)} onAdmin={() => { game.blur(); setMenu(false); setAdminOpen(true); }} onToggleAuto={() => game.toggleAutoFire()} onSettings={() => { game.blur(); setSettingsOpen(true); }} />}
+      {hud && game && <Hud_ hud={hud} onOpen={() => { game.blur(); setAdminOpen(false); setMenu(true); }} onHelp={() => setHelp(true)} onAdmin={() => { game.blur(); setMenu(false); setAdminOpen(true); }} onToggleAuto={() => game.toggleAutoFire()} onSettings={() => { game.blur(); setSettingsOpen(true); }} onBestiary={() => { game.blur(); setBestiaryOpen(true); }} onHome={goHome} />}
       {hud && game && adminOpen && <AdminPanel game={game} hud={hud} onClose={() => setAdminOpen(false)} />}
       {hud && game && menu && <Hangar game={game} hud={hud} onClose={() => setMenu(false)} />}
+      {game && bestiaryOpen && <Bestiary bestiary={game.save.bestiary ?? {}} onClose={() => { setBestiaryOpen(false); game.blur(); }} />}
       {game && settingsOpen && (
         <div className="fixed inset-0 z-50 grid place-items-center bg-black/75 p-3 backdrop-blur-sm" onMouseDown={(e) => { if (e.target === e.currentTarget) setSettingsOpen(false); }}>
           <div className="flex max-h-[88dvh] w-[min(94vw,32rem)] flex-col rounded-md border border-cyan-300/40 bg-[#060a18]/97 shadow-[0_0_50px_rgba(77,255,210,0.18)]">
@@ -207,12 +222,22 @@ function HarpoonGlyph({ state, load, hp }: { state: number; load: number; hp: nu
   );
 }
 
-function Hud_({ hud, onOpen, onHelp, onAdmin, onSettings, onToggleAuto }: { hud: Hud; onOpen: () => void; onHelp: () => void; onAdmin: () => void; onSettings: () => void; onToggleAuto: () => void }) {
+function Hud_({ hud, onOpen, onHelp, onAdmin, onSettings, onBestiary, onHome, onToggleAuto }: { hud: Hud; onOpen: () => void; onHelp: () => void; onAdmin: () => void; onSettings: () => void; onBestiary: () => void; onHome: () => void; onToggleAuto: () => void }) {
   const hpCol = hud.hp / hud.maxHp > 0.5 ? "#2dffa0" : hud.hp / hud.maxHp > 0.25 ? "#ffd24d" : "#ff4d6d";
   const [selAb, setSelAb] = useState<number | null>(null);
   return (
     <>
-      <div className="pointer-events-none absolute left-3 top-3 flex flex-col gap-1.5">
+      <div className="absolute left-3 top-3 z-20 flex items-center gap-1.5">
+        <button onClick={onHome} title="Save and return to the title screen" className="grid h-8 w-8 place-items-center rounded-sm border border-white/20 bg-black/60 text-xs text-white/60 transition hover:scale-110 hover:bg-white/10 active:scale-95">⌂</button>
+        <button onClick={onSettings} title="Settings" className="grid h-8 w-8 place-items-center rounded-sm border border-cyan-300/40 bg-black/60 text-cyan-200 transition hover:scale-110 hover:bg-cyan-400/20 active:scale-95">⚙</button>
+        <button onClick={onAdmin} title="Admin panel (`)" className="rounded-sm border border-fuchsia-300/50 bg-black/60 px-2 py-1 text-[11px] text-fuchsia-200 transition hover:scale-110 hover:bg-fuchsia-400/20 active:scale-95">`</button>
+        <button onClick={onHelp} title="Controls" className="grid h-8 w-8 place-items-center rounded-sm border border-cyan-300/40 bg-black/60 text-cyan-200 transition hover:scale-110 hover:bg-cyan-400/20 active:scale-95">?</button>
+        <button onClick={onBestiary} title="Bestiary" className="grid h-8 w-8 place-items-center rounded-sm border-2 border-yellow-300/70 bg-yellow-300/10 text-yellow-200 shadow-[0_0_12px_rgba(255,225,77,0.25)] transition hover:scale-110 hover:bg-yellow-300/25 active:scale-95">
+          <BeeIcon size={20} />
+        </button>
+      </div>
+
+      <div className="pointer-events-none absolute left-3 top-16 flex flex-col gap-1.5">
         <Bar v={hud.hp} max={hud.maxHp} color={hpCol} h={12} />
         {hud.maxShield > 0 && <Bar v={hud.shield} max={hud.maxShield} color="#4dd2ff" h={8} />}
         {hud.hasBoost && <Bar v={hud.boost} max={100} color="#ff9d4d" h={6} />}
@@ -245,6 +270,12 @@ function Hud_({ hud, onOpen, onHelp, onAdmin, onSettings, onToggleAuto }: { hud:
         {hud.overdrive && <span className="font-bold text-yellow-300">⚡ OVERDRIVE</span>}
         {hud.admin.on && <span className="font-bold text-fuchsia-300">ADMIN</span>}
       </div>
+
+      {hud.discovery && (
+        <div className="pointer-events-none absolute left-1/2 top-12 z-20 -translate-x-1/2 rounded-sm border border-yellow-300/70 bg-black/80 px-4 py-1.5 text-center text-sm font-black tracking-wide text-yellow-200 shadow-[0_0_24px_rgba(255,225,77,0.35)]">
+          New enemy discovered: {hud.discovery.name}!
+        </div>
+      )}
 
       {/* ability hotbar */}
       <div className="pointer-events-none absolute right-3 top-1/2 flex -translate-y-1/2 flex-col gap-2">
@@ -282,10 +313,6 @@ function Hud_({ hud, onOpen, onHelp, onAdmin, onSettings, onToggleAuto }: { hud:
 
       <div className="absolute bottom-3 right-3 flex items-center gap-2">
         {hud.lock && <span title="Target marked" className="rounded-sm border border-amber-400/70 bg-black/70 px-2 py-1 text-xs text-amber-300">◎</span>}
-        <Link href="/" title="Back to the title screen" className="rounded-sm border border-white/20 bg-black/60 px-2 py-1 text-xs text-white/60 hover:bg-white/10">⌂</Link>
-        <button onClick={onSettings} title="Settings" className="rounded-sm border border-cyan-300/40 bg-black/60 px-2 py-1 text-xs text-cyan-200 hover:bg-cyan-400/20">⚙</button>
-        <button onClick={onAdmin} className="rounded-sm border border-fuchsia-300/50 bg-black/60 px-2 py-1 text-xs text-fuchsia-200 hover:bg-fuchsia-400/20" title="Admin panel (`)">` ADMIN</button>
-        <button onClick={onHelp} className="rounded-sm border border-cyan-300/40 bg-black/60 px-2 py-1 text-xs text-cyan-200 hover:bg-cyan-400/20">? CONTROLS</button>
       </div>
 
       {hud.nearBase && !hud.dead && (
@@ -327,6 +354,7 @@ function Help({ onClose }: { onClose: () => void }) {
     ["Mouse wheel", "Zoom out (craftable optics)"],
     ["Z X C V F", "Fire equipped active abilities"],
     ["` (backtick)", "Admin panel (infinite resources)"],
+    ["Bee button", "Bestiary — discovered species, stats and drops"],
   ];
   return (
     <div className="absolute inset-0 z-50 grid place-items-center bg-black/70 p-4">
@@ -340,7 +368,7 @@ function Help({ onClose }: { onClose: () => void }) {
           <li>Destroyed pieces drop components. Tether them and tow them into the <b className="text-yellow-300">yellow hex</b> at the nest.</li>
           <li>Too heavy? Stronger cables, more harpoons on one part, or a better winch help. Overloaded cables snap.</li>
           <li>Sell components for credits or store them to craft weapons, shields, armour, optics, utilities and active abilities.</li>
-          <li>Epic and above enemies wear grey armour plating: lasers and shockwaves cannot cut it. Missiles strike through it — mark a piece and they will thread past everything else.</li>
+          <li>Rare and above enemies wear grey armour layers around their parts; the deeper the zone, the more layers. Energy shields (blue hexes) swallow lasers and shock completely, but solid rounds pass through them.</li>
           <li>Hover a loose component to read its name, rarity, value and mass. Turn that off in ⚙ SETTINGS.</li>
           <li>Danger rises toward the centre of the map: bigger, deadlier, more layered enemies. Your progress autosaves.</li>
         </ul>
@@ -461,7 +489,7 @@ function effectText(game: Game, r: Recipe, eff: number) {
     case "plating": return `+${Math.round(35 * e)}% max hull`;
     case "reactive": return `-${Math.round(clamp(12 * e, 0, 60))}% damage taken`;
     case "thorn": return `Hit shockwave ${fmtNum(st.dmg * 3 * e)} dmg, +${Math.round(10 * e)}% hull`;
-    case "lens": return `Zoom out to ${clamp(1 / (1 + 2.8 * e), 0.04, 1).toFixed(2)}x (${Math.round(1 / clamp(1 / (1 + 2.8 * e), 0.04, 1))}x range)`;
+    case "lens": return `Zoom out to ${clamp(1 / (1 + 1.96 * e), 0.056, 1).toFixed(2)}x (${Math.round(1 / clamp(1 / (1 + 1.96 * e), 0.056, 1))}x range)`;
     case "recall": return `Channel ${clamp(6 / (0.6 + 0.5 * e), 2, 6).toFixed(1)}s, cooldown ${Math.round(clamp(100 / (0.5 + 0.5 * e), 20, 100))}s`;
     case "magnet": return `Pulls loose parts from ${Math.round(420 + 320 * e)} units`;
     case "kinetic": return `+${fmtNum(st.hull * 0.38 * e)} shield, -${Math.round(clamp(30 * e, 10, 60))}% damage while it holds`;
@@ -543,6 +571,18 @@ function Craft({ game }: { game: Game }) {
             </div>
           </div>
           <div className="text-xs text-white/70">{r.desc}</div>
+          <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-[10px]">
+            {(() => {
+              const prof = damageProfile(r);
+              return (
+                <>
+                  {prof.deals && <span className="rounded-sm border px-1.5 py-0.5 font-bold" style={{ borderColor: DMG_INFO[prof.deals].color + "88", color: DMG_INFO[prof.deals].color }}>DEALS {DMG_INFO[prof.deals].name.toUpperCase()}</span>}
+                  {prof.blocks?.map((b) => <span key={b} className="rounded-sm border border-white/20 px-1.5 py-0.5 font-bold text-white/65">BLOCKS {DMG_INFO[b].name.toUpperCase()}</span>)}
+                  {prof.deals && <span className="text-white/35">{DMG_INFO[prof.deals].note}</span>}
+                </>
+              );
+            })()}
+          </div>
           <div className="mt-1 text-xs text-cyan-200">
             Needs {r.n} components{r.need ? ` (at least ${r.need.count}x ${(r.need.cats ?? []).map((c) => CAT_NAME[c]).join(" or ")})` : ""}
             {r.species ? ` · ${r.species.count}x from ${r.species.names.join(" / ")}` : ""}.
