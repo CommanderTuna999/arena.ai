@@ -1,14 +1,15 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Game, type Hud } from "@/game/engine";
 import { render } from "@/game/render";
 import {
-  ABILITY_LIST, CAT_NAME, KIND_CAT, RARITIES, RECIPES, RECIPE_BY_ID, SLOT_NAME, UPGRADES, UP_CATS, craftEfficiency, decodeSave, encodeSave, migrate, newSave, recipeProblem, upgradeCost,
+  ABILITY_LIST, CAT_NAME, KIND_CAT, RARITIES, RECIPES, RECIPE_BY_ID, SLOT_NAME, UPGRADES, UP_CATS, craftEfficiency, migrate, newSave, recipeProblem, upgradeCost,
   type Comp, type Recipe, type SaveData, type Slot, type UpCat,
 } from "@/game/data";
 import { clamp, fmtNum } from "@/game/math";
+import SettingsPanel from "@/components/SettingsPanel";
 
 const SAVE_KEY = "neon-hive-save-v1";
 const PID_KEY = "neon-hive-pid";
@@ -51,10 +52,13 @@ export default function GameClient() {
   const [menu, setMenu] = useState(false);
   const [help, setHelp] = useState(false);
   const [adminOpen, setAdminOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const menuRef = useRef(false);
   const adminRef = useRef(false);
+  const settingsRef = useRef(false);
   useEffect(() => { menuRef.current = menu; }, [menu]);
   useEffect(() => { adminRef.current = adminOpen; }, [adminOpen]);
+  useEffect(() => { settingsRef.current = settingsOpen; }, [settingsOpen]);
 
   useEffect(() => {
     let raf = 0;
@@ -94,8 +98,8 @@ export default function GameClient() {
           return;
         }
         if (e.code === "Backquote") { e.preventDefault(); setMenu(false); setAdminOpen((v) => !v); game.blur(); return; }
-        if (e.code === "Escape") { setMenu(false); setAdminOpen(false); return; }
-        if (menuRef.current || adminRef.current) return;
+        if (e.code === "Escape") { setMenu(false); setAdminOpen(false); setSettingsOpen(false); return; }
+        if (menuRef.current || adminRef.current || settingsRef.current) return;
         if (!e.repeat) game.keyDown(e.code);
         else game.input.keys.add(e.code);
       };
@@ -155,9 +159,20 @@ export default function GameClient() {
       <canvas ref={canvasRef} className="block cursor-crosshair" />
       <div className="pointer-events-none fixed inset-0" style={{ background: "radial-gradient(ellipse at center, transparent 55%, rgba(0,0,10,0.65) 100%)" }} />
       {!hud && <div className="absolute inset-0 grid place-items-center text-xl tracking-[0.4em] text-cyan-300">LOADING SAVE…</div>}
-      {hud && game && <Hud_ hud={hud} onOpen={() => { game.blur(); setAdminOpen(false); setMenu(true); }} onHelp={() => setHelp(true)} onAdmin={() => { game.blur(); setMenu(false); setAdminOpen(true); }} onToggleAuto={() => game.toggleAutoFire()} />}
+      {hud && game && <Hud_ hud={hud} onOpen={() => { game.blur(); setAdminOpen(false); setMenu(true); }} onHelp={() => setHelp(true)} onAdmin={() => { game.blur(); setMenu(false); setAdminOpen(true); }} onToggleAuto={() => game.toggleAutoFire()} onSettings={() => { game.blur(); setSettingsOpen(true); }} />}
       {hud && game && adminOpen && <AdminPanel game={game} hud={hud} onClose={() => setAdminOpen(false)} />}
       {hud && game && menu && <Hangar game={game} hud={hud} onClose={() => setMenu(false)} />}
+      {game && settingsOpen && (
+        <div className="fixed inset-0 z-50 grid place-items-center bg-black/75 p-3 backdrop-blur-sm" onMouseDown={(e) => { if (e.target === e.currentTarget) setSettingsOpen(false); }}>
+          <div className="flex max-h-[88dvh] w-[min(94vw,32rem)] flex-col rounded-md border border-cyan-300/40 bg-[#060a18]/97 shadow-[0_0_50px_rgba(77,255,210,0.18)]">
+            <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
+              <div className="text-sm font-black tracking-[0.28em] text-cyan-200">SETTINGS</div>
+              <button onClick={() => setSettingsOpen(false)} className="rounded-sm border border-white/25 px-3 py-1 text-[11px] font-bold text-white/70 hover:bg-white/10">CLOSE</button>
+            </div>
+            <div className="min-h-0 flex-1 overflow-y-auto p-4"><Settings game={game} /></div>
+          </div>
+        </div>
+      )}
       {help && <Help onClose={closeHelp} />}
     </div>
   );
@@ -191,7 +206,7 @@ function HarpoonGlyph({ state, load, hp }: { state: number; load: number; hp: nu
   );
 }
 
-function Hud_({ hud, onOpen, onHelp, onAdmin, onToggleAuto }: { hud: Hud; onOpen: () => void; onHelp: () => void; onAdmin: () => void; onToggleAuto: () => void }) {
+function Hud_({ hud, onOpen, onHelp, onAdmin, onSettings, onToggleAuto }: { hud: Hud; onOpen: () => void; onHelp: () => void; onAdmin: () => void; onSettings: () => void; onToggleAuto: () => void }) {
   const hpCol = hud.hp / hud.maxHp > 0.5 ? "#2dffa0" : hud.hp / hud.maxHp > 0.25 ? "#ffd24d" : "#ff4d6d";
   const [selAb, setSelAb] = useState<number | null>(null);
   return (
@@ -266,7 +281,8 @@ function Hud_({ hud, onOpen, onHelp, onAdmin, onToggleAuto }: { hud: Hud; onOpen
 
       <div className="absolute bottom-3 right-3 flex items-center gap-2">
         {hud.lock && <span title="Target marked" className="rounded-sm border border-amber-400/70 bg-black/70 px-2 py-1 text-xs text-amber-300">◎</span>}
-        <Link href="/" title="Back to the website" className="rounded-sm border border-white/20 bg-black/60 px-2 py-1 text-xs text-white/60 hover:bg-white/10">⌂</Link>
+        <Link href="/" title="Back to the title screen" className="rounded-sm border border-white/20 bg-black/60 px-2 py-1 text-xs text-white/60 hover:bg-white/10">⌂</Link>
+        <button onClick={onSettings} title="Settings" className="rounded-sm border border-cyan-300/40 bg-black/60 px-2 py-1 text-xs text-cyan-200 hover:bg-cyan-400/20">⚙</button>
         <button onClick={onAdmin} className="rounded-sm border border-fuchsia-300/50 bg-black/60 px-2 py-1 text-xs text-fuchsia-200 hover:bg-fuchsia-400/20" title="Admin panel (`)">` ADMIN</button>
         <button onClick={onHelp} className="rounded-sm border border-cyan-300/40 bg-black/60 px-2 py-1 text-xs text-cyan-200 hover:bg-cyan-400/20">? CONTROLS</button>
       </div>
@@ -314,7 +330,7 @@ function Help({ onClose }: { onClose: () => void }) {
   return (
     <div className="absolute inset-0 z-50 grid place-items-center bg-black/70 p-4">
       <div className="max-h-full w-full max-w-xl overflow-auto rounded-md border border-cyan-300/60 bg-[#060a18]/95 p-6 shadow-[0_0_40px_rgba(77,255,210,0.25)]">
-        <h1 className="text-center text-3xl font-black tracking-[0.25em] text-cyan-200 drop-shadow-[0_0_14px_#4dffd2]">NEON HIVE</h1>
+        <h1 className="text-center text-3xl font-black tracking-[0.25em] text-cyan-200 drop-shadow-[0_0_14px_#4dffd2]">WOFGUE.IO</h1>
         <p className="mt-2 text-center text-xs text-cyan-100/70">Hunt geometric insects. Strip their plating, shear their limbs, then break the core.</p>
         <div className="mt-4 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
           {rows.map(([k, v]) => (<><div key={k} className="text-yellow-300">{k}</div><div key={v}>{v}</div></>))}
@@ -324,7 +340,7 @@ function Help({ onClose }: { onClose: () => void }) {
           <li>Too heavy? Stronger cables, more harpoons on one part, or a better winch help. Overloaded cables snap.</li>
           <li>Sell components for credits or store them to craft weapons, shields, armour, optics, utilities and active abilities.</li>
           <li>Epic and above enemies wear grey armour plating: lasers and shockwaves cannot cut it. Missiles strike through it — mark a piece and they will thread past everything else.</li>
-          <li>Deep toward the centre, a very long snake coils through the dark.</li>
+          <li>Hover a loose component to read its name, rarity, value and mass. Turn that off in ⚙ SETTINGS.</li>
           <li>Danger rises toward the centre of the map: bigger, deadlier, more layered enemies. Your progress autosaves.</li>
         </ul>
         <button onClick={onClose} className="mt-5 w-full rounded-sm border-2 border-cyan-300 bg-cyan-400/20 py-2 font-bold tracking-widest text-cyan-100 hover:bg-cyan-400/40">LAUNCH</button>
@@ -651,79 +667,21 @@ function Loadout({ game }: { game: Game }) {
 }
 
 function Settings({ game }: { game: Game }) {
-  const [name, setName] = useState(game.save.name);
-  const [confirm, setConfirm] = useState(false);
-  const [code, setCode] = useState("");
-  const [note, setNote] = useState("");
-  const reset = useCallback(() => {
-    game.hardReset(newSave());
+  const apply = (fn: () => void) => {
+    fn();
     game.persist(true);
     void game.pushServer();
-    setConfirm(false);
-  }, [game]);
-  const exportCode = async () => {
-    const c = encodeSave(game.save);
-    setCode(c);
-    try { await navigator.clipboard.writeText(c); setNote("Save code copied — keep it somewhere safe."); }
-    catch { setNote("Copy the code below and keep it somewhere safe."); }
-  };
-  const restoreCode = () => {
-    const s = decodeSave(code);
-    if (!s) { setNote("That save code could not be read."); return; }
-    game.hardReset(s);
-    game.persist(true);
-    void game.pushServer();
-    setName(s.name);
-    setNote(`Restored ${s.name} — ${fmtNum(s.credits)} CR, ${s.kills} kills.`);
   };
   return (
-    <div className="max-w-lg space-y-3 text-sm">
-      <div>
-        <div className="mb-1 text-[10px] font-bold tracking-widest text-white/50">CALLSIGN (shown to other pilots)</div>
-        <div className="flex gap-2">
-          <input value={name} maxLength={16} onChange={(e) => setName(e.target.value)} className="flex-1 rounded-sm border border-white/20 bg-black px-2 py-1" />
-          <button onClick={() => game.setName(name)} className="rounded-sm border border-cyan-300/60 px-3 py-1 text-xs font-bold text-cyan-200 hover:bg-cyan-400/20">SAVE</button>
-        </div>
-      </div>
-      <label className="flex cursor-pointer items-center justify-between rounded-sm border border-white/15 bg-white/[0.03] p-2 text-xs">
-        <span>
-          <span className="block font-bold text-cyan-100">Automatic crafted weapons</span>
-          <span className="block text-[10px] text-white/50">Fire on their own at anything in range (B).</span>
-        </span>
-        <input type="checkbox" checked={game.save.autoFire} onChange={() => game.toggleAutoFire()} />
-      </label>
-      <div className="rounded-sm border border-white/10 p-2 text-xs text-white/60">
-        Enemies destroyed: {fmtNum(game.save.kills)} · Credits earned: {fmtNum(game.save.earned)}<br />
-        Progress autosaves to this browser. Other pilots appear as pink craft on the shared map.
-      </div>
-      <div className="space-y-2 rounded-sm border border-cyan-300/30 bg-cyan-400/[0.04] p-2">
-        <div className="flex items-center justify-between">
-          <div className="text-[10px] font-bold tracking-widest text-cyan-200/80">SAVE CODE</div>
-          <div className="flex gap-1.5">
-            <button onClick={exportCode} className="rounded-sm border border-cyan-300/60 px-2 py-1 text-[10px] font-bold text-cyan-200 hover:bg-cyan-400/20">EXPORT</button>
-            <button onClick={restoreCode} className="rounded-sm border border-yellow-300/60 px-2 py-1 text-[10px] font-bold text-yellow-200 hover:bg-yellow-300/20">RESTORE</button>
-          </div>
-        </div>
-        <textarea
-          value={code}
-          onChange={(e) => { setCode(e.target.value); setNote(""); }}
-          placeholder="Paste a save code here, then press RESTORE."
-          spellCheck={false}
-          className="h-24 w-full resize-y rounded-sm border border-white/15 bg-black/70 p-1.5 font-mono text-[10px] leading-tight text-cyan-100/90"
-        />
-        <div className="text-[10px] text-white/45">
-          Codes are self-contained and checksummed. Move a code to another browser or device to carry your nest across.
-        </div>
-        {note && <div className="text-[11px] text-emerald-300">{note}</div>}
-      </div>
-      <div>
-        {!confirm ? (
-          <button onClick={() => setConfirm(true)} className="rounded-sm border border-red-400/60 px-3 py-1 text-xs font-bold text-red-300 hover:bg-red-500/20">RESET ALL PROGRESS</button>
-        ) : (
-          <div className="flex items-center gap-2 text-xs text-red-300">Really wipe everything? <button onClick={reset} className="rounded-sm border border-red-400 bg-red-500/30 px-3 py-1 font-bold">YES, WIPE</button><button onClick={() => setConfirm(false)} className="rounded-sm border border-white/30 px-3 py-1">Cancel</button></div>
-        )}
-      </div>
-    </div>
+    <SettingsPanel
+      save={game.save}
+      onAutoFire={(v) => { game.setAutoFire(v); }}
+      onShowCompInfo={(v) => { game.setShowCompInfo(v); }}
+      onAutoSell={(v) => { game.setAutoSell(v); }}
+      onName={(v) => { game.setName(v); }}
+      onReset={() => apply(() => game.hardReset(newSave()))}
+      onRestore={(save) => apply(() => game.hardReset(save))}
+    />
   );
 }
 

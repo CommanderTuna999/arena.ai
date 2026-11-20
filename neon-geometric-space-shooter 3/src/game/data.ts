@@ -291,7 +291,13 @@ export const ABILITY_LIST: AbilitySpec[] = [
 ];
 export const ABILITY_BY_ID: Record<string, AbilitySpec> = Object.fromEntries(ABILITY_LIST.map((a) => [a.id, a]));
 
-/* ---------- save ---------- */
+/* ---------- save ----------
+ * Persistent player settings (see Nest / Settings panel):
+ *   autoFire     — crafted weapons fire on their own when a target is in range (default true)
+ *   showCompInfo — hover tooltip on loose components: name, rarity, value, mass (default true)
+ *   autoSell     — sell docked components automatically
+ * Version history lives in src/game/changelog.ts (semantic: 1.x features, 1.0.x fixes).
+ */
 export interface SaveData {
   v: number;
   ts: number;
@@ -308,14 +314,16 @@ export interface SaveData {
   autoSell: boolean;
   /** crafted weapons fire themselves when an enemy is in range (toggle with B) */
   autoFire: boolean;
+  /** show name, rarity, value and mass when hovering a loose component */
+  showCompInfo: boolean;
 }
 
 export function newSave(): SaveData {
   return {
-    v: 2, ts: Date.now(), name: "Pilot-" + Math.floor(1000 + Math.random() * 9000),
+    v: 2, ts: Date.now(), name: "",
     credits: 60, earned: 0, kills: 0, seq: 1, upgrades: {}, inventory: [], crafted: [],
     equip: { weapon: [null, null, null], shield: null, armor: null, optics: null, utility: null },
-    abilitySlots: [null, null, null, null, null], autoSell: false, autoFire: true,
+    abilitySlots: [null, null, null, null, null], autoSell: false, autoFire: true, showCompInfo: true,
   };
 }
 
@@ -336,6 +344,7 @@ export function migrate(raw: unknown): SaveData {
     equip: { ...d.equip, ...(r.equip ?? {}), weapon: [0, 1, 2].map((i) => r.equip?.weapon?.[i] ?? null) },
     abilitySlots,
     autoFire: r.autoFire ?? true,
+    showCompInfo: r.showCompInfo ?? true,
   };
 }
 

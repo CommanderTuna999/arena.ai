@@ -3,6 +3,40 @@
 Everything below is implemented in the current build. Numbers are the actual constants used by
 the simulation, not design targets.
 
+## 0. Title screen, settings, changelog and versioning (v1.1)
+
+- **Wofgue.io start screen** (`/`): the title, a callsign field on top (pre-filled when a name is
+  already saved, empty on a fresh browser), a full-width **PLAY** button, **SETTINGS** and
+  **CHANGELOG** buttons side by side, and the version number in small text at the bottom.
+  The game itself is still `/play`; the in-game `⌂` returns here.
+- **Play requires a callsign.** An empty name focuses the field and shows "Enter a callsign to play."
+  The name is stored in the local save and pushed to the shared map as before.
+- **Real settings panel** (`src/components/SettingsPanel.tsx`), shared by the title screen and the
+  in-game gear button (`⚙`, bottom right) and the Nest → SYSTEM tab. It contains every setting:
+
+  | Setting | Key | Default | Effect |
+  | --- | --- | --- | --- |
+  | Automatic crafted weapons | `autoFire` | `true` | Crafted weapons fire on their own (B still toggles) |
+  | Component hover info | `showCompInfo` | `true` | Name / rarity / value / mass card under the cursor |
+  | Auto-sell docked components | `autoSell` | `false` | Sell on arrival instead of storing |
+  | Callsign | `name` | `""` | Shown to other pilots, max 16 characters |
+  | Save code | — | — | Export to clipboard, or paste + restore |
+  | Reset all progress | — | — | Two-step confirm, wipes the local save |
+
+- **Hover info.** `Game.compUnderCursor()` polygon-tests loose components with 16u of slack.
+  The hovered part gets a dashed rarity-coloured ring and a 216×84 screen-space card showing name,
+  `RARITY · category`, `◈ value CR`, `⚖ mass` and the species. Disabled by `showCompInfo`.
+- **Snake boss disabled.** `SNAKE_ENABLED = false` in `src/game/engine.ts` makes `BOSS_SP = -1`, so
+  the centre zone no longer spawns it. The species, its parts and its bestiary entry remain; flip
+  the flag to bring it back.
+- **Changelog.** `src/game/changelog.ts` holds `VERSION` and the short, dated release list drawn by
+  the title-screen CHANGELOG button; this file keeps the long-form history. Versioning: `1.1` for a
+  feature release, `1.0.1` for a fix or small quality-of-life change. Every release bumps both
+  `VERSION` and the entry list.
+- **Responsive layout.** Title scales with `clamp(2.75rem, 14vw, 4.5rem)`, the column is capped at
+  24rem, panels at `min(94vw, 32rem)` / `max-height: 88dvh`, and the game canvas keeps its
+  full-window sizing, so phones, tablets and desktop browsers all get the same screens.
+
 ## 1. Missile targeting (Homing Missile Launcher)
 
 | Rule | Implementation |
@@ -103,13 +137,15 @@ and every ability scales with base damage and overdrive.
 
 ## 7. Website and save codes
 
-- `/` is now a standalone landing site: hero, feature grid, how-to-play, controls table and a save
-  code gate.
-- The game moved to **`/play`**; the in-game `⌂` button returns to the site.
+- `/` is now the Wofgue.io title screen (callsign, PLAY, SETTINGS, CHANGELOG, version); the old
+  feature grid, how-to-play and controls-table site is gone, and save-code entry lives in SETTINGS.
+- The game moved to **`/play`**; the in-game `⌂` button returns to it.
 - **Save code format:** `NH1-<checksum base36>-<base64 JSON>`; checksum is a 31× rolling hash mod
   1,000,003. Invalid or truncated codes fail closed.
-- Export copies the code to the clipboard from **Nest → SYSTEM**; paste a code to restore.
-- Landing page validates and stores a pasted code, then opens `/play`.
+- Export copies the code to the clipboard from **SETTINGS** (title screen, gear button or Nest →
+  SYSTEM); paste a code there to restore.
+- Restoring validates and checksums the code, writes it to the local save and updates the title
+  screen immediately.
 - Server-side profiles (`/api/save`) still work when `DATABASE_URL` is configured; without a
   database the browser is the vault.
 
@@ -131,7 +167,7 @@ node /tmp/h2.js   # original mechanics assertions (lock test updated to right-cl
 node /tmp/h3.js   # plating, precision missiles, auto-fire, spawn cap, save codes, body length
 ```
 
-All four pass. `h3` asserts, among other things: epic=1 / mythical=3 layers, lasers and shockwaves
+All four pass; `h2` now asserts that no boss spawns while `SNAKE_ENABLED` is `false`. `h3` asserts, among other things: epic=1 / mythical=3 layers, lasers and shockwaves
 deal 0 to plating, kinetic hits deal 30%, a marked far-side piece is hit through the body, crafted
 weapons fire with no mouse input, the toggle stops them, and population peaks at 12 in a 20-location
 tour.

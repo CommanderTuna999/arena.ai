@@ -27,7 +27,9 @@ const DENS = [0.42, 0.36, 0.3, 0.24, 0.19, 0.15];
 const MAX_ENEMIES = 18;
 /** shells shave 70% off kinetic hits; lasers and shockwaves do nothing to them */
 const SHELL_TAKE = 0.3;
-const BOSS_SP = SPECIES_LIST.findIndex((s) => s.boss);
+/** The segmented snake boss is disabled for now; the species stays in the bestiary. */
+const SNAKE_ENABLED = false;
+const BOSS_SP = SNAKE_ENABLED ? SPECIES_LIST.findIndex((s) => s.boss) : -1;
 const KIND_DROP: Record<PartKind, number> = { core: 1, segment: 1, armor: 0.8, leg: 0.6, arm: 1, wing: 0.6, weapon: 1.4, shield: 1.4, spike: 0.35 };
 
 /* ---------------- entity types ---------------- */
@@ -336,7 +338,21 @@ export class Game {
     this.recompute();
     this.markDirty();
   }
-  setName(n: string) { this.save.name = n.slice(0, 16) || "Pilot"; this.markDirty(); }
+  setName(n: string) { this.save.name = n.slice(0, 16); this.markDirty(); }
+  setAutoFire(v: boolean) { this.autoFire = v; this.save.autoFire = v; this.markDirty(); this.rev++; }
+  setShowCompInfo(v: boolean) { this.save.showCompInfo = v; this.markDirty(); this.rev++; }
+  /** loose component under the mouse (for the hover tooltip) */
+  compUnderCursor(): LComp | null {
+    const [mx, my] = this.mouseWorld();
+    for (let i = this.comps.length - 1; i >= 0; i--) {
+      const c = this.comps[i];
+      const dx = mx - c.x, dy = my - c.y;
+      if (dx * dx + dy * dy > (Math.max(c.r, 20) + 16) * (Math.max(c.r, 20) + 16)) continue;
+      const ca = Math.cos(-c.a), sa = Math.sin(-c.a);
+      if (pointInPoly(dx * ca - dy * sa, dx * sa + dy * ca, c.c.poly)) return c;
+    }
+    return null;
+  }
   setAutoSell(v: boolean) { this.save.autoSell = v; this.markDirty(); }
   hardReset(save: SaveData) {
     this.save = save;
@@ -364,13 +380,13 @@ export class Game {
   async pushServer() {
     this.lastServerSave = Date.now();
     try {
-      await fetch("/api/save", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ id: this.pid, name: this.save.name, save: this.save }), keepalive: true });
+      await fetch("/api/save", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ id: this.pid, name: this.save.name || "Pilot", save: this.save }), keepalive: true });
     } catch { /* offline is fine */ }
   }
   beaconSave() {
     this.persist(true);
     try {
-      const blob = new Blob([JSON.stringify({ id: this.pid, name: this.save.name, save: this.save })], { type: "application/json" });
+      const blob = new Blob([JSON.stringify({ id: this.pid, name: this.save.name || "Pilot", save: this.save })], { type: "application/json" });
       navigator.sendBeacon("/api/save", blob);
     } catch { /* ignore */ }
   }
@@ -381,7 +397,7 @@ export class Game {
       const p = this.player;
       const res = await fetch("/api/presence", {
         method: "POST", headers: { "content-type": "application/json" },
-        body: JSON.stringify({ id: this.pid, name: this.save.name, x: Math.round(p.x), y: Math.round(p.y), a: +p.a.toFixed(2), dead: p.dead }),
+        body: JSON.stringify({ id: this.pid, name: this.save.name || "Pilot", x: Math.round(p.x), y: Math.round(p.y), a: +p.a.toFixed(2), dead: p.dead }),
       });
       if (res.ok) {
         const data = (await res.json()) as { players: { id: string; name: string; x: number; y: number; a: number }[]; online: number };
@@ -416,13 +432,7 @@ export class Game {
     if (this.hasHoming() && this.markTarget()) return;
     this.fireHarpoon();
   }
-  toggleAutoFire() {
-    this.autoFire = !this.autoFire;
-    this.save.autoFire = this.autoFire;
-    this.markDirty();
-    this.toast(this.autoFire ? "Auto-weapons ONLINE" : "Auto-weapons OFFLINE", this.autoFire ? "#7dffb4" : "#ffb36b");
-    this.rev++;
-  }
+  toggleAutoFire() { this.setAutoFire(!this.autoFire); }
   private hasHoming() { return this.stats.weapons.some((w) => w.rid === "homing"); }
   /** mark the enemy piece under the cursor; returns false if the cursor is empty */
   private markTarget() {

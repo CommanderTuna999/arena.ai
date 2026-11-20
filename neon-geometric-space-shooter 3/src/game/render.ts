@@ -1,5 +1,5 @@
-import { TAU, clamp } from "./math";
-import { BASE, RARITIES, SHIP_R, WORLD_R, ZONE_EDGES } from "./data";
+import { TAU, clamp, fmtNum } from "./math";
+import { BASE, CAT_NAME, KIND_CAT, RARITIES, SHIP_R, WORLD_R, ZONE_EDGES } from "./data";
 import { N_ROPE, type Enemy, type Game, type LComp } from "./engine";
 
 function bend(e: Enemy, p: { seg: number }) {
@@ -129,9 +129,17 @@ export function render(g: Game, ctx: CanvasRenderingContext2D) {
   }
 
   /* ---- loose components ---- */
+  const hoveredComp = g.save.showCompInfo && !g.player.dead ? g.compUnderCursor() : null;
   for (const c of g.comps) {
     if (c.x + c.r < vx0 || c.x - c.r > vx1 || c.y + c.r < vy0 || c.y - c.r > vy1) continue;
     drawComp(g, ctx, c, z, t);
+    if (c === hoveredComp) {
+      ctx.strokeStyle = RARITIES[c.c.tier].color;
+      ctx.lineWidth = 2.2 / z;
+      ctx.setLineDash([7 / z, 6 / z]);
+      ctx.beginPath(); ctx.arc(c.x, c.y, c.r + 10, 0, TAU); ctx.stroke();
+      ctx.setLineDash([]);
+    }
   }
 
   /* ---- magnet field ---- */
@@ -348,6 +356,42 @@ export function render(g: Game, ctx: CanvasRenderingContext2D) {
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   drawMinimap(g, ctx);
   drawBaseArrow(g, ctx);
+  if (hoveredComp) drawCompTooltip(g, ctx, hoveredComp);
+}
+
+/* Hover card for loose components: name, rarity/category, value and mass.
+ * Drawn in screen space so the text stays crisp at every zoom level. */
+function drawCompTooltip(g: Game, ctx: CanvasRenderingContext2D, c: LComp) {
+  const col = RARITIES[c.c.tier].color;
+  const bw = 216, bh = 84;
+  let x = g.input.mx + 18, y = g.input.my + 18;
+  if (x + bw > g.w - 8) x = g.input.mx - bw - 18;
+  if (y + bh > g.h - 8) y = g.input.my - bh - 18;
+  x = clamp(x, 8, Math.max(8, g.w - bw - 8));
+  y = clamp(y, 8, Math.max(8, g.h - bh - 8));
+  ctx.save();
+  ctx.globalAlpha = 0.96;
+  ctx.fillStyle = "rgba(4,6,14,0.94)";
+  ctx.fillRect(x, y, bw, bh);
+  ctx.strokeStyle = col + "aa"; ctx.lineWidth = 1.5;
+  ctx.strokeRect(x + 0.75, y + 0.75, bw - 1.5, bh - 1.5);
+  ctx.fillStyle = col;
+  ctx.fillRect(x, y, 3, bh);
+  ctx.textAlign = "left";
+  ctx.textBaseline = "alphabetic";
+  ctx.font = "bold 13px ui-monospace, monospace";
+  ctx.fillStyle = "#e8fbff";
+  ctx.fillText(c.c.name, x + 12, y + 21);
+  ctx.font = "10px ui-monospace, monospace";
+  ctx.fillStyle = col;
+  ctx.fillText(`${RARITIES[c.c.tier].name} · ${CAT_NAME[KIND_CAT[c.c.kind]]}`, x + 12, y + 38);
+  ctx.fillStyle = "#ffe14d";
+  ctx.fillText(`◈ ${fmtNum(c.c.value)} CR`, x + 12, y + 57);
+  ctx.fillStyle = "rgba(200,235,255,0.7)";
+  ctx.fillText(`⚖ ${c.c.mass.toFixed(1)} mass`, x + 112, y + 57);
+  ctx.fillStyle = "rgba(200,235,255,0.4)";
+  ctx.fillText(c.c.species, x + 12, y + 73);
+  ctx.restore();
 }
 
 function drawBase(g: Game, ctx: CanvasRenderingContext2D, z: number, t: number) {

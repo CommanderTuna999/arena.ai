@@ -85,8 +85,9 @@ A second pass reworked combat and tone; see `docs/CHANGELOG.md` for the full tab
 - Centipede and snake got true segmented bodies with a travelling wave; the snake is now called
   **Snake** and is roughly five times longer; the centipede is roughly 2.5× longer and curves.
 - All bar text, "CRIPPLED"/"IMMOBILISED", base "HANGAR" lettering and harpoon status words removed.
-- `/` is a landing website, `/play` is the game, and self-contained **save codes** (NH1-…) move
-  progress between browsers.
+- `/` is the Wofgue.io title screen (callsign, PLAY, SETTINGS, CHANGELOG, version), `/play` is the
+  game, and self-contained **save codes** (NH1-…) move progress between browsers.
+- The snake boss is disabled for now (`SNAKE_ENABLED = false`); the species stays in the bestiary.
 
 ## Deviations from the original plan
 
