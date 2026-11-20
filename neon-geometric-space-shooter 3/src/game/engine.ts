@@ -50,7 +50,7 @@ const MYTHIC_SHELL_FRAC = 0.55;
 const BASE_REPAIR_IDLE = 120;
 /* six point-defence turrets on the outer hex ring */
 const MINI_COUNT = 6;
-const MINI_DMG = 18;
+const MINI_DMG = 72;
 const MINI_CD = 0.24;
 const MINI_SPEED = 1450;
 /** The segmented snake boss is disabled for now; the species stays in the bestiary. */
@@ -1124,7 +1124,7 @@ export class Game {
     p.hp -= dmg; p.hurt = 0.1; p.barT = 3.5; e.barT = 4;
     e.aggro = true;
     if (wx !== 0 || wy !== 0) for (let i = 0; i < 2; i++) this.addParticle(wx, wy, (Math.random() - 0.5) * 220, (Math.random() - 0.5) * 220, p.stroke, 2.5, 0.25, Math.floor(Math.random() * 3));
-    if (p.hp <= 0 && p.alive) this.breakPart(e, p, !fromBase);
+    if (p.hp <= 0 && p.alive) this.breakPart(e, p, !fromBase, fromBase);
   }
   private refreshMobility(e: Enemy) {
     if (e.spd.id === "serpent") { e.mobility = 1; return; } // snakes have no legs to lose
@@ -1139,7 +1139,7 @@ export class Game {
       e.mobility = lf > 0 ? Math.max(0.2, lf) : 0;
     }
   }
-  private breakPart(e: Enemy, p: Part, byPlayer: boolean) {
+  private breakPart(e: Enemy, p: Part, byPlayer: boolean, byBase = false) {
     if (!p.alive) return;
     p.alive = false; p.hp = 0;
     e.tags[p.name] = (e.tags[p.name] ?? 1) - 1;
@@ -1149,7 +1149,7 @@ export class Game {
     this.burst(px, py, p.stroke, count, clamp(p.r * 0.2, 3, 26), 120 + p.r * 2.2);
     if (p.r > 30) this.ringFx(px, py, p.r * 1.8, p.stroke, 500);
     this.shake = Math.max(this.shake, Math.min(14, 2 + p.r / 18));
-    if (p.kind === "core") { this.killEnemy(e, px, py); return; }
+    if (p.kind === "core") { this.killEnemy(e, px, py, byBase); return; }
     if (p.kind === "weapon" || p.kind === "shield") this.explode(e, p, px, py, false);
     if (byPlayer) this.maybeDrop(e, p, px, py);
     this.refreshMobility(e);
@@ -1196,7 +1196,7 @@ export class Game {
     if (Math.random() < 0.65) { const w = this.partWorld(e, big); this.maybeDrop(e, big, w[0], w[1], 1.0); }
     this.refreshMobility(e);
   }
-  private killEnemy(e: Enemy, x: number, y: number) {
+  private killEnemy(e: Enemy, x: number, y: number, byBase = false) {
     if (e.dead) return;
     e.dead = true;
     /* Base-majority kills leave nothing behind. Scrub loose pieces that broke
@@ -1213,10 +1213,13 @@ export class Game {
       this.shake = Math.max(this.shake, 24);
     }
     this.save.kills++;
-    const firstSeen = this.save.bestiary[e.spd.id] === undefined;
-    if (firstSeen || (this.save.bestiary[e.spd.id] ?? -1) < e.tier) this.save.bestiary[e.spd.id] = e.tier;
-    if (firstSeen) {
-      this.discovery = { name: e.spd.name, t: 5 };
+    /* Bestiary credit belongs to the player. A kill finished by the nest or its
+     * hex turrets never unlocks a species or announces a discovery. */
+    const credit = !byBase && !this.baseMajority(e);
+    if (credit) {
+      const firstSeen = this.save.bestiary[e.spd.id] === undefined;
+      if (firstSeen || (this.save.bestiary[e.spd.id] ?? -1) < e.tier) this.save.bestiary[e.spd.id] = e.tier;
+      if (firstSeen) this.discovery = { name: e.spd.name, t: 5 };
     }
     this.dirty = true;
     let i = 0;
@@ -2658,7 +2661,7 @@ export class Game {
     if (e.tier <= 4 || total <= 0) {
       /* rare, epic and legendary are incinerated in a single flash of ash */
       this.trackDamage(e, total, true);
-      this.killEnemy(e, x, y);
+      this.killEnemy(e, x, y, true);
       return;
     }
     /* mythicals survive, but only just */
@@ -2667,7 +2670,7 @@ export class Game {
     for (const q of alive) {
       q.hp -= q.hp * MYTHIC_SHELL_FRAC;
       q.hurt = 0.16; q.barT = 4;
-      if (q.hp <= 0) this.breakPart(e, q, false);
+      if (q.hp <= 0) this.breakPart(e, q, false, true);
     }
     e.barT = 4;
   }

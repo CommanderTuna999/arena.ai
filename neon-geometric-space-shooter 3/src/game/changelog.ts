@@ -8,7 +8,7 @@
  *   CHANGELOG and mirror the details in docs/CHANGELOG.md.
  */
 
-export const VERSION = "1.7";
+export const VERSION = "1.7.1";
 
 export interface ChangeEntry {
   version: string;
@@ -19,6 +19,15 @@ export interface ChangeEntry {
 }
 
 export const CHANGELOG: ChangeEntry[] = [
+  {
+    version: "1.7.1",
+    date: "20 Nov 2026",
+    title: "Hex turrets hit four times harder and stop granting bestiary credit",
+    points: [
+      "Point-defence tracers now deal 4x damage: 18 -> 72 per shot, with the same 0.24s cadence and 850u range.",
+      "Kills finished by the nest cannon or its hex turrets no longer unlock bestiary entries or show discovery banners; only player-credited kills count.",
+    ],
+  },
   {
     version: "1.7",
     date: "20 Nov 2026",

@@ -29,6 +29,23 @@ the simulation, not design targets.
 - Cores stay on layer 0, underneath the body, so segments and plating draw over them and the core
   only shows through gaps.
 
+## 0. v1.7.1 — four-times turret damage, no bestiary credit for nest kills
+
+### Point-defence damage
+- `MINI_DMG` is now **72**, up from 18 (exactly 4×). Fire cadence stays **0.24s**, tracer speed
+  1,450u/s and range 850u, so six turrets put out roughly 1,800 raw dps when all have targets.
+- Plating still absorbs 70% of each physical tracer (`SHELL_TAKE = 0.3`), and energy shields still
+  do not stop kinetic fire.
+
+### Bestiary credit
+- `killEnemy(e, x, y, byBase)` now receives an explicit base-kill flag, propagated from
+  `breakPart(..., byBase)` and from `damagePart(..., fromBase)`.
+- A kill never updates `save.bestiary` or sets the discovery banner when **either** the finishing
+  blow came from the nest defences **or** `baseDmg × 2 > dmgTaken`. This covers the siege cannon,
+  the six hex turrets and core breaks caused by either.
+- Player-credited kills still update the bestiary, best-rarity record and discovery banner.
+  `save.kills` continues to count every kill.
+
 ## 0. v1.7 — hex point turrets, legendary siege shells, 120s repair lockout
 
 ### Aggro leash
@@ -39,7 +56,7 @@ the simulation, not design targets.
 ### Six hex point-defence turrets
 - Six small turrets sit on the existing hex pylons at `BASE.r` (260u), one every 60°.
 - Each turret spins up toward its target (5 rad/s), idles by slowly rotating, and fires a fast
-  (`1,450u/s`) cyan tracer every **0.24s** for **18 damage** at anything inside **850u**
+  (`1,450u/s`) cyan tracer every **0.24s** for **18 damage** (raised to **72** in v1.7.1) at anything inside **850u**
   (`BASE.smallR`). Tracers lead moving targets, last 0.85s and hit plating before hull.
 - Point-turret damage is physical/kinetic: armour shells absorb 30%, shields still ignore it.
 - They do **not** wake the siege cannon; the cannon only reacts to rare+ enemies.
