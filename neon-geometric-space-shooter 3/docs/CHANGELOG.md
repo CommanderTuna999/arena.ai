@@ -3,6 +3,23 @@
 Everything below is implemented in the current build. Numbers are the actual constants used by
 the simulation, not design targets.
 
+## 0. v2.0.2 — kinetic shields, quieter inner rings and the stat compendium
+
+### Base cannon and kinetic shields
+- The base cannon bullet now carries `elem: "kinetic"` explicitly (it previously left `elem` undefined).
+- Enemy energy-shield bubbles now stop kinetic and physical rounds. Each kinetic hit removes `8% × shieldMax`; at zero the bubble sets `shieldDown = 4`, re-arms at 40% and regenerates 15%/s after a 3s quiet period.
+- Energy/shock/thermal hits are still absorbed without draining the bubble; explosive/corrosive rounds still pass through; bypass and rail beams still skip bubbles.
+- Base cannon damage remains `st.dmg`, rate `4 + 0.7/level`, `1 + barrels` shots.
+
+### Spawn pressure
+- `ZONE_DENS` is now `[2.6, 2.2, 1.8, 0.32, 0.16, 0.075]` (epic was 0.56, legendary 0.44, mythical 0.36).
+- `ZONE_CAP` is now `[56, 48, 40, 14, 8, 4]` (epic was 18, legendary 10, mythical 5).
+- The initial seed probability floor is now `0.03` (was `0.38`), so the actual chunk pass rates are common 100%, uncommon 84.6%, rare 69.2%, epic 12.3%, legendary 6.2%, mythical 2.9%.
+- The visibility floor spawns at most tier 2 (rare) in epic+ zones; top-up still spawns the local tier but is limited by the much lower caps.
+
+### Documentation
+- Added `docs/STATS.md`: all 32 enemy species at every tier, all 19 crafted weapons, player shields, armour, optics, utility, active abilities, base cannon and upgrades, with formulas and live constants.
+
 ## 0. v2.0.1 — max-zoom performance and the white mythical pile
 
 ### Enemy level of detail

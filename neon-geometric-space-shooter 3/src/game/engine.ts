@@ -26,13 +26,17 @@ import { SPECIES_LIST, buildEnemy, type AbilityDef, type Group, type Part, type 
  *   Plating          : tier 2/3/4/5 get 1/2/3/4 grey layers of 5*HP_MUL[tier] HP.
  *                      Kinetic and explosive hits deal 30%; laser and shock deal 0.
  *                      Layers are drawn as solid grey copies of the part outlines.
- *   Energy shields   : blue hexes stop energy/shock/thermal completely and take no
- *                      damage from them; kinetic/explosive/corrosive pass through.
+ *   Energy shields   : blue hexes stop energy/shock/thermal completely, and solid
+ *                      kinetic rounds are stopped too. Kinetic impacts strip 8%
+ *                      of a generator's shield per hit; at zero the bubble drops
+ *                      for 4s and restarts at 40%. Explosive/corrosive rounds
+ *                      still slip through, while bypass beams ignore bubbles.
  *   Spawning         : every walkable 1,500u chunk is seeded once when the run starts,
  *                      so the whole map is already inhabited (no pop-in on arrival).
- *                      Seed probability follows the rarity curve (outer 100%, epic+
- *                      ~38%), then a top-up pass refills the local band to ~85% of
- *                      its cap and a visibility floor keeps 4 enemies in view.
+ *                      Seed probability follows the rarity curve (outer 100%, epic
+ *                      12.3%, legendary 6.2%, mythical 2.9%), then a top-up pass
+ *                      refills the local band to ~85% of its cap and a visibility
+ *                      floor keeps 4 enemies in view (2 in legendary+).
  *   Body wave        : parts tagged seg >= 0 shift laterally by
  *                      amp * sin(walk*speed - seg*k); used for centipede and snake.
  * ------------------------------------------------------------------------- */
@@ -43,14 +47,16 @@ export const N_ROPE = 22;
  * and every zone has its own population cap so the lag guard scales with the tier.
  * ZONE_DENS is the relative spawn pressure per 1,500u chunk; the initial
  * world seed scales its per-chunk spawn probability by this curve. */
-const ZONE_DENS = [2.6, 2.2, 1.8, 0.56, 0.44, 0.36];
-const ZONE_CAP = [56, 48, 40, 18, 10, 5];
+const ZONE_DENS = [2.6, 2.2, 1.8, 0.32, 0.16, 0.075];
+const ZONE_CAP = [56, 48, 40, 14, 8, 4];
 /** whole-world population ceiling: every zone is seeded at load, then maintained */
 const HARD_MAX = 420;
 /** how many enemies one chunk may contribute during the initial world seed */
 const SEED_BUDGET = 1;
 /** shells shave 70% off kinetic hits; lasers and shockwaves do nothing to them */
 const SHELL_TAKE = 0.3;
+/** share of a shield generator's capacity stripped by one kinetic impact */
+const SHIELD_STRIP = 0.08;
 /* Nest defence tuning. The siege shell one-shots up to legendary; mythicals lose
  * a fixed chunk so they stay a genuine end-game threat. */
 const SHELL_DMG = 2_500_000;
@@ -1015,11 +1021,12 @@ export class Game {
     const ccx = (cx + 0.5) * CH, ccy = (cy + 0.5) * CH;
     if (Math.hypot(ccx, ccy) > WORLD_R + 300) return;
     const zt = zoneTier(Math.hypot(ccx, ccy));
-    /* the one-time world seed keeps the rarity-band density curve: high-rarity
-     * chunks are only ~40% as likely to hold a resident as an outer chunk */
+    /* the one-time world seed keeps the rarity-band density curve: an epic
+     * chunk is ~12% as likely to hold a resident as an outer chunk, a legendary
+     * chunk ~6% and a mythical chunk ~3%; each inner ring is quieter still */
     let n: number;
     if (budget !== Infinity) {
-      const seedP = clamp(ZONE_DENS[zt] / ZONE_DENS[0], 0.38, 1);
+      const seedP = clamp(ZONE_DENS[zt] / ZONE_DENS[0], 0.03, 1);
       if (rng() > seedP) return;
       n = 1;
     } else {
@@ -1142,7 +1149,9 @@ export class Game {
         if (Math.hypot(x - BASE.x, y - BASE.y) < BASE.safe + 350) continue;
         const z2 = zoneTier(Math.hypot(x, y));
         const key = `${Math.floor(x / CH)},${Math.floor(y / CH)}`;
-        this.enemies.push(this.makeEnemy(pickSpecies(x, y, Math.random, z2), Math.max(0, z2 - 1), x, y, key, hash2(x | 0, y | 0, 31)));
+        /* The visibility floor stays at rare tier even in epic+ rings: those
+         * zones must feel sparse, not refill with one legendary per glance. */
+        this.enemies.push(this.makeEnemy(pickSpecies(x, y, Math.random, z2), Math.max(0, Math.min(2, z2 - 1)), x, y, key, hash2(x | 0, y | 0, 31)));
         break;
       }
     }
@@ -2100,16 +2109,28 @@ export class Game {
           const sx = b.x - s.x, sy = b.y - s.y;
           if (sx * sx + sy * sy < s.r * s.r) {
             const energy = b.elem === "energy" || b.elem === "shock" || b.elem === "thermal";
-            if (!energy) break; // physical rounds pass straight through energy shields
-            if (e.spd.reflectShell) {
+            const kinetic = b.elem === "kinetic" || b.elem === "physical";
+            if (!energy && !kinetic) break; // explosive/corrosive rounds slip through energy shields
+            if (e.spd.reflectShell && energy) {
               this.eprojs.push({ x: b.x, y: b.y, vx: -b.vx * 0.9, vy: -b.vy * 0.9, life: 1.5, dmg: b.dmg * 0.6, r: 6, hue: e.spd.hue, type: "bolt", homing: 0, slow: 0, slowT: 0, poison: 0, pierce: false, hp: 1, speed: 620, src: e, puddle: null });
               this.ringFx(b.x, b.y, 46, "#7df9ff", 400);
               return true;
             }
             s.part.shieldHit = 3;
             e.aggro = true; e.barT = 3;
-            this.addParticle(b.x, b.y, (Math.random() - 0.5) * 200, (Math.random() - 0.5) * 200, "#7df9ff", 4, 0.35, 3, false);
-            this.ringFx(b.x, b.y, 40, "#7df9ff", 500);
+            if (kinetic) {
+              s.part.shieldHp -= s.part.shieldMax * SHIELD_STRIP;
+              if (s.part.shieldHp <= 0) {
+                s.part.shieldHp = 0;
+                s.part.shieldDown = 4;
+                s.part.shieldHit = 0;
+                this.burst(b.x, b.y, "#bff6ff", 12, 5, 320);
+                this.ringFx(b.x, b.y, s.r, "#7df9ff", 720);
+                if (Math.hypot(e.x - this.player.x, e.y - this.player.y) < 1600) this.toast("SHIELD DOWN", "#7df9ff");
+              }
+            }
+            this.addParticle(b.x, b.y, (Math.random() - 0.5) * 200, (Math.random() - 0.5) * 200, kinetic ? "#ffd24d" : "#7df9ff", 4, 0.35, 3, false);
+            this.ringFx(b.x, b.y, 40, kinetic ? "#ffd24d" : "#7df9ff", 500);
             return true;
           }
         }
@@ -2221,8 +2242,19 @@ export class Game {
         if (!bypass) for (const s of e.shields) {
           if (s.part.alive && s.part.shieldHp > 0 && (bx - s.x) ** 2 + (by - s.y) ** 2 < s.r * s.r) {
             const energy = src === "laser" || src === "shock";
-            if (!energy) break; // physical beams ignore energy shields
+            const kinetic = src === "kinetic";
+            if (!energy && !kinetic) break; // explosive/corrosive beams pass through
             s.part.shieldHit = 3;
+            if (kinetic) {
+              s.part.shieldHp -= s.part.shieldMax * SHIELD_STRIP;
+              if (s.part.shieldHp <= 0) {
+                s.part.shieldHp = 0;
+                s.part.shieldDown = 4;
+                s.part.shieldHit = 0;
+                this.burst(bx, by, "#bff6ff", 12, 5, 320);
+                this.ringFx(bx, by, s.r, "#7df9ff", 720);
+              }
+            }
             this.ringFx(bx, by, 42, "#7df9ff", 520);
             endLen = d; break outer;
           }
@@ -2256,7 +2288,7 @@ export class Game {
       for (let i = 0; i < n; i++) {
         const ang = base + (i - (n - 1) / 2) * 0.09;
         const crit = Math.random() < st.crit;
-        this.bullets.push({ x: p.x + Math.cos(ang) * 12, y: p.y + Math.sin(ang) * 12, vx: Math.cos(ang) * st.bulletSpeed + p.vx * 0.3, vy: Math.sin(ang) * st.bulletSpeed + p.vy * 0.3, life: st.bulletRange / st.bulletSpeed, dmg: st.dmg * (crit ? 2.5 : 1) * (p.overT > 0 ? 2.2 : 1) * this.dmgMul(), pierce: st.pierce, hit: [], kind: 0, target: null, crit });
+        this.bullets.push({ x: p.x + Math.cos(ang) * 12, y: p.y + Math.sin(ang) * 12, vx: Math.cos(ang) * st.bulletSpeed + p.vx * 0.3, vy: Math.sin(ang) * st.bulletSpeed + p.vy * 0.3, life: st.bulletRange / st.bulletSpeed, dmg: st.dmg * (crit ? 2.5 : 1) * (p.overT > 0 ? 2.2 : 1) * this.dmgMul(), pierce: st.pierce, hit: [], kind: 0, target: null, crit, elem: "kinetic" });
       }
       p.vx -= Math.cos(base) * 6; p.vy -= Math.sin(base) * 6;
     }
@@ -2578,7 +2610,7 @@ export class Game {
       if (!t) { d.cd = 0.3; continue; }
       d.cd = 0.55;
       const ang = Math.atan2(t.y - y, t.x - x);
-      this.bullets.push({ x, y, vx: Math.cos(ang) * 1050, vy: Math.sin(ang) * 1050, life: 0.8, dmg: this.stats.dmg * 0.4 * eff * this.dmgMul(), pierce: 0, hit: [], kind: 0, target: null, crit: false });
+      this.bullets.push({ x, y, vx: Math.cos(ang) * 1050, vy: Math.sin(ang) * 1050, life: 0.8, dmg: this.stats.dmg * 0.4 * eff * this.dmgMul(), pierce: 0, hit: [], kind: 0, target: null, crit: false, elem: "kinetic" });
     }
   }
   private updateLock(dt: number) {

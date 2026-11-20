@@ -389,7 +389,7 @@ function Help({ onClose }: { onClose: () => void }) {
   const rows: [string, string][] = [
     ["WASD / Arrows", "Fly"],
     ["Mouse", "Aim"],
-    ["Left click / SPACE", "Fire the base cannon"],
+    ["Left click / SPACE", "Fire the base cannon (kinetic; energy shields stop it)"],
     ["Right click", "Mark a target (missile launcher) or fire the tether"],
     ["B", "Toggle automatic crafted weapons"],
     ["Hold R over hooked part", "Release harpoon"],

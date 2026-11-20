@@ -136,19 +136,19 @@ export const upgradeCost = (u: UpgradeDef, level: number) => Math.round(u.base *
  * crafted efficiency scales both damage and cooldown: cd / (0.7 + 0.3*eff)).
  *
  * WEAPONS (19)
- *   pulse   0.60 dmg / 0.45s   auto turret, nearest target within 650u
+ *   pulse   0.60 dmg / 0.45s   auto turret, nearest target within 560u
  *   scatter 0.55 x6 / 0.75s    shotgun cone, 6 pellets, short range
  *   missile 2.20 x2 / 1.50s    homing seeker pod, splash
  *   lance   0.22 / 0.12s       beam, pierces 2+ pieces, stops on plating
  *   homing  3.10 / 1.70s       right-click mark, ignores everything en route
  *   bypass  0.16 / 0.10s       auto beam, ignores shields, stopped by plating
- *   hmg     0.10 / 0.075s      high rate, wide spread, weak per hit
+ *   hmg     0.10 / 0.08s       high rate, wide spread, weak per hit
  *   emp     1.40 / 2.60s       AoE stun 1.8s, radius 620u
  *   cutter  1.10 / 0.18s       short plasma arc (175u), 1+ pierce
  *   acid    0.30 x3 / 0.16s    corrosive, +32% melt per hit + 1.6 dps dot
  *   chain   1.60 / 0.80s       arcs through 5 pieces, -25% per jump
  *   flak    1.30 / 0.90s       airburst at cursor, 125u splash
- *   rail    2.40 / 1.40s       beam, 1500u, pierces 12
+ *   rail    2.40 / 1.82s       beam, 1500u, pierces 12
  *   gravity 2.80 / 3.20s       well drags enemies for 1.15s then implodes
  *   mines   2.50 / 1.10s       proximity mine, 150u, armed after 0.7s
  *   drones  0.40 / 0.55s       two orbiting drones, auto fire
@@ -287,18 +287,21 @@ export const WEAPON_TINT: Record<string, string> = {
 
 /* ---------- damage types ----------
  * Every weapon deals exactly one kind; shields and armour list what they block.
- * Enemy energy shields stop energy/shock/thermal completely but physical rounds
- * (kinetic, explosive, corrosive) pass straight through them.
+ * Enemy energy shields stop energy/shock/thermal completely, and now stop solid
+ * kinetic rounds as well: each kinetic hit strips 8% of a generator's shield,
+ * the bubble collapses for 4s at zero and restarts at 40%. Explosive/corrosive
+ * rounds still slip through, while bypass beams ignore bubbles entirely.
+ * Kinetic/explosive hull shells reduce incoming damage to 30%; lasers/shock do 0.
  */
 export type DmgKind = "kinetic" | "energy" | "explosive" | "shock" | "corrosive" | "thermal" | "physical";
 export interface DmgInfo { name: string; color: string; note: string }
 export const DMG_INFO: Record<DmgKind, DmgInfo> = {
-  kinetic: { name: "Kinetic", color: "#ffd24d", note: "solid rounds; plating reduces it to 30%" },
-  energy: { name: "Energy", color: "#7df9ff", note: "lasers and beams; plating blocks it, energy shields block it" },
+  kinetic: { name: "Kinetic", color: "#ffd24d", note: "solid rounds; blocked by energy shields (8% strip per hit); hull shells reduce it to 30%" },
+  energy: { name: "Energy", color: "#7df9ff", note: "lasers and beams; blocked by energy shields, hull shells block it" },
   explosive: { name: "Explosive", color: "#ff7a5c", note: "blast damage; plating reduces it to 30%" },
-  shock: { name: "Shock", color: "#c77dff", note: "electrical arcs; plating blocks it, energy shields block it" },
-  corrosive: { name: "Corrosive", color: "#9dff6a", note: "acid; melts plating and bypasses energy shields" },
-  thermal: { name: "Thermal", color: "#ff8ad6", note: "plasma heat; energy shields block it" },
+  shock: { name: "Shock", color: "#c77dff", note: "electrical arcs; blocked by energy shields, hull shells block it" },
+  corrosive: { name: "Corrosive", color: "#9dff6a", note: "acid; melts armour and slips through energy shields" },
+  thermal: { name: "Thermal", color: "#ff8ad6", note: "plasma heat; blocked by energy shields" },
   physical: { name: "Physical", color: "#c3ccd6", note: "blunt impacts and collisions" },
 };
 

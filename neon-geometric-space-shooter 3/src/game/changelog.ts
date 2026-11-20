@@ -8,7 +8,7 @@
  *   CHANGELOG and mirror the details in docs/CHANGELOG.md.
  */
 
-export const VERSION = "2.0.1";
+export const VERSION = "2.0.2";
 
 export interface ChangeEntry {
   version: string;
@@ -19,6 +19,17 @@ export interface ChangeEntry {
 }
 
 export const CHANGELOG: ChangeEntry[] = [
+  {
+    version: "2.0.2",
+    date: "21 Nov 2026",
+    title: "Kinetic shields, a much quieter inner map, and a full stat compendium",
+    points: [
+      "The base cannon now carries kinetic damage explicitly. Enemy energy-shield bubbles stop kinetic rounds instead of letting them pass through: each hit strips 8% of the generator's shield, the bubble collapses for 4s at zero, then re-arms at 40% capacity. Explosive and corrosive rounds still slip through, and bypass beams still ignore bubbles.",
+      "Epic and higher zones spawn far less. Spawn weight is now 2.6 / 2.2 / 1.8 / 0.32 / 0.16 / 0.075 per chunk (was 2.6 / 2.2 / 1.8 / 0.56 / 0.44 / 0.36), local caps are 56 / 48 / 40 / 14 / 8 / 4 (was 56 / 48 / 40 / 18 / 10 / 5), and the seed-probability floor dropped from 38% to 3%.",
+      "The visibility floor in legendary and mythical zones now spawns rare-tier enemies at most, so it cannot refill the core with legendaries. Each higher inner ring holds fewer residents than the one outside it.",
+      "The complete enemy, weapon, shield, armour, optics, utility, ability and upgrade stat compendium now lives in docs/STATS.md.",
+    ],
+  },
   {
     version: "2.0.1",
     date: "21 Nov 2026",
