@@ -105,8 +105,6 @@ export interface Bullet {
 export interface EProj {
   x: number; y: number; vx: number; vy: number; life: number; dmg: number; r: number; hue: number; type: ProjType;
   homing: number; slow: number; slowT: number; poison: number; pierce: boolean; hp: number; speed: number; src: Enemy | null; puddle: { r: number; dps: number; slow: number } | null;
-  /** aimed at the nest instead of the player (ignores the ship entirely) */
-  tgtBase?: boolean;
 }
 export interface Particle { x: number; y: number; vx: number; vy: number; rot: number; vr: number; life: number; max: number; size: number; shape: number; color: string; fill: boolean }
 export interface Puddle { x: number; y: number; r: number; life: number; max: number; arm: number; dps: number; slow: number; hue: number }
@@ -151,6 +149,8 @@ export interface Player {
   slowF: number; slowT: number; poison: number; poisonT: number;
   pull: { e: Enemy; t: number } | null; dead: boolean; respawn: number;
   fireCd: number; wCd: number[]; hitT: number; shieldT: number; flash: number; thornCd: number;
+  /** per-mount aim angle, relative to the hull (set by the auto-targeting pass) */
+  wAim: number[];
   tpT: number; tpCd: number; tow: number; thrust: number;
   barrier: number; barrierMax: number; barrierT: number; overT: number; nullCd: number;
 }
@@ -285,7 +285,7 @@ export class Game {
     this.stats = computeStats(save);
     this.player = {
       x: BASE.x, y: BASE.y - 200, vx: 0, vy: 0, a: -Math.PI / 2, hp: this.stats.hull, shield: this.stats.shieldMax, boost: 100, boosting: false,
-      slowF: 1, slowT: 0, poison: 0, poisonT: 0, pull: null, dead: false, respawn: 0, fireCd: 0, wCd: [0, 0, 0], hitT: 99, shieldT: 0,
+      slowF: 1, slowT: 0, poison: 0, poisonT: 0, pull: null, dead: false, respawn: 0, fireCd: 0, wCd: [0, 0, 0], wAim: [0, 0, 0], hitT: 99, shieldT: 0,
       flash: 0, thornCd: 0, tpT: 0, tpCd: 0, tow: 1, thrust: 0,
       barrier: 0, barrierMax: 0, barrierT: 0, overT: 0, nullCd: 0,
     };
@@ -1368,7 +1368,7 @@ export class Game {
       const pr = this.eprojs[i];
       if (!pr) continue;
       pr.life -= dt;
-      const tx = pr.tgtBase ? BASE.x : p.x, ty = pr.tgtBase ? BASE.y : p.y;
+      const tx = p.x, ty = p.y;
       if (pr.type === "missile") {
         const want = Math.atan2(ty - pr.y, tx - pr.x), cur = Math.atan2(pr.vy, pr.vx);
         const na = cur + clamp(angDiff(cur, want), -pr.homing * dt, pr.homing * dt);
@@ -1383,8 +1383,9 @@ export class Game {
       }
       pr.x += pr.vx * dt; pr.y += pr.vy * dt;
       let dead = pr.life <= 0;
-      if (!dead && pr.tgtBase) {
-        /* base-targeted shots ignore the ship completely */
+      /* Enemies aim at the ship, but the nest is solid: stray fire that crosses
+       * its hull still damages the structure. */
+      if (!dead && !this.baseLost) {
         const db = Math.hypot(pr.x - BASE.x, pr.y - BASE.y);
         if (db < BASE.r * 0.82 + pr.r) {
           this.hurtBase(pr.dmg, pr.src);
@@ -1395,7 +1396,7 @@ export class Game {
           dead = true;
         }
       }
-      if (!dead && !pr.tgtBase && pr.type !== "glob" && !p.dead) {
+      if (!dead && pr.type !== "glob" && !p.dead) {
         const dd = Math.hypot(pr.x - p.x, pr.y - p.y);
         if (dd < pr.r + SHIP_R) {
           if (st.nullField > 0 && p.shield > 0 && p.nullCd <= 0 && Math.random() < 0.35 + 0.3 * st.nullField) {
@@ -1737,7 +1738,7 @@ export class Game {
     return false;
   }
 
-  private updateEnemy(e: Enemy, dt: number, dx: number, dy: number, dist: number, baseEngaged: boolean) {
+  private updateEnemy(e: Enemy, dt: number, dx: number, dy: number, dist: number) {
     const p = this.player;
     for (const q of e.parts) { if (q.hurt > 0) q.hurt -= dt; if (q.barT > 0) q.barT -= dt; }
     if (e.barT > 0) e.barT -= dt;
@@ -1754,14 +1755,12 @@ export class Game {
     const safe = this.inSafe() || p.dead;
     // higher tiers refuse to let you disengage: bigger aggro radius and a much longer leash
     const aggroR = (650 + Math.min(e.radius, 700) * 1.2) * (1 + 0.12 * e.tier);
-    if (baseEngaged) e.aggro = true;
-    else if (!e.aggro) { if (!safe && dist < aggroR) e.aggro = true; }
+    if (!e.aggro) { if (!safe && dist < aggroR) e.aggro = true; }
     else if (safe || dist > aggroR * (2.4 + 0.6 * e.tier)) e.aggro = false;
     for (let i = 0; i < e.abilCd.length; i++) if (e.abilCd[i] > 0) e.abilCd[i] -= dt;
     if (e.gap > 0) e.gap -= dt;
 
     const toP = Math.atan2(dy, dx);
-    const toB = Math.atan2(BASE.y - e.y, BASE.x - e.x);
     const sp = e.speed * e.mobility * (e.slowT > 0 ? e.slowF : 1) * (e.aggro && e.tier >= 3 ? 1 + 0.03 * e.tier : 1);
     const moving = Math.hypot(e.vx, e.vy) / (e.speed + 1);
     e.walk += dt * (3 + moving * 9);
@@ -1798,8 +1797,8 @@ export class Game {
       const g = e.groups[q.g];
       const w = this.partWorld(e, q);
       const wx = w[0], wy = w[1];
-      if (baseEngaged || (e.aggro && !p.dead)) {
-        const aimX = baseEngaged ? BASE.x : p.x, aimY = baseEngaged ? BASE.y : p.y;
+      if (e.aggro && !p.dead) {
+        const aimX = p.x, aimY = p.y;
         const aim = Math.atan2(aimY - wy, aimX - wx);
         const rel = angDiff(e.a, aim);
         g.ang += clamp(angDiff(g.ang, rel), -2.2 * dt, 2.2 * dt);
@@ -1811,10 +1810,10 @@ export class Game {
           const mx = wx + Math.cos(dir) * q.muzzle, my = wy + Math.sin(dir) * q.muzzle;
           if (q.wpn === "gun") {
             q.cd = (1.1 + Math.random() * 0.6) / (1 + 0.04 * e.tier);
-            this.eprojs.push({ x: mx, y: my, vx: Math.cos(dir) * 560, vy: Math.sin(dir) * 560, life: 1.9, dmg: e.eDmg * 0.4, r: 5 + e.tier, hue: 8, type: "bolt", homing: 0, slow: 0, slowT: 0, poison: 0, pierce: false, hp: 1, speed: 560, src: e, puddle: null, tgtBase: baseEngaged });
+            this.eprojs.push({ x: mx, y: my, vx: Math.cos(dir) * 560, vy: Math.sin(dir) * 560, life: 1.9, dmg: e.eDmg * 0.4, r: 5 + e.tier, hue: 8, type: "bolt", homing: 0, slow: 0, slowT: 0, poison: 0, pierce: false, hp: 1, speed: 560, src: e, puddle: null });
           } else {
             q.cd = 4.5 + Math.random() * 1.5;
-            this.eprojs.push({ x: mx, y: my, vx: Math.cos(dir) * 200, vy: Math.sin(dir) * 200, life: 5, dmg: e.eDmg * 1.1, r: 8 + e.tier * 1.5, hue: 25, type: "missile", homing: 2.0, slow: 0, slowT: 0, poison: 0, pierce: false, hp: 1, speed: 330, src: e, puddle: null, tgtBase: baseEngaged });
+            this.eprojs.push({ x: mx, y: my, vx: Math.cos(dir) * 200, vy: Math.sin(dir) * 200, life: 5, dmg: e.eDmg * 1.1, r: 8 + e.tier * 1.5, hue: 25, type: "missile", homing: 2.0, slow: 0, slowT: 0, poison: 0, pierce: false, hp: 1, speed: 330, src: e, puddle: null });
           }
           this.burst(mx, my, "#ff9d4d", 3, 3, 140);
         }
@@ -1826,22 +1825,10 @@ export class Game {
     let faceTo = e.a;
     let turnMul = 0.3 + 0.7 * e.mobility;
     if (e.stun > 0) { e.stun -= dt; e.vx *= Math.exp(-4 * dt); e.vy *= Math.exp(-4 * dt); }
-    else if (e.act && !baseEngaged) {
+    else if (e.act) {
       this.runAct(e, dt, toP, dist);
     } else {
-      if (baseEngaged) {
-        /* the nest is the juicier target: close in and chew on its hull */
-        e.act = null;
-        faceTo = toB;
-        const bd = Math.hypot(BASE.x - e.x, BASE.y - e.y);
-        const stop = BASE.r + Math.min(e.radius, 320) * 0.45 + 10;
-        if (bd > stop) {
-          /* a swarm charging the nest moves much faster than one stalking the player */
-          const bsp = sp * 2.6;
-          const f = Math.max(0, Math.cos(angDiff(e.a, toB)));
-          tvx = Math.cos(e.a) * bsp * f; tvy = Math.sin(e.a) * bsp * f;
-        }
-      } else if (e.aggro && !p.dead) {
+      if (e.aggro && !p.dead) {
         const weave = e.bend ? Math.sin(this.t * (e.spd.boss ? 1.7 : 2.6) + e.id) * (e.spd.boss ? 0.22 : 0.12) : 0;
         faceTo = toP + weave;
         const nx = dx / (dist || 1), ny = dy / (dist || 1);
@@ -1879,25 +1866,9 @@ export class Game {
       e.vx += (tvx - e.vx) * k; e.vy += (tvy - e.vy) * k;
     }
     if (!e.act || e.act.def.type === "charge") { /* turning handled by act for others */ }
-    /* insects charging the nest pivot fast — otherwise slow walkers waste the
-     * whole approach turning while the cannon picks them off */
-    const turnRate = baseEngaged ? Math.max(e.turn * turnMul, 1.6) : e.turn * turnMul;
+    const turnRate = e.turn * turnMul;
     if (!e.act) e.a += clamp(angDiff(e.a, faceTo), -turnRate * dt, turnRate * dt);
     e.x += e.vx * dt; e.y += e.vy * dt;
-
-    // keep out of the nest's docking apron (base attackers are exempt)
-    const bd = Math.hypot(e.x - BASE.x, e.y - BASE.y);
-    if (!baseEngaged && bd < BASE.safe) { e.x += ((e.x - BASE.x) / (bd || 1)) * 220 * dt; e.y += ((e.y - BASE.y) / (bd || 1)) * 220 * dt; }
-
-    // gnawing on the nest
-    if (baseEngaged && this.baseHp > 0) {
-      const reach = BASE.r + Math.min(e.radius, 320) * 0.55 + 20;
-      if (bd < reach && e.contactCd <= 0) {
-        e.contactCd = 0.7;
-        this.hurtBase(e.eDmg * 0.25, e);
-        this.burst(BASE.x + Math.cos(toB + Math.PI) * BASE.r * 0.9, BASE.y + Math.sin(toB + Math.PI) * BASE.r * 0.9, "#ffb04d", 5, 4, 220);
-      }
-    }
 
     // contact with player
     if (!p.dead && dist < e.radius + SHIP_R + 30 && !this.inSafe()) {
@@ -1924,15 +1895,13 @@ export class Game {
       this.toast("A SNAKE EMERGES", "#c45cff");
       this.shake = Math.max(this.shake, 16);
     }
-    const baseAlive = !this.baseLost;
     for (const e of this.enemies) {
       if (e.dead) continue;
       const dx = p.x - e.x, dy = p.y - e.y;
       e.dist = Math.hypot(dx, dy);
       e.bdist = Math.hypot(BASE.x - e.x, BASE.y - e.y);
-      const baseEngaged = baseAlive && e.bdist < BASE.aggroR;
-      if (e.dist > 3800 && !e.aggro && !baseEngaged) continue;
-      this.updateEnemy(e, dt, dx, dy, e.dist, baseEngaged);
+      if (e.dist > 3800 && !e.aggro) continue;
+      this.updateEnemy(e, dt, dx, dy, e.dist);
     }
     // separation
     const n = this.enemies.length;
@@ -2137,7 +2106,7 @@ export class Game {
       for (let i = 0; i < n; i++) {
         const ang = base + (i - (n - 1) / 2) * 0.09;
         const crit = Math.random() < st.crit;
-        this.bullets.push({ x: p.x + Math.cos(ang) * 18, y: p.y + Math.sin(ang) * 18, vx: Math.cos(ang) * st.bulletSpeed + p.vx * 0.3, vy: Math.sin(ang) * st.bulletSpeed + p.vy * 0.3, life: st.bulletRange / st.bulletSpeed, dmg: st.dmg * (crit ? 2.5 : 1) * (p.overT > 0 ? 2.2 : 1) * this.dmgMul(), pierce: st.pierce, hit: [], kind: 0, target: null, crit });
+        this.bullets.push({ x: p.x + Math.cos(ang) * 26, y: p.y + Math.sin(ang) * 26, vx: Math.cos(ang) * st.bulletSpeed + p.vx * 0.3, vy: Math.sin(ang) * st.bulletSpeed + p.vy * 0.3, life: st.bulletRange / st.bulletSpeed, dmg: st.dmg * (crit ? 2.5 : 1) * (p.overT > 0 ? 2.2 : 1) * this.dmgMul(), pierce: st.pierce, hit: [], kind: 0, target: null, crit });
       }
       p.vx -= Math.cos(base) * 6; p.vy -= Math.sin(base) * 6;
     }
@@ -2171,12 +2140,42 @@ export class Game {
   /** visible radius in world units (half the screen diagonal at the current zoom) */
   viewRadius() { return Math.hypot(this.w, this.h) / 2 / Math.max(0.04, this.cam.z); }
 
+  /** Point every hardpoint at the target its weapon would engage. Mounts track
+   *  live targets and swing back to the nose when there is nothing to shoot. */
+  private updateWeaponAims(dt: number) {
+    const p = this.player, st = this.stats;
+    const n = st.weapons.length;
+    while (p.wAim.length < n) p.wAim.push(0);
+    if (p.wAim.length > n) p.wAim.length = n;
+    const view = this.viewRadius() * 0.95;
+    for (let i = 0; i < n; i++) {
+      const w = st.weapons[i];
+      let want = 0;
+      if (this.autoFire && !p.dead && !this.inSafe()) {
+        const range = Math.min(WEAPON_RANGE[w.rid] ?? 600, view);
+        if (w.rid === "homing") {
+          const L = this.lock;
+          if (L && !L.e.dead && L.part.alive && Math.hypot(L.e.x - p.x, L.e.y - p.y) <= range) {
+            const wp = this.partWorld(L.e, L.part);
+            want = Math.atan2(wp[1] - p.y, wp[0] - p.x) - p.a;
+          }
+        } else {
+          const t = this.nearestEnemy(p.x, p.y, range);
+          if (t) want = Math.atan2(t.y - p.y, t.x - p.x) - p.a;
+        }
+      }
+      want = Math.atan2(Math.sin(want), Math.cos(want));
+      const step = (this.autoFire ? 9 : 3.5) * dt;
+      p.wAim[i] += clamp(angDiff(p.wAim[i], want), -step, step);
+    }
+  }
   /* Every crafted weapon is automatic: it picks its own target and fires when
    * something is in range. B (or the AUTO button) disables the whole rack.
    * Damage is always st.dmg (base cannon) * weapon multiplier * efficiency, so
    * weapon damage scales with the Cannon Damage upgrade and overdrive. */
   private fireWeapons(dt: number, base: number) {
     const p = this.player, st = this.stats;
+    this.updateWeaponAims(dt);
     if (!this.autoFire || p.dead) return;
     const view = this.viewRadius() * 0.95;
     const R = (id: string) => Math.min(WEAPON_RANGE[id] ?? 600, view);
@@ -2186,9 +2185,13 @@ export class Game {
       if (p.wCd[i] > 0 || this.inSafe()) return;
       const eff = w.eff;
       const cd = (c: number) => c / (0.7 + 0.3 * eff);
-      const side = i === 1 ? -1 : 1;
-      const ox = p.x + Math.cos(base + Math.PI / 2) * 14 * side;
-      const oy = p.y + Math.sin(base + Math.PI / 2) * 14 * side;
+      /* match the rotating hardpoint on the hull, with the muzzle nudged out
+       * along the mount's current aim */
+      const slotX = i === 2 ? -7 : 2;
+      const slotY = i === 0 ? -12.5 : i === 1 ? 12.5 : 0;
+      const aimRel = p.wAim[i] ?? 0;
+      const ox = p.x + Math.cos(base) * slotX - Math.sin(base) * slotY + Math.cos(base + aimRel) * 7;
+      const oy = p.y + Math.sin(base) * slotX + Math.cos(base) * slotY + Math.sin(base + aimRel) * 7;
       const dmg = st.dmg * (p.overT > 0 ? 2.2 : 1) * this.dmgMul();
       const shot = (x: number, y: number, ang: number, sp: number, life: number, d: number, kind: Bullet["kind"], extra: Partial<Bullet> = {}) => {
         this.bullets.push({ x, y, vx: Math.cos(ang) * sp, vy: Math.sin(ang) * sp, life, dmg: d, pierce: 0, hit: [], kind, target: null, crit: false, elem, ...extra });

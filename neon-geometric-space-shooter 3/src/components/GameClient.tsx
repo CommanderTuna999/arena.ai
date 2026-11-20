@@ -304,7 +304,7 @@ function Hud_({ hud, onOpen, onHelp, onAdmin, onSettings, onBestiary, onHome, on
       )}
       {hud.baseUnderAttack && !hud.baseLost && (
         <div className="pointer-events-none absolute left-1/2 top-[4.5rem] z-20 -translate-x-1/2 animate-pulse rounded-sm border border-orange-400/80 bg-black/80 px-4 py-1 text-center text-[11px] font-black tracking-[0.22em] text-orange-300 shadow-[0_0_22px_rgba(255,140,80,0.4)]">
-          ⬢ NEST UNDER ATTACK
+          ⬢ HOSTILES IN NEST RANGE
         </div>
       )}
 
@@ -392,6 +392,7 @@ function Help({ onClose }: { onClose: () => void }) {
     ["T", "Recall beacon (craftable)"],
     ["E", "Open the nest at your base"],
     ["Nest cannon", "Stays offline until rare+ enters range; one-shots legendaries, mythicals lose 55% hull"],
+    ["Nest targeting", "Insects hunt your ship, never the nest — they will follow you straight through turret range, and stray fire can still scar the hull"],
     ["Hex turrets", "Six fast, weak point-defence turrets; one dies for every 1/6 of nest integrity lost"],
     ["Mouse wheel", "Zoom out (craftable optics)"],
     ["Z X C V F", "Fire equipped active abilities"],

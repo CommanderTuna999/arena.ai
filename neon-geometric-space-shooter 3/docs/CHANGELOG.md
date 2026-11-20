@@ -3,6 +3,35 @@
 Everything below is implemented in the current build. Numbers are the actual constants used by
 the simulation, not design targets.
 
+## 0. v1.8 — turret system rework, detailed ship, rotating mounts
+
+### Enemies hunt the ship, not the nest
+- Removed every base-targeting branch from `updateEnemy`: no `baseEngaged` aggro override, no nest-aimed
+  projectiles (`tgtBase`), no 2.6× nest charge, no docking-apron exemption, no hull gnawing and no
+  forced 1.6 rad/s turn floor.
+- `BASE.aggroR` (1,760u) is now purely the nest's defence-alert radius and the retention zone for
+  enemies chasing the player through it. Enemies follow the player normally at every distance, so they
+  enter turret range instead of stalling outside it.
+- The nest hull remains solid for stray fire: any enemy projectile that crosses `BASE.r × 0.82` now
+  damages the structure, regardless of what it was aimed at. Base defences and the 120s repair
+  lockout are unchanged, and nest-owned kills still grant no bestiary credit.
+
+### Detailed player hull
+- `drawShipShape` is a multi-layer build: dark-to-light hull gradient, flank chine plates, inset wing
+  armour, three rib lines per wing, tail fins, cockpit canopy with frame and highlight, fixed nose
+  cannon with muzzle glow, engine block with two nozzles, reactor spine, intake slots, greeble boxes,
+  antennae, rivets and panel seams.
+- Adds animated engine wash, port/starboard running lights and wingtip pods. Only the outer silhouette
+  uses a shadow blur; interior detail is plain stroked geometry to keep frame time flat.
+
+### Rotating weapon mounts
+- New `Player.wAim[]` holds a per-mount angle relative to the hull. `updateWeaponAims()` tracks the same
+  target each weapon would fire at (including the marked missile part) at 9 rad/s and relaxes to the nose
+  when auto-fire is off.
+- `drawWeaponMount` takes that angle, rotates about a hex hardpoint on the wing, and shot origins now
+  start from the matching hardpoint plus a 7u muzzle offset, so tracers leave the barrel that is pointing
+  at them.
+
 ## 0. v1.6.1 — stable preview, solid bestiary cards, compact cores
 
 ### Preview cannot serve an old release

@@ -8,7 +8,7 @@
  *   CHANGELOG and mirror the details in docs/CHANGELOG.md.
  */
 
-export const VERSION = "1.7.1";
+export const VERSION = "1.8";
 
 export interface ChangeEntry {
   version: string;
@@ -19,6 +19,17 @@ export interface ChangeEntry {
 }
 
 export const CHANGELOG: ChangeEntry[] = [
+  {
+    version: "1.8",
+    date: "20 Nov 2026",
+    title: "Turret-system rework, a far more detailed ship and rotating weapon mounts",
+    points: [
+      "Enemies no longer target the nest: they will not charge it, aim at it or gnaw on its hull. They now chase the ship straight through the 1,760u defence ring, so the cannon and hex turrets engage them inside turret range.",
+      "The nest is still solid — stray rounds that cross its hull damage the structure, and the HUD now reads HOSTILES IN NEST RANGE instead of NEST UNDER ATTACK.",
+      "The player ship is rebuilt from layered hull plates, swept wings with inset armour, a glass canopy, a fixed nose cannon, a reactor spine, engine block, tail fins, running lights, vents, rivets and panel seams.",
+      "Every fitted weapon now sits on a rotating hex hardpoint and tracks the direction it fires, swinging smoothly back to the nose when it has no target.",
+    ],
+  },
   {
     version: "1.7.1",
     date: "20 Nov 2026",

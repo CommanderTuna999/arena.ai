@@ -4,9 +4,10 @@ import { clamp, fmtNum } from "./math";
 export const WORLD_R = 16000;
 /* The nest drifts around the outer ring every run: the x/y below are only the
  * initial fallback, Game.placeBase() moves it before the player spawns. */
-/* turretR is the siege cannon's reach; aggroR is only 10% beyond it, so mobs
- * switch to the nest just before they enter the cannon's envelope. smallR is
- * the point-defence reach of the six hex turrets on the nest ring. */
+/* turretR is the siege cannon's reach; aggroR (10% beyond it) is the nest's
+ * defence-alert radius and the zone enemies are retained in while chasing the
+ * player through it. Enemies never target the nest itself. smallR is the
+ * point-defence reach of the six hex turrets on the nest ring. */
 export const BASE = { x: 0, y: 15000, r: 260, dock: 175, safe: 950, turretR: 1600, aggroR: 1760, smallR: 850 };
 /** radius band the nest may occupy — the outer (common) ring only */
 export const BASE_RING = { min: 13900, max: 15300 };

@@ -359,7 +359,7 @@ export function render(g: Game, ctx: CanvasRenderingContext2D) {
   /* ---- other players ---- */
   for (const o of g.others) {
     ctx.save(); ctx.translate(o.x, o.y); ctx.rotate(o.a);
-    drawShipShape(ctx, "#ff7ad9", 0.85, z);
+    drawShipShape(ctx, "#ff7ad9", 0.85, z, t);
     ctx.restore();
     ctx.fillStyle = "rgba(255,170,230,0.9)";
     ctx.font = `${12 / z}px ui-monospace, monospace`; ctx.textAlign = "center";
@@ -731,16 +731,179 @@ function drawRope(g: Game, ctx: CanvasRenderingContext2D, h: { state: number; no
   ctx.restore(); ctx.shadowBlur = 0;
 }
 
-function drawShipShape(ctx: CanvasRenderingContext2D, color: string, alpha: number, z: number) {
+function drawShipShape(ctx: CanvasRenderingContext2D, color: string, alpha: number, z: number, t = 0) {
+  const lw = 1.4 / Math.max(z, 0.6);
+  const seam = "rgba(150,215,240,0.22)";
+  const hot = "rgba(214,250,255,0.75)";
+  const pr = 0.7 + 0.3 * Math.sin(t * 17);
+  ctx.save();
   ctx.globalAlpha = alpha;
-  ctx.shadowColor = color; ctx.shadowBlur = 14;
-  ctx.fillStyle = "rgba(10,30,45,0.92)"; ctx.strokeStyle = color; ctx.lineWidth = 2.2 / Math.max(z, 0.6);
   ctx.lineJoin = "round";
-  ctx.beginPath(); ctx.moveTo(21, 0); ctx.lineTo(-12, -13); ctx.lineTo(-6, 0); ctx.lineTo(-12, 13); ctx.closePath();
-  ctx.fill(); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(8, 0); ctx.lineTo(-3, -4); ctx.lineTo(-3, 4); ctx.closePath();
-  ctx.fillStyle = color; ctx.fill();
-  ctx.shadowBlur = 0; ctx.globalAlpha = 1;
+  ctx.lineCap = "round";
+
+  /* ---- engine wash, behind everything ---- */
+  ctx.fillStyle = `rgba(125,249,255,${0.22 * pr})`;
+  ctx.shadowColor = color; ctx.shadowBlur = 12;
+  for (const sy of [-1, 1]) {
+    ctx.beginPath(); ctx.ellipse(-23, sy * 4.2, 5 + pr * 1.6, 2.1, 0, 0, TAU); ctx.fill();
+  }
+  ctx.shadowBlur = 0;
+
+  /* ---- tail fins ---- */
+  for (const sy of [-1, 1]) {
+    ctx.beginPath();
+    ctx.moveTo(-15, sy * 4.5); ctx.lineTo(-23.5, sy * 12.5); ctx.lineTo(-20.5, sy * 2.5);
+    ctx.closePath();
+    ctx.fillStyle = "#061019"; ctx.fill();
+    ctx.strokeStyle = seam; ctx.lineWidth = lw; ctx.stroke();
+    ctx.strokeStyle = `rgba(125,249,255,${0.5 * pr})`;
+    ctx.beginPath(); ctx.moveTo(-19.5, sy * 9.5); ctx.lineTo(-21, sy * 4.5); ctx.stroke();
+  }
+
+  /* ---- swept wings, two plate layers ---- */
+  for (const sy of [-1, 1]) {
+    const wg = ctx.createLinearGradient(-16, 0, 14, 0);
+    wg.addColorStop(0, "#071521"); wg.addColorStop(0.55, "#0d2637"); wg.addColorStop(1, "#16394b");
+    ctx.beginPath();
+    ctx.moveTo(14, sy * 3.4); ctx.lineTo(6, sy * 8.2); ctx.lineTo(-10, sy * 15.6);
+    ctx.lineTo(-17.5, sy * 11); ctx.lineTo(-12, sy * 4.1);
+    ctx.closePath();
+    ctx.fillStyle = wg; ctx.fill();
+    ctx.strokeStyle = color; ctx.lineWidth = 1.7 * lw; ctx.stroke();
+
+    /* inset armour panel */
+    ctx.beginPath();
+    ctx.moveTo(10.5, sy * 4.2); ctx.lineTo(1.5, sy * 7.8); ctx.lineTo(-9, sy * 13.2);
+    ctx.lineTo(-14.2, sy * 9.6); ctx.lineTo(-8, sy * 4.45);
+    ctx.closePath();
+    ctx.fillStyle = "rgba(24,58,76,0.75)"; ctx.fill();
+    ctx.strokeStyle = seam; ctx.lineWidth = lw; ctx.stroke();
+
+    /* wing ribs */
+    ctx.strokeStyle = seam;
+    for (const k of [0.3, 0.55, 0.8]) {
+      const ax = 9 - 16 * k, ay = sy * (4.6 + 9.4 * k);
+      ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(ax - 2.4, ay + sy * 2.2); ctx.stroke();
+    }
+    /* wingtip running light */
+    ctx.fillStyle = sy < 0 ? "#ff6b81" : "#7dffb4";
+    ctx.shadowColor = ctx.fillStyle; ctx.shadowBlur = 6;
+    ctx.beginPath(); ctx.arc(-13.4, sy * 13.6, 1.5, 0, TAU); ctx.fill();
+    ctx.shadowBlur = 0;
+    /* wingtip weapon pod */
+    ctx.beginPath(); ctx.arc(-14.6, sy * 12.2, 2.5, 0, TAU);
+    ctx.fillStyle = "#081621"; ctx.fill();
+    ctx.strokeStyle = `rgba(125,249,255,0.55)`; ctx.lineWidth = lw; ctx.stroke();
+    ctx.fillStyle = hot; ctx.beginPath(); ctx.arc(-14.6, sy * 12.2, 0.7, 0, TAU); ctx.fill();
+  }
+
+  /* ---- main hull ---- */
+  const hg = ctx.createLinearGradient(0, -9, 0, 9);
+  hg.addColorStop(0, "#08141f"); hg.addColorStop(0.45, "#173a4c"); hg.addColorStop(0.62, "#0e2534"); hg.addColorStop(1, "#060f18");
+  ctx.beginPath();
+  ctx.moveTo(26, 0);
+  ctx.lineTo(19, -3.4); ctx.lineTo(10, -5.6); ctx.lineTo(0, -6.8); ctx.lineTo(-12, -8.4);
+  ctx.lineTo(-19, -5.2); ctx.lineTo(-19, 5.2); ctx.lineTo(-12, 8.4);
+  ctx.lineTo(0, 6.8); ctx.lineTo(10, 5.6); ctx.lineTo(19, 3.4);
+  ctx.closePath();
+  ctx.fillStyle = hg; ctx.fill();
+  ctx.strokeStyle = color; ctx.lineWidth = 2 * lw;
+  ctx.shadowColor = color; ctx.shadowBlur = 11; ctx.stroke(); ctx.shadowBlur = 0;
+
+  /* ---- chine plates along both flanks ---- */
+  ctx.fillStyle = "rgba(20,50,66,0.92)";
+  for (const sy of [-1, 1]) {
+    ctx.beginPath();
+    ctx.moveTo(18, sy * 2.7); ctx.lineTo(9, sy * 4.5); ctx.lineTo(-2, sy * 5.5);
+    ctx.lineTo(-13, sy * 6.8); ctx.lineTo(-15, sy * 4.2); ctx.lineTo(-2, sy * 3.2); ctx.lineTo(9, sy * 2.1);
+    ctx.closePath();
+    ctx.fill(); ctx.strokeStyle = seam; ctx.lineWidth = lw; ctx.stroke();
+    /* intake slot */
+    ctx.fillStyle = "#04101a";
+    ctx.beginPath(); ctx.roundRect(1.5, sy * 3.4, 5.5, 1.35, 0.6); ctx.fill();
+    ctx.fillStyle = `rgba(125,249,255,${0.35 + 0.25 * pr})`;
+    ctx.beginPath(); ctx.rect(2.2, sy * 3.7, 4, 0.55); ctx.fill();
+    ctx.fillStyle = "rgba(20,50,66,0.92)";
+  }
+
+  /* ---- panel seams + dorsal chevrons ---- */
+  ctx.strokeStyle = seam; ctx.lineWidth = lw;
+  ctx.beginPath(); ctx.moveTo(20, 0); ctx.lineTo(-16, 0); ctx.stroke();
+  for (const x of [12, 4, -5, -12]) {
+    const hgt = x > 6 ? 2.1 : 3.2;
+    ctx.beginPath(); ctx.moveTo(x, -hgt); ctx.lineTo(x - 1.4, 0); ctx.lineTo(x, hgt); ctx.stroke();
+  }
+  for (const x of [6, -2, -9]) {
+    ctx.beginPath(); ctx.moveTo(x, -2.6); ctx.lineTo(x - 2.2, 0); ctx.lineTo(x, 2.6);
+    ctx.strokeStyle = "rgba(125,249,255,0.3)"; ctx.stroke();
+    ctx.fillStyle = "rgba(14,36,50,0.85)"; ctx.fill();
+  }
+  ctx.strokeStyle = seam;
+  for (const sy of [-1, 1]) {
+    ctx.beginPath(); ctx.moveTo(-3, sy * 2.2); ctx.lineTo(-3, sy * 5); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(14, sy * 1.4); ctx.lineTo(14, sy * 3); ctx.stroke();
+  }
+
+  /* ---- cockpit canopy ---- */
+  const cg = ctx.createLinearGradient(20, 0, 6, 0);
+  cg.addColorStop(0, "#eaffff"); cg.addColorStop(0.45, color); cg.addColorStop(1, "rgba(8,26,38,0.9)");
+  ctx.beginPath();
+  ctx.moveTo(20.5, 0); ctx.lineTo(13.5, -2.9); ctx.lineTo(7, 0); ctx.lineTo(13.5, 2.9);
+  ctx.closePath();
+  ctx.fillStyle = cg; ctx.fill();
+  ctx.strokeStyle = hot; ctx.lineWidth = lw; ctx.stroke();
+  ctx.strokeStyle = "rgba(255,255,255,0.65)";
+  ctx.beginPath(); ctx.moveTo(18.6, -0.4); ctx.lineTo(12.6, -1.6); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(13.5, -2.9); ctx.lineTo(13.5, 2.9); ctx.stroke();
+
+  /* ---- fixed nose cannon ---- */
+  ctx.fillStyle = "#08131e"; ctx.strokeStyle = color; ctx.lineWidth = 1.2 * lw;
+  ctx.beginPath(); ctx.roundRect(17, -1.25, 10.4, 2.5, 1.1); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = hot;
+  ctx.beginPath(); ctx.arc(27.2, 0, 0.85, 0, TAU); ctx.fill();
+  ctx.strokeStyle = seam;
+  ctx.beginPath(); ctx.moveTo(20, -2.1); ctx.lineTo(24, -2.1); ctx.moveTo(20, 2.1); ctx.lineTo(24, 2.1); ctx.stroke();
+
+  /* ---- engine block + nozzles ---- */
+  ctx.fillStyle = "#050e16"; ctx.strokeStyle = seam; ctx.lineWidth = lw;
+  ctx.beginPath(); ctx.roundRect(-20.2, -5.2, 4.6, 10.4, 1.2); ctx.fill(); ctx.stroke();
+  for (const sy of [-1, 1]) {
+    ctx.fillStyle = "#04101a";
+    ctx.beginPath(); ctx.roundRect(-21.6, sy * 4.9 - 1.9, 3.2, 3.8, 1); ctx.fill();
+    ctx.fillStyle = `rgba(125,249,255,${0.55 + 0.35 * pr})`;
+    ctx.beginPath(); ctx.arc(-22, sy * 4.9, 0.9, 0, TAU); ctx.fill();
+  }
+  /* reactor spine + greeble boxes */
+  ctx.fillStyle = "rgba(125,249,255,0.35)";
+  ctx.beginPath(); ctx.rect(-15.5, -1.1, 6, 2.2); ctx.fill();
+  ctx.strokeStyle = "rgba(125,249,255,0.6)";
+  ctx.beginPath(); ctx.moveTo(-14.5, 0); ctx.lineTo(-9.5, 0); ctx.stroke();
+  ctx.fillStyle = "rgba(10,28,40,0.95)"; ctx.strokeStyle = seam;
+  for (let k = 0; k < 3; k++) {
+    ctx.beginPath(); ctx.roundRect(-1 - k * 3.4, 1.9, 2.4, 1.4, 0.4); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.roundRect(-1 - k * 3.4, -3.3, 2.4, 1.4, 0.4); ctx.fill(); ctx.stroke();
+  }
+  /* antennae */
+  ctx.strokeStyle = color;
+  for (const sy of [-1, 1]) {
+    ctx.globalAlpha = alpha * 0.75;
+    ctx.beginPath(); ctx.moveTo(7, sy * 5); ctx.lineTo(4.2, sy * 8.6); ctx.stroke();
+    ctx.fillStyle = hot; ctx.beginPath(); ctx.arc(4.2, sy * 8.6, 0.6, 0, TAU); ctx.fill();
+  }
+  ctx.globalAlpha = alpha;
+  /* hull rivets */
+  ctx.fillStyle = "rgba(190,235,255,0.4)";
+  for (const x of [10, 6, 2, -2, -6, -10]) {
+    for (const sy of [-1, 1]) {
+      ctx.beginPath(); ctx.arc(x, sy * (x > 8 ? 1.8 : 2.6), 0.42, 0, TAU); ctx.fill();
+    }
+  }
+
+  /* ---- top highlight ---- */
+  ctx.strokeStyle = hot; ctx.globalAlpha = alpha * 0.55; ctx.lineWidth = lw;
+  ctx.beginPath(); ctx.moveTo(23.5, -0.7); ctx.lineTo(15, -3.3); ctx.lineTo(6, -5.2); ctx.stroke();
+  ctx.globalAlpha = 1;
+  ctx.restore();
 }
 
 const WEAPON_ART: Record<string, { color: string; kind: "gun" | "pod" | "beam" | "special" }> = {
@@ -781,12 +944,13 @@ function equipped(g: Game, slot: "shield" | "armor" | "optics" | "utility") {
 }
 
 /** Physical weapon hardware mounted on the hull, one silhouette per weapon. */
-function drawWeaponMount(ctx: CanvasRenderingContext2D, rid: string, x: number, y: number, flip: number, t: number, i: number) {
+function drawWeaponMount(ctx: CanvasRenderingContext2D, rid: string, x: number, y: number, flip: number, aim: number, t: number, i: number) {
   const art = WEAPON_ART[rid] ?? { color: "#ff9d6e", kind: "gun" as const };
   const c = art.color;
   const pulse = 0.55 + 0.45 * Math.sin(t * 3 + i * 2);
   ctx.save();
   ctx.translate(x, y);
+  ctx.rotate(aim);
   ctx.scale(1, flip);
   ctx.lineWidth = 1.6;
   ctx.strokeStyle = c;
@@ -814,14 +978,27 @@ function drawWeaponMount(ctx: CanvasRenderingContext2D, rid: string, x: number, 
     else { ctx.arc(0, 0, 6.4, 0, TAU); }
     ctx.stroke();
   } else {
-    const barrels = rid === "hmg" ? 3 : rid === "scatter" ? 3 : 1;
-    for (let b = 0; b < barrels; b++) {
-      const oy = barrels === 1 ? 0 : (b - 1) * 2.2;
-      ctx.beginPath(); ctx.roundRect(-3, oy - 1, rid === "scatter" ? 6 : 10, 2, 1); ctx.fill(); ctx.stroke();
+    const barrels = rid === "hmg" || rid === "scatter" ? 3 : rid === "flak" ? 2 : 1;
+    const len = rid === "scatter" ? 6 : 10;
+    if (barrels === 1) {
+      ctx.beginPath(); ctx.roundRect(-3, -1, len, 2, 1); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = c; ctx.globalAlpha = 0.4 + 0.4 * pulse;
+      ctx.beginPath(); ctx.arc(len - 2, 0, 1, 0, TAU); ctx.fill();
+      ctx.globalAlpha = 1;
+    } else {
+      /* one armoured housing with individual barrel ports, so a triple mount
+       * still reads as three barrels instead of a single slab */
+      const hh = barrels === 3 ? 6.2 : 4.6;
+      ctx.beginPath(); ctx.roundRect(-3, -hh / 2, len, hh, 1.4); ctx.fill(); ctx.stroke();
+      for (let b = 0; b < barrels; b++) {
+        const oy = (b - (barrels - 1) / 2) * (hh - 1.4) / Math.max(1, barrels - 1 || 1);
+        ctx.fillStyle = "#020a12";
+        ctx.beginPath(); ctx.roundRect(len - 2.4, oy - 0.55, 3, 1.1, 0.5); ctx.fill();
+        ctx.fillStyle = c; ctx.globalAlpha = 0.45 + 0.4 * pulse;
+        ctx.beginPath(); ctx.arc(len - 0.2, oy, 0.55, 0, TAU); ctx.fill();
+      }
+      ctx.globalAlpha = 1;
     }
-    ctx.fillStyle = c; ctx.globalAlpha = 0.4 + 0.4 * pulse;
-    ctx.beginPath(); ctx.arc(rid === "scatter" ? 5 : 8, 0, 1.1, 0, TAU); ctx.fill();
-    ctx.globalAlpha = 1;
   }
   ctx.shadowBlur = 0;
   ctx.restore();
@@ -862,15 +1039,23 @@ function drawPlayer(g: Game, ctx: CanvasRenderingContext2D, z: number, t: number
     ctx.beginPath(); ctx.moveTo(-8, -5); ctx.lineTo(-8 - len, 0); ctx.lineTo(-8, 5); ctx.closePath(); ctx.fill();
     ctx.shadowBlur = 0;
   }
-  drawShipShape(ctx, p.flash > 0 ? "#ff6b81" : "#7df9ff", 1, z);
+  drawShipShape(ctx, p.flash > 0 ? "#ff6b81" : "#7df9ff", 1, z, t);
 
   /* ---- fitted hardware ---- */
   const armor = equipped(g, "armor");
   if (armor) drawArmorVisual(ctx, armor.rid, armor.eff, t);
-  const slots: [number, number][] = [[0, -11.5], [0, 11.5], [-7, 0]];
+  const slots: [number, number][] = [[2, -12.5], [2, 12.5], [-7, 0]];
   st.weapons.slice(0, 3).forEach((w, i) => {
     const [wx, wy] = slots[i] ?? [0, 0];
-    drawWeaponMount(ctx, w.rid, wx, wy, wy < 0 ? -1 : 1, t, i);
+    const aim = p.wAim[i] ?? 0;
+    /* rotating hex hardpoint under each barrel */
+    ctx.save(); ctx.translate(wx, wy);
+    ctx.fillStyle = "#07131d"; ctx.strokeStyle = "rgba(125,249,255,0.4)"; ctx.lineWidth = 1.1;
+    hexPath(ctx, 0, 0, 4.4, 0); ctx.fill(); ctx.stroke();
+    ctx.strokeStyle = "rgba(125,249,255,0.22)";
+    ctx.beginPath(); ctx.arc(0, 0, 2.2, 0, TAU); ctx.stroke();
+    ctx.restore();
+    drawWeaponMount(ctx, w.rid, wx, wy, wy < 0 ? -1 : 1, aim, t, i);
   });
   // shield emitters
   const shield = equipped(g, "shield");
