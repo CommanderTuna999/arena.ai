@@ -1,5 +1,5 @@
 import { TAU, clamp, fmtNum } from "./math";
-import { BASE, CAT_NAME, KIND_CAT, RARITIES, SHIP_R, WEAPON_RANGE, WEAPON_TINT, WORLD_R, ZONE_EDGES } from "./data";
+import { BASE, CAT_NAME, KIND_CAT, RARITIES, SHIP_R, W_SLOTS, WEAPON_RANGE, WEAPON_TINT, WORLD_R, ZONE_EDGES } from "./data";
 import { N_ROPE, type Enemy, type Game, type LComp } from "./engine";
 
 function bend(e: Enemy, p: { seg: number }) {
@@ -160,6 +160,28 @@ export function render(g: Game, ctx: CanvasRenderingContext2D) {
       ctx.setLineDash([]);
     }
   }
+
+  /* ---- credit motes ---- */
+  for (const c of g.creditDrops) {
+    if (c.x < vx0 - 10 || c.x > vx1 + 10 || c.y < vy0 - 10 || c.y > vy1 + 10) continue;
+    const fade = clamp(c.life / 2.5, 0, 1);
+    const bob = Math.sin(t * 4 + c.spin) * 1.4;
+    ctx.save(); ctx.translate(c.x, c.y + bob); ctx.rotate(c.spin);
+    ctx.globalAlpha = fade;
+    ctx.fillStyle = "#ffd24d"; ctx.shadowColor = "#ffd24d"; ctx.shadowBlur = 8;
+    ctx.beginPath(); ctx.moveTo(0, -4.8); ctx.lineTo(3.7, 0); ctx.lineTo(0, 4.8); ctx.lineTo(-3.7, 0); ctx.closePath(); ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = "#3b2704";
+    ctx.beginPath(); ctx.moveTo(0, -2.4); ctx.lineTo(1.8, 0); ctx.lineTo(0, 2.4); ctx.lineTo(-1.8, 0); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = "rgba(255,245,190,0.85)"; ctx.lineWidth = 0.7;
+    ctx.beginPath(); ctx.moveTo(0, -4.8); ctx.lineTo(0, 4.8); ctx.stroke();
+    if (c.value >= 24) {
+      ctx.strokeStyle = "rgba(255,225,120,0.45)"; ctx.lineWidth = 0.8;
+      ctx.beginPath(); ctx.arc(0, 0, 6.2, 0, TAU); ctx.stroke();
+    }
+    ctx.restore();
+  }
+  ctx.globalAlpha = 1;
 
   /* ---- magnet field ---- */
   if (g.stats.magnet > 0) {
@@ -478,7 +500,7 @@ function drawBase(g: Game, ctx: CanvasRenderingContext2D, z: number, t: number) 
   ctx.strokeStyle = "rgba(90,255,170,0.2)"; ctx.lineWidth = 3 / z;
   ctx.beginPath(); ctx.arc(x, y, safe, 0, TAU); ctx.stroke();
   ctx.setLineDash([]);
-  /* defence cannon reach (and the 10% leash where enemies turn on the nest) */
+  /* siege-cannon reach and the wider defence-alert ring */
   if (!lost && Math.hypot(g.player.x - x, g.player.y - y) < BASE.aggroR * 2.4) {
     ctx.setLineDash([14 / z, 22 / z]);
     ctx.lineDashOffset = -t * 24 / z;
@@ -597,22 +619,29 @@ function drawBase(g: Game, ctx: CanvasRenderingContext2D, z: number, t: number) 
  * shot, the mount glows hotter as it charges, and the muzzle flash is huge. */
 function drawTurret(g: Game, ctx: CanvasRenderingContext2D, z: number, t: number, x: number, y: number) {
   const T = g.turret;
-  const online = !!T.target;
+  const powered = !g.baseLost && g.basePowerT > 0;
+  const online = powered && !!T.target;
   const recoil = T.recoil * 36;
   const charge = online ? clamp(1 - T.cd / 7, 0, 1) : 0;
   ctx.save();
   ctx.translate(x, y);
   ctx.rotate(T.a);
-  ctx.globalAlpha = online ? 1 : 0.55;
+  ctx.globalAlpha = powered ? (online ? 1 : 0.6) : 0.26;
   // shadow / mount
   ctx.fillStyle = "rgba(4,10,16,0.95)";
   hexPath(ctx, 0, 0, 46, 0); ctx.fill();
   ctx.strokeStyle = "rgba(125,249,255,0.7)"; ctx.lineWidth = 3 / z;
   hexPath(ctx, 0, 0, 46, 0); ctx.stroke();
-  // charge arc
-  ctx.strokeStyle = `rgba(255,${176 - 60 * charge},${77 + 90 * (1 - charge)},${0.45 + 0.45 * charge})`;
-  ctx.lineWidth = 4 / z;
-  ctx.beginPath(); ctx.arc(0, 0, 38, -Math.PI / 2, -Math.PI / 2 + TAU * charge); ctx.stroke();
+  // charge arc / idle power ring
+  if (powered) {
+    ctx.strokeStyle = `rgba(255,${176 - 60 * charge},${77 + 90 * (1 - charge)},${0.45 + 0.45 * charge})`;
+    ctx.lineWidth = 4 / z;
+    ctx.beginPath(); ctx.arc(0, 0, 38, -Math.PI / 2, -Math.PI / 2 + TAU * (online ? charge : 1)); ctx.stroke();
+    if (!online) {
+      ctx.strokeStyle = "rgba(255,210,120,0.18)"; ctx.lineWidth = 1.5 / z;
+      ctx.beginPath(); ctx.arc(0, 0, 44, 0, TAU); ctx.stroke();
+    }
+  }
   // barrel
   const back = 18 - recoil, tip = 164 - recoil;
   ctx.fillStyle = "#0a1622";
@@ -653,7 +682,7 @@ function drawTurret(g: Game, ctx: CanvasRenderingContext2D, z: number, t: number
   ctx.globalAlpha = 1;
   ctx.restore();
   // turret base glow (world space, unrotated)
-  ctx.strokeStyle = `rgba(255,176,77,${0.16 + 0.25 * T.recoil})`;
+  ctx.strokeStyle = powered ? `rgba(255,176,77,${0.16 + 0.25 * T.recoil})` : "rgba(120,140,155,0.14)";
   ctx.lineWidth = 2 / z;
   ctx.beginPath(); ctx.arc(x, y, 52 + 10 * T.recoil, 0, TAU); ctx.stroke();
   void t;
@@ -734,174 +763,147 @@ function drawRope(g: Game, ctx: CanvasRenderingContext2D, h: { state: number; no
 function drawShipShape(ctx: CanvasRenderingContext2D, color: string, alpha: number, z: number, t = 0) {
   const lw = 1.4 / Math.max(z, 0.6);
   const seam = "rgba(150,215,240,0.22)";
-  const hot = "rgba(214,250,255,0.75)";
-  const pr = 0.7 + 0.3 * Math.sin(t * 17);
+  const hot = "rgba(214,250,255,0.78)";
+  const pr = 0.62 + 0.38 * Math.sin(t * 4.4);
   ctx.save();
   ctx.globalAlpha = alpha;
   ctx.lineJoin = "round";
   ctx.lineCap = "round";
 
-  /* ---- engine wash, behind everything ---- */
-  ctx.fillStyle = `rgba(125,249,255,${0.22 * pr})`;
-  ctx.shadowColor = color; ctx.shadowBlur = 12;
-  for (const sy of [-1, 1]) {
-    ctx.beginPath(); ctx.ellipse(-23, sy * 4.2, 5 + pr * 1.6, 2.1, 0, 0, TAU); ctx.fill();
-  }
-  ctx.shadowBlur = 0;
+  /* ---- gravity halo ---- */
+  const halo = ctx.createRadialGradient(0, 0, 4, 0, 0, 31);
+  halo.addColorStop(0, `rgba(125,249,255,${0.10 + 0.06 * pr})`);
+  halo.addColorStop(0.65, "rgba(125,249,255,0.035)");
+  halo.addColorStop(1, "rgba(125,249,255,0)");
+  ctx.fillStyle = halo;
+  ctx.beginPath(); ctx.arc(0, 0, 31, 0, TAU); ctx.fill();
 
-  /* ---- tail fins ---- */
-  for (const sy of [-1, 1]) {
-    ctx.beginPath();
-    ctx.moveTo(-15, sy * 4.5); ctx.lineTo(-23.5, sy * 12.5); ctx.lineTo(-20.5, sy * 2.5);
-    ctx.closePath();
-    ctx.fillStyle = "#061019"; ctx.fill();
-    ctx.strokeStyle = seam; ctx.lineWidth = lw; ctx.stroke();
-    ctx.strokeStyle = `rgba(125,249,255,${0.5 * pr})`;
-    ctx.beginPath(); ctx.moveTo(-19.5, sy * 9.5); ctx.lineTo(-21, sy * 4.5); ctx.stroke();
-  }
-
-  /* ---- swept wings, two plate layers ---- */
-  for (const sy of [-1, 1]) {
-    const wg = ctx.createLinearGradient(-16, 0, 14, 0);
-    wg.addColorStop(0, "#071521"); wg.addColorStop(0.55, "#0d2637"); wg.addColorStop(1, "#16394b");
-    ctx.beginPath();
-    ctx.moveTo(14, sy * 3.4); ctx.lineTo(6, sy * 8.2); ctx.lineTo(-10, sy * 15.6);
-    ctx.lineTo(-17.5, sy * 11); ctx.lineTo(-12, sy * 4.1);
-    ctx.closePath();
-    ctx.fillStyle = wg; ctx.fill();
-    ctx.strokeStyle = color; ctx.lineWidth = 1.7 * lw; ctx.stroke();
-
-    /* inset armour panel */
-    ctx.beginPath();
-    ctx.moveTo(10.5, sy * 4.2); ctx.lineTo(1.5, sy * 7.8); ctx.lineTo(-9, sy * 13.2);
-    ctx.lineTo(-14.2, sy * 9.6); ctx.lineTo(-8, sy * 4.45);
-    ctx.closePath();
-    ctx.fillStyle = "rgba(24,58,76,0.75)"; ctx.fill();
-    ctx.strokeStyle = seam; ctx.lineWidth = lw; ctx.stroke();
-
-    /* wing ribs */
-    ctx.strokeStyle = seam;
-    for (const k of [0.3, 0.55, 0.8]) {
-      const ax = 9 - 16 * k, ay = sy * (4.6 + 9.4 * k);
-      ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(ax - 2.4, ay + sy * 2.2); ctx.stroke();
-    }
-    /* wingtip running light */
-    ctx.fillStyle = sy < 0 ? "#ff6b81" : "#7dffb4";
-    ctx.shadowColor = ctx.fillStyle; ctx.shadowBlur = 6;
-    ctx.beginPath(); ctx.arc(-13.4, sy * 13.6, 1.5, 0, TAU); ctx.fill();
-    ctx.shadowBlur = 0;
-    /* wingtip weapon pod */
-    ctx.beginPath(); ctx.arc(-14.6, sy * 12.2, 2.5, 0, TAU);
-    ctx.fillStyle = "#081621"; ctx.fill();
-    ctx.strokeStyle = `rgba(125,249,255,0.55)`; ctx.lineWidth = lw; ctx.stroke();
-    ctx.fillStyle = hot; ctx.beginPath(); ctx.arc(-14.6, sy * 12.2, 0.7, 0, TAU); ctx.fill();
-  }
-
-  /* ---- main hull ---- */
-  const hg = ctx.createLinearGradient(0, -9, 0, 9);
-  hg.addColorStop(0, "#08141f"); hg.addColorStop(0.45, "#173a4c"); hg.addColorStop(0.62, "#0e2534"); hg.addColorStop(1, "#060f18");
-  ctx.beginPath();
-  ctx.moveTo(26, 0);
-  ctx.lineTo(19, -3.4); ctx.lineTo(10, -5.6); ctx.lineTo(0, -6.8); ctx.lineTo(-12, -8.4);
-  ctx.lineTo(-19, -5.2); ctx.lineTo(-19, 5.2); ctx.lineTo(-12, 8.4);
-  ctx.lineTo(0, 6.8); ctx.lineTo(10, 5.6); ctx.lineTo(19, 3.4);
-  ctx.closePath();
-  ctx.fillStyle = hg; ctx.fill();
-  ctx.strokeStyle = color; ctx.lineWidth = 2 * lw;
-  ctx.shadowColor = color; ctx.shadowBlur = 11; ctx.stroke(); ctx.shadowBlur = 0;
-
-  /* ---- chine plates along both flanks ---- */
-  ctx.fillStyle = "rgba(20,50,66,0.92)";
-  for (const sy of [-1, 1]) {
-    ctx.beginPath();
-    ctx.moveTo(18, sy * 2.7); ctx.lineTo(9, sy * 4.5); ctx.lineTo(-2, sy * 5.5);
-    ctx.lineTo(-13, sy * 6.8); ctx.lineTo(-15, sy * 4.2); ctx.lineTo(-2, sy * 3.2); ctx.lineTo(9, sy * 2.1);
-    ctx.closePath();
-    ctx.fill(); ctx.strokeStyle = seam; ctx.lineWidth = lw; ctx.stroke();
-    /* intake slot */
-    ctx.fillStyle = "#04101a";
-    ctx.beginPath(); ctx.roundRect(1.5, sy * 3.4, 5.5, 1.35, 0.6); ctx.fill();
-    ctx.fillStyle = `rgba(125,249,255,${0.35 + 0.25 * pr})`;
-    ctx.beginPath(); ctx.rect(2.2, sy * 3.7, 4, 0.55); ctx.fill();
-    ctx.fillStyle = "rgba(20,50,66,0.92)";
-  }
-
-  /* ---- panel seams + dorsal chevrons ---- */
-  ctx.strokeStyle = seam; ctx.lineWidth = lw;
-  ctx.beginPath(); ctx.moveTo(20, 0); ctx.lineTo(-16, 0); ctx.stroke();
-  for (const x of [12, 4, -5, -12]) {
-    const hgt = x > 6 ? 2.1 : 3.2;
-    ctx.beginPath(); ctx.moveTo(x, -hgt); ctx.lineTo(x - 1.4, 0); ctx.lineTo(x, hgt); ctx.stroke();
-  }
-  for (const x of [6, -2, -9]) {
-    ctx.beginPath(); ctx.moveTo(x, -2.6); ctx.lineTo(x - 2.2, 0); ctx.lineTo(x, 2.6);
-    ctx.strokeStyle = "rgba(125,249,255,0.3)"; ctx.stroke();
-    ctx.fillStyle = "rgba(14,36,50,0.85)"; ctx.fill();
-  }
-  ctx.strokeStyle = seam;
-  for (const sy of [-1, 1]) {
-    ctx.beginPath(); ctx.moveTo(-3, sy * 2.2); ctx.lineTo(-3, sy * 5); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(14, sy * 1.4); ctx.lineTo(14, sy * 3); ctx.stroke();
-  }
-
-  /* ---- cockpit canopy ---- */
-  const cg = ctx.createLinearGradient(20, 0, 6, 0);
-  cg.addColorStop(0, "#eaffff"); cg.addColorStop(0.45, color); cg.addColorStop(1, "rgba(8,26,38,0.9)");
-  ctx.beginPath();
-  ctx.moveTo(20.5, 0); ctx.lineTo(13.5, -2.9); ctx.lineTo(7, 0); ctx.lineTo(13.5, 2.9);
-  ctx.closePath();
-  ctx.fillStyle = cg; ctx.fill();
-  ctx.strokeStyle = hot; ctx.lineWidth = lw; ctx.stroke();
-  ctx.strokeStyle = "rgba(255,255,255,0.65)";
-  ctx.beginPath(); ctx.moveTo(18.6, -0.4); ctx.lineTo(12.6, -1.6); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(13.5, -2.9); ctx.lineTo(13.5, 2.9); ctx.stroke();
-
-  /* ---- fixed nose cannon ---- */
-  ctx.fillStyle = "#08131e"; ctx.strokeStyle = color; ctx.lineWidth = 1.2 * lw;
-  ctx.beginPath(); ctx.roundRect(17, -1.25, 10.4, 2.5, 1.1); ctx.fill(); ctx.stroke();
-  ctx.fillStyle = hot;
-  ctx.beginPath(); ctx.arc(27.2, 0, 0.85, 0, TAU); ctx.fill();
-  ctx.strokeStyle = seam;
-  ctx.beginPath(); ctx.moveTo(20, -2.1); ctx.lineTo(24, -2.1); ctx.moveTo(20, 2.1); ctx.lineTo(24, 2.1); ctx.stroke();
-
-  /* ---- engine block + nozzles ---- */
-  ctx.fillStyle = "#050e16"; ctx.strokeStyle = seam; ctx.lineWidth = lw;
-  ctx.beginPath(); ctx.roundRect(-20.2, -5.2, 4.6, 10.4, 1.2); ctx.fill(); ctx.stroke();
-  for (const sy of [-1, 1]) {
-    ctx.fillStyle = "#04101a";
-    ctx.beginPath(); ctx.roundRect(-21.6, sy * 4.9 - 1.9, 3.2, 3.8, 1); ctx.fill();
-    ctx.fillStyle = `rgba(125,249,255,${0.55 + 0.35 * pr})`;
-    ctx.beginPath(); ctx.arc(-22, sy * 4.9, 0.9, 0, TAU); ctx.fill();
-  }
-  /* reactor spine + greeble boxes */
-  ctx.fillStyle = "rgba(125,249,255,0.35)";
-  ctx.beginPath(); ctx.rect(-15.5, -1.1, 6, 2.2); ctx.fill();
-  ctx.strokeStyle = "rgba(125,249,255,0.6)";
-  ctx.beginPath(); ctx.moveTo(-14.5, 0); ctx.lineTo(-9.5, 0); ctx.stroke();
-  ctx.fillStyle = "rgba(10,28,40,0.95)"; ctx.strokeStyle = seam;
+  /* ---- three gimbal arms with pumping piston rods ---- */
+  const armA = t * 0.18 + Math.PI / 3;
   for (let k = 0; k < 3; k++) {
-    ctx.beginPath(); ctx.roundRect(-1 - k * 3.4, 1.9, 2.4, 1.4, 0.4); ctx.fill(); ctx.stroke();
-    ctx.beginPath(); ctx.roundRect(-1 - k * 3.4, -3.3, 2.4, 1.4, 0.4); ctx.fill(); ctx.stroke();
+    const reach = 18 + Math.sin(t * 2.2 + k * 2.1) * 1.5;
+    ctx.save();
+    ctx.rotate(armA + (k / 3) * TAU);
+    ctx.beginPath();
+    ctx.moveTo(5.5, -2.4); ctx.lineTo(reach - 2, -1.2); ctx.lineTo(reach + 1.5, 0);
+    ctx.lineTo(reach - 2, 1.2); ctx.lineTo(5.5, 2.4); ctx.closePath();
+    ctx.fillStyle = "#07131e"; ctx.fill();
+    ctx.strokeStyle = "rgba(125,249,255,0.45)"; ctx.lineWidth = lw; ctx.stroke();
+    ctx.strokeStyle = `rgba(125,249,255,${0.35 + 0.3 * pr})`;
+    ctx.beginPath(); ctx.moveTo(8, 0); ctx.lineTo(reach - 4, 0); ctx.stroke();
+    ctx.beginPath(); ctx.arc(reach, 0, 3, 0, TAU);
+    ctx.fillStyle = "#081621"; ctx.fill();
+    ctx.strokeStyle = color; ctx.lineWidth = 1.2 * lw; ctx.stroke();
+    ctx.fillStyle = hot; ctx.beginPath(); ctx.arc(reach, 0, 0.9, 0, TAU); ctx.fill();
+    ctx.restore();
   }
-  /* antennae */
-  ctx.strokeStyle = color;
-  for (const sy of [-1, 1]) {
-    ctx.globalAlpha = alpha * 0.75;
-    ctx.beginPath(); ctx.moveTo(7, sy * 5); ctx.lineTo(4.2, sy * 8.6); ctx.stroke();
-    ctx.fillStyle = hot; ctx.beginPath(); ctx.arc(4.2, sy * 8.6, 0.6, 0, TAU); ctx.fill();
-  }
-  ctx.globalAlpha = alpha;
-  /* hull rivets */
-  ctx.fillStyle = "rgba(190,235,255,0.4)";
-  for (const x of [10, 6, 2, -2, -6, -10]) {
-    for (const sy of [-1, 1]) {
-      ctx.beginPath(); ctx.arc(x, sy * (x > 8 ? 1.8 : 2.6), 0.42, 0, TAU); ctx.fill();
+
+  /* ---- counter-rotating inner armour ring ---- */
+  const midA = -t * 0.6;
+  for (let k = 0; k < 3; k++) {
+    const a0 = midA + (k / 3) * TAU + 0.14, a1 = a0 + TAU / 3 - 0.28;
+    ctx.beginPath(); ctx.arc(0, 0, 17.4, a0, a1);
+    ctx.strokeStyle = "#0d2838"; ctx.lineWidth = 5.2 * lw; ctx.stroke();
+    ctx.strokeStyle = color; ctx.globalAlpha = alpha * 0.78; ctx.lineWidth = 1.4 * lw; ctx.stroke();
+    ctx.globalAlpha = alpha;
+    ctx.beginPath(); ctx.arc(0, 0, 15.1, a0 + 0.08, a1 - 0.08);
+    ctx.strokeStyle = seam; ctx.lineWidth = lw; ctx.stroke();
+    for (const a of [a0, a1]) {
+      ctx.fillStyle = hot;
+      ctx.beginPath(); ctx.arc(Math.cos(a) * 17.4, Math.sin(a) * 17.4, 0.9, 0, TAU); ctx.fill();
     }
+  }
+
+  /* ---- outer segmented orbit ring ---- */
+  const outA = t * 0.52;
+  for (let i = 0; i < 8; i++) {
+    const a0 = outA + (i / 8) * TAU + 0.045, a1 = a0 + TAU / 8 - 0.09;
+    ctx.beginPath(); ctx.arc(0, 0, 23, a0, a1);
+    ctx.strokeStyle = i % 2 ? "rgba(125,249,255,0.78)" : "rgba(95,190,225,0.42)";
+    ctx.lineWidth = (i % 2 ? 2.8 : 1.8) * lw; ctx.stroke();
+    const ba = a0 + 0.02;
+    ctx.strokeStyle = i % 2 ? color : seam;
+    ctx.beginPath();
+    ctx.moveTo(Math.cos(ba) * 23, Math.sin(ba) * 23);
+    ctx.lineTo(Math.cos(ba) * 25.8, Math.sin(ba) * 25.8);
+    ctx.stroke();
+  }
+  ctx.strokeStyle = "rgba(125,249,255,0.13)"; ctx.lineWidth = lw;
+  ctx.beginPath(); ctx.arc(0, 0, 23, 0, TAU); ctx.stroke();
+
+  /* ---- orbiting sensor motes ---- */
+  const satA = t * 0.9;
+  for (let k = 0; k < 3; k++) {
+    const a = satA + (k / 3) * TAU;
+    const rr = 26.6 + Math.sin(t * 1.7 + k * 1.9) * 1.2;
+    ctx.strokeStyle = `rgba(125,249,255,${0.18 + 0.12 * pr})`;
+    ctx.beginPath(); ctx.moveTo(Math.cos(a) * 23, Math.sin(a) * 23); ctx.lineTo(Math.cos(a) * rr, Math.sin(a) * rr); ctx.stroke();
+    ctx.fillStyle = hot; ctx.shadowColor = color; ctx.shadowBlur = 7;
+    ctx.beginPath(); ctx.arc(Math.cos(a) * rr, Math.sin(a) * rr, 1.9, 0, TAU); ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.strokeStyle = "rgba(125,249,255,0.55)"; ctx.lineWidth = lw;
+    ctx.beginPath(); ctx.arc(Math.cos(a) * rr, Math.sin(a) * rr, 3.2, 0, TAU); ctx.stroke();
+  }
+
+  /* ---- fast inner gyro ring ---- */
+  const inA = t * 1.15;
+  for (let k = 0; k < 4; k++) {
+    const a0 = inA + (k / 4) * TAU + 0.1, a1 = a0 + TAU / 4 - 0.2;
+    ctx.beginPath(); ctx.arc(0, 0, 12, a0, a1);
+    ctx.strokeStyle = k % 2 ? "rgba(125,249,255,0.55)" : "rgba(125,249,255,0.22)";
+    ctx.lineWidth = (k % 2 ? 2.2 : 1.2) * lw; ctx.stroke();
+  }
+
+  /* ---- core housing ---- */
+  const cg = ctx.createRadialGradient(-2, -2, 1, 0, 0, 10);
+  cg.addColorStop(0, "#173a4c"); cg.addColorStop(0.6, "#0a1a26"); cg.addColorStop(1, "#040d15");
+  hexPath(ctx, 0, 0, 9.6, Math.PI / 6);
+  ctx.fillStyle = cg; ctx.fill();
+  ctx.strokeStyle = color; ctx.lineWidth = 2 * lw;
+  ctx.shadowColor = color; ctx.shadowBlur = 10; ctx.stroke(); ctx.shadowBlur = 0;
+  hexPath(ctx, 0, 0, 7.6, Math.PI / 6);
+  ctx.strokeStyle = seam; ctx.lineWidth = lw; ctx.stroke();
+  for (let k = 0; k < 8; k++) {
+    const a = (k / 8) * TAU + Math.PI / 8;
+    ctx.fillStyle = "rgba(190,235,255,0.45)";
+    ctx.beginPath(); ctx.arc(Math.cos(a) * 11.2, Math.sin(a) * 11.2, 0.55, 0, TAU); ctx.fill();
+  }
+  /* four vents that breathe with the core */
+  for (let k = 0; k < 4; k++) {
+    const a = (k / 4) * TAU + Math.PI / 4;
+    ctx.save(); ctx.rotate(a);
+    ctx.fillStyle = "#020a12";
+    ctx.beginPath(); ctx.roundRect(7.2, -1.7, 2.6, 3.4, 0.6); ctx.fill();
+    ctx.fillStyle = `rgba(125,249,255,${0.25 + 0.35 * pr})`;
+    ctx.beginPath(); ctx.rect(7.8, -0.9, 1.5, 1.8); ctx.fill();
+    ctx.restore();
+  }
+
+  /* ---- forward iris: the construct's "face" ---- */
+  ctx.beginPath(); ctx.arc(2.6, 0, 5.4, 0, TAU);
+  ctx.fillStyle = "#03101a"; ctx.fill();
+  ctx.strokeStyle = color; ctx.lineWidth = 1.3 * lw; ctx.stroke();
+  const ig = ctx.createRadialGradient(2.6, 0, 0.4, 2.6, 0, 5);
+  ig.addColorStop(0, "#ffffff");
+  ig.addColorStop(0.35, color);
+  ig.addColorStop(1, "rgba(6,20,30,0)");
+  ctx.fillStyle = ig;
+  ctx.beginPath(); ctx.arc(2.6, 0, 4.8, 0, TAU); ctx.fill();
+  ctx.fillStyle = hot;
+  ctx.beginPath(); ctx.roundRect(4.7, -2.4, 1.9, 4.8, 0.95); ctx.fill();
+  ctx.strokeStyle = `rgba(125,249,255,${0.3 + 0.3 * pr})`;
+  ctx.beginPath(); ctx.arc(2.6, 0, 7.2, -0.85 + t * 1.1, 0.85 + t * 1.1); ctx.stroke();
+
+  /* ---- running lights on the outer ring ---- */
+  for (const a of [outA, outA + Math.PI]) {
+    ctx.fillStyle = "#7dffb4"; ctx.shadowColor = "#7dffb4"; ctx.shadowBlur = 5;
+    ctx.beginPath(); ctx.arc(Math.cos(a) * 25.8, Math.sin(a) * 25.8, 0.9, 0, TAU); ctx.fill();
+    ctx.shadowBlur = 0;
   }
 
   /* ---- top highlight ---- */
-  ctx.strokeStyle = hot; ctx.globalAlpha = alpha * 0.55; ctx.lineWidth = lw;
-  ctx.beginPath(); ctx.moveTo(23.5, -0.7); ctx.lineTo(15, -3.3); ctx.lineTo(6, -5.2); ctx.stroke();
+  ctx.strokeStyle = hot; ctx.globalAlpha = alpha * 0.5; ctx.lineWidth = lw;
+  ctx.beginPath(); ctx.arc(0, 0, 9.6, -1.9, -1.2); ctx.stroke();
   ctx.globalAlpha = 1;
   ctx.restore();
 }
@@ -1004,24 +1006,36 @@ function drawWeaponMount(ctx: CanvasRenderingContext2D, rid: string, x: number, 
   ctx.restore();
 }
 
-/** Armour shows up as plates bolted onto the hull, coloured by recipe. */
+/** Armour shows up as curved plates bolted onto the construct's ring. */
 function drawArmorVisual(ctx: CanvasRenderingContext2D, rid: string, eff: number, t: number) {
   const c = ARMOR_ART[rid] ?? "#c3ccd6";
   const thick = rid === "titan" ? 4.4 : rid === "carapace" ? 3.8 : 2.6;
+  const n = eff > 1.2 ? 4 : 3;
+  const rot = t * 0.38;
   ctx.save();
   ctx.strokeStyle = c;
   ctx.fillStyle = c + "22";
   ctx.lineWidth = thick;
   ctx.shadowColor = c; ctx.shadowBlur = 6;
-  ctx.beginPath();
-  ctx.moveTo(-9, -13.4); ctx.lineTo(6, -15.2); ctx.lineTo(9, -8); ctx.lineTo(-4, -7.4); ctx.closePath();
-  ctx.moveTo(-9, 13.4); ctx.lineTo(6, 15.2); ctx.lineTo(9, 8); ctx.lineTo(-4, 7.4); ctx.closePath();
-  ctx.fill(); ctx.stroke();
-  // dorsal ridge grows with efficiency
-  const ridge = 3 + Math.min(6, eff * 2);
-  ctx.globalAlpha = 0.5 + 0.3 * Math.sin(t * 2);
-  ctx.beginPath(); ctx.moveTo(-16, 0); ctx.lineTo(-8, -ridge); ctx.lineTo(-2, 0); ctx.lineTo(-8, ridge); ctx.closePath();
-  ctx.fillStyle = c + "55"; ctx.fill(); ctx.stroke();
+  for (let i = 0; i < n; i++) {
+    const a0 = rot + (i / n) * TAU + 0.16, a1 = a0 + TAU / n - 0.32;
+    ctx.beginPath(); ctx.arc(0, 0, 18.9, a0, a1); ctx.stroke();
+    ctx.globalAlpha = 0.55;
+    ctx.beginPath(); ctx.arc(0, 0, 16.9, a0 + 0.07, a1 - 0.07);
+    ctx.lineWidth = 1.1; ctx.stroke();
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = c;
+    for (const a of [a0, a1]) {
+      ctx.beginPath(); ctx.arc(Math.cos(a) * 18.9, Math.sin(a) * 18.9, 1.15, 0, TAU); ctx.fill();
+    }
+  }
+  /* collar of reactive plates around the core */
+  ctx.lineWidth = 2;
+  ctx.globalAlpha = 0.45 + 0.25 * Math.sin(t * 2.2);
+  for (let k = 0; k < 6; k++) {
+    const a0 = -t * 0.5 + (k / 6) * TAU + 0.1, a1 = a0 + TAU / 6 - 0.2;
+    ctx.beginPath(); ctx.arc(0, 0, 11.1, a0, a1); ctx.stroke();
+  }
   ctx.globalAlpha = 1;
   ctx.shadowBlur = 0;
   ctx.restore();
@@ -1031,52 +1045,57 @@ function drawPlayer(g: Game, ctx: CanvasRenderingContext2D, z: number, t: number
   const p = g.player, st = g.stats;
   ctx.save();
   ctx.translate(p.x, p.y); ctx.rotate(p.a);
+  /* directional ion wash: the construct drifts, it does not have a bow */
   const sp = Math.hypot(p.vx, p.vy);
   if (sp > 30) {
-    const len = 8 + clamp(sp / 40, 0, 20) * (p.boosting ? 2 : 1) + Math.random() * 4;
-    ctx.fillStyle = p.boosting ? "rgba(255,170,60,0.9)" : "rgba(125,249,255,0.7)";
-    ctx.shadowColor = ctx.fillStyle; ctx.shadowBlur = 14;
-    ctx.beginPath(); ctx.moveTo(-8, -5); ctx.lineTo(-8 - len, 0); ctx.lineTo(-8, 5); ctx.closePath(); ctx.fill();
-    ctx.shadowBlur = 0;
+    const back = Math.atan2(-p.vy, -p.vx) - p.a;
+    const len = 7 + clamp(sp / 40, 0, 20) * (p.boosting ? 1.8 : 1) + Math.random() * 3;
+    ctx.save(); ctx.rotate(back);
+    ctx.fillStyle = p.boosting ? "rgba(255,170,60,0.85)" : "rgba(125,249,255,0.6)";
+    ctx.shadowColor = ctx.fillStyle; ctx.shadowBlur = 13;
+    ctx.beginPath(); ctx.moveTo(16, -4.4); ctx.lineTo(16 + len, 0); ctx.lineTo(16, 4.4); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = "rgba(232,255,255,0.75)";
+    ctx.beginPath(); ctx.moveTo(16, -1.8); ctx.lineTo(16 + len * 0.58, 0); ctx.lineTo(16, 1.8); ctx.closePath(); ctx.fill();
+    ctx.restore(); ctx.shadowBlur = 0;
   }
   drawShipShape(ctx, p.flash > 0 ? "#ff6b81" : "#7df9ff", 1, z, t);
 
   /* ---- fitted hardware ---- */
   const armor = equipped(g, "armor");
   if (armor) drawArmorVisual(ctx, armor.rid, armor.eff, t);
-  const slots: [number, number][] = [[2, -12.5], [2, 12.5], [-7, 0]];
   st.weapons.slice(0, 3).forEach((w, i) => {
-    const [wx, wy] = slots[i] ?? [0, 0];
-    const aim = p.wAim[i] ?? 0;
-    /* rotating hex hardpoint under each barrel */
-    ctx.save(); ctx.translate(wx, wy);
+    const slot = W_SLOTS[i] ?? { x: 0, y: 0, rest: 0 };
+    const aim = p.wAim[i] ?? slot.rest;
+    /* rotating hex hardpoint socket under each barrel */
+    ctx.save(); ctx.translate(slot.x, slot.y);
     ctx.fillStyle = "#07131d"; ctx.strokeStyle = "rgba(125,249,255,0.4)"; ctx.lineWidth = 1.1;
     hexPath(ctx, 0, 0, 4.4, 0); ctx.fill(); ctx.stroke();
     ctx.strokeStyle = "rgba(125,249,255,0.22)";
     ctx.beginPath(); ctx.arc(0, 0, 2.2, 0, TAU); ctx.stroke();
     ctx.restore();
-    drawWeaponMount(ctx, w.rid, wx, wy, wy < 0 ? -1 : 1, aim, t, i);
+    drawWeaponMount(ctx, w.rid, slot.x, slot.y, slot.y < 0 ? -1 : 1, aim, t, i);
   });
-  // shield emitters
+  // shield emitters sit on the gimbal joints
   const shield = equipped(g, "shield");
   if (shield) {
     const sc = SHIELD_ART[shield.rid] ?? "#7df9ff";
     ctx.fillStyle = sc; ctx.shadowColor = sc; ctx.shadowBlur = 8;
-    for (const sy of [-1, 1]) {
-      ctx.globalAlpha = 0.55 + 0.35 * Math.sin(t * 3 + sy);
-      ctx.beginPath(); ctx.arc(-4, sy * 5.5, 1.8, 0, TAU); ctx.fill();
+    for (let k = 0; k < 3; k++) {
+      const a = Math.PI / 3 + (k / 3) * TAU;
+      ctx.globalAlpha = 0.5 + 0.4 * Math.sin(t * 3 + k * 2);
+      ctx.beginPath(); ctx.arc(Math.cos(a) * 19.8, Math.sin(a) * 19.8, 1.8, 0, TAU); ctx.fill();
     }
     ctx.globalAlpha = 1; ctx.shadowBlur = 0;
   }
-  // optics lens + utility pod
+  // optics sensor + utility pod ride the outer ring
   if (equipped(g, "optics")) {
     ctx.strokeStyle = "#9dff6a"; ctx.lineWidth = 1.3;
-    ctx.beginPath(); ctx.arc(13, 0, 2.6, 0, TAU); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(15, 0); ctx.lineTo(18, 0); ctx.stroke();
+    ctx.beginPath(); ctx.arc(23.8, 0, 2.6, 0, TAU); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(26.4, 0); ctx.lineTo(29, 0); ctx.stroke();
   }
   if (equipped(g, "utility")) {
     ctx.fillStyle = "#c0a8ff"; ctx.shadowColor = "#c0a8ff"; ctx.shadowBlur = 7;
-    ctx.beginPath(); ctx.arc(-13, 0, 2, 0, TAU); ctx.fill(); ctx.shadowBlur = 0;
+    ctx.beginPath(); ctx.arc(-21.5, 0, 2, 0, TAU); ctx.fill(); ctx.shadowBlur = 0;
   }
   ctx.restore();
 
@@ -1085,23 +1104,23 @@ function drawPlayer(g: Game, ctx: CanvasRenderingContext2D, z: number, t: number
     const sc = shield ? SHIELD_ART[shield.rid] ?? "#7df9ff" : "#7df9ff";
     ctx.strokeStyle = sc; ctx.globalAlpha = 0.2 + 0.5 * f; ctx.lineWidth = 2 / z;
     ctx.shadowColor = sc; ctx.shadowBlur = 10;
-    hexPath(ctx, p.x, p.y, SHIP_R + 14, t * 0.8);
+    hexPath(ctx, p.x, p.y, SHIP_R + 20, t * 0.8);
     ctx.stroke(); ctx.fillStyle = sc; ctx.globalAlpha = 0.04 + 0.06 * f; ctx.fill();
     ctx.globalAlpha = 0.5 + 0.35 * Math.sin(t * 4);
     for (const dir of [1, -1]) {
-      ctx.beginPath(); ctx.arc(p.x, p.y, SHIP_R + 20, t * dir * 1.1, t * dir * 1.1 + 1.1); ctx.stroke();
+      ctx.beginPath(); ctx.arc(p.x, p.y, SHIP_R + 26, t * dir * 1.1, t * dir * 1.1 + 1.1); ctx.stroke();
     }
     ctx.globalAlpha = 1; ctx.shadowBlur = 0;
   }
   if (p.barrier > 0 && p.barrierMax > 0) {
     const f = p.barrier / p.barrierMax;
     ctx.strokeStyle = `rgba(120,220,255,${0.35 + 0.5 * f})`; ctx.lineWidth = 4 / z; ctx.shadowColor = "#4dd2ff"; ctx.shadowBlur = 16;
-    ctx.beginPath(); ctx.arc(p.x, p.y, SHIP_R + 22 + 3 * Math.sin(t * 8), 0, TAU); ctx.stroke();
+    ctx.beginPath(); ctx.arc(p.x, p.y, SHIP_R + 30 + 3 * Math.sin(t * 8), 0, TAU); ctx.stroke();
     ctx.fillStyle = `rgba(120,220,255,${0.05 + 0.08 * f})`; ctx.fill(); ctx.shadowBlur = 0;
   }
   if (p.overT > 0) {
     ctx.strokeStyle = "rgba(255,225,77,0.7)"; ctx.lineWidth = 2 / z;
-    ctx.beginPath(); ctx.arc(p.x, p.y, SHIP_R + 18, 0, TAU); ctx.stroke();
+    ctx.beginPath(); ctx.arc(p.x, p.y, SHIP_R + 26, 0, TAU); ctx.stroke();
   }
   if (p.tpT > 0) {
     const f = 1 - p.tpT / Math.max(0.1, st.tpTime);
@@ -1305,8 +1324,10 @@ function drawMinimap(g: Game, ctx: CanvasRenderingContext2D) {
   ctx.strokeRect(cx + g.cam.x * k - vw / 2, cy + g.cam.y * k - vh / 2, vw, vh);
   for (const o of g.others) { ctx.fillStyle = "#ff7ad9"; ctx.beginPath(); ctx.arc(cx + o.x * k, cy + o.y * k, 2.5, 0, TAU); ctx.fill(); }
   const p = g.player;
-  ctx.save(); ctx.translate(cx + p.x * k, cy + p.y * k); ctx.rotate(p.a);
-  ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.moveTo(5, 0); ctx.lineTo(-3.5, -3.5); ctx.lineTo(-3.5, 3.5); ctx.closePath(); ctx.fill();
+  ctx.save(); ctx.translate(cx + p.x * k, cy + p.y * k);
+  ctx.strokeStyle = "#fff"; ctx.lineWidth = 1.6;
+  ctx.beginPath(); ctx.arc(0, 0, 4.6, 0, TAU); ctx.stroke();
+  ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(0, 0, 1.7, 0, TAU); ctx.fill();
   ctx.restore();
   ctx.restore();
   ctx.strokeStyle = "rgba(125,249,255,0.7)"; ctx.lineWidth = 2;

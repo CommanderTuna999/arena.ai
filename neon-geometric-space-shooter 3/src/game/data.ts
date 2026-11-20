@@ -5,9 +5,10 @@ export const WORLD_R = 16000;
 /* The nest drifts around the outer ring every run: the x/y below are only the
  * initial fallback, Game.placeBase() moves it before the player spawns. */
 /* turretR is the siege cannon's reach; aggroR (10% beyond it) is the nest's
- * defence-alert radius and the zone enemies are retained in while chasing the
- * player through it. Enemies never target the nest itself. smallR is the
- * point-defence reach of the six hex turrets on the nest ring. */
+ * defence-alert radius, the zone where player vision widens 1.3x, and the band
+ * enemies are retained in while chasing the player through it. Enemies never
+ * target the nest itself. smallR is the point-defence reach of the six hex
+ * turrets on the nest ring. */
 export const BASE = { x: 0, y: 15000, r: 260, dock: 175, safe: 950, turretR: 1600, aggroR: 1760, smallR: 850 };
 /** radius band the nest may occupy — the outer (common) ring only */
 export const BASE_RING = { min: 13900, max: 15300 };
@@ -15,6 +16,12 @@ export const BASE_RING = { min: 13900, max: 15300 };
 export const BASE_MAX_HP = 600;
 /** incoming damage multiplier by attacker tier (common … mythical) */
 export const BASE_TAKE = [0, 0.01, 0.4, 1, 1.6, 2.4];
+/** three radial hardpoints on the player construct: slot position + resting aim */
+export const W_SLOTS = [
+  { x: 0, y: -17, rest: -Math.PI / 2 },
+  { x: 14.72, y: 8.5, rest: Math.PI / 6 },
+  { x: -14.72, y: 8.5, rest: (5 * Math.PI) / 6 },
+] as const;
 export const SHIP_R = 15;
 /** distance-from-centre thresholds: tier = index of first threshold the distance is under (mythical first) */
 export const ZONE_EDGES = [2200, 4800, 7800, 10600, 13200]; // mythical, legendary, epic, rare, uncommon, else common

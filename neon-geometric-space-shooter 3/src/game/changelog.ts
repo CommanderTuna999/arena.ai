@@ -8,7 +8,7 @@
  *   CHANGELOG and mirror the details in docs/CHANGELOG.md.
  */
 
-export const VERSION = "1.8";
+export const VERSION = "1.9";
 
 export interface ChangeEntry {
   version: string;
@@ -19,6 +19,19 @@ export interface ChangeEntry {
 }
 
 export const CHANGELOG: ChangeEntry[] = [
+  {
+    version: "1.9",
+    date: "20 Nov 2026",
+    title: "Circular player construct, whole-map spawns, credit drops and a retaliating nest",
+    points: [
+      "The player is no longer a ship. It is a circular construct with three pumping gimbal arms, counter-rotating armour rings, eight orbiting ring segments, three sensor motes and a forward iris — all visibly animated.",
+      "Its three weapons sit on radial hardpoints at 120 degrees, rest pointing outward and rotate to track their firing direction.",
+      "Every walkable chunk is populated at run start, so enemies exist across the whole map immediately and stay where they spawned. Rarity bands keep their density curve.",
+      "Breaking an enemy part shakes loose 1-4 credit motes worth ~4% of the part's component value; they home in and are collected automatically.",
+      "Any enemy that damages the nest is instantly destroyed. Base damage powers the siege cannon for 120 seconds; it goes dormant again after two quiet minutes.",
+      "Inside the nest's 1,760u alert ring the camera pulls back for 1.3x player vision, and the HUD shows cannon status.",
+    ],
+  },
   {
     version: "1.8",
     date: "20 Nov 2026",

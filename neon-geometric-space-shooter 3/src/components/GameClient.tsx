@@ -267,6 +267,12 @@ function Hud_({ hud, onOpen, onHelp, onAdmin, onSettings, onBestiary, onHome, on
             </span>
           </div>
         )}
+        {hud.baseNear && !hud.baseLost && (
+          <div className="flex items-center gap-2 text-[9px] font-bold tracking-[0.14em]">
+            <span className={hud.basePowered ? "text-orange-300" : "text-slate-500"}>{hud.basePowered ? "CANNON ONLINE" : "CANNON OFFLINE"}</span>
+            <span className="text-cyan-300/80">VISION ×1.3</span>
+          </div>
+        )}
         <div className="mt-1 flex items-center gap-2 text-sm font-bold text-yellow-300 drop-shadow-[0_0_8px_rgba(255,225,77,0.7)]">
           <span className="inline-block h-3 w-3 rotate-45 border border-yellow-300 bg-yellow-300/30" /> {fmtNum(hud.credits)} CR
         </div>
@@ -391,8 +397,10 @@ function Help({ onClose }: { onClose: () => void }) {
     ["SHIFT", "Afterburner (upgrade)"],
     ["T", "Recall beacon (craftable)"],
     ["E", "Open the nest at your base"],
-    ["Nest cannon", "Stays offline until rare+ enters range; one-shots legendaries, mythicals lose 55% hull"],
+    ["Nest cannon", "Dormant until the nest is hit, then online for 120s; only tracks rare+ targets and one-shots legendaries"],
+    ["Nest retaliation", "Any insect that damages the nest is instantly destroyed — no swarming the hull"],
     ["Nest targeting", "Insects hunt your ship, never the nest — they will follow you straight through turret range, and stray fire can still scar the hull"],
+    ["Credits", "Broken enemy parts shake loose credit motes; fly close to collect them automatically"],
     ["Hex turrets", "Six fast, weak point-defence turrets; one dies for every 1/6 of nest integrity lost"],
     ["Mouse wheel", "Zoom out (craftable optics)"],
     ["Z X C V F", "Fire equipped active abilities"],

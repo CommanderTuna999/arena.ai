@@ -3,6 +3,53 @@
 Everything below is implemented in the current build. Numbers are the actual constants used by
 the simulation, not design targets.
 
+## 0. v1.9 — construct player, whole-map spawns, credit drops and nest retaliation
+
+### The player is a construct, not a ship
+- `drawShipShape` is now a circular machine: three animated gimbal arms with pumping piston
+  rods, three counter-rotating armour plates, an eight-segment orbital ring, three orbiting
+  sensor motes, a fast inner gyro ring, a vented hex core and a forward iris lens.
+- The hull has no bow or stern. The old forward thruster triangle is replaced by a directional
+  ion wash that points opposite the velocity vector, and the minimap icon is a ring rather
+  than a triangle.
+- Weapon hardpoints are three radial sockets at 120° (`W_SLOTS` in `data.ts`, radius 17u).
+  Each mount rests pointing outward and rotates to its target; shots spawn at the matching
+  socket + 7u muzzle. Main-cannon rounds now leave the core at 12u instead of the old nose.
+- Armour is drawn as curved plates bolted around the 18.9u ring plus a core collar. Shield
+  emitters ride the three gimbal joints. Shield/barrier visuals were widened to clear the
+  larger silhouette.
+
+### Whole-map enemy population
+- `seedWorld()` runs on the first simulation tick and visits every walkable 1,500u chunk
+  (376 chunks) once. Each chunk gets one resident with a zone-dependent probability
+  (`ZONE_DENS / 2.6`, floored at 0.38), preserving the low high-rarity density.
+- Chunks are no longer deleted when the player leaves and enemies are no longer filtered by
+  the player's current chunk. The initial population is ~250-300 enemies and persists.
+- `HARD_MAX` is 420. `topUp()` now measures the local neighbourhood instead of the global
+  array and refills around the player without relocating the world population.
+
+### Credits from broken parts
+- `breakPart` calls `dropCredits` for player-attributed breaks. Each break creates 1-4
+  physical motes worth ~4% of `compValue(part.area, enemyTier, part.kind) × sellMul`.
+- Motes drift for 18s, home in from 260u (plus 45% of magnet range), and add to
+  `save.credits` / `save.earned` on contact. Base-majority kills scrub the dead enemy's motes
+  the same way they scrub loose components.
+
+### Nest retaliation and cannon power
+- `hurtBase` sets `basePowerT = 120` and instantly calls `killEnemy(src, ..., byBase=true)` on
+  the attacker that damaged the hull. Such kills grant no bestiary credit and drop nothing.
+- `updateTurret` refuses to acquire targets while `basePowerT <= 0`; the barrel idles and the
+  renderer dims the turret. Damage restarts the 120s window, so the cannon sleeps again after
+  two quiet minutes.
+- HUD exposes `basePowered`; the nest panel shows CANNON ONLINE / OFFLINE.
+- Any enemy projectile crossing `BASE.r × 0.82` still damages the hull, so stray fire can
+  trigger retaliation without enemies deliberately targeting the nest.
+
+### Base vision
+- Inside `BASE.aggroR` (1,760u) the camera target is `min(playerZoom, 1 / 1.3)`, widening
+  player vision by 1.3x. It smoothly returns to normal on leaving the ring.
+- HUD exposes `baseVision` and the nest panel shows VISION ×1.3.
+
 ## 0. v1.8 — turret system rework, detailed ship, rotating mounts
 
 ### Enemies hunt the ship, not the nest

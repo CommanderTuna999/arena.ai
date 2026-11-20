@@ -1,6 +1,6 @@
 import { TAU, angDiff, clamp, distToPoly, hash2, lerp, mulberry32, pointInPoly } from "./math";
 import {
-  ABILITY_BY_ID, BASE, BASE_MAX_HP, BASE_RING, BASE_TAKE, DMG_MUL, HP_MUL, KIND_CAT, RECIPE_BY_ID, SHIP_R, UPGRADES, WORLD_R, compMass, compValue, computeStats, craftEfficiency,
+  ABILITY_BY_ID, BASE, BASE_MAX_HP, BASE_RING, BASE_TAKE, DMG_MUL, HP_MUL, KIND_CAT, RECIPE_BY_ID, SHIP_R, UPGRADES, WORLD_R, W_SLOTS, compMass, compValue, computeStats, craftEfficiency,
   recipeProblem, upgradeCost, zoneTier, WEAPON_DMG, WEAPON_RANGE, type Comp, type DmgKind, type PartKind, type SaveData, type Slot, type Stats,
 } from "./data";
 import { SPECIES_LIST, buildEnemy, type AbilityDef, type Group, type Part, type ProjType, type SpeciesDef } from "./enemies";
@@ -8,10 +8,15 @@ import { SPECIES_LIST, buildEnemy, type AbilityDef, type Group, type Part, type 
 /* ---------------------------------------------------------------------------
  * COMBAT & WORLD REFERENCE (live constants)
  *   Base cannon      : st.dmg per shot, rate 4 + 0.7/level, 1 + barrels shots.
- *   Nest defences    : siege cannon sleeps until a rare+ target enters 1,600u and
- *                      one-shots up to legendary; six hex turrets fire fast weak
- *                      tracers to 850u. One turret dies per 1/6 nest integrity,
- *                      and the nest repairs only after 120s without damage.
+ *   Nest defences    : the siege cannon is dormant until the nest takes damage, then
+ *                      stays online for 120s and one-shots up to legendary; six hex
+ *                      turrets fire fast weak tracers to 850u. Any enemy whose shot
+ *                      damages the hull is instantly destroyed. One turret dies per
+ *                      1/6 nest integrity; repair starts after 120s without damage.
+ *                      Player vision widens 1.3x inside the 1,760u alert ring.
+ *   Credits          : every part broken by the player shakes loose 1-4 credit motes
+ *                      worth ~4% of the part's component value (x salvage multiplier).
+ *                      Motes home in from 260u and are collected on contact.
  *   Crafted weapons  : fully automatic; damage = st.dmg * multiplier * efficiency.
  *                      B / AUTO pill toggles the rack (persisted in save.autoFire).
  *                      Each weapon has its own range (data.ts WEAPON_RANGE); auto-fire
@@ -23,11 +28,11 @@ import { SPECIES_LIST, buildEnemy, type AbilityDef, type Group, type Part, type 
  *                      Layers are drawn as solid grey copies of the part outlines.
  *   Energy shields   : blue hexes stop energy/shock/thermal completely and take no
  *                      damage from them; kinetic/explosive/corrosive pass through.
- *   Spawning         : per-zone density/cap [2.6/56, 2.2/50, 1.8/44, 1.4/38, 1.1/32,
- *                      0.9/28] per 1,500u chunk, chunk pass every 1.0s. A top-up pass
- *                      refills to ~85% of the local cap, and a visibility floor keeps
- *                      at least 4 enemies inside the view in the outer/mid rings
- *                      (2 in the deep rings).
+ *   Spawning         : every walkable 1,500u chunk is seeded once when the run starts,
+ *                      so the whole map is already inhabited (no pop-in on arrival).
+ *                      Seed probability follows the rarity curve (outer 100%, epic+
+ *                      ~38%), then a top-up pass refills the local band to ~85% of
+ *                      its cap and a visibility floor keeps 4 enemies in view.
  *   Body wave        : parts tagged seg >= 0 shift laterally by
  *                      amp * sin(walk*speed - seg*k); used for centipede and snake.
  * ------------------------------------------------------------------------- */
@@ -36,11 +41,14 @@ export const N_ROPE = 22;
 /* Spawn pressure, indexed by zone tier (0 = outer/common … 5 = mythical core).
  * Early rings are crowded on purpose — players should always see a few enemies —
  * and every zone has its own population cap so the lag guard scales with the tier.
- * ZONE_DENS is enemies per 1,500u chunk per chunk pass. */
+ * ZONE_DENS is the relative spawn pressure per 1,500u chunk; the initial
+ * world seed scales its per-chunk spawn probability by this curve. */
 const ZONE_DENS = [2.6, 2.2, 1.8, 0.56, 0.44, 0.36];
 const ZONE_CAP = [56, 48, 40, 22, 18, 15];
-/** absolute ceiling across every zone; only a safety net */
-const HARD_MAX = 60;
+/** whole-world population ceiling: every zone is seeded at load, then maintained */
+const HARD_MAX = 420;
+/** how many enemies one chunk may contribute during the initial world seed */
+const SEED_BUDGET = 1;
 /** shells shave 70% off kinetic hits; lasers and shockwaves do nothing to them */
 const SHELL_TAKE = 0.3;
 /* Nest defence tuning. The siege shell one-shots up to legendary; mythicals lose
@@ -48,6 +56,10 @@ const SHELL_TAKE = 0.3;
 const SHELL_DMG = 2_500_000;
 const MYTHIC_SHELL_FRAC = 0.55;
 const BASE_REPAIR_IDLE = 120;
+/** the siege cannon stays powered for this long after the nest is hit */
+const BASE_POWER_IDLE = 120;
+/** camera pulls back this much while the player is inside the nest's alert ring */
+const BASE_VIEW_MUL = 1.3;
 /* six point-defence turrets on the outer hex ring */
 const MINI_COUNT = 6;
 const MINI_DMG = 72;
@@ -121,6 +133,8 @@ export interface Harpoon {
 export interface Other { id: string; name: string; x: number; y: number; a: number; tx: number; ty: number; ta: number; seen: number }
 export interface Toast { id: number; msg: string; color: string; t: number }
 export interface Mine { x: number; y: number; vx: number; vy: number; arm: number; life: number; dmg: number; r: number }
+/** a credit mote shaken loose when an enemy part breaks; auto-collected near the player */
+export interface CreditDrop { x: number; y: number; vx: number; vy: number; life: number; max: number; value: number; spin: number; srcId: number }
 export interface Drone { a: number; r: number; cd: number }
 export interface Well { x: number; y: number; life: number; max: number; dmg: number; r: number }
 export interface LockOn { e: Enemy; part: Part; t: number }
@@ -163,6 +177,7 @@ export interface Hud {
   abilities: HudAbility[]; admin: AdminState; lock: boolean; autoFire: boolean; overdrive: boolean;
   discovery: { name: string; t: number } | null;
   baseHp: number; baseMaxHp: number; baseLost: boolean; baseLostT: number; baseNear: boolean; baseUnderAttack: boolean;
+  basePowered: boolean; baseVision: boolean;
   /** alive state of the six hex point-defence turrets */
   baseTurrets: boolean[];
 }
@@ -228,6 +243,7 @@ export class Game {
   debris: Debris[] = [];
   beams: Beam[] = [];
   comps: LComp[] = [];
+  creditDrops: CreditDrop[] = [];
   harpoons: Harpoon[] = [];
   others: Other[] = [];
   toasts: Toast[] = [];
@@ -256,6 +272,8 @@ export class Game {
   baseLostT = 0;
   baseFlash = 0;
   baseHitT = 0;
+  /** >0 while the siege cannon is powered; reset to 120s by any nest hit */
+  basePowerT = 0;
   /** cumulative integrity damage; one turret dies per sixth of max HP */
   private baseDamageTaken = 0;
   private miniLost = 0;
@@ -266,6 +284,7 @@ export class Game {
   aCd: number[] = [0, 0, 0, 0, 0];
   private idc = 1;
   private chunkT = 0;
+  private worldSeeded = false;
   private saveT = 0;
   private serverT = 0;
   private netT = 0;
@@ -285,7 +304,7 @@ export class Game {
     this.stats = computeStats(save);
     this.player = {
       x: BASE.x, y: BASE.y - 200, vx: 0, vy: 0, a: -Math.PI / 2, hp: this.stats.hull, shield: this.stats.shieldMax, boost: 100, boosting: false,
-      slowF: 1, slowT: 0, poison: 0, poisonT: 0, pull: null, dead: false, respawn: 0, fireCd: 0, wCd: [0, 0, 0], wAim: [0, 0, 0], hitT: 99, shieldT: 0,
+      slowF: 1, slowT: 0, poison: 0, poisonT: 0, pull: null, dead: false, respawn: 0, fireCd: 0, wCd: [0, 0, 0], wAim: W_SLOTS.map((s) => s.rest), hitT: 99, shieldT: 0,
       flash: 0, thornCd: 0, tpT: 0, tpCd: 0, tow: 1, thrust: 0,
       barrier: 0, barrierMax: 0, barrierT: 0, overT: 0, nullCd: 0,
     };
@@ -967,17 +986,26 @@ export class Game {
       bend: spd.bodyWave ? { amp: spd.bodyWave.amp * b.size, k: spd.bodyWave.k, speed: spd.bodyWave.speed } : null,
     };
   }
-  private spawnChunk(cx: number, cy: number, key: string) {
+  private spawnChunk(cx: number, cy: number, key: string, budget = Infinity) {
     const rng = mulberry32(hash2(cx, cy, 77));
     const ccx = (cx + 0.5) * CH, ccy = (cy + 0.5) * CH;
     if (Math.hypot(ccx, ccy) > WORLD_R + 300) return;
     const zt = zoneTier(Math.hypot(ccx, ccy));
-    const cap = Math.min(HARD_MAX, ZONE_CAP[zt]);
-    const room = this.enemies.length < cap;
-    let n = room ? Math.floor(ZONE_DENS[zt]) : 0;
-    if (room && rng() < ZONE_DENS[zt] - n) n++;
+    /* the one-time world seed keeps the rarity-band density curve: high-rarity
+     * chunks are only ~40% as likely to hold a resident as an outer chunk */
+    let n: number;
+    if (budget !== Infinity) {
+      const seedP = clamp(ZONE_DENS[zt] / ZONE_DENS[0], 0.38, 1);
+      if (rng() > seedP) return;
+      n = 1;
+    } else {
+      n = Math.floor(ZONE_DENS[zt]);
+      if (rng() < ZONE_DENS[zt] - n) n++;
+      n = Math.min(n, budget);
+    }
+    let made = 0;
     for (let i = 0; i < n; i++) {
-      if (this.enemies.length >= cap) break;
+      if (this.enemies.length >= HARD_MAX || made >= budget) break;
       const x = cx * CH + rng() * CH, y = cy * CH + rng() * CH;
       const d = Math.hypot(x, y);
       const rolls = [rng(), rng(), rng(), rng()];
@@ -990,9 +1018,10 @@ export class Game {
       const spi = pickSpecies(x, y, () => rolls[1], z2);
       const pack = SPECIES_LIST[spi].pack[tier];
       for (let k = 0; k < pack; k++) {
-        if (this.enemies.length >= cap) break;
+        if (this.enemies.length >= HARD_MAX || made >= budget) break;
         const ox = k === 0 ? 0 : Math.cos(k * 2.4) * (80 + k * 40), oy = k === 0 ? 0 : Math.sin(k * 2.4) * (80 + k * 40);
         this.enemies.push(this.makeEnemy(spi, tier, x + ox, y + oy, key, hash2(cx + k, cy + i, 5)));
+        made++;
       }
     }
     // a snake prowls the mythical core: at most one at a time
@@ -1006,44 +1035,64 @@ export class Game {
       this.shake = Math.max(this.shake, 20);
     }
   }
+
+  /** Seed every walkable chunk once, before the player starts moving.
+   *  Enemies therefore exist across the whole map immediately instead of
+   *  materialising only when the player enters a chunk. */
+  private seedWorld() {
+    if (this.worldSeeded) return;
+    this.worldSeeded = true;
+    const keys: string[] = [];
+    const lim = Math.ceil((WORLD_R + CH) / CH);
+    for (let cx = -lim; cx <= lim; cx++) for (let cy = -lim; cy <= lim; cy++) {
+      const ccx = (cx + 0.5) * CH, ccy = (cy + 0.5) * CH;
+      if (Math.hypot(ccx, ccy) > WORLD_R + 300) continue;
+      keys.push(`${cx},${cy}`);
+    }
+    const rng = mulberry32(hash2(7919, 104729, 17));
+    for (let i = keys.length - 1; i > 0; i--) {
+      const j = Math.floor(rng() * (i + 1));
+      [keys[i], keys[j]] = [keys[j], keys[i]];
+    }
+    for (const key of keys) {
+      if (this.enemies.length >= HARD_MAX) break;
+      const [cx, cy] = key.split(",").map(Number);
+      this.chunks.add(key);
+      this.spawnChunk(cx, cy, key, SEED_BUDGET);
+    }
+    this.topUp();
+    this.ensureNearby();
+  }
   private bossAlive() { return this.enemies.some((e) => e.spd.boss && !e.dead); }
   private manageChunks() {
-    const p = this.player;
-    const pcx = Math.floor(p.x / CH), pcy = Math.floor(p.y / CH);
-    for (let dx = -2; dx <= 2; dx++) for (let dy = -2; dy <= 2; dy++) {
-      const key = `${pcx + dx},${pcy + dy}`;
-      if (!this.chunks.has(key)) { this.chunks.add(key); this.spawnChunk(pcx + dx, pcy + dy, key); }
-    }
-    for (const key of [...this.chunks]) {
-      const [a, b] = key.split(",").map(Number);
-      if (Math.max(Math.abs(a - pcx), Math.abs(b - pcy)) > 3) this.chunks.delete(key);
-    }
-    this.enemies = this.enemies.filter((e) => this.chunks.has(e.chunk) || (e.aggro && e.dist < 4000) || Math.hypot(e.x - BASE.x, e.y - BASE.y) < BASE.aggroR + 600);
+    if (!this.worldSeeded) this.seedWorld();
     this.topUp();
     this.ensureNearby();
   }
 
-  /** Refill the local population toward ~85% of the player's zone cap. */
+  /** Refill the immediate neighbourhood toward ~85% of the local zone cap.
+   *  The rest of the world keeps its own persistent population. */
   private topUp() {
     const p = this.player;
     const zt = zoneTier(Math.hypot(p.x, p.y));
+    let near = 0;
+    for (const e of this.enemies) if (!e.dead && Math.hypot(e.x - p.x, e.y - p.y) < CH * 1.8) near++;
     const target = Math.round(ZONE_CAP[zt] * 0.85);
-    const add = Math.min(3, target - this.enemies.length);
+    const add = Math.min(3, target - near);
     if (add <= 0) return;
-    const keys = [...this.chunks];
-    if (!keys.length) return;
+    const viewR = this.viewRadius();
     for (let k = 0; k < add; k++) {
       if (this.enemies.length >= HARD_MAX) return;
-      const key = keys[Math.floor(Math.random() * keys.length)];
-      const [cx, cy] = key.split(",").map(Number);
-      for (let tries = 0; tries < 8; tries++) {
-        const x = cx * CH + Math.random() * CH, y = cy * CH + Math.random() * CH;
+      for (let tries = 0; tries < 10; tries++) {
+        const a = Math.random() * TAU;
+        const d = clamp(viewR * 1.25, 700, 2100) + Math.random() * 500;
+        const x = p.x + Math.cos(a) * d, y = p.y + Math.sin(a) * d;
         if (Math.hypot(x, y) > WORLD_R - 250) continue;
         if (Math.hypot(x - BASE.x, y - BASE.y) < BASE.safe + 350) continue;
-        if (Math.hypot(x - p.x, y - p.y) < 900) continue;
         const z2 = zoneTier(Math.hypot(x, y));
         const tier = Math.max(0, z2 - (Math.random() < 0.55 ? 0 : 1));
-        this.enemies.push(this.makeEnemy(pickSpecies(x, y, Math.random, z2), tier, x, y, key, hash2(cx + tries, cy, 21)));
+        const key = `${Math.floor(x / CH)},${Math.floor(y / CH)}`;
+        this.enemies.push(this.makeEnemy(pickSpecies(x, y, Math.random, z2), tier, x, y, key, hash2(x | 0, y | 0, 21)));
         break;
       }
     }
@@ -1149,13 +1198,14 @@ export class Game {
     this.burst(px, py, p.stroke, count, clamp(p.r * 0.2, 3, 26), 120 + p.r * 2.2);
     if (p.r > 30) this.ringFx(px, py, p.r * 1.8, p.stroke, 500);
     this.shake = Math.max(this.shake, Math.min(14, 2 + p.r / 18));
+    if (byPlayer && !byBase) this.dropCredits(e, p, px, py);
     if (p.kind === "core") { this.killEnemy(e, px, py, byBase); return; }
     if (p.kind === "weapon" || p.kind === "shield") this.explode(e, p, px, py, false);
     if (byPlayer) this.maybeDrop(e, p, px, py);
     this.refreshMobility(e);
-    this.checkSever(e);
+    this.checkSever(e, byPlayer);
   }
-  private checkSever(e: Enemy) {
+  private checkSever(e: Enemy, byPlayer: boolean) {
     const seen = new Uint8Array(e.parts.length);
     const stack = [e.coreId];
     seen[e.coreId] = 1;
@@ -1193,20 +1243,29 @@ export class Game {
     for (const p of sev) { e.tags[p.name] = (e.tags[p.name] ?? 1) - 1; if (p.area > big.area) big = p; }
     for (const p of sev) p.alive = false;
     this.shake = Math.max(this.shake, 6);
+    if (byPlayer) {
+      const area = sev.reduce((sum, q) => sum + q.area, 0);
+      this.dropCreditValue(e, cx, cy, area, "armor");
+    }
     if (Math.random() < 0.65) { const w = this.partWorld(e, big); this.maybeDrop(e, big, w[0], w[1], 1.0); }
     this.refreshMobility(e);
+  }
+  /** A base kill takes everything with it: loose parts and credit motes. */
+  private scrubDrops(e: Enemy) {
+    for (let i = this.comps.length - 1; i >= 0; i--) {
+      const c = this.comps[i];
+      if (c.srcId === e.id && !c.hooks.length) this.comps.splice(i, 1);
+    }
+    for (let i = this.creditDrops.length - 1; i >= 0; i--) {
+      if (this.creditDrops[i].srcId === e.id) this.creditDrops.splice(i, 1);
+    }
   }
   private killEnemy(e: Enemy, x: number, y: number, byBase = false) {
     if (e.dead) return;
     e.dead = true;
     /* Base-majority kills leave nothing behind. Scrub loose pieces that broke
      * off this enemy earlier in the fight as well. */
-    if (this.baseMajority(e)) {
-      for (let i = this.comps.length - 1; i >= 0; i--) {
-        const c = this.comps[i];
-        if (c.srcId === e.id && !c.hooks.length) this.comps.splice(i, 1);
-      }
-    }
+    if (this.baseMajority(e)) this.scrubDrops(e);
     if (e.spd.boss) {
       this.bossT = 150;
       this.toast("THE WORLD SERPENT IS SLAIN", "#c54cff");
@@ -1233,7 +1292,7 @@ export class Game {
     }
     this.ringFx(x, y, e.radius * 1.4, "#ffffff", 900);
     this.shake = Math.max(this.shake, 16);
-    this.maybeDrop(e, e.parts[e.coreId], x, y);
+    if (!byBase) this.maybeDrop(e, e.parts[e.coreId], x, y);
   }
   private rollTier(etier: number, isCore: boolean) {
     const luck = this.stats.luck;
@@ -1244,6 +1303,52 @@ export class Game {
     const q = 0.5 * (1 - luck);
     while (r > 0 && Math.random() < q) r--;
     return r;
+  }
+  /** Shake loose spendable credits when a player breaks a part. The motes are
+   *  physical pickups: they drift, home in and are collected on contact. */
+  private dropCreditValue(e: Enemy, x: number, y: number, area: number, kind: PartKind) {
+    if (this.baseMajority(e)) return;
+    const cr = Math.max(1, Math.round(compValue(area, Math.min(5, e.tier), kind) * 0.04 * this.stats.sellMul));
+    const n = cr >= 90 ? 4 : cr >= 24 ? 3 : cr >= 6 ? 2 : 1;
+    const each = Math.max(1, Math.round(cr / n));
+    for (let k = 0; k < n; k++) {
+      const a = Math.random() * TAU, sp = 50 + Math.random() * 110;
+      this.creditDrops.push({
+        x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp,
+        life: 18, max: 18, value: each, spin: Math.random() * TAU, srcId: e.id,
+      });
+    }
+    if (this.creditDrops.length > 140) this.creditDrops.splice(0, this.creditDrops.length - 140);
+  }
+  private dropCredits(e: Enemy, p: Part, x: number, y: number) {
+    this.dropCreditValue(e, x, y, p.area, p.kind);
+  }
+  private updateCreditDrops(dt: number) {
+    const p = this.player;
+    const magnet = 260 + (this.stats.magnet ? this.stats.magnetRange * 0.45 : 0);
+    for (let i = this.creditDrops.length - 1; i >= 0; i--) {
+      const c = this.creditDrops[i];
+      c.life -= dt;
+      const dx = p.x - c.x, dy = p.y - c.y;
+      const d = Math.hypot(dx, dy);
+      if (!p.dead && d < magnet) {
+        const pull = 900 + 1600 * (1 - d / magnet);
+        c.vx += (dx / (d || 1)) * pull * dt;
+        c.vy += (dy / (d || 1)) * pull * dt;
+      }
+      c.vx *= Math.exp(-1.6 * dt); c.vy *= Math.exp(-1.6 * dt);
+      c.x += c.vx * dt; c.y += c.vy * dt;
+      c.spin += dt * 4;
+      if (!p.dead && d < 30) {
+        this.save.credits += c.value;
+        this.save.earned += c.value;
+        this.dirty = true;
+        this.burst(c.x, c.y, "#ffd24d", 4, 2, 120);
+        this.creditDrops.splice(i, 1);
+        continue;
+      }
+      if (c.life <= 0) this.creditDrops.splice(i, 1);
+    }
   }
   private maybeDrop(e: Enemy, p: Part, x: number, y: number, mul = 1) {
     /* No salvage when the nest did most of the damage. */
@@ -2106,7 +2211,7 @@ export class Game {
       for (let i = 0; i < n; i++) {
         const ang = base + (i - (n - 1) / 2) * 0.09;
         const crit = Math.random() < st.crit;
-        this.bullets.push({ x: p.x + Math.cos(ang) * 26, y: p.y + Math.sin(ang) * 26, vx: Math.cos(ang) * st.bulletSpeed + p.vx * 0.3, vy: Math.sin(ang) * st.bulletSpeed + p.vy * 0.3, life: st.bulletRange / st.bulletSpeed, dmg: st.dmg * (crit ? 2.5 : 1) * (p.overT > 0 ? 2.2 : 1) * this.dmgMul(), pierce: st.pierce, hit: [], kind: 0, target: null, crit });
+        this.bullets.push({ x: p.x + Math.cos(ang) * 12, y: p.y + Math.sin(ang) * 12, vx: Math.cos(ang) * st.bulletSpeed + p.vx * 0.3, vy: Math.sin(ang) * st.bulletSpeed + p.vy * 0.3, life: st.bulletRange / st.bulletSpeed, dmg: st.dmg * (crit ? 2.5 : 1) * (p.overT > 0 ? 2.2 : 1) * this.dmgMul(), pierce: st.pierce, hit: [], kind: 0, target: null, crit });
       }
       p.vx -= Math.cos(base) * 6; p.vy -= Math.sin(base) * 6;
     }
@@ -2145,12 +2250,12 @@ export class Game {
   private updateWeaponAims(dt: number) {
     const p = this.player, st = this.stats;
     const n = st.weapons.length;
-    while (p.wAim.length < n) p.wAim.push(0);
+    while (p.wAim.length < n) p.wAim.push(W_SLOTS[p.wAim.length]?.rest ?? 0);
     if (p.wAim.length > n) p.wAim.length = n;
     const view = this.viewRadius() * 0.95;
     for (let i = 0; i < n; i++) {
       const w = st.weapons[i];
-      let want = 0;
+      let want = W_SLOTS[i]?.rest ?? 0;
       if (this.autoFire && !p.dead && !this.inSafe()) {
         const range = Math.min(WEAPON_RANGE[w.rid] ?? 600, view);
         if (w.rid === "homing") {
@@ -2187,9 +2292,9 @@ export class Game {
       const cd = (c: number) => c / (0.7 + 0.3 * eff);
       /* match the rotating hardpoint on the hull, with the muzzle nudged out
        * along the mount's current aim */
-      const slotX = i === 2 ? -7 : 2;
-      const slotY = i === 0 ? -12.5 : i === 1 ? 12.5 : 0;
-      const aimRel = p.wAim[i] ?? 0;
+      const slot = W_SLOTS[i] ?? { x: 0, y: 0, rest: 0 };
+      const slotX = slot.x, slotY = slot.y;
+      const aimRel = p.wAim[i] ?? slot.rest;
       const ox = p.x + Math.cos(base) * slotX - Math.sin(base) * slotY + Math.cos(base + aimRel) * 7;
       const oy = p.y + Math.sin(base) * slotX + Math.cos(base) * slotY + Math.sin(base + aimRel) * 7;
       const dmg = st.dmg * (p.overT > 0 ? 2.2 : 1) * this.dmgMul();
@@ -2453,23 +2558,42 @@ export class Game {
     this.baseFlash = 0.22;
     /* the nest only starts repairing after two full minutes without a hit */
     this.baseHitT = BASE_REPAIR_IDLE;
+    /* any damage wakes the siege cannon and keeps it online for two minutes */
+    this.basePowerT = BASE_POWER_IDLE;
     this.syncMiniLoss();
     this.shake = Math.max(this.shake, Math.min(12, 2 + tier * 2));
     if (this.baseAlarmCd <= 0 && tier >= 2) {
       this.baseAlarmCd = 20;
       this.toast("The nest is under attack!", "#ff9d6e");
     }
-    if (this.baseHp <= 0) this.destroyBase();
+    if (this.baseHp <= 0) { this.destroyBase(); return; }
+    /* The nest answers structural damage immediately: whatever hit it is
+     * erased, so ranged mobs cannot park outside and swarm the hull. */
+    if (src && !src.dead) {
+      const px = src.x, py = src.y;
+      this.burst(px, py, "#ff9d6e", 18, 6, 340);
+      this.ringFx(px, py, Math.max(60, src.radius * 1.3), "#ffd24d", 700);
+      this.scrubDrops(src);
+      this.killEnemy(src, px, py, true);
+      this.shake = Math.max(this.shake, 7);
+    }
   }
 
-  /** Slow siege cannon: it only powers up for rare+ targets, tracks one at a
-   *  time and hits like a meteor. */
+  /** Slow siege cannon: dormant until the nest is hit, then it tracks one rare+
+   *  target at a time for two minutes and hits like a meteor. */
   private updateTurret(dt: number) {
     const T = this.turret;
     T.cd -= dt;
     T.recoil = Math.max(0, T.recoil - dt * 2.2);
     T.flash = Math.max(0, T.flash - dt);
     if (this.baseLost) { T.target = null; return; }
+    /* The main cannon is asleep until the nest itself is damaged. Once awake
+     * it keeps tracking for two minutes after the last hit. */
+    if (this.basePowerT <= 0) {
+      T.target = null;
+      T.a += dt * 0.25;
+      return;
+    }
     const cur = T.target;
     if (!cur || cur.dead || !this.enemies.includes(cur) || cur.tier < 2 || Math.hypot(cur.x - BASE.x, cur.y - BASE.y) > BASE.turretR * 1.05) {
       T.target = this.nearestEnemy(BASE.x, BASE.y, BASE.turretR, 2);
@@ -2807,6 +2931,7 @@ export class Game {
     if (this.baseFlash > 0) this.baseFlash -= dt;
     if (this.baseHitT > 0) this.baseHitT -= dt;
     if (this.baseAlarmCd > 0) this.baseAlarmCd -= dt;
+    if (this.basePowerT > 0) this.basePowerT = Math.max(0, this.basePowerT - dt);
     if (!this.baseLost) {
       if (this.baseHitT <= 0 && this.baseHp < this.baseMaxHp) this.baseHp = Math.min(this.baseMaxHp, this.baseHp + this.baseMaxHp * 0.02 * dt);
       this.updateTurret(dt);
@@ -2817,6 +2942,7 @@ export class Game {
 
     // world
     if (!this.baseLost) {
+      if (!this.worldSeeded) this.seedWorld();
       this.chunkT -= dt;
       if (this.chunkT <= 0) { this.chunkT = 1.0; this.manageChunks(); }
       this.updateEnemies(dt);
@@ -2826,6 +2952,7 @@ export class Game {
     this.updateComps(dt);
     this.updateHarpoons(dt);
     this.updateMines(dt);
+    this.updateCreditDrops(dt);
     this.updateWells(dt);
     this.updateDrones(dt);
     this.updateLock(dt);
@@ -2893,8 +3020,10 @@ export class Game {
     this.tintHue += angDiff(this.tintHue * (Math.PI / 180), this.tintTarget * (Math.PI / 180)) * (180 / Math.PI) * Math.min(1, dt * 1.5);
     this.tintHue = ((this.tintHue % 360) + 360) % 360;
 
-    // camera
-    this.cam.z = lerp(this.cam.z, this.zoom, Math.min(1, dt * 8));
+    // camera — the nest gives the player 1.3x vision inside its alert ring
+    const baseView = !this.baseLost && Math.hypot(p.x - BASE.x, p.y - BASE.y) < BASE.aggroR;
+    const wantZ = baseView ? Math.min(this.zoom, 1 / BASE_VIEW_MUL) : this.zoom;
+    this.cam.z = lerp(this.cam.z, wantZ, Math.min(1, dt * 4));
     this.cam.x += (p.x + p.vx * 0.12 - this.cam.x) * Math.min(1, dt * 7);
     this.cam.y += (p.y + p.vy * 0.12 - this.cam.y) * Math.min(1, dt * 7);
     this.shake = Math.max(0, this.shake - dt * 30);
@@ -2918,6 +3047,8 @@ export class Game {
       discovery: this.discovery ? { name: this.discovery.name, t: this.discovery.t } : null,
       baseHp: this.baseHp, baseMaxHp: this.baseMaxHp, baseLost: this.baseLost, baseLostT: this.baseLostT,
       baseNear: !this.baseLost && Math.hypot(p.x - BASE.x, p.y - BASE.y) < BASE.aggroR,
+      basePowered: !this.baseLost && this.basePowerT > 0,
+      baseVision: !this.baseLost && Math.hypot(p.x - BASE.x, p.y - BASE.y) < BASE.aggroR,
       baseUnderAttack: !this.baseLost && this.enemies.some((e) => !e.dead && e.bdist < BASE.aggroR && (e.tier >= 2 || this.baseHp < this.baseMaxHp * 0.92)),
       baseTurrets: this.miniTurrets.map((T) => T.alive),
       abilities: ["Z", "X", "C", "V", "F"].map((key, i) => {
