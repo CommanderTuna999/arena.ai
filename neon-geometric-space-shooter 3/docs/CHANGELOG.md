@@ -11,7 +11,7 @@ the simulation, not design targets.
   forced 1.6 rad/s turn floor.
 - `BASE.aggroR` (1,760u) is now purely the nest's defence-alert radius and the retention zone for
   enemies chasing the player through it. Enemies follow the player normally at every distance, so they
-  enter turret range instead of stalling outside it.
+  can be drawn into turret range instead of switching to the nest.
 - The nest hull remains solid for stray fire: any enemy projectile that crosses `BASE.r × 0.82` now
   damages the structure, regardless of what it was aimed at. Base defences and the 120s repair
   lockout are unchanged, and nest-owned kills still grant no bestiary credit.
