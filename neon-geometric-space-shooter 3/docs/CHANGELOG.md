@@ -3,6 +3,41 @@
 Everything below is implemented in the current build. Numbers are the actual constants used by
 the simulation, not design targets.
 
+## 0. v2.0 — bulk upgrades, persistent admin, component shockwaves, global vision
+
+### Admin mode lives for the tab, not the page
+- Admin flags are read from `sessionStorage["wof-admin-flags"]` when the `Game` is constructed, so
+  leaving `/play` with the HOME button and returning keeps admin enabled.
+- `setAdmin` and `adminAll` write the flag object (`on`, `credits`, `health`, `damage`, `components`)
+  back after every toggle. Nothing is added to `SaveData`, so the pilot save stays clean.
+
+### 1x / 5x / 10x / MAX upgrades
+- Every upgrade card has a quantity selector. Fixed quantities price each level with the existing
+  `upgradeCost(u, level)` curve and disable the button unless the whole batch is affordable.
+- MAX walks levels until `u.max` or the first unaffordable level, then buys exactly that many.
+- `Game.buy(id, count)` loops the levels, stops at the cap or the first level the player cannot pay
+  for, recomputes stats once, and returns the number of levels bought.
+
+### Component shockwaves
+- `breakPart` already detonated weapon and shield parts; those blasts now use `shockwave()`, an
+  expanding ring that applies player damage when it reaches them and immediate hull damage to every
+  enemy part inside `part.r × 3 + 40`.
+- Shattered plating (`shellHit`, `layer.hp <= 0`) now calls the same shockwave with radius
+  `shellR × 1.7 + 40`, player damage `eDmg × 1.1` and hull damage `layer.max × 0.75`, replacing the
+  old silent pop.
+- The blast hits the breaking enemy's own remaining parts too; `areaDamage` still routes through
+  another shell layer first if one remains. Cascade explosions during death use 35% damage and only
+  fire when `expDepth === 0`, so packed enemies cannot chain-nuke the screen.
+
+### Global 1.3x vision
+- `VISION_MUL = 1.3`; the camera target is always `min(playerZoom, 1 / VISION_MUL)` with an 8/s
+  smoothing rate. The old `BASE.aggroR` proximity gate and `baseVision` HUD flag are gone.
+- Optics upgrades still zoom out from the 1.3x baseline.
+
+### Enemy damage doubled
+- `eDmg` is now `16 × DMG_MUL[tier]` instead of `8 × DMG_MUL[tier]`, so every rarity deals 2x damage
+  while the 3x step between tiers (1 / 3 / 9 / 27 / 81 / 243) is unchanged.
+
 ## 0. v1.9 — construct player, whole-map spawns, credit drops and nest retaliation
 
 ### The player is a construct, not a ship
@@ -45,10 +80,10 @@ the simulation, not design targets.
 - Any enemy projectile crossing `BASE.r × 0.82` still damages the hull, so stray fire can
   trigger retaliation without enemies deliberately targeting the nest.
 
-### Base vision
-- Inside `BASE.aggroR` (1,760u) the camera target is `min(playerZoom, 1 / 1.3)`, widening
-  player vision by 1.3x. It smoothly returns to normal on leaving the ring.
-- HUD exposes `baseVision` and the nest panel shows VISION ×1.3.
+### Base vision (superseded in v2.0)
+- v1.9 applied a 1.3x camera pull-back only inside `BASE.aggroR` (1,760u) and exposed
+  `baseVision` to the HUD. v2.0 makes the 1.3x baseline global and removes both the gate and the
+  HUD chip.
 
 ## 0. v1.8 — turret system rework, detailed ship, rotating mounts
 

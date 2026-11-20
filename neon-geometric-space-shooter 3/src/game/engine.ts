@@ -13,7 +13,7 @@ import { SPECIES_LIST, buildEnemy, type AbilityDef, type Group, type Part, type 
  *                      turrets fire fast weak tracers to 850u. Any enemy whose shot
  *                      damages the hull is instantly destroyed. One turret dies per
  *                      1/6 nest integrity; repair starts after 120s without damage.
- *                      Player vision widens 1.3x inside the 1,760u alert ring.
+ *                      Player vision is 1.3x wider than the raw camera everywhere (optics stack).
  *   Credits          : every part broken by the player shakes loose 1-4 credit motes
  *                      worth ~4% of the part's component value (x salvage multiplier).
  *                      Motes home in from 260u and are collected on contact.
@@ -58,8 +58,8 @@ const MYTHIC_SHELL_FRAC = 0.55;
 const BASE_REPAIR_IDLE = 120;
 /** the siege cannon stays powered for this long after the nest is hit */
 const BASE_POWER_IDLE = 120;
-/** camera pulls back this much while the player is inside the nest's alert ring */
-const BASE_VIEW_MUL = 1.3;
+/** baseline camera pull-back: the player sees 1.3x further everywhere */
+const VISION_MUL = 1.3;
 /* six point-defence turrets on the outer hex ring */
 const MINI_COUNT = 6;
 const MINI_DMG = 72;
@@ -154,6 +154,21 @@ export interface BaseBolt {
   x: number; y: number; vx: number; vy: number; life: number; dmg: number; target: Enemy | null; trail: number;
 }
 export interface AdminState { on: boolean; credits: boolean; health: boolean; damage: boolean; components: boolean }
+/** Admin flags survive the trip home: sessionStorage keeps them for this tab,
+ *  while the pilot save stays clean. */
+const ADMIN_KEY = "wof-admin-flags";
+const ADMIN_DEFAULT: AdminState = { on: false, credits: false, health: false, damage: false, components: false };
+function readAdminFlags(): AdminState {
+  try {
+    const raw = globalThis.sessionStorage?.getItem(ADMIN_KEY);
+    if (!raw) return { ...ADMIN_DEFAULT };
+    const o = JSON.parse(raw) as Partial<AdminState>;
+    return { on: !!o.on, credits: !!o.credits, health: !!o.health, damage: !!o.damage, components: !!o.components };
+  } catch { return { ...ADMIN_DEFAULT }; }
+}
+function writeAdminFlags(a: AdminState) {
+  try { globalThis.sessionStorage?.setItem(ADMIN_KEY, JSON.stringify(a)); } catch { /* storage unavailable */ }
+}
 
 export interface HudAbility { key: string; name: string; icon: string; color: string; cd: number; max: number; ready: boolean; active: boolean; empty: boolean }
 
@@ -177,7 +192,7 @@ export interface Hud {
   abilities: HudAbility[]; admin: AdminState; lock: boolean; autoFire: boolean; overdrive: boolean;
   discovery: { name: string; t: number } | null;
   baseHp: number; baseMaxHp: number; baseLost: boolean; baseLostT: number; baseNear: boolean; baseUnderAttack: boolean;
-  basePowered: boolean; baseVision: boolean;
+  basePowered: boolean;
   /** alive state of the six hex point-defence turrets */
   baseTurrets: boolean[];
 }
@@ -278,7 +293,7 @@ export class Game {
   private baseDamageTaken = 0;
   private miniLost = 0;
   private baseAlarmCd = 0;
-  admin: AdminState = { on: false, credits: false, health: false, damage: false, components: false };
+  admin: AdminState = readAdminFlags();
   autoFire = true;
   private bossT = 12;
   aCd: number[] = [0, 0, 0, 0, 0];
@@ -347,10 +362,12 @@ export class Game {
     (this.admin as unknown as Record<string, boolean>)[k] = v;
     if (k === "on" && v) this.toast("ADMIN MODE ONLINE", "#ff7ad9");
     if (k === "on" && !v) this.toast("Admin mode offline", "#9db4c9");
+    writeAdminFlags(this.admin);
     this.rev++;
   }
   adminAll(v: boolean) {
     this.admin = { on: v || this.admin.on, credits: v, health: v, damage: v, components: v };
+    writeAdminFlags(this.admin);
     this.rev++;
   }
   adminCredits(n = 1_000_000) {
@@ -381,18 +398,25 @@ export class Game {
   }
 
   /* ---------------- UI facing actions ---------------- */
-  buy(id: string) {
+  /** Buy up to `count` levels; MAX callers pass the upgrade's remaining room.
+   *  Purchases stop when credits run out, so a bulk buy never overdraws. */
+  buy(id: string, count = 1) {
     const u = UPGRADES.find((x) => x.id === id);
-    if (!u) return false;
-    const l = this.save.upgrades[id] ?? 0;
-    if (l >= u.max) return false;
-    const c = this.admin.on && this.admin.credits ? 0 : upgradeCost(u, l);
-    if (this.save.credits < c) return false;
-    this.save.credits -= c;
-    this.save.upgrades[id] = l + 1;
+    if (!u) return 0;
+    const start = this.save.upgrades[id] ?? 0;
+    let l = start, bought = 0;
+    while (bought < count && l < u.max) {
+      const c = this.admin.on && this.admin.credits ? 0 : upgradeCost(u, l);
+      if (this.save.credits < c) break;
+      this.save.credits -= c;
+      l++;
+      bought++;
+    }
+    if (!bought) return 0;
+    this.save.upgrades[id] = l;
     this.recompute();
     this.markDirty();
-    return true;
+    return bought;
   }
   sellComp(id: string) {
     const i = this.save.inventory.findIndex((c) => c.id === id);
@@ -945,10 +969,10 @@ export class Game {
     e.aggro = true;
     if (layer.hp <= 0) {
       e.shells.pop();
-      const n = e.shells.length;
-      this.ringFx(e.x, e.y, e.shellR + 10, "#c3ccd6", 520);
-      this.burst(e.x, e.y, "#9aa7b4", 16, 5, 300);
-      this.shake = Math.max(this.shake, 6);
+      /* A shattered shield lets go in a shockwave: it chews the hull it was
+       * bolted to, everything nearby and the player if they are too close. */
+      const R = e.shellR * 1.7 + 40;
+      this.shockwave(e.x, e.y, R, e.eDmg * 1.1, layer.max * 0.75, "#ffc46b");
     }
     return true;
   }
@@ -977,7 +1001,7 @@ export class Game {
       parts: b.parts, groups: b.groups, order: b.order, coreId: b.coreId, chunk: key, home: { x, y }, aggro: false, barT: 0,
       speed: spd.speed * (1 + 0.04 * tier), turn: spd.turn / ((1 + tier * 1.05) * (1 + b.radius / (b.size * 6))), mobility: 1, legCount: b.legCount, wingCount: b.wingCount,
       abil, abilCd: abil.map(() => 1 + Math.random() * 3), gap: 1, act: null, stun: 0, wander: { x, y, t: 0 }, roleGroups,
-      walk: Math.random() * 6, dead: false, eDmg: 8 * DMG_MUL[tier], keep: spd.keep + b.radius * 0.9, strafe: Math.random() < 0.5 ? 1 : -1, strafeT: 2,
+      walk: Math.random() * 6, dead: false, eDmg: 16 * DMG_MUL[tier], keep: spd.keep + b.radius * 0.9, strafe: Math.random() < 0.5 ? 1 : -1, strafeT: 2,
       tags, shields: [], weaponParts, shieldParts, dist: 9999, bdist: 9999, contactCd: 0, hasChange: false, gen: 0,
       dmgTaken: 0, baseDmg: 0,
       dot: 0, dotT: 0, melt: 0, slowT: 0, slowF: 1,
@@ -1370,19 +1394,35 @@ export class Game {
       if (i >= 0) this.comps.splice(i, 1);
     }
   }
-  private explode(e: Enemy, p: Part, x: number, y: number, cascade: boolean) {
-    const R = p.r * 3 + 40;
-    const dmg = e.eDmg * (p.kind === "weapon" ? 1.8 : 1.3) * (cascade ? 0.5 : 1);
-    const pl = this.player;
-    const d = Math.hypot(pl.x - x, pl.y - y);
-    if (d < R + SHIP_R) this.hurtPlayer(dmg * (1 - clamp(d / (R + SHIP_R), 0, 1) * 0.6), { kb: 500, kbx: (pl.x - x) / (d || 1), kby: (pl.y - y) / (d || 1) });
-    this.ringFx(x, y, R, "#ff9d4d", 700);
+  /** Detonate a part or a shield layer. The blast is an expanding ring that
+   *  hurts the player as it sweeps past, plus an immediate hull hit on every
+   *  enemy part inside the radius (the breaker's own hull included). */
+  private shockwave(x: number, y: number, R: number, playerDmg: number, enemyDmg: number, color = "#ff9d4d") {
+    this.rings.push({ x, y, r: 6, max: R, speed: Math.max(560, R * 5), dmg: playerDmg, hit: false, color, hurts: playerDmg > 0 });
+    this.ringFx(x, y, R * 0.6, "#ffe3b8", Math.max(700, R * 7));
     this.burst(x, y, "#ffb04d", clamp(Math.round(R / 14), 8, 30), clamp(R * 0.08, 4, 22), 260 + R);
     this.shake = Math.max(this.shake, Math.min(18, 6 + R / 40));
-    if (cascade || this.expDepth > 3) return;
+    if (enemyDmg <= 0 || this.expDepth > 3) return;
     this.expDepth++;
-    this.areaDamage(x, y, R, p.maxHp * 0.5, p);
+    this.areaDamage(x, y, R, enemyDmg, null);
     this.expDepth--;
+  }
+  private explode(e: Enemy, p: Part, x: number, y: number, cascade: boolean) {
+    const R = p.r * 3 + 40;
+    const playerDmg = e.eDmg * (p.kind === "weapon" ? 1.8 : 1.3);
+    if (cascade) {
+      this.ringFx(x, y, R, "#ff9d4d", 700);
+      this.burst(x, y, "#ffb04d", clamp(Math.round(R / 18), 6, 20), clamp(R * 0.07, 4, 18), 260 + R);
+      this.shake = Math.max(this.shake, Math.min(14, 4 + R / 50));
+      /* Death-throes only shockwave when the kill itself was not a blast, so
+       * packed enemies cannot chain-nuke the whole screen. */
+      if (this.expDepth > 0) return;
+      this.expDepth++;
+      this.areaDamage(x, y, R, p.maxHp * 0.35, null);
+      this.expDepth--;
+      return;
+    }
+    this.shockwave(x, y, R, playerDmg, p.maxHp * 0.5);
   }
   areaDamage(x: number, y: number, R: number, dmg: number, skip: Part | null, src: DmgSrc = "explosive") {
     for (const e of this.enemies) {
@@ -3020,10 +3060,8 @@ export class Game {
     this.tintHue += angDiff(this.tintHue * (Math.PI / 180), this.tintTarget * (Math.PI / 180)) * (180 / Math.PI) * Math.min(1, dt * 1.5);
     this.tintHue = ((this.tintHue % 360) + 360) % 360;
 
-    // camera — the nest gives the player 1.3x vision inside its alert ring
-    const baseView = !this.baseLost && Math.hypot(p.x - BASE.x, p.y - BASE.y) < BASE.aggroR;
-    const wantZ = baseView ? Math.min(this.zoom, 1 / BASE_VIEW_MUL) : this.zoom;
-    this.cam.z = lerp(this.cam.z, wantZ, Math.min(1, dt * 4));
+    // camera — 1.3x baseline vision everywhere, with optics zooming out further
+    this.cam.z = lerp(this.cam.z, Math.min(this.zoom, 1 / VISION_MUL), Math.min(1, dt * 8));
     this.cam.x += (p.x + p.vx * 0.12 - this.cam.x) * Math.min(1, dt * 7);
     this.cam.y += (p.y + p.vy * 0.12 - this.cam.y) * Math.min(1, dt * 7);
     this.shake = Math.max(0, this.shake - dt * 30);
@@ -3048,7 +3086,6 @@ export class Game {
       baseHp: this.baseHp, baseMaxHp: this.baseMaxHp, baseLost: this.baseLost, baseLostT: this.baseLostT,
       baseNear: !this.baseLost && Math.hypot(p.x - BASE.x, p.y - BASE.y) < BASE.aggroR,
       basePowered: !this.baseLost && this.basePowerT > 0,
-      baseVision: !this.baseLost && Math.hypot(p.x - BASE.x, p.y - BASE.y) < BASE.aggroR,
       baseUnderAttack: !this.baseLost && this.enemies.some((e) => !e.dead && e.bdist < BASE.aggroR && (e.tier >= 2 || this.baseHp < this.baseMaxHp * 0.92)),
       baseTurrets: this.miniTurrets.map((T) => T.alive),
       abilities: ["Z", "X", "C", "V", "F"].map((key, i) => {

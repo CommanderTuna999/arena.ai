@@ -270,7 +270,6 @@ function Hud_({ hud, onOpen, onHelp, onAdmin, onSettings, onBestiary, onHome, on
         {hud.baseNear && !hud.baseLost && (
           <div className="flex items-center gap-2 text-[9px] font-bold tracking-[0.14em]">
             <span className={hud.basePowered ? "text-orange-300" : "text-slate-500"}>{hud.basePowered ? "CANNON ONLINE" : "CANNON OFFLINE"}</span>
-            <span className="text-cyan-300/80">VISION ×1.3</span>
           </div>
         )}
         <div className="mt-1 flex items-center gap-2 text-sm font-bold text-yellow-300 drop-shadow-[0_0_8px_rgba(255,225,77,0.7)]">
@@ -482,21 +481,42 @@ function Hangar({ game, hud, onClose }: { game: Game; hud: Hud; onClose: () => v
 
 function Upgrades({ game }: { game: Game }) {
   const [cat, setCat] = useState<UpCat>("weapons");
+  const [qty, setQty] = useState<1 | 5 | 10 | "max">(1);
   const save = game.save;
+  const free = game.admin.on && game.admin.credits;
+  const qtyOptions: (1 | 5 | 10 | "max")[] = [1, 5, 10, "max"];
   return (
     <div>
-      <div className="mb-3 flex flex-wrap gap-1">
-        {UP_CATS.map((c) => (
-          <button key={c.id} onClick={() => setCat(c.id)} className="rounded-sm border px-3 py-1 text-xs font-bold tracking-wider" style={{ borderColor: cat === c.id ? c.color : "rgba(255,255,255,0.15)", color: c.color, background: cat === c.id ? c.color + "22" : "transparent" }}>{c.name.toUpperCase()}</button>
-        ))}
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-wrap gap-1">
+          {UP_CATS.map((c) => (
+            <button key={c.id} onClick={() => setCat(c.id)} className="rounded-sm border px-3 py-1 text-xs font-bold tracking-wider" style={{ borderColor: cat === c.id ? c.color : "rgba(255,255,255,0.15)", color: c.color, background: cat === c.id ? c.color + "22" : "transparent" }}>{c.name.toUpperCase()}</button>
+          ))}
+        </div>
+        <div className="flex items-center gap-1 rounded-sm border border-white/10 bg-white/[0.03] px-1.5 py-1">
+          <span className="mr-1 text-[9px] font-bold tracking-[0.18em] text-white/40">BUY</span>
+          {qtyOptions.map((q) => (
+            <button key={q} onClick={() => setQty(q)} className={`rounded-sm border px-1.5 py-0.5 text-[10px] font-bold ${qty === q ? "border-cyan-300 bg-cyan-400/25 text-white" : "border-white/15 text-cyan-200/60 hover:bg-white/10"}`}>
+              {q === "max" ? "MAX" : `${q}×`}
+            </button>
+          ))}
+        </div>
       </div>
       <div className="grid gap-2 md:grid-cols-2">
         {UPGRADES.filter((u) => u.cat === cat).map((u) => {
           const l = save.upgrades[u.id] ?? 0;
           const maxed = l >= u.max;
-          const cost = upgradeCost(u, l);
-          const can = !maxed && save.credits >= cost;
+          const room = u.max - l;
+          const want = qty === "max" ? room : Math.min(qty, room);
+          let n = 0, total = 0, fullTotal = 0;
+          for (let k = 0; k < want; k++) {
+            const c = free ? 0 : upgradeCost(u, l + k);
+            fullTotal += c;
+            if (free || total + c <= save.credits) { total += c; n++; }
+          }
+          const can = !maxed && (qty === "max" ? n > 0 : n === want);
           const color = UP_CATS.find((c) => c.id === u.cat)!.color;
+          const label = maxed ? "MAX" : qty === "max" ? (n ? `MAX ${n}× · ${fmtNum(total)} CR` : `${fmtNum(upgradeCost(u, l))} CR`) : `${want}× · ${fmtNum(fullTotal)} CR`;
           return (
             <div key={u.id} className="rounded-sm border border-white/15 bg-white/[0.03] p-2.5">
               <div className="flex items-center justify-between">
@@ -509,8 +529,8 @@ function Upgrades({ game }: { game: Game }) {
               </div>
               <div className="mt-2 flex items-center justify-between gap-2">
                 <div className="text-xs text-cyan-100">{u.fmt(l)}{!maxed && <span className="text-emerald-300"> → {u.fmt(l + 1)}</span>}</div>
-                <button disabled={!can} onClick={() => game.buy(u.id)} className={`rounded-sm border px-3 py-1 text-xs font-bold ${can ? "border-yellow-300 bg-yellow-300/15 text-yellow-200 hover:bg-yellow-300/30" : "border-white/10 text-white/30"}`}>
-                  {maxed ? "MAX" : `${fmtNum(cost)} CR`}
+                <button disabled={!can} onClick={() => game.buy(u.id, qty === "max" ? room : want)} title={qty === "max" ? "Buy as many levels as you can afford" : `Buy ${want} level(s)`} className={`rounded-sm border px-3 py-1 text-xs font-bold ${can ? "border-yellow-300 bg-yellow-300/15 text-yellow-200 hover:bg-yellow-300/30" : "border-white/10 text-white/30"}`}>
+                  {label}
                 </button>
               </div>
             </div>
@@ -820,7 +840,7 @@ function AdminPanel({ game, hud, onClose }: { game: Game; hud: Hud; onClose: () 
         <button onClick={() => game.adminAll(false)} className="flex-1 rounded-sm border border-white/20 px-2 py-1 text-[10px] text-white/70 hover:bg-white/10">ALL OFF</button>
       </div>
       <button onClick={() => game.adminCredits(1_000_000)} className="mt-2 w-full rounded-sm border border-yellow-300 bg-yellow-300/15 px-2 py-1 text-[11px] font-black text-yellow-200 hover:bg-yellow-300/30">+1,000,000 CR</button>
-      <div className="mt-2 text-[9px] leading-tight text-white/35">Session-only sandbox flags. Nothing here is saved to your pilot.</div>
+      <div className="mt-2 text-[9px] leading-tight text-white/35">Admin stays on when you return home. Flags are kept in this tab, not in your pilot save.</div>
     </div>
   );
 }

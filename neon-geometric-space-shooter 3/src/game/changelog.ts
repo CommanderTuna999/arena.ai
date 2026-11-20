@@ -8,7 +8,7 @@
  *   CHANGELOG and mirror the details in docs/CHANGELOG.md.
  */
 
-export const VERSION = "1.9";
+export const VERSION = "2.0";
 
 export interface ChangeEntry {
   version: string;
@@ -20,8 +20,21 @@ export interface ChangeEntry {
 
 export const CHANGELOG: ChangeEntry[] = [
   {
+    version: "2.0",
+    date: "21 Nov 2026",
+    title: "Bulk upgrades, persistent admin, exploding components and global vision",
+    points: [
+      "Admin mode now stays enabled when you press HOME and return to the title screen. Its flags live in this tab's session storage and are never written into your pilot save.",
+      "Upgrade cards have 1x / 5x / 10x / MAX buy buttons. MAX purchases as many levels as your credits allow, and every button shows the full price before you commit.",
+      "Broken enemy weapons and shield parts now detonate in a visible shockwave. The expanding blast damages the breaking enemy's own hull, other enemies and the player as it sweeps past.",
+      "Enemy plating layers also burst into a shockwave when their shield breaks, instead of vanishing silently.",
+      "The 1.3x vision increase is now the global baseline instead of only applying inside the nest's alert ring. Optics still zoom out from there.",
+      "Enemy damage is doubled at every rarity. The existing 3x step between rarity tiers is unchanged.",
+    ],
+  },
+  {
     version: "1.9",
-    date: "20 Nov 2026",
+    date: "21 Nov 2026",
     title: "Circular player construct, whole-map spawns, credit drops and a retaliating nest",
     points: [
       "The player is no longer a ship. It is a circular construct with three pumping gimbal arms, counter-rotating armour rings, eight orbiting ring segments, three sensor motes and a forward iris — all visibly animated.",
@@ -34,7 +47,7 @@ export const CHANGELOG: ChangeEntry[] = [
   },
   {
     version: "1.8",
-    date: "20 Nov 2026",
+    date: "21 Nov 2026",
     title: "Turret-system rework, a far more detailed ship and rotating weapon mounts",
     points: [
       "Enemies no longer target the nest: they will not charge it, aim at it or gnaw on its hull. They now chase the ship straight through the 1,760u defence ring, so the cannon and hex turrets engage them inside turret range.",

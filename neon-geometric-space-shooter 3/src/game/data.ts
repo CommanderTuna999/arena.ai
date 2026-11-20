@@ -5,10 +5,9 @@ export const WORLD_R = 16000;
 /* The nest drifts around the outer ring every run: the x/y below are only the
  * initial fallback, Game.placeBase() moves it before the player spawns. */
 /* turretR is the siege cannon's reach; aggroR (10% beyond it) is the nest's
- * defence-alert radius, the zone where player vision widens 1.3x, and the band
- * enemies are retained in while chasing the player through it. Enemies never
- * target the nest itself. smallR is the point-defence reach of the six hex
- * turrets on the nest ring. */
+ * defence-alert radius and the band enemies are retained in while chasing the
+ * player through it. Enemies never target the nest itself. smallR is the
+ * point-defence reach of the six hex turrets on the nest ring. */
 export const BASE = { x: 0, y: 15000, r: 260, dock: 175, safe: 950, turretR: 1600, aggroR: 1760, smallR: 850 };
 /** radius band the nest may occupy — the outer (common) ring only */
 export const BASE_RING = { min: 13900, max: 15300 };
@@ -43,6 +42,7 @@ export const RARITIES = [
 
 export const SIZE_GROWTH = 1.65;
 export const HP_MUL = [1, 4, 18, 80, 360, 1600];
+/* 2x baseline as of v2.0 — the 3x ratio between tiers is unchanged. */
 export const DMG_MUL = [1, 3, 9, 27, 81, 243];
 
 /* ---------- parts / components ---------- */
