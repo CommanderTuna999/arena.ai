@@ -1021,6 +1021,9 @@ export class Game {
   private killPlayer() {
     const p = this.player;
     p.dead = true; p.hp = 0; p.respawn = 3; p.tpT = 0; p.pull = null;
+    p.barrier = 0; p.barrierMax = 0; p.barrierT = 0; p.overT = 0;
+    this.lock = null;
+    this.wells = [];
     this.burst(p.x, p.y, "#7df9ff", 40, 10, 500);
     this.ringFx(p.x, p.y, 380, "#7df9ff", 800);
     this.shake = 20;
@@ -1031,6 +1034,7 @@ export class Game {
     const p = this.player;
     p.dead = false; p.x = BASE.x; p.y = BASE.y - 180; p.vx = p.vy = 0; p.hp = this.stats.hull; p.shield = this.stats.shieldMax;
     p.poison = 0; p.slowT = 0; p.pull = null;
+    p.barrier = 0; p.barrierMax = 0; p.barrierT = 0; p.overT = 0;
     this.cam.x = p.x; this.cam.y = p.y;
   }
   applySlow(f: number, t: number) {
@@ -1073,7 +1077,8 @@ export class Game {
       if (!dead && pr.type !== "glob" && !p.dead) {
         const dd = Math.hypot(pr.x - p.x, pr.y - p.y);
         if (dd < pr.r + SHIP_R) {
-          if (st.nullField > 0 && p.shield > 0 && Math.random() < 0.35 + 0.3 * st.nullField) {
+          if (st.nullField > 0 && p.shield > 0 && p.nullCd <= 0 && Math.random() < 0.35 + 0.3 * st.nullField) {
+            p.nullCd = 1.4 / (0.5 + st.nullField);
             p.shield = Math.max(0, p.shield - pr.dmg * 0.2);
             p.shieldT = st.shieldDelay;
             this.ringFx(pr.x, pr.y, 44, "#c77dff", 350);

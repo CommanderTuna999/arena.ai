@@ -15,14 +15,14 @@ This document is both the plan and the record of what shipped. Every phase below
 | Active ability hotbar | 5 slots (Z/X/C/V/F) | 5 slots, 8 craftable abilities |
 | Admin panel | Infinite credits/health/damage/components | Collapsible panel on `` ` `` with all four flags |
 | Enemy behaviour | Ability gating, flee prevention, turn scaling | Tier-gated abilities, tier-scaled aggro/leash, radius-scaled turn rate |
-| Crafting overhaul | Species-specific requirements | `species` requirements on 24 recipes + 51 recipes total |
+| Crafting overhaul | Species-specific requirements | `species` requirements on 33 recipes + 51 recipes total |
 
 ## Phase 1 — Data layer (`src/game/data.ts`) ✅
 
 - `ActiveAbilitySlot` type and `abilitySlots: ActiveAbilitySlot[5]` in `SaveData` (v2, migrated from v1).
 - `Recipe.slot` gained `"ability"`; recipes gained optional `species` requirement and `wpn` display data.
 - **19 weapons**, **10 shields**, **11 armours**, **2 optics/utility**, **8 active abilities** (51 recipes).
-- Species requirements reference real enemy names (e.g. *Homing Missile Launcher* needs a Bombardier Beetle or Yellowjacket part).
+- Species requirements on 33 of the 51 recipes reference real enemy names (e.g. *Homing Missile Launcher* needs a Bombardier Beetle or Yellowjacket part).
 - Admin mode lives on the `Game` instance only (never written to the save).
 - Zoom is craftable-only (`zoomMin === 1` until Wide-Field Optics is equipped).
 - `computeStats()` handles every new item's effects: kinetic/dodge/nova-on-shield-break/null-field/prismatic shields, chitin/carapace/nano-weave/ablative/titan/exoskeleton/venom-guard/scale-mail armour, magnet utility and per-slot active abilities.
