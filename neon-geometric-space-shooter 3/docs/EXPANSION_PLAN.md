@@ -71,6 +71,23 @@ Gravity-well swirls, magnet field lines, armed/blinking mines, drone escorts, mi
 - Headless simulation harness: all 32 species built at tiers 0–5, all 51 recipes crafted, all 19 weapons fired, all 8 abilities cast, every zone visited including the boss arena, ~4,400 frames simulated with rendering — no exceptions.
 - Mechanic assertions: save migration, lock-on, homing launch, EMP stun, magnet pull, zone gating, tier-0 ability gating, boss mythical drops, single-boss rule, admin invulnerability.
 
+## 2.0 balance / feel pass (current build)
+
+A second pass reworked combat and tone; see `docs/CHANGELOG.md` for the full table of numbers.
+
+- Missile launcher now uses **right-click marks** and precision missiles that ignore everything in
+  their path; the tether still owns right-click when no launcher is fitted or the cursor is empty.
+- All crafted weapons are **automatic** (toggle with B or the AUTO pill); HMG, bypass laser and arc
+  lance damage was cut sharply.
+- **Armour plating** for epic+ enemies: 1/2/3 thin grey shells, 30% kinetic damage taken, complete
+  immunity to lasers and shockwaves; precision missiles bypass it.
+- Spawn density cut ~4x with a hard cap of 18 and slower chunk evaluation.
+- Centipede and snake got true segmented bodies with a travelling wave; the snake is now called
+  **Snake** and is roughly five times longer; the centipede is roughly 2.5× longer and curves.
+- All bar text, "CRIPPLED"/"IMMOBILISED", base "HANGAR" lettering and harpoon status words removed.
+- `/` is a landing website, `/play` is the game, and self-contained **save codes** (NH1-…) move
+  progress between browsers.
+
 ## Deviations from the original plan
 
 - The ability HUD is React (like the rest of the HUD) rather than canvas-drawn in `render.ts`; this keeps the hotbar crisp and clickable.

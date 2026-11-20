@@ -2,7 +2,12 @@ import { TAU, clamp } from "./math";
 import { BASE, RARITIES, SHIP_R, WORLD_R, ZONE_EDGES } from "./data";
 import { N_ROPE, type Enemy, type Game, type LComp } from "./engine";
 
-function pw(e: Enemy, p: { cx: number; cy: number; g: number }): [number, number] {
+function bend(e: Enemy, p: { seg: number }) {
+  if (!e.bend || p.seg < 0) return 0;
+  return e.bend.amp * Math.sin(e.walk * e.bend.speed - p.seg * e.bend.k);
+}
+
+function pw(e: Enemy, p: { cx: number; cy: number; g: number; seg: number }): [number, number] {
   let x = p.cx, y = p.cy;
   if (p.g >= 0) {
     const g = e.groups[p.g];
@@ -10,6 +15,7 @@ function pw(e: Enemy, p: { cx: number; cy: number; g: number }): [number, number
     const dx = x - g.px, dy = y - g.py;
     x = g.px + dx * c - dy * s; y = g.py + dx * s + dy * c;
   }
+  y += bend(e, p);
   const ca = Math.cos(e.a), sa = Math.sin(e.a);
   return [e.x + x * ca - y * sa, e.y + x * sa + y * ca];
 }
@@ -226,13 +232,18 @@ export function render(g: Game, ctx: CanvasRenderingContext2D) {
   /* ---- player bullets & beams ---- */
   ctx.lineCap = "round";
   for (const b of g.bullets) {
-    if (b.kind === 1 || b.kind === 3) {
-      const col = b.kind === 3 ? "#ffd24d" : "#ffb04d";
+    if (b.kind === 1 || b.kind === 3 || b.kind === 4) {
+      const col = b.kind === 3 ? "#ffd24d" : b.kind === 4 ? "#ff7ad9" : "#ffb04d";
       ctx.fillStyle = col; ctx.shadowColor = col; ctx.shadowBlur = 10;
       ctx.save(); ctx.translate(b.x, b.y); ctx.rotate(Math.atan2(b.vy, b.vx));
       ctx.beginPath(); ctx.moveTo(10, 0); ctx.lineTo(-7, -5); ctx.lineTo(-3, 0); ctx.lineTo(-7, 5); ctx.closePath(); ctx.fill();
       if (b.kind === 3) {
         ctx.beginPath(); ctx.arc(-10, 0, 3.5, 0, TAU); ctx.fill();
+      }
+      if (b.kind === 4) {
+        ctx.globalAlpha = 0.45;
+        ctx.beginPath(); ctx.moveTo(-8, 0); ctx.lineTo(-30, 0); ctx.strokeStyle = "#ff7ad9"; ctx.lineWidth = 2; ctx.stroke();
+        ctx.globalAlpha = 1;
       }
       ctx.restore(); ctx.shadowBlur = 0;
       continue;
@@ -290,7 +301,7 @@ export function render(g: Game, ctx: CanvasRenderingContext2D) {
     const [lx, ly] = pw(g.lock.e, g.lock.part);
     const r = Math.max(18, g.lock.part.r * 0.9);
     const a = 0.55 + 0.45 * Math.sin(t * 8);
-    ctx.strokeStyle = `rgba(255,60,90,${a})`; ctx.lineWidth = 2.5 / z; ctx.shadowColor = "#ff3d73"; ctx.shadowBlur = 12;
+    ctx.strokeStyle = `rgba(255,176,77,${a})`; ctx.lineWidth = 2.5 / z; ctx.shadowColor = "#ffb04d"; ctx.shadowBlur = 12;
     for (let k = 0; k < 4; k++) {
       const an = (k / 4) * TAU + Math.PI / 4;
       ctx.beginPath();
@@ -377,10 +388,14 @@ function drawBase(g: Game, ctx: CanvasRenderingContext2D, z: number, t: number) 
     ctx.strokeStyle = "rgba(125,249,255,0.25)"; ctx.lineWidth = 1.5 / z;
     ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(x, y); ctx.stroke();
   }
-  ctx.fillStyle = "rgba(125,249,255,0.7)";
-  ctx.font = `bold ${22 / z * Math.min(1, z * 1.3)}px ui-monospace, monospace`;
-  ctx.textAlign = "center";
-  if (z > 0.35) { ctx.fillText("HANGAR", x, y - 8); ctx.font = `${12}px ui-monospace, monospace`; ctx.fillStyle = "rgba(255,225,77,0.8)"; ctx.fillText("drop components inside the yellow hex", x, y + 18); }
+  // minimal nest sigil: a hex with three cells, no lettering
+  hexPath(ctx, x, y, 30, 0);
+  ctx.strokeStyle = "rgba(125,249,255,0.85)"; ctx.lineWidth = 3 / z; ctx.stroke();
+  for (let i = 0; i < 3; i++) {
+    const a = -Math.PI / 2 + (i / 3) * TAU;
+    hexPath(ctx, x + Math.cos(a) * 12, y + Math.sin(a) * 12, 6, a);
+    ctx.fillStyle = "rgba(255,225,77,0.75)"; ctx.fill();
+  }
   void g;
 }
 
@@ -539,6 +554,8 @@ function drawEnemy(g: Game, ctx: CanvasRenderingContext2D, e: Enemy, z: number, 
     if (!p.alive) continue;
     const gr = p.g >= 0 ? e.groups[p.g] : null;
     if (gr && gr.ang !== 0) { ctx.save(); ctx.translate(gr.px, gr.py); ctx.rotate(gr.ang); ctx.translate(-gr.px, -gr.py); }
+    const bo = bend(e, p);
+    if (bo !== 0) { ctx.save(); ctx.translate(0, bo); }
     polyPath(ctx, p.poly);
     const hf = p.hp / p.maxHp;
     const hurt = p.hurt > 0;
@@ -561,9 +578,25 @@ function drawEnemy(g: Game, ctx: CanvasRenderingContext2D, e: Enemy, z: number, 
       ctx.beginPath(); ctx.arc(p.cx, p.cy, p.r * 0.25, 0, TAU); ctx.fill();
     }
     ctx.globalAlpha = 1;
+    if (bo !== 0) ctx.restore();
     if (gr && gr.ang !== 0) ctx.restore();
   }
   ctx.restore();
+
+  // armour plating: thin grey shell, one ring per layer
+  for (let i = 0; i < e.shells.length; i++) {
+    const rr = e.shellR + i * 6;
+    const f = clamp(e.shells[i].hp / Math.max(1, e.shells[i].max), 0, 1);
+    const hit = e.shellHit > 0 ? 0.25 : 0;
+    ctx.beginPath(); ctx.arc(e.x, e.y, rr, 0, TAU);
+    ctx.strokeStyle = `rgba(176,188,200,${0.22 + 0.35 * f + hit})`;
+    ctx.lineWidth = (2.2 + hit * 4) / z;
+    if (i === e.shells.length - 1) { ctx.shadowColor = "#c3ccd6"; ctx.shadowBlur = 8; }
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+    ctx.beginPath(); ctx.arc(e.x, e.y, rr - 2.5, 0, TAU);
+    ctx.strokeStyle = `rgba(120,132,144,${0.12 + 0.15 * f})`; ctx.lineWidth = 1 / z; ctx.stroke();
+  }
 
   // status auras
   if (e.slowT > 0) {
@@ -617,16 +650,21 @@ function drawBars(g: Game, ctx: CanvasRenderingContext2D, e: Enemy, z: number) {
   if (showMain) {
     const integ = g.integrity(e);
     const bw = clamp(e.radius * 1.5, 110 / z, 800 / z), bh = 8 / z;
-    const x = e.x - bw / 2, y = e.y - e.radius - 30 / z;
+    const x = e.x - bw / 2, y = e.y - Math.min(e.radius, 260) - 30 / z;
     ctx.fillStyle = "rgba(0,0,0,0.7)"; ctx.fillRect(x - 2 / z, y - 2 / z, bw + 4 / z, bh + 4 / z);
     const grd = ctx.createLinearGradient(x, 0, x + bw, 0);
     grd.addColorStop(0, "#ff3d73"); grd.addColorStop(0.5, "#ffd24d"); grd.addColorStop(1, "#4dffb4");
     ctx.fillStyle = "rgba(255,255,255,0.08)"; ctx.fillRect(x, y, bw, bh);
     ctx.fillStyle = grd; ctx.fillRect(x, y, bw * integ, bh);
     ctx.strokeStyle = "rgba(255,255,255,0.5)"; ctx.lineWidth = 1 / z; ctx.strokeRect(x, y, bw, bh);
-    if (e.mobility < 0.5) {
-      ctx.fillStyle = "#ffb04d"; ctx.font = `${11 / z}px ui-monospace, monospace`; ctx.textAlign = "center";
-      ctx.fillText(e.mobility <= 0 ? "IMMOBILISED" : "CRIPPLED", e.x, y - 5 / z);
+    if (e.shells.length) {
+      const pr = 3.4 / z;
+      for (let i = 0; i < e.shells.length; i++) {
+        const sx = x + (i + 0.5) * (bw / Math.max(1, e.shells.length));
+        const sf = clamp(e.shells[i].hp / Math.max(1, e.shells[i].max), 0, 1);
+        ctx.beginPath(); ctx.arc(sx, y + bh + 6 / z, pr, 0, TAU);
+        ctx.fillStyle = `rgba(176,188,200,${0.35 + 0.5 * sf})`; ctx.fill();
+      }
     }
   }
 }

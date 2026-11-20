@@ -1,6 +1,21 @@
 import { TAU, polyArea, polyCentroid, mulberry32 } from "./math";
 import { HP_MUL, SIZE_GROWTH, type PartKind } from "./data";
 
+/* ---------------------------------------------------------------------------
+ * BESTIARY — QUICK STATS (tier 0 → 5 scaling is global, see data.ts HP_MUL / DMG_MUL)
+ *   Small flyers (Worker Ant, Honeybee, Mosquito, Yellowjacket, Ladybug): speed 190–260,
+ *     turn 3.4–4.2, 1–2 abilities, pack 1–2.
+ *   Beetles (Bombardier, Rhino, Stag, Tiger, Dung, Jewel): speed 120–180, turn 2.4–3.2,
+ *     heavy armour layers, 2–4 abilities, pack 1.
+ *   Long-bodied (Centipede, Snake): bodyWave enabled, 12+3t / 40+5t segments,
+ *     turn 2.8 / 3.6, no leg-based mobility loss.
+ *   Snake (boss): zone 5 only, one alive, 430 speed, 3.6 turn, 65 segments at t5,
+ *     guaranteed mythical drops, 120s respawn timer (150s when killed from the chunk spawn).
+ *   Body plan sizes: BASE_SIZE 28px, x1.65 per tier; part HP = base * HP_MUL[tier].
+ *   Epic+ (tier 3+) non-serpentine species gain plating shells: t3=1, t4=2, t5=3,
+ *     each 10*HP_MUL[tier] HP, kinetic hits take 30%, lasers/shockwaves take 0.
+ * ------------------------------------------------------------------------- */
+
 export const BASE_SIZE = 28;
 
 export interface Part {
@@ -17,6 +32,8 @@ export interface Part {
   layer: number;
   links: number[];
   g: number;
+  /** index along a curving body (-1 for ordinary parts) */
+  seg: number;
   alive: boolean;
   hurt: number;
   barT: number;
@@ -103,6 +120,8 @@ export interface SpeciesDef {
   boss?: boolean;
   /** its shields bounce player shots back */
   reflectShell?: boolean;
+  /** serpentine body: lateral wave applied to parts tagged with a segment index */
+  bodyWave?: { amp: number; k: number; speed: number };
 }
 
 interface Sec {
@@ -199,7 +218,7 @@ export class Builder {
     this.S = BASE_SIZE * Math.pow(SIZE_GROWTH, tier);
   }
 
-  add(kind: PartKind, name: string, poly: number[], o: { layer?: number; hpM?: number; g?: number; links?: number[]; style?: number } = {}) {
+  add(kind: PartKind, name: string, poly: number[], o: { layer?: number; hpM?: number; g?: number; links?: number[]; style?: number; seg?: number } = {}) {
     const S = this.S;
     const p = poly.map((v) => v * S);
     const [cx, cy] = polyCentroid(p);
@@ -211,7 +230,7 @@ export class Builder {
     const id = this.parts.length;
     this.parts.push({
       id, kind, name, poly: p, cx, cy, r, area: polyArea(p), hp, maxHp: hp,
-      layer: o.layer ?? 1, links: [], g: o.g ?? -1, alive: true, hurt: 0, barT: 0, style,
+      layer: o.layer ?? 1, links: [], g: o.g ?? -1, seg: o.seg ?? -1, alive: true, hurt: 0, barT: 0, style,
       stroke: col.stroke, fill: col.fill, glow: col.glow || (kind === "segment" && style >= 3),
       wpn: "", muzzle: 0, shieldR: 0, shieldHp: 0, shieldMax: 0, shieldDown: 0, shieldHit: 0, cd: 1 + this.rng() * 2,
     });
@@ -227,30 +246,30 @@ export class Builder {
     this.groups.push({ px: px * this.S, py: py * this.S, ang: 0, role, sign, phase, amp });
     return this.groups.length - 1;
   }
-  sec(name: string, s: Sec, o: { hpM?: number; layer?: number; style?: number } = {}) {
-    return this.add("segment", name, secPoly(s), { layer: o.layer ?? 1, hpM: o.hpM, style: o.style });
+  sec(name: string, s: Sec, o: { hpM?: number; layer?: number; style?: number; seg?: number } = {}) {
+    return this.add("segment", name, secPoly(s), { layer: o.layer ?? 1, hpM: o.hpM, style: o.style, seg: o.seg });
   }
-  core(s: Sec, host: number, nbrs: number[]) {
+  core(s: Sec, host: number, nbrs: number[], seg = -1) {
     const r = Math.max(0.24, Math.min(s.rx, s.ry) * 0.36);
-    const id = this.add("core", "Core", ell(s.cx, s.cy, r, r, 6, Math.PI / 6), { layer: 3, links: [host, ...nbrs] });
-    if (this.tier >= 2) this.add("armor", "Core Guard", ell(s.cx, s.cy, r * 1.55, r * 1.55, 6), { layer: 6, links: [host], hpM: 1.6, style: 1 });
-    if (this.tier >= 4) this.add("armor", "Core Guard", ell(s.cx, s.cy, r * 1.12, r * 1.12, 6, Math.PI / 6), { layer: 7, links: [host], hpM: 2.2, style: 2 });
+    const id = this.add("core", "Core", ell(s.cx, s.cy, r, r, 6, Math.PI / 6), { layer: 3, links: [host, ...nbrs], seg });
+    if (this.tier >= 2) this.add("armor", "Core Guard", ell(s.cx, s.cy, r * 1.55, r * 1.55, 6), { layer: 6, links: [host], hpM: 1.6, style: 1, seg });
+    if (this.tier >= 4) this.add("armor", "Core Guard", ell(s.cx, s.cy, r * 1.12, r * 1.12, 6, Math.PI / 6), { layer: 7, links: [host], hpM: 2.2, style: 2, seg });
     this.coreId = id;
     return id;
   }
-  armor(s: Sec, host: number, o: { name: string; layers: number; edges: number; style?: number; hpM?: number }) {
+  armor(s: Sec, host: number, o: { name: string; layers: number; edges: number; style?: number; hpM?: number; seg?: number }) {
     const ids: number[] = [];
     for (let L = 0; L < o.layers; L++) {
       const f1 = 1.05 - 0.3 * L;
       const f0 = Math.max(0.12, f1 - 0.45);
       for (let k0 = 0; k0 < s.n; k0 += o.edges) {
         const k1 = Math.min(s.n, k0 + o.edges);
-        ids.push(this.add("armor", o.name, secSector(s, f0, f1, k0, k1), { layer: 4 + L, hpM: (o.hpM ?? 1) * (1 + 0.2 * L), links: [host], style: o.style ?? L % 2 }));
+        ids.push(this.add("armor", o.name, secSector(s, f0, f1, k0, k1), { layer: 4 + L, hpM: (o.hpM ?? 1) * (1 + 0.2 * L), links: [host], style: o.style ?? L % 2, seg: o.seg }));
       }
     }
     return ids;
   }
-  spikes(s: Sec, host: number, o: { every: number; len: number; name?: string }) {
+  spikes(s: Sec, host: number, o: { every: number; len: number; name?: string; seg?: number }) {
     for (let k = 0; k < s.n; k += o.every) {
       const a0 = (k / s.n) * TAU, a1 = ((k + 1) / s.n) * TAU, am = (a0 + a1) / 2;
       const poly = [
@@ -258,7 +277,7 @@ export class Builder {
         s.cx + Math.cos(am) * s.rx * (1 + o.len), s.cy + Math.sin(am) * s.ry * (1 + o.len),
         s.cx + Math.cos(a1) * s.rx * 0.98, s.cy + Math.sin(a1) * s.ry * 0.98,
       ];
-      this.add("spike", o.name ?? "Spine", poly, { layer: 5, links: [host], hpM: 0.8 });
+      this.add("spike", o.name ?? "Spine", poly, { layer: 5, links: [host], hpM: 0.8, seg: o.seg });
     }
   }
 }
@@ -266,7 +285,7 @@ export class Builder {
 /* ---------------- shared limb builders ---------------- */
 function leg(
   b: Builder, host: number, sx: number, sy: number, side: number, angs: number[], lens: number[], w: number, name: string,
-  o: { phase?: number; amp?: number; split?: number; layer?: number; kind?: PartKind; role?: GroupRole } = {},
+  o: { phase?: number; amp?: number; split?: number; layer?: number; kind?: PartKind; role?: GroupRole; seg?: number } = {},
 ) {
   const gi = b.group(sx, sy * side, o.role ?? "leg", side, o.amp ?? 0.32, o.phase ?? 0);
   let x = sx, y = sy;
@@ -280,24 +299,24 @@ function leg(
       const wa = w * (1 - 0.35 * prog), wb = w * (1 - 0.35 * (prog + 1 / (lens.length * sp)));
       const bx = x - Math.cos(angs[i]) * wa * 0.9, by = y - Math.sin(angs[i]) * wa * 0.9;
       const poly = taper(bx, by, nx, ny, wa, wb);
-      const id = b.add(o.kind ?? "leg", name, side > 0 ? poly : mirror(poly), { layer: o.layer ?? 0, g: gi, links: [prev] });
+      const id = b.add(o.kind ?? "leg", name, side > 0 ? poly : mirror(poly), { layer: o.layer ?? 0, g: gi, links: [prev], seg: o.seg });
       prev = id;
       x = nx; y = ny;
     }
   }
   return gi;
 }
-function legPair(b: Builder, host: number, sx: number, sy: number, angs: number[], lens: number[], w: number, name: string, o: { phase?: number; split?: number; amp?: number } = {}) {
+function legPair(b: Builder, host: number, sx: number, sy: number, angs: number[], lens: number[], w: number, name: string, o: { phase?: number; split?: number; amp?: number; seg?: number } = {}) {
   leg(b, host, sx, sy, 1, angs, lens, w, name, { ...o, phase: o.phase ?? 0 });
   leg(b, host, sx, sy, -1, angs, lens, w, name, { ...o, phase: (o.phase ?? 0) + Math.PI });
 }
-function antennae(b: Builder, host: number, ax: number, ay: number, angs: number[], lens: number[], w = 0.05) {
-  for (const side of [1, -1]) leg(b, host, ax, ay, side, angs, lens, w, "Antenna", { kind: "spike", layer: 2, role: "sway", amp: 0.14, phase: side * 1.3 });
+function antennae(b: Builder, host: number, ax: number, ay: number, angs: number[], lens: number[], w = 0.05, seg = -1) {
+  for (const side of [1, -1]) leg(b, host, ax, ay, side, angs, lens, w, "Antenna", { kind: "spike", layer: 2, role: "sway", amp: 0.14, phase: side * 1.3, seg });
 }
-function mandibles(b: Builder, host: number, pivotX: number, pivotY: number, poly: number[], name: string, hpM = 1) {
+function mandibles(b: Builder, host: number, pivotX: number, pivotY: number, poly: number[], name: string, hpM = 1, seg = -1) {
   for (const side of [1, -1]) {
     const gi = b.group(pivotX, pivotY * side, "mandible", side, 0.1, 0);
-    b.add("arm", name, side > 0 ? poly : mirror(poly), { layer: 2, g: gi, links: [host], hpM });
+    b.add("arm", name, side > 0 ? poly : mirror(poly), { layer: 2, g: gi, links: [host], hpM, seg });
   }
 }
 function wingPart(b: Builder, host: number, ax: number, ay: number, side: number, poly: number[], name: string, amp = 0.22, phase = 0, hpM = 1) {
@@ -613,8 +632,9 @@ const SPECIES: SpeciesDef[] = [
 
   /* 5 ─ CENTIPEDE */
   {
-    id: "centipede", name: "Centipede", hue: 335, flying: false, speed: 170, turn: 2.2, ranged: false, keep: 0, muzzle: 3.0,
+    id: "centipede", name: "Centipede", hue: 335, flying: false, speed: 170, turn: 2.8, ranged: false, keep: 0, muzzle: 3.0,
     armed: { gun: false, missile: false, shield: false }, pack: [1, 1, 1, 1, 1, 1],
+    bodyWave: { amp: 0.22, k: 0.8, speed: 6 },
     abilities: [
       { type: "swing", name: "Forcipule Bite", minTier: 0, cd: 2, wind: 0.4, dmg: 1.8, maxS: 3.6, role: "mandible", needs: "Forcipule" },
       { type: "charge", name: "Rush", minTier: 0, cd: 5, wind: 0.4, dmg: 1.5, speed: 540, dur: 0.9, minP: 220, maxP: 900 },
@@ -622,8 +642,8 @@ const SPECIES: SpeciesDef[] = [
       { type: "nova", name: "Venom Ring", minTier: 3, cd: 10, wind: 0.8, dmg: 0.6, n: 14, ns: 2, speed: 380, life: 1.5, size: 7, poison: 0.15, kind: "bolt", maxP: 600 },
     ],
     build(b, t) {
-      const N = 5 + 2 * t;
-      const L = 5.2;
+      const N = 12 + 3 * t;
+      const L = 9 + 0.8 * t;
       const sp = L / N;
       const c = Math.floor(N / 2);
       const ids: number[] = [];
@@ -631,24 +651,24 @@ const SPECIES: SpeciesDef[] = [
       for (let i = 0; i < N; i++) {
         const last = i === N - 1;
         const cx = -L / 2 + sp * (i + 0.5);
-        const ry = 0.42 + 0.12 * (i / (N - 1));
-        const s: Sec = last ? { cx: cx + sp * 0.15, cy: 0, rx: Math.max(0.42, sp * 0.8), ry: 0.58, n: 8 } : { cx, cy: 0, rx: sp * 0.82, ry, n: 6 };
+        const ry = 0.36 + 0.14 * (i / (N - 1));
+        const s: Sec = last ? { cx: cx + sp * 0.15, cy: 0, rx: Math.max(0.34, sp * 0.95), ry: 0.5, n: 8 } : { cx, cy: 0, rx: sp * 1.18, ry, n: 6 };
         secs.push(s);
-        ids.push(b.sec(last ? "Head" : "Body Segment", s, { style: i % 2, hpM: last ? 1.2 : 1 }));
+        ids.push(b.sec(last ? "Head" : "Body Segment", s, { style: i % 2, hpM: last ? 1.2 : 1, seg: i }));
         if (i > 0) b.link(ids[i - 1], ids[i]);
       }
       for (let i = 0; i < N - 1; i++) {
         const dl = Math.min(2, 1 + (t >= 3 ? 1 : 0));
-        legPair(b, ids[i], secs[i].cx, 0.25, [1.25, 1.75], [0.5, 0.55], 0.06, "Leg", { split: dl, phase: i * 0.7, amp: 0.4 });
+        legPair(b, ids[i], secs[i].cx, 0.22, [1.25, 1.75], [0.42, 0.46], 0.055, "Leg", { split: dl, phase: i * 0.7, amp: 0.4, seg: i });
       }
-      b.core(secs[c], ids[c], [ids[c - 1], ids[c + 1]]);
+      b.core(secs[c], ids[c], [ids[c - 1], ids[c + 1]], c);
       for (let i = 0; i < N; i++) {
-        if (i === c) { b.armor(secs[i], ids[i], { name: "Tergite", layers: 1, edges: 3 }); continue; }
-        b.armor(secs[i], ids[i], { name: i === N - 1 ? "Cranial Plate" : "Tergite", layers: t >= 3 ? 2 : 1, edges: 3, style: i % 2 });
+        if (i === c) { b.armor(secs[i], ids[i], { name: "Tergite", layers: 1, edges: 3, seg: i }); continue; }
+        b.armor(secs[i], ids[i], { name: i === N - 1 ? "Cranial Plate" : "Tergite", layers: t >= 3 ? 2 : 1, edges: 3, style: i % 2, seg: i });
       }
       const hs = secs[N - 1];
-      mandibles(b, ids[N - 1], hs.cx + hs.rx * 0.8, 0.2, [hs.cx + hs.rx * 0.7, 0.05, hs.cx + hs.rx * 1.1, 0.34, hs.cx + hs.rx * 1.6, 0.28, hs.cx + hs.rx * 1.35, 0.1, hs.cx + hs.rx * 1.0, 0.03], "Forcipule", 1.2);
-      antennae(b, ids[N - 1], hs.cx + hs.rx * 0.6, 0.3, [0.8, 0.4], [0.6, 0.6], 0.04);
+      mandibles(b, ids[N - 1], hs.cx + hs.rx * 0.8, 0.2, [hs.cx + hs.rx * 0.7, 0.05, hs.cx + hs.rx * 1.1, 0.34, hs.cx + hs.rx * 1.6, 0.28, hs.cx + hs.rx * 1.35, 0.1, hs.cx + hs.rx * 1.0, 0.03], "Forcipule", 1.2, N - 1);
+      antennae(b, ids[N - 1], hs.cx + hs.rx * 0.6, 0.3, [0.8, 0.4], [0.6, 0.6], 0.04, N - 1);
       return [];
     },
   },
@@ -1133,8 +1153,9 @@ const SPECIES: SpeciesDef[] = [
 
   /* 31 ─ WORLD SERPENT (boss) */
   {
-    id: "serpent", name: "World Serpent", hue: 285, flying: false, speed: 340, turn: 2.6, ranged: false, keep: 0, muzzle: 3.0,
+    id: "serpent", name: "Snake", hue: 285, flying: false, speed: 430, turn: 3.6, ranged: false, keep: 0, muzzle: 3.0,
     armed: { gun: true, missile: true, shield: true }, pack: [1, 1, 1, 1, 1, 1], minZone: 5, maxZone: 5, boss: true,
+    bodyWave: { amp: 0.5, k: 0.42, speed: 2.4 },
     abilities: [
       { type: "swing", name: "Tail Sweep", minTier: 1, cd: 4, wind: 0.8, dmg: 4.5, maxS: 5, role: "tail", needs: "Tail Barb" },
       { type: "nova", name: "Venom Ring", minTier: 2, cd: 9, wind: 0.9, dmg: 0.9, n: 20, ns: 2, speed: 460, life: 1.8, size: 9, poison: 0.3, kind: "bolt", maxP: 900 },
@@ -1142,7 +1163,7 @@ const SPECIES: SpeciesDef[] = [
       { type: "spit", name: "Venom Glob", minTier: 4, cd: 7, wind: 0.6, dmg: 1.4, speed: 520, size: 3, maxP: 1000 },
     ],
     build(b, t) {
-      return buildSnake(b, t, 18 + 2 * t);
+      return buildSnake(b, t, 40 + 5 * t);
     },
   },
 ];
@@ -1381,35 +1402,39 @@ function buildFlyer(b: Builder, t: number, o: FlyerOpts = {}): Mount[] {
 }
 
 function buildSnake(b: Builder, t: number, n: number): Mount[] {
-  const L = 2.8 + 0.075 * n;
+  /* The snake is a genuine chain: 40 + 5*t segments (65 at mythical), total
+     length L = 7 + 0.3*n body units (~26.5 at tier 5, about 9,100 world px,
+     ~5.4x the original boss). Raise the 0.3 to lengthen it.
+     Segments overlap so the travelling wave reads as one continuous body. */
+  const L = 7 + 0.3 * n;
   const sp = L / n;
   const ids: number[] = [];
   const secs: Sec[] = [];
   for (let i = 0; i < n; i++) {
     const f = i / (n - 1);
     const cx = -L / 2 + sp * (i + 0.5);
-    const ry = i === n - 1 ? 0.72 : 0.3 + 0.36 * Math.sin(Math.PI * Math.min(1, f * 1.1));
-    const s: Sec = { cx, cy: 0, rx: sp * 0.8, ry, n: i === n - 1 ? 8 : 6 };
+    const ry = i === n - 1 ? 0.6 : 0.24 + 0.3 * Math.sin(Math.PI * Math.min(1, f * 1.05));
+    const s: Sec = { cx, cy: 0, rx: sp * 1.35, ry, n: i === n - 1 ? 8 : 6 };
     secs.push(s);
-    ids.push(b.sec(i === n - 1 ? "Head" : "Body Segment", s, { style: i % 2, hpM: i === n - 1 ? 2.2 : 1.7 }));
+    ids.push(b.sec(i === n - 1 ? "Head" : "Body Segment", s, { style: i % 2, hpM: i === n - 1 ? 2.2 : 1.7, seg: i }));
     if (i > 0) b.link(ids[i - 1], ids[i]);
   }
   const c = Math.floor(n * 0.4);
-  b.core(secs[c], ids[c], [ids[c - 1], ids[c + 1]]);
+  b.core(secs[c], ids[c], [ids[c - 1], ids[c + 1]], c);
   for (let i = 0; i < n; i++) {
-    b.armor(secs[i], ids[i], { name: i === n - 1 ? "Cranial Plate" : i === c ? "Heart Guard" : "Scale Plate", layers: i === c ? 1 : t >= 3 ? 2 : 1, edges: 3, style: i % 2 });
+    b.armor(secs[i], ids[i], { name: i === n - 1 ? "Cranial Plate" : i === c ? "Heart Guard" : "Scale Plate", layers: i === c ? 1 : t >= 3 ? 2 : 1, edges: 3, style: i % 2, seg: i });
   }
-  for (let i = 2; i < n - 2; i += 3) b.spikes(secs[i], ids[i], { every: 2, len: 0.34 });
+  for (let i = 2; i < n - 2; i += 3) b.spikes(secs[i], ids[i], { every: 2, len: 0.3, seg: i });
   const h = secs[n - 1], hi = ids[n - 1];
-  mandibles(b, hi, h.cx + h.rx * 0.5, 0.3, [h.cx + h.rx * 0.5, 0.1, h.cx + h.rx * 0.95, 0.55, h.cx + h.rx * 1.55, 0.68, h.cx + h.rx * 2.0, 0.3, h.cx + h.rx * 1.2, 0.22], "Fang", 1.9);
+  mandibles(b, hi, h.cx + h.rx * 0.5, 0.3, [h.cx + h.rx * 0.5, 0.1, h.cx + h.rx * 0.95, 0.5, h.cx + h.rx * 1.5, 0.62, h.cx + h.rx * 1.9, 0.28, h.cx + h.rx * 1.2, 0.2], "Fang", 1.9, n - 1);
   for (const side of [1, -1]) {
     const e = ell(h.cx + h.rx * 0.25, 0.5 * side, 0.26, 0.2, 6);
-    b.add("armor", "Serpent Eye", side > 0 ? e : mirror(e), { layer: 4, links: [hi], style: 2, hpM: 1 });
+    b.add("armor", "Serpent Eye", side > 0 ? e : mirror(e), { layer: 4, links: [hi], style: 2, hpM: 1, seg: n - 1 });
   }
   const tail = secs[0];
-  b.add("spike", "Tail Barb", [tail.cx - tail.rx * 0.9, -0.22, tail.cx - tail.rx * 1.9, 0, tail.cx - tail.rx * 0.9, 0.22], { layer: 2, links: [ids[0]], hpM: 1.3 });
+  b.add("spike", "Tail Barb", [tail.cx - tail.rx * 0.9, -0.22, tail.cx - tail.rx * 1.9, 0, tail.cx - tail.rx * 0.9, 0.22], { layer: 2, links: [ids[0]], hpM: 1.3, seg: 0 });
   // fins along the back
-  for (let i = 3; i < n - 2; i += 4) b.spikes(secs[i], ids[i], { every: 1, len: 0.5 });
+  for (let i = 3; i < n - 2; i += 4) b.spikes(secs[i], ids[i], { every: 1, len: 0.45, seg: i });
   return [{ sec: h, host: hi, core: true }, { sec: secs[c], host: ids[c] }];
 }
 

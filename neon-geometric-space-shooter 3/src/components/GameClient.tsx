@@ -1,10 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { Game, type Hud } from "@/game/engine";
 import { render } from "@/game/render";
 import {
-  ABILITY_LIST, CAT_NAME, KIND_CAT, RARITIES, RECIPES, RECIPE_BY_ID, SLOT_NAME, UPGRADES, UP_CATS, craftEfficiency, migrate, newSave, recipeProblem, upgradeCost,
+  ABILITY_LIST, CAT_NAME, KIND_CAT, RARITIES, RECIPES, RECIPE_BY_ID, SLOT_NAME, UPGRADES, UP_CATS, craftEfficiency, decodeSave, encodeSave, migrate, newSave, recipeProblem, upgradeCost,
   type Comp, type Recipe, type SaveData, type Slot, type UpCat,
 } from "@/game/data";
 import { clamp, fmtNum } from "@/game/math";
@@ -154,7 +155,7 @@ export default function GameClient() {
       <canvas ref={canvasRef} className="block cursor-crosshair" />
       <div className="pointer-events-none fixed inset-0" style={{ background: "radial-gradient(ellipse at center, transparent 55%, rgba(0,0,10,0.65) 100%)" }} />
       {!hud && <div className="absolute inset-0 grid place-items-center text-xl tracking-[0.4em] text-cyan-300">LOADING SAVE…</div>}
-      {hud && game && <Hud_ hud={hud} onOpen={() => { game.blur(); setAdminOpen(false); setMenu(true); }} onHelp={() => setHelp(true)} onAdmin={() => { game.blur(); setMenu(false); setAdminOpen(true); }} />}
+      {hud && game && <Hud_ hud={hud} onOpen={() => { game.blur(); setAdminOpen(false); setMenu(true); }} onHelp={() => setHelp(true)} onAdmin={() => { game.blur(); setMenu(false); setAdminOpen(true); }} onToggleAuto={() => game.toggleAutoFire()} />}
       {hud && game && adminOpen && <AdminPanel game={game} hud={hud} onClose={() => setAdminOpen(false)} />}
       {hud && game && menu && <Hangar game={game} hud={hud} onClose={() => setMenu(false)} />}
       {help && <Help onClose={closeHelp} />}
@@ -163,50 +164,70 @@ export default function GameClient() {
 }
 
 /* ---------------------------------------------------------------- HUD */
-function Bar({ v, max, color, label, h = 10 }: { v: number; max: number; color: string; label?: string; h?: number }) {
+function Bar({ v, max, color, h = 10 }: { v: number; max: number; color: string; h?: number }) {
   const f = clamp(max > 0 ? v / max : 0, 0, 1);
   return (
     <div className="relative w-56 overflow-hidden rounded-sm border border-white/20 bg-black/50" style={{ height: h + 6 }}>
       <div className="absolute inset-y-0 left-0 transition-[width] duration-100" style={{ width: `${f * 100}%`, background: color, boxShadow: `0 0 12px ${color}` }} />
-      {label && <div className="absolute inset-0 flex items-center justify-between px-1.5 text-[10px] font-bold text-white/90 mix-blend-difference"><span>{label}</span><span>{fmtNum(v)} / {fmtNum(max)}</span></div>}
     </div>
   );
 }
 
-function Hud_({ hud, onOpen, onHelp, onAdmin }: { hud: Hud; onOpen: () => void; onHelp: () => void; onAdmin: () => void }) {
+/** Harpoon state as a bare glyph: colour carries the status, no words. */
+function HarpoonGlyph({ state, load, hp }: { state: number; load: number; hp: number }) {
+  const col = state === 0 ? "#2f6f66" : state === 1 ? "#7df9ff" : state === 2 ? (load > 0.9 ? "#ff4d6d" : "#ffd24d") : "#ff9d6e";
+  return (
+    <div className="relative h-7 w-9 rounded-sm border border-white/10 bg-black/40" title="Tether">
+      <svg viewBox="0 0 36 28" className="absolute inset-0 h-full w-full">
+        <g stroke={col} strokeWidth="2" strokeLinecap="round" fill="none" style={{ filter: `drop-shadow(0 0 3px ${col})` }}>
+          <path d="M5 14h18" />
+          <path d="M23 14l5-5M23 14l5 5M23 14l4 0" />
+          <path d="M5 14l3-3M5 14l3 3" />
+        </g>
+        {state === 2 && <rect x="2" y="25" width={32 * clamp(load, 0, 1)} height="2" fill={load > 0.9 ? "#ff4d6d" : "#ffd24d"} />}
+        {state !== 0 && <rect x="2" y="1" width={32 * clamp(hp, 0, 1)} height="1.5" fill="#ff6b81" opacity="0.75" />}
+      </svg>
+    </div>
+  );
+}
+
+function Hud_({ hud, onOpen, onHelp, onAdmin, onToggleAuto }: { hud: Hud; onOpen: () => void; onHelp: () => void; onAdmin: () => void; onToggleAuto: () => void }) {
   const hpCol = hud.hp / hud.maxHp > 0.5 ? "#2dffa0" : hud.hp / hud.maxHp > 0.25 ? "#ffd24d" : "#ff4d6d";
   const [selAb, setSelAb] = useState<number | null>(null);
   return (
     <>
       <div className="pointer-events-none absolute left-3 top-3 flex flex-col gap-1.5">
-        <Bar v={hud.hp} max={hud.maxHp} color={hpCol} label="HULL" h={12} />
-        {hud.maxShield > 0 && <Bar v={hud.shield} max={hud.maxShield} color="#4dd2ff" label="SHIELD" h={8} />}
-        {hud.hasBoost && <Bar v={hud.boost} max={100} color="#ff9d4d" label="BOOST" h={6} />}
+        <Bar v={hud.hp} max={hud.maxHp} color={hpCol} h={12} />
+        {hud.maxShield > 0 && <Bar v={hud.shield} max={hud.maxShield} color="#4dd2ff" h={8} />}
+        {hud.hasBoost && <Bar v={hud.boost} max={100} color="#ff9d4d" h={6} />}
         <div className="mt-1 flex items-center gap-2 text-sm font-bold text-yellow-300 drop-shadow-[0_0_8px_rgba(255,225,77,0.7)]">
           <span className="inline-block h-3 w-3 rotate-45 border border-yellow-300 bg-yellow-300/30" /> {fmtNum(hud.credits)} CR
         </div>
         <div className="flex gap-1.5">
-          {hud.harp.map((h, i) => (
-            <div key={i} className="relative h-7 w-12 overflow-hidden rounded-sm border border-cyan-300/40 bg-black/50 text-[9px]" title="Harpoon (right click)">
-              <div className="absolute inset-0 flex items-center justify-center font-bold" style={{ color: h.state === 0 ? "#4dffd2" : h.state === 2 ? "#ffd24d" : "#7df9ff" }}>
-                {h.state === 0 ? "READY" : h.state === 1 ? "FLY" : h.state === 2 ? "HOOKED" : "REEL"}
-              </div>
-              {h.state === 2 && <div className="absolute bottom-0 left-0 h-[3px]" style={{ width: `${clamp(h.load, 0, 1) * 100}%`, background: h.load > 0.9 ? "#ff4d6d" : "#ffd24d" }} />}
-              {h.state !== 0 && <div className="absolute left-0 top-0 h-[2px] bg-red-400" style={{ width: `${clamp(h.hp, 0, 1) * 100}%` }} />}
-            </div>
-          ))}
+          {hud.harp.map((h, i) => <HarpoonGlyph key={i} state={h.state} load={h.load} hp={h.hp} />)}
         </div>
         {hud.tp.has && (
-          <div className="text-[11px] text-fuchsia-300">
-            [T] RECALL {hud.tp.ch > 0 ? `CHANNELING ${Math.round(hud.tp.ch * 100)}%` : hud.tp.cd > 0 ? `COOLDOWN ${Math.ceil(hud.tp.cd)}s` : "READY"}
+          <div className="flex items-center gap-1.5 text-fuchsia-300" title="Recall beacon">
+            <span className="text-sm">⌁</span>
+            <div className="h-1 w-20 overflow-hidden rounded-sm bg-black/60">
+              <div className="h-full" style={{ width: `${hud.tp.ch > 0 ? hud.tp.ch * 100 : hud.tp.cd > 0 ? 100 - (hud.tp.cd / Math.max(1, hud.tp.max)) * 100 : 100}%`, background: hud.tp.ch > 0 ? "#ff7ad9" : hud.tp.cd > 0 ? "#7a3f6a" : "#c77dff" }} />
+            </div>
           </div>
         )}
       </div>
 
-      <div className="pointer-events-none absolute left-1/2 top-2 -translate-x-1/2 text-[11px] text-cyan-300/70">
-        ● {hud.online} pilot{hud.online === 1 ? "" : "s"} online · {hud.fps} fps{hud.zoomOn ? " · wheel = zoom" : ""}
-        {hud.overdrive && <span className="ml-2 font-bold text-yellow-300">⚡ OVERDRIVE</span>}
-        {hud.admin.on && <span className="ml-2 font-bold text-fuchsia-300">ADMIN</span>}
+      <div className="pointer-events-none absolute left-1/2 top-2 flex -translate-x-1/2 items-center gap-2 text-[11px] text-cyan-300/70">
+        <span>● {hud.online} · {hud.fps} fps{hud.zoomOn ? " · wheel = zoom" : ""}</span>
+        <button
+          onClick={onToggleAuto}
+          className="pointer-events-auto rounded-sm border px-1.5 py-0.5 text-[10px] font-bold tracking-wider"
+          style={{ borderColor: hud.autoFire ? "#7dffb4" : "#64748b", color: hud.autoFire ? "#7dffb4" : "#94a3b8", background: "rgba(0,0,0,0.55)" }}
+          title="Toggle automatic crafted weapons (B)"
+        >
+          AUTO {hud.autoFire ? "ON" : "OFF"}
+        </button>
+        {hud.overdrive && <span className="font-bold text-yellow-300">⚡ OVERDRIVE</span>}
+        {hud.admin.on && <span className="font-bold text-fuchsia-300">ADMIN</span>}
       </div>
 
       {/* ability hotbar */}
@@ -244,25 +265,33 @@ function Hud_({ hud, onOpen, onHelp, onAdmin }: { hud: Hud; onOpen: () => void; 
       </div>
 
       <div className="absolute bottom-3 right-3 flex items-center gap-2">
-        {hud.lock && <span className="rounded-sm border border-red-400/70 bg-black/70 px-2 py-1 text-[10px] font-bold text-red-300">◎ LOCK</span>}
+        {hud.lock && <span title="Target marked" className="rounded-sm border border-amber-400/70 bg-black/70 px-2 py-1 text-xs text-amber-300">◎</span>}
+        <Link href="/" title="Back to the website" className="rounded-sm border border-white/20 bg-black/60 px-2 py-1 text-xs text-white/60 hover:bg-white/10">⌂</Link>
         <button onClick={onAdmin} className="rounded-sm border border-fuchsia-300/50 bg-black/60 px-2 py-1 text-xs text-fuchsia-200 hover:bg-fuchsia-400/20" title="Admin panel (`)">` ADMIN</button>
         <button onClick={onHelp} className="rounded-sm border border-cyan-300/40 bg-black/60 px-2 py-1 text-xs text-cyan-200 hover:bg-cyan-400/20">? CONTROLS</button>
       </div>
 
       {hud.nearBase && !hud.dead && (
-        <button onClick={onOpen} className="absolute bottom-16 left-1/2 -translate-x-1/2 animate-pulse rounded-sm border-2 border-cyan-300 bg-cyan-400/15 px-6 py-2 text-sm font-bold tracking-widest text-cyan-100 shadow-[0_0_24px_rgba(77,255,210,0.5)] hover:bg-cyan-400/30">
-          OPEN HANGAR [E]
+        <button onClick={onOpen} title="Open nest (E)" className="absolute bottom-16 left-1/2 grid h-11 w-11 -translate-x-1/2 animate-pulse place-items-center rounded-full border-2 border-cyan-300 bg-cyan-400/15 text-cyan-100 shadow-[0_0_24px_rgba(77,255,210,0.5)] hover:bg-cyan-400/30">
+          <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.6">
+            <path d="M12 2.5l8 4.6v9.8l-8 4.6-8-4.6V7.1z" />
+            <path d="M12 8.2l4 2.3v4.6l-4 2.3-4-2.3v-4.6z" />
+          </svg>
         </button>
       )}
       {hud.dead && (
         <div className="pointer-events-none absolute inset-0 grid place-items-center bg-red-950/40">
           <div className="text-center">
-            <div className="text-4xl font-black tracking-[0.3em] text-red-400 drop-shadow-[0_0_20px_#ff2d55]">SHIP DESTROYED</div>
-            <div className="mt-2 text-red-200">Rebuilding at hangar in {Math.ceil(hud.respawn)}…</div>
+            <div className="text-4xl font-black tracking-[0.3em] text-red-400 drop-shadow-[0_0_20px_#ff2d55]">CORE DESTROYED</div>
+            <div className="mt-2 text-red-200">Reforming at the nest in {Math.ceil(hud.respawn)}…</div>
           </div>
         </div>
       )}
-      {hud.hold > 0 && <div className="pointer-events-none absolute left-1/2 top-24 -translate-x-1/2 text-xs text-red-300">RELEASING HARPOON… {Math.round(hud.hold * 100)}%</div>}
+      {hud.hold > 0 && (
+        <div className="pointer-events-none absolute left-1/2 top-24 -translate-x-1/2">
+          <div className="h-1 w-24 overflow-hidden rounded-sm bg-black/60"><div className="h-full bg-red-400" style={{ width: `${Math.round(clamp(hud.hold, 0, 1) * 100)}%` }} /></div>
+        </div>
+      )}
     </>
   );
 }
@@ -271,12 +300,13 @@ function Help({ onClose }: { onClose: () => void }) {
   const rows: [string, string][] = [
     ["WASD / Arrows", "Fly"],
     ["Mouse", "Aim"],
-    ["Left click / SPACE", "Fire cannon (+ crafted weapons)"],
-    ["Right click", "Fire harpoon at a glowing component"],
+    ["Left click / SPACE", "Fire the base cannon"],
+    ["Right click", "Mark a target (missile launcher) or fire the tether"],
+    ["B", "Toggle automatic crafted weapons"],
     ["Hold R over hooked part", "Release harpoon"],
     ["SHIFT", "Afterburner (upgrade)"],
     ["T", "Recall beacon (craftable)"],
-    ["E", "Open hangar at your base"],
+    ["E", "Open the nest at your base"],
     ["Mouse wheel", "Zoom out (craftable optics)"],
     ["Z X C V F", "Fire equipped active abilities"],
     ["` (backtick)", "Admin panel (infinite resources)"],
@@ -285,15 +315,16 @@ function Help({ onClose }: { onClose: () => void }) {
     <div className="absolute inset-0 z-50 grid place-items-center bg-black/70 p-4">
       <div className="max-h-full w-full max-w-xl overflow-auto rounded-md border border-cyan-300/60 bg-[#060a18]/95 p-6 shadow-[0_0_40px_rgba(77,255,210,0.25)]">
         <h1 className="text-center text-3xl font-black tracking-[0.25em] text-cyan-200 drop-shadow-[0_0_14px_#4dffd2]">NEON HIVE</h1>
-        <p className="mt-2 text-center text-xs text-cyan-100/70">Hunt geometric insects and constructs. Shoot their armour off, cripple their legs, then destroy the core.</p>
+        <p className="mt-2 text-center text-xs text-cyan-100/70">Hunt geometric insects. Strip their plating, shear their limbs, then break the core.</p>
         <div className="mt-4 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
           {rows.map(([k, v]) => (<><div key={k} className="text-yellow-300">{k}</div><div key={v}>{v}</div></>))}
         </div>
         <ul className="mt-4 list-disc space-y-1 pl-5 text-xs text-cyan-100/80">
-          <li>Destroyed pieces drop components. Harpoon them and tow them into the <b className="text-yellow-300">yellow hex</b> at your hangar.</li>
+          <li>Destroyed pieces drop components. Tether them and tow them into the <b className="text-yellow-300">yellow hex</b> at the nest.</li>
           <li>Too heavy? Stronger cables, more harpoons on one part, or a better winch help. Overloaded cables snap.</li>
           <li>Sell components for credits or store them to craft weapons, shields, armour, optics, utilities and active abilities.</li>
-          <li>Enemies only use their abilities at higher tiers, and the biggest creatures turn slowly — flank them. Deep toward the centre lurks the World Serpent.</li>
+          <li>Epic and above enemies wear grey armour plating: lasers and shockwaves cannot cut it. Missiles strike through it — mark a piece and they will thread past everything else.</li>
+          <li>Deep toward the centre, a very long snake coils through the dark.</li>
           <li>Danger rises toward the centre of the map: bigger, deadlier, more layered enemies. Your progress autosaves.</li>
         </ul>
         <button onClick={onClose} className="mt-5 w-full rounded-sm border-2 border-cyan-300 bg-cyan-400/20 py-2 font-bold tracking-widest text-cyan-100 hover:bg-cyan-400/40">LAUNCH</button>
@@ -326,7 +357,12 @@ function Hangar({ game, hud, onClose }: { game: Game; hud: Hud; onClose: () => v
     <div className="absolute inset-0 z-40 grid place-items-center bg-black/60 p-2 sm:p-6">
       <div className="flex h-full max-h-[760px] w-full max-w-5xl flex-col rounded-md border border-cyan-300/60 bg-[#060a18]/97 shadow-[0_0_50px_rgba(77,255,210,0.2)]">
         <div className="flex items-center gap-2 border-b border-cyan-300/30 p-2">
-          <div className="px-2 text-sm font-black tracking-[0.3em] text-cyan-200">HANGAR</div>
+          <div className="px-2" title="Nest">
+            <svg viewBox="0 0 24 24" className="h-5 w-5 text-cyan-200" fill="none" stroke="currentColor" strokeWidth="1.6">
+              <path d="M12 2.5l8 4.6v9.8l-8 4.6-8-4.6V7.1z" />
+              <path d="M12 8.2l4 2.3v4.6l-4 2.3-4-2.3v-4.6z" />
+            </svg>
+          </div>
           <div className="flex flex-1 flex-wrap gap-1">
             {tabs.map(([id, label]) => (
               <button key={id} onClick={() => setTab(id)} className={`rounded-sm border px-3 py-1 text-xs font-bold tracking-wider ${tab === id ? "border-cyan-300 bg-cyan-400/25 text-white" : "border-white/15 text-cyan-200/70 hover:bg-white/10"}`}>{label}</button>
@@ -591,7 +627,7 @@ function Loadout({ game }: { game: Game }) {
         <div className="mt-2 text-[10px] font-bold tracking-widest text-white/50">ACTIVE ABILITIES</div>
         {["Z", "X", "C", "V", "F"].map((k, i) => <SlotSel key={k} game={game} slot="ability" idx={i} value={save.abilitySlots[i]} title={`[${k}] Ability`} />)}
         <div className="mt-2 rounded-sm border border-white/10 p-2 text-[11px] text-white/60">
-          Hull {fmtNum(game.stats.hull)} · Shield {fmtNum(game.stats.shieldMax)} · Damage taken -{Math.round((1 - (1 - game.stats.armor) * (1 - game.stats.reactive)) * 100)}% · Zoom {game.stats.zoomMin.toFixed(2)}x
+          Integrity {fmtNum(game.stats.hull)} · Shield {fmtNum(game.stats.shieldMax)} · Damage taken -{Math.round((1 - (1 - game.stats.armor) * (1 - game.stats.reactive)) * 100)}% · Zoom {game.stats.zoomMin.toFixed(2)}x
         </div>
       </div>
       <div className="space-y-1.5">
@@ -617,24 +653,68 @@ function Loadout({ game }: { game: Game }) {
 function Settings({ game }: { game: Game }) {
   const [name, setName] = useState(game.save.name);
   const [confirm, setConfirm] = useState(false);
+  const [code, setCode] = useState("");
+  const [note, setNote] = useState("");
   const reset = useCallback(() => {
     game.hardReset(newSave());
     game.persist(true);
     void game.pushServer();
     setConfirm(false);
   }, [game]);
+  const exportCode = async () => {
+    const c = encodeSave(game.save);
+    setCode(c);
+    try { await navigator.clipboard.writeText(c); setNote("Save code copied — keep it somewhere safe."); }
+    catch { setNote("Copy the code below and keep it somewhere safe."); }
+  };
+  const restoreCode = () => {
+    const s = decodeSave(code);
+    if (!s) { setNote("That save code could not be read."); return; }
+    game.hardReset(s);
+    game.persist(true);
+    void game.pushServer();
+    setName(s.name);
+    setNote(`Restored ${s.name} — ${fmtNum(s.credits)} CR, ${s.kills} kills.`);
+  };
   return (
-    <div className="max-w-md space-y-3 text-sm">
+    <div className="max-w-lg space-y-3 text-sm">
       <div>
-        <div className="mb-1 text-[10px] font-bold tracking-widest text-white/50">PILOT NAME (shown to other pilots)</div>
+        <div className="mb-1 text-[10px] font-bold tracking-widest text-white/50">CALLSIGN (shown to other pilots)</div>
         <div className="flex gap-2">
           <input value={name} maxLength={16} onChange={(e) => setName(e.target.value)} className="flex-1 rounded-sm border border-white/20 bg-black px-2 py-1" />
           <button onClick={() => game.setName(name)} className="rounded-sm border border-cyan-300/60 px-3 py-1 text-xs font-bold text-cyan-200 hover:bg-cyan-400/20">SAVE</button>
         </div>
       </div>
+      <label className="flex cursor-pointer items-center justify-between rounded-sm border border-white/15 bg-white/[0.03] p-2 text-xs">
+        <span>
+          <span className="block font-bold text-cyan-100">Automatic crafted weapons</span>
+          <span className="block text-[10px] text-white/50">Fire on their own at anything in range (B).</span>
+        </span>
+        <input type="checkbox" checked={game.save.autoFire} onChange={() => game.toggleAutoFire()} />
+      </label>
       <div className="rounded-sm border border-white/10 p-2 text-xs text-white/60">
         Enemies destroyed: {fmtNum(game.save.kills)} · Credits earned: {fmtNum(game.save.earned)}<br />
-        Progress autosaves every few seconds to this browser and to the server. Pilots in range show up as pink ships; the world itself is a shared map.
+        Progress autosaves to this browser. Other pilots appear as pink craft on the shared map.
+      </div>
+      <div className="space-y-2 rounded-sm border border-cyan-300/30 bg-cyan-400/[0.04] p-2">
+        <div className="flex items-center justify-between">
+          <div className="text-[10px] font-bold tracking-widest text-cyan-200/80">SAVE CODE</div>
+          <div className="flex gap-1.5">
+            <button onClick={exportCode} className="rounded-sm border border-cyan-300/60 px-2 py-1 text-[10px] font-bold text-cyan-200 hover:bg-cyan-400/20">EXPORT</button>
+            <button onClick={restoreCode} className="rounded-sm border border-yellow-300/60 px-2 py-1 text-[10px] font-bold text-yellow-200 hover:bg-yellow-300/20">RESTORE</button>
+          </div>
+        </div>
+        <textarea
+          value={code}
+          onChange={(e) => { setCode(e.target.value); setNote(""); }}
+          placeholder="Paste a save code here, then press RESTORE."
+          spellCheck={false}
+          className="h-24 w-full resize-y rounded-sm border border-white/15 bg-black/70 p-1.5 font-mono text-[10px] leading-tight text-cyan-100/90"
+        />
+        <div className="text-[10px] text-white/45">
+          Codes are self-contained and checksummed. Move a code to another browser or device to carry your nest across.
+        </div>
+        {note && <div className="text-[11px] text-emerald-300">{note}</div>}
       </div>
       <div>
         {!confirm ? (

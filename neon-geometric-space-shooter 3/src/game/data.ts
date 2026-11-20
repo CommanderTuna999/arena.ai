@@ -111,7 +111,45 @@ export const UP_CATS: { id: UpCat; name: string; color: string }[] = [
 
 export const upgradeCost = (u: UpgradeDef, level: number) => Math.round(u.base * Math.pow(u.growth, level));
 
-/* ---------- crafting ---------- */
+/* ---------- crafting ----------
+ * BALANCE REFERENCE (all damage values are multiples of the player's base cannon
+ * damage, st.dmg = 10 * 1.2^dmgLevel. Cooldowns are seconds at 100% efficiency;
+ * crafted efficiency scales both damage and cooldown: cd / (0.7 + 0.3*eff)).
+ *
+ * WEAPONS (19)
+ *   pulse   0.60 dmg / 0.45s   auto turret, nearest target within 650u
+ *   scatter 0.55 x6 / 0.75s    shotgun cone, 6 pellets, short range
+ *   missile 2.20 x2 / 1.50s    homing seeker pod, splash
+ *   lance   0.22 / 0.12s       beam, pierces 2+ pieces, stops on plating
+ *   homing  3.10 / 1.70s       right-click mark, ignores everything en route
+ *   bypass  0.16 / 0.10s       auto beam, ignores shields, stopped by plating
+ *   hmg     0.10 / 0.075s      high rate, wide spread, weak per hit
+ *   emp     1.40 / 2.60s       AoE stun 1.8s, radius 620u
+ *   cutter  1.10 / 0.18s       short plasma arc (175u), 1+ pierce
+ *   acid    0.30 x3 / 0.16s    corrosive, +32% melt per hit + 1.6 dps dot
+ *   chain   1.60 / 0.80s       arcs through 5 pieces, -25% per jump
+ *   flak    1.30 / 0.90s       airburst at cursor, 125u splash
+ *   rail    2.40 / 1.40s       beam, 1500u, pierces 12
+ *   gravity 2.80 / 3.20s       well drags enemies for 1.15s then implodes
+ *   mines   2.50 / 1.10s       proximity mine, 150u, armed after 0.7s
+ *   drones  0.40 / 0.55s       two orbiting drones, auto fire
+ *   venom   0.45 x2 / 0.35s    3.2 dps stacking venom
+ *   sonic   0.60 / 1.60s       cone stun 1.5s, 540u, shove
+ *   cluster 1.70 / 2.20s       rocket splits into 4 bomblets
+ *
+ * SHIELDS (10): deflector 45% hull, absorber 22% fast, reflector 32% + reflect,
+ *   kinetic 38% +30% flat reduction, phase 25% +12% dodge, ward 30% fast regen,
+ *   shell 20% + nova on break, overcharge 70% slow, nullfield 35% + projectile
+ *   swallow, prismatic 40% + reflect + dodge.
+ * ARMOUR (11): plating +35% hull, reactive -12% damage, thorn shockwave,
+ *   chitin +25% hull +2% armour, carapace +55% hull -6% speed,
+ *   nanoweave +12% hull +0.4%/s regen, ablative -8% damage, titan +90% hull
+ *   -12% speed, exoskeleton +12% thrust, venomguard 20% poison resist,
+ *   scalemail +18% hull +3% armour.
+ * ABILITIES (8): EMP 14s, salvo 12s, repair 22s, blink 9s, barrier 18s,
+ *   overdrive 26s, timewarp 24s, shockwave 16s (see ABILITY_LIST below).
+ */
+
 export type Slot = "weapon" | "shield" | "armor" | "optics" | "utility" | "ability";
 export interface Recipe {
   id: string;
@@ -131,16 +169,16 @@ export const RECIPES: Recipe[] = [
   { id: "pulse", name: "Pulse Turret", slot: "weapon", difficulty: 1, n: 3, wpn: { dmg: 0.6, cd: 0.45 }, desc: "Auto-targeting turret. Fires at the nearest enemy piece on its own." },
   { id: "scatter", name: "Scatter Driver", slot: "weapon", difficulty: 2, n: 4, need: { cats: ["limb", "plate"], count: 1 }, wpn: { dmg: 0.55, cd: 0.75 }, desc: "Short-range shotgun burst on your fire button." },
   { id: "missile", name: "Seeker Pod", slot: "weapon", difficulty: 3, n: 5, need: { cats: ["weapon", "shield"], count: 1 }, wpn: { dmg: 2.2, cd: 1.5 }, desc: "Launches homing missiles with splash damage." },
-  { id: "lance", name: "Arc Lance", slot: "weapon", difficulty: 4, n: 6, need: { cats: ["core"], count: 1 }, wpn: { dmg: 0.45, cd: 0.12 }, desc: "Piercing beam that melts through armour layers." },
-  { id: "homing", name: "Homing Missile Launcher", slot: "weapon", difficulty: 3, n: 5, need: { cats: ["weapon"], count: 1 }, species: { names: ["Bombardier Beetle", "Yellowjacket"], count: 1 }, wpn: { dmg: 3.1, cd: 1.8 }, desc: "Hold fire on a piece to lock it. Missiles track the lock and detonate on impact." },
-  { id: "bypass", name: "Shield-Bypass Laser", slot: "weapon", difficulty: 5, n: 7, need: { cats: ["core", "weapon"], count: 1 }, species: { names: ["Jewel Beetle", "Firefly"], count: 1 }, wpn: { dmg: 0.5, cd: 0.1 }, desc: "Continuous beam that ignores enemy shield generators and burns straight into plates." },
-  { id: "hmg", name: "Heavy Machine Gun", slot: "weapon", difficulty: 2, n: 4, need: { cats: ["weapon", "limb"], count: 1 }, wpn: { dmg: 0.32, cd: 0.08 }, desc: "Very high rate of fire, wide spray, long reload between bursts." },
+  { id: "lance", name: "Arc Lance", slot: "weapon", difficulty: 4, n: 6, need: { cats: ["core"], count: 1 }, wpn: { dmg: 0.22, cd: 0.12 }, desc: "Piercing beam. Strong against soft targets, stopped dead by armour plating." },
+  { id: "homing", name: "Homing Missile Launcher", slot: "weapon", difficulty: 3, n: 5, need: { cats: ["weapon"], count: 1 }, species: { names: ["Bombardier Beetle", "Yellowjacket"], count: 1 }, wpn: { dmg: 3.1, cd: 1.8 }, desc: "Right-click any enemy piece to mark it. Missiles fly straight through everything else to that exact spot." },
+  { id: "bypass", name: "Shield-Bypass Laser", slot: "weapon", difficulty: 5, n: 7, need: { cats: ["core", "weapon"], count: 1 }, species: { names: ["Jewel Beetle", "Firefly"], count: 1 }, wpn: { dmg: 0.16, cd: 0.1 }, desc: "Auto-firing beam that ignores shield generators but cannot cut through armour plating." },
+  { id: "hmg", name: "Heavy Machine Gun", slot: "weapon", difficulty: 2, n: 4, need: { cats: ["weapon", "limb"], count: 1 }, wpn: { dmg: 0.1, cd: 0.08 }, desc: "Very high rate of fire, wide spray, weak per hit. Good for stripping light enemies." },
   { id: "emp", name: "EMP Cannon", slot: "weapon", difficulty: 4, n: 6, need: { cats: ["core", "shield"], count: 1 }, species: { names: ["Cicada", "Firefly"], count: 1 }, wpn: { dmg: 1.4, cd: 2.6 }, desc: "Pulse that stuns every enemy within a wide radius." },
   { id: "cutter", name: "Plasma Cutter", slot: "weapon", difficulty: 3, n: 5, need: { cats: ["plate", "weapon"], count: 1 }, wpn: { dmg: 1.1, cd: 0.18 }, desc: "Short, searing plasma arc that shreds plates at point-blank range." },
   { id: "acid", name: "Acid Sprayer", slot: "weapon", difficulty: 3, n: 5, need: { cats: ["body", "limb"], count: 1 }, species: { names: ["Soldier Ant", "Worker Ant", "Bombardier Beetle"], count: 1 }, wpn: { dmg: 0.3, cd: 0.16 }, desc: "Cone of corrosive globs. Melts armour so every following hit lands harder." },
   { id: "chain", name: "Chain Lightning", slot: "weapon", difficulty: 4, n: 6, need: { cats: ["core", "wing"], count: 1 }, species: { names: ["Firefly", "Jewel Beetle"], count: 1 }, wpn: { dmg: 1.6, cd: 0.8 }, desc: "Arcs between up to five nearby pieces, losing power with every jump." },
   { id: "flak", name: "Flak Cannon", slot: "weapon", difficulty: 3, n: 5, need: { cats: ["plate", "body"], count: 1 }, wpn: { dmg: 1.3, cd: 0.9 }, desc: "Lobs airburst shells that detonate near the target point." },
-  { id: "rail", name: "Rail Sniper", slot: "weapon", difficulty: 5, n: 7, need: { cats: ["core", "weapon"], count: 1 }, species: { names: ["Tiger Beetle", "Assassin Bug"], count: 1 }, wpn: { dmg: 2.4, cd: 1.4 }, desc: "Hypervelocity slug that pierces the whole enemy line." },
+  { id: "rail", name: "Rail Sniper", slot: "weapon", difficulty: 5, n: 7, need: { cats: ["core", "weapon"], count: 1 }, species: { names: ["Tiger Beetle", "Assassin Bug"], count: 1 }, wpn: { dmg: 2.4, cd: 1.4 }, desc: "Hypervelocity slug that pierces the enemy line — but not plating." },
   { id: "gravity", name: "Gravity Bomb", slot: "weapon", difficulty: 5, n: 7, need: { cats: ["core", "body"], count: 1 }, species: { names: ["Dung Beetle", "Atlas Moth"], count: 1 }, wpn: { dmg: 2.8, cd: 3.2 }, desc: "Collapses a gravity well that drags enemies in, then implodes." },
   { id: "mines", name: "Mine Layer", slot: "weapon", difficulty: 2, n: 4, need: { cats: ["plate", "weapon"], count: 1 }, species: { names: ["Weevil", "Scarab"], count: 1 }, wpn: { dmg: 2.5, cd: 1.1 }, desc: "Drops proximity mines behind you that shred anything that follows." },
   { id: "drones", name: "Swarm Drones", slot: "weapon", difficulty: 4, n: 6, need: { cats: ["wing", "core"], count: 1 }, species: { names: ["Honeybee", "Yellowjacket", "Hornet"], count: 1 }, wpn: { dmg: 0.4, cd: 0.55 }, desc: "Deploys two orbiting drones that fire at nearby enemies." },
@@ -168,15 +206,15 @@ export const RECIPES: Recipe[] = [
   { id: "carapace", name: "Carapace Shell", slot: "armor", difficulty: 3, n: 5, need: { cats: ["plate", "body"], count: 1 }, species: { names: ["Rhinoceros Beetle", "Dung Beetle", "Scarab"], count: 1 }, desc: "Massive hull bonus at the cost of top speed." },
   { id: "nanoweave", name: "Nano-weave Mesh", slot: "armor", difficulty: 4, n: 6, need: { cats: ["wing", "body"], count: 1 }, species: { names: ["Atlas Moth", "Widow Spider"], count: 1 }, desc: "Self-repairing weave that continuously regenerates hull." },
   { id: "ablative", name: "Ablative Coating", slot: "armor", difficulty: 3, n: 5, need: { cats: ["plate", "shield"], count: 1 }, species: { names: ["Cockroach", "Weevil"], count: 1 }, desc: "Sacrificial coating that absorbs a big share of every hit." },
-  { id: "titan", name: "Titan Frame", slot: "armor", difficulty: 5, n: 7, need: { cats: ["body", "plate"], count: 2 }, species: { names: ["Dung Beetle", "World Serpent"], count: 1 }, desc: "Colossal armour frame: the biggest hull bonus in the game, heavy as lead." },
+  { id: "titan", name: "Titan Frame", slot: "armor", difficulty: 5, n: 7, need: { cats: ["body", "plate"], count: 2 }, species: { names: ["Dung Beetle", "Snake"], count: 1 }, desc: "Colossal armour frame: the biggest hull bonus in the game, heavy as lead." },
   { id: "exoskeleton", name: "Exoskeleton Rig", slot: "armor", difficulty: 3, n: 5, need: { cats: ["limb"], count: 2 }, species: { names: ["Grasshopper", "Tiger Beetle", "Mole Cricket"], count: 1 }, desc: "Servo-assisted exoskeleton: agility and acceleration instead of bulk." },
   { id: "venomguard", name: "Venom Guard", slot: "armor", difficulty: 4, n: 6, need: { cats: ["plate", "limb"], count: 1 }, species: { names: ["Assassin Bug", "Yellowjacket", "Centipede"], count: 1 }, desc: "Neutralises toxins and adds a small hull bonus." },
-  { id: "scalemail", name: "Scale Mail", slot: "armor", difficulty: 4, n: 6, need: { cats: ["plate", "wing"], count: 1 }, species: { names: ["World Serpent", "Jewel Beetle", "Ladybug"], count: 1 }, desc: "Overlapping scales: solid hull and all-round damage reduction." },
+  { id: "scalemail", name: "Scale Mail", slot: "armor", difficulty: 4, n: 6, need: { cats: ["plate", "wing"], count: 1 }, species: { names: ["Snake", "Jewel Beetle", "Ladybug"], count: 1 }, desc: "Overlapping scales: solid hull and all-round damage reduction." },
 
   /* ---------------- optics / utility ---------------- */
   { id: "lens", name: "Wide-Field Optics", slot: "optics", difficulty: 2, n: 4, need: { cats: ["wing", "core"], count: 1 }, desc: "Unlocks mouse-wheel zoom out. Better efficiency zooms further." },
   { id: "recall", name: "Recall Beacon", slot: "utility", difficulty: 4, n: 6, need: { cats: ["core"], count: 1 }, desc: "Press T to channel a teleport back to base." },
-  { id: "magnet", name: "Component Magnet", slot: "utility", difficulty: 3, n: 5, need: { cats: ["core", "body"], count: 1 }, species: { names: ["Worker Ant", "Honeybee"], count: 1 }, desc: "Passively drags loose components toward your ship from a wide radius." },
+  { id: "magnet", name: "Component Magnet", slot: "utility", difficulty: 3, n: 5, need: { cats: ["core", "body"], count: 1 }, species: { names: ["Worker Ant", "Honeybee"], count: 1 }, desc: "Passively drags loose components toward your craft from a wide radius." },
 
   /* ---------------- active abilities (Z / X / C / V / F) ---------------- */
   { id: "ab_emp", name: "EMP Burst", slot: "ability", difficulty: 3, n: 5, need: { cats: ["core", "shield"], count: 1 }, species: { names: ["Cicada", "Firefly"], count: 1 }, desc: "Discharges an electromagnetic ring that stuns every enemy around you." },
@@ -268,6 +306,8 @@ export interface SaveData {
   equip: Equip;
   abilitySlots: ActiveAbilitySlot[];
   autoSell: boolean;
+  /** crafted weapons fire themselves when an enemy is in range (toggle with B) */
+  autoFire: boolean;
 }
 
 export function newSave(): SaveData {
@@ -275,7 +315,7 @@ export function newSave(): SaveData {
     v: 2, ts: Date.now(), name: "Pilot-" + Math.floor(1000 + Math.random() * 9000),
     credits: 60, earned: 0, kills: 0, seq: 1, upgrades: {}, inventory: [], crafted: [],
     equip: { weapon: [null, null, null], shield: null, armor: null, optics: null, utility: null },
-    abilitySlots: [null, null, null, null, null], autoSell: false,
+    abilitySlots: [null, null, null, null, null], autoSell: false, autoFire: true,
   };
 }
 
@@ -289,11 +329,57 @@ export function migrate(raw: unknown): SaveData {
     ...r,
     v: 2,
     upgrades: { ...(r.upgrades ?? {}) },
-    inventory: Array.isArray(r.inventory) ? r.inventory : [],
+    inventory: Array.isArray(r.inventory)
+      ? r.inventory.map((c) => (c && c.species === "World Serpent" ? { ...c, species: "Snake" } : c))
+      : [],
     crafted: Array.isArray(r.crafted) ? r.crafted : [],
     equip: { ...d.equip, ...(r.equip ?? {}), weapon: [0, 1, 2].map((i) => r.equip?.weapon?.[i] ?? null) },
     abilitySlots,
+    autoFire: r.autoFire ?? true,
   };
+}
+
+/* ---------- shareable save codes ----------
+ * Format: NH1-<checksum base36>-<base64 of the UTF-8 JSON save>.
+ * Codes are self-contained: paste one into another browser to resume exactly.
+ * The checksum is a 31x rolling hash mod 1,000,003; corruption fails closed.
+ */
+export const SAVE_CODE_PREFIX = "NH1";
+
+function saveHash(s: string) {
+  let x = 7;
+  for (let i = 0; i < s.length; i++) x = (x * 31 + s.charCodeAt(i)) % 1_000_003;
+  return x;
+}
+function b64encode(s: string) {
+  const bytes = new TextEncoder().encode(s);
+  let bin = "";
+  for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+  return btoa(bin);
+}
+function b64decode(b: string) {
+  const bin = atob(b);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return new TextDecoder().decode(bytes);
+}
+
+export function encodeSave(save: SaveData): string {
+  const json = JSON.stringify(save);
+  return `${SAVE_CODE_PREFIX}-${saveHash(json).toString(36)}-${b64encode(json)}`;
+}
+
+export function decodeSave(code: string): SaveData | null {
+  try {
+    const parts = code.trim().replace(/\s+/g, "").split("-");
+    if (parts.length !== 3 || parts[0] !== SAVE_CODE_PREFIX) return null;
+    const json = b64decode(parts[2]);
+    if (saveHash(json).toString(36) !== parts[1]) return null;
+    const raw = JSON.parse(json) as unknown;
+    return migrate(raw);
+  } catch {
+    return null;
+  }
 }
 
 /* ---------- derived stats ---------- */

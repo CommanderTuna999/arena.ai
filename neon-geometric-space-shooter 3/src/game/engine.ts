@@ -1,13 +1,32 @@
 import { TAU, angDiff, clamp, distToPoly, hash2, lerp, mulberry32, pointInPoly } from "./math";
 import {
-  ABILITY_BY_ID, BASE, DMG_MUL, KIND_CAT, RECIPE_BY_ID, SHIP_R, UPGRADES, WORLD_R, compMass, compValue, computeStats, craftEfficiency,
+  ABILITY_BY_ID, BASE, DMG_MUL, HP_MUL, KIND_CAT, RECIPE_BY_ID, SHIP_R, UPGRADES, WORLD_R, compMass, compValue, computeStats, craftEfficiency,
   recipeProblem, upgradeCost, zoneTier, type Comp, type PartKind, type SaveData, type Slot, type Stats,
 } from "./data";
 import { SPECIES_LIST, buildEnemy, type AbilityDef, type Group, type Part, type ProjType, type SpeciesDef } from "./enemies";
 
+/* ---------------------------------------------------------------------------
+ * COMBAT & WORLD REFERENCE (live constants)
+ *   Base cannon      : st.dmg per shot, rate 4 + 0.7/level, 1 + barrels shots.
+ *   Crafted weapons  : fully automatic; damage = st.dmg * multiplier * efficiency.
+ *                      B / AUTO pill toggles the rack (persisted in save.autoFire).
+ *   Precision missiles: right-click marks a part; kind-4 bullets ignore all collision
+ *                      and hit that part for 3.1x base damage. Re-marking resets reload.
+ *   Plating          : tier 3/4/5 get 1/2/3 shells of 5*HP_MUL[tier] HP. Kinetic and
+ *                      explosive hits deal 30%; laser and shock deal 0 and are stopped.
+ *   Spawning         : densities [0.42,0.36,0.3,0.24,0.19,0.15] per chunk, cap 18,
+ *                      chunk pass every 1.3s, no spawns within 1,200u of the player.
+ *   Body wave        : parts tagged seg >= 0 shift laterally by
+ *                      amp * sin(walk*speed - seg*k); used for centipede and snake.
+ * ------------------------------------------------------------------------- */
 export const CH = 1500;
 export const N_ROPE = 22;
-const DENS = [1.8, 1.5, 1.2, 0.9, 0.7, 0.5];
+/* spawn pressure: enemies per 1500u chunk, by zone tier.
+ * Lowered ~4x from the original build and hard-capped, so the world has room. */
+const DENS = [0.42, 0.36, 0.3, 0.24, 0.19, 0.15];
+const MAX_ENEMIES = 18;
+/** shells shave 70% off kinetic hits; lasers and shockwaves do nothing to them */
+const SHELL_TAKE = 0.3;
 const BOSS_SP = SPECIES_LIST.findIndex((s) => s.boss);
 const KIND_DROP: Record<PartKind, number> = { core: 1, segment: 1, armor: 0.8, leg: 0.6, arm: 1, wing: 0.6, weapon: 1.4, shield: 1.4, spike: 0.35 };
 
@@ -26,11 +45,23 @@ export interface Enemy {
   tags: Record<string, number>; shields: ShieldInfo[]; weaponParts: number[]; shieldParts: number[];
   dist: number; contactCd: number; hasChange: boolean;
   dot: number; dotT: number; melt: number; slowT: number; slowF: number;
+  /** outer armour plating, one entry per layer (epic = 1, legendary = 2, mythical = 3) */
+  shells: ShellLayer[];
+  /** plating hit flash timer */
+  shellHit: number;
+  /** radius of the plating shell */
+  shellR: number;
+  /** serpentine body wave (null for ordinary species) */
+  bend: { amp: number; k: number; speed: number } | null;
 }
+export interface ShellLayer { hp: number; max: number }
+export type DmgSrc = "kinetic" | "laser" | "shock" | "explosive" | "missile" | "dot";
 export interface Bullet {
   x: number; y: number; vx: number; vy: number; life: number; dmg: number; pierce: number; hit: number[];
-  kind: 0 | 1 | 2 | 3; target: Enemy | null; crit: boolean;
+  kind: 0 | 1 | 2 | 3 | 4; target: Enemy | null; crit: boolean;
   dot?: number; melt?: number; split?: number; flak?: boolean;
+  /** kind 4 (precision missile): exact enemy piece it was fired at */
+  lockE?: Enemy; lockP?: Part;
 }
 export interface EProj {
   x: number; y: number; vx: number; vy: number; life: number; dmg: number; r: number; hue: number; type: ProjType;
@@ -73,7 +104,7 @@ export interface Hud {
   harp: { state: number; load: number; hp: number }[]; toasts: Toast[]; nearBase: boolean;
   tp: { has: boolean; ch: number; cd: number; max: number }; dead: boolean; respawn: number; x: number; y: number;
   online: number; zoomOn: boolean; inv: number; cargo: number; hold: number; rev: number; zoom: number; fps: number;
-  abilities: HudAbility[]; admin: AdminState; lock: boolean; overdrive: boolean;
+  abilities: HudAbility[]; admin: AdminState; lock: boolean; autoFire: boolean; overdrive: boolean;
 }
 
 export function biomeWeights(x: number, y: number): number[] {
@@ -148,6 +179,7 @@ export class Game {
   drones: Drone[] = [];
   wells: Well[] = [];
   admin: AdminState = { on: false, credits: false, health: false, damage: false, components: false };
+  autoFire = true;
   private bossT = 12;
   aCd: number[] = [0, 0, 0, 0, 0];
   private idc = 1;
@@ -174,6 +206,7 @@ export class Game {
       flash: 0, thornCd: 0, tpT: 0, tpCd: 0, tow: 1, thrust: 0,
       barrier: 0, barrierMax: 0, barrierT: 0, overT: 0, nullCd: 0,
     };
+    this.autoFire = save.autoFire !== false;
     this.syncHarpoons();
     this.cam.x = this.player.x;
     this.cam.y = this.player.y;
@@ -370,13 +403,49 @@ export class Game {
   keyDown(code: string) {
     this.input.keys.add(code);
     if (code === "KeyT") this.toggleRecall();
+    if (code === "KeyB") this.toggleAutoFire();
     const ai = (["KeyZ", "KeyX", "KeyC", "KeyV", "KeyF"] as const).indexOf(code as never);
     if (ai >= 0) this.useAbility(ai);
   }
   keyUp(code: string) { this.input.keys.delete(code); }
   mouseDown(btn: number) {
     if (btn === 0) this.input.lmb = true;
-    if (btn === 2) this.fireHarpoon();
+    if (btn !== 2) return;
+    // with a missile launcher fitted, right-click marks a precise target.
+    // hovering empty space (or no launcher) still fires the harpoon.
+    if (this.hasHoming() && this.markTarget()) return;
+    this.fireHarpoon();
+  }
+  toggleAutoFire() {
+    this.autoFire = !this.autoFire;
+    this.save.autoFire = this.autoFire;
+    this.markDirty();
+    this.toast(this.autoFire ? "Auto-weapons ONLINE" : "Auto-weapons OFFLINE", this.autoFire ? "#7dffb4" : "#ffb36b");
+    this.rev++;
+  }
+  private hasHoming() { return this.stats.weapons.some((w) => w.rid === "homing"); }
+  /** mark the enemy piece under the cursor; returns false if the cursor is empty */
+  private markTarget() {
+    const [mx, my] = this.mouseWorld();
+    for (const e of this.enemies) {
+      if (e.dead) continue;
+      const dx = mx - e.x, dy = my - e.y;
+      if (dx * dx + dy * dy > (e.radius + 30) * (e.radius + 30)) continue;
+      const ca = Math.cos(e.a), sa = Math.sin(e.a);
+      const part = this.partAt(e, dx * ca + dy * sa, -dx * sa + dy * ca);
+      if (!part) continue;
+      const changed = !this.lock || this.lock.e !== e || this.lock.part !== part;
+      this.lock = { e, part, t: 0 };
+      if (changed) {
+        // re-marking resets the launcher reload
+        this.stats.weapons.forEach((w, i) => { if (w.rid === "homing") this.player.wCd[i] = 1.7 / (0.7 + 0.3 * w.eff); });
+        const [wx, wy] = this.partWorld(e, part);
+        for (let k = 0; k < 3; k++) this.ringFx(wx, wy, 34 + k * 14, "#ffb04d", 260);
+        this.toast("Target marked", "#ffb04d");
+      }
+      return true;
+    }
+    return false;
   }
   mouseUp(btn: number) { if (btn === 0) this.input.lmb = false; }
   wheel(dy: number) {
@@ -409,7 +478,7 @@ export class Game {
         for (const e of this.enemies) {
           if (Math.hypot(e.x - p.x, e.y - p.y) < R + e.radius) {
             e.stun = Math.max(e.stun, dur * (0.7 + 0.3 * eff));
-            this.damagePart(e, e.parts[e.coreId].alive ? e.parts[e.coreId] : e.parts[0], st.dmg * 1.5 * eff, 0, 0);
+            if (!e.shells.length) this.damagePart(e, e.parts[e.coreId].alive ? e.parts[e.coreId] : e.parts[0], st.dmg * 1.5 * eff, 0, 0, "shock");
           }
         }
         this.ringFx(p.x, p.y, R, "#7df9ff", 900);
@@ -478,7 +547,7 @@ export class Game {
             e.stun = Math.max(e.stun, 0.5);
           }
         }
-        this.areaDamage(p.x, p.y, R, st.dmg * 5 * eff * this.dmgMul(), null);
+        this.areaDamage(p.x, p.y, R, st.dmg * 5 * eff * this.dmgMul(), null, "shock");
         this.ringFx(p.x, p.y, R, "#ff6b81", 1000);
         this.burst(p.x, p.y, "#ff6b81", 30, 8, 520);
         this.shake = Math.max(this.shake, 14);
@@ -718,6 +787,11 @@ export class Game {
       this.addParticle(x, y, Math.cos(a) * s, Math.sin(a) * s, color, size * (0.5 + Math.random()), 0.5 + Math.random() * 0.7, Math.floor(Math.random() * 5), Math.random() < 0.5);
     }
   }
+  /** lateral offset of a body segment in enemy-local space (travelling wave) */
+  private bendOff(e: Enemy, p: Part) {
+    if (!e.bend || p.seg < 0) return 0;
+    return e.bend.amp * Math.sin(e.walk * e.bend.speed - p.seg * e.bend.k);
+  }
   private partWorld(e: Enemy, p: Part): [number, number] {
     let x = p.cx, y = p.cy;
     if (p.g >= 0) {
@@ -726,9 +800,28 @@ export class Game {
       const dx = x - g.px, dy = y - g.py;
       x = g.px + dx * c - dy * s; y = g.py + dx * s + dy * c;
     }
+    y += this.bendOff(e, p);
     const ca = Math.cos(e.a), sa = Math.sin(e.a);
     this._w[0] = e.x + x * ca - y * sa; this._w[1] = e.y + x * sa + y * ca;
     return this._w;
+  }
+  /** plating takes the hit instead of the body. Returns true if it absorbed it. */
+  private shellHit(e: Enemy, dmg: number, src: DmgSrc) {
+    const layer = e.shells[e.shells.length - 1];
+    if (!layer) return false;
+    const dealt = src === "laser" || src === "shock" ? 0 : dmg * SHELL_TAKE;
+    layer.hp -= dealt;
+    e.shellHit = 0.12;
+    e.aggro = true;
+    if (layer.hp <= 0) {
+      e.shells.pop();
+      const n = e.shells.length;
+      this.ringFx(e.x, e.y, e.shellR + 10, "#c3ccd6", 520);
+      this.burst(e.x, e.y, "#9aa7b4", 16, 5, 300);
+      this.shake = Math.max(this.shake, 6);
+      this.toast(n ? "Plating cracked — another layer" : "Plating stripped", "#c3ccd6");
+    }
+    return true;
   }
   ringFx(x: number, y: number, max: number, color: string, speed = 600) {
     this.rings.push({ x, y, r: 4, max, speed, dmg: 0, hit: true, color, hurts: false });
@@ -758,6 +851,9 @@ export class Game {
       walk: Math.random() * 6, dead: false, eDmg: 8 * DMG_MUL[tier], keep: spd.keep + b.radius * 0.9, strafe: Math.random() < 0.5 ? 1 : -1, strafeT: 2,
       tags, shields: [], weaponParts, shieldParts, dist: 9999, contactCd: 0, hasChange: false,
       dot: 0, dotT: 0, melt: 0, slowT: 0, slowF: 1,
+      shells: Array.from({ length: tier >= 3 && !spd.bodyWave ? tier - 2 : 0 }, () => ({ hp: 5 * HP_MUL[tier], max: 5 * HP_MUL[tier] })),
+      shellHit: 0, shellR: b.radius + 10,
+      bend: spd.bodyWave ? { amp: spd.bodyWave.amp * b.size, k: spd.bodyWave.k, speed: spd.bodyWave.speed } : null,
     };
   }
   private spawnChunk(cx: number, cy: number, key: string) {
@@ -765,9 +861,11 @@ export class Game {
     const ccx = (cx + 0.5) * CH, ccy = (cy + 0.5) * CH;
     if (Math.hypot(ccx, ccy) > WORLD_R + 300) return;
     const zt = zoneTier(Math.hypot(ccx, ccy));
-    let n = Math.floor(DENS[zt]);
-    if (rng() < DENS[zt] - n) n++;
+    const room = this.enemies.length < MAX_ENEMIES;
+    let n = room ? Math.floor(DENS[zt]) : 0;
+    if (room && rng() < DENS[zt] - n) n++;
     for (let i = 0; i < n; i++) {
+      if (this.enemies.length >= MAX_ENEMIES) break;
       const x = cx * CH + rng() * CH, y = cy * CH + rng() * CH;
       const d = Math.hypot(x, y);
       const rolls = [rng(), rng(), rng(), rng()];
@@ -780,17 +878,19 @@ export class Game {
       const spi = pickSpecies(x, y, () => rolls[1], z2);
       const pack = SPECIES_LIST[spi].pack[tier];
       for (let k = 0; k < pack; k++) {
+        if (this.enemies.length >= MAX_ENEMIES) break;
         const ox = k === 0 ? 0 : Math.cos(k * 2.4) * (80 + k * 40), oy = k === 0 ? 0 : Math.sin(k * 2.4) * (80 + k * 40);
         this.enemies.push(this.makeEnemy(spi, tier, x + ox, y + oy, key, hash2(cx + k, cy + i, 5)));
       }
     }
-    // the World Serpent prowls the mythical core: at most one at a time
+    // a snake prowls the mythical core: at most one at a time
     if (zt >= 5 && BOSS_SP >= 0 && rng() < 0.55 && !this.bossAlive()) {
       const bx = cx * CH + rng() * CH, by = cy * CH + rng() * CH;
       const boss = this.makeEnemy(BOSS_SP, 5, bx, by, key, hash2(cx, cy, 999));
       boss.aggro = true;
       this.enemies.push(boss);
-      this.toast("THE WORLD SERPENT STIRS", "#c45cff");
+      this.bossT = 120;
+      this.toast("A SNAKE EMERGES", "#c45cff");
       this.shake = Math.max(this.shake, 20);
     }
   }
@@ -823,6 +923,7 @@ export class Game {
           x = g.px + dx * c - dy * s; y = g.py + dx * s + dy * c;
         }
       }
+      if (p.seg >= 0 && e.bend) y -= this.bendOff(e, p);
       const ddx = x - p.cx, ddy = y - p.cy;
       if (ddx * ddx + ddy * ddy > p.r * p.r) continue;
       if (pointInPoly(x, y, p.poly)) return p;
@@ -834,13 +935,15 @@ export class Game {
     for (const p of e.parts) { max += p.maxHp; if (p.alive) cur += p.hp; }
     return max > 0 ? cur / max : 0;
   }
-  damagePart(e: Enemy, p: Part, dmg: number, wx: number, wy: number) {
+  damagePart(e: Enemy, p: Part, dmg: number, wx: number, wy: number, src: DmgSrc = "kinetic") {
+    void src;
     p.hp -= dmg; p.hurt = 0.1; p.barT = 3.5; e.barT = 4;
     e.aggro = true;
     if (wx !== 0 || wy !== 0) for (let i = 0; i < 2; i++) this.addParticle(wx, wy, (Math.random() - 0.5) * 220, (Math.random() - 0.5) * 220, p.stroke, 2.5, 0.25, Math.floor(Math.random() * 3));
     if (p.hp <= 0 && p.alive) this.breakPart(e, p, true);
   }
   private refreshMobility(e: Enemy) {
+    if (e.spd.id === "serpent") { e.mobility = 1; return; } // snakes have no legs to lose
     let legs = 0, wings = 0;
     for (const p of e.parts) { if (!p.alive) continue; if (p.kind === "leg") legs++; else if (p.kind === "wing") wings++; }
     if (e.spd.flying) {
@@ -889,6 +992,7 @@ export class Game {
       for (let i = 0; i < p.poly.length; i += 2) {
         let x = p.poly[i], y = p.poly[i + 1];
         if (g) { const c = Math.cos(g.ang), s = Math.sin(g.ang); const dx = x - g.px, dy = y - g.py; x = g.px + dx * c - dy * s; y = g.py + dx * s + dy * c; }
+        y += this.bendOff(e, p);
         poly.push(e.x + x * ca - y * sa, e.y + x * sa + y * ca);
       }
       worldPolys.push(poly);
@@ -973,11 +1077,12 @@ export class Game {
     this.areaDamage(x, y, R, p.maxHp * 0.5, p);
     this.expDepth--;
   }
-  areaDamage(x: number, y: number, R: number, dmg: number, skip: Part | null) {
+  areaDamage(x: number, y: number, R: number, dmg: number, skip: Part | null, src: DmgSrc = "explosive") {
     for (const e of this.enemies) {
       if (e.dead) continue;
       const dx = e.x - x, dy = e.y - y;
       if (dx * dx + dy * dy > (R + e.radius) * (R + e.radius)) continue;
+      if (e.shells.length && Math.hypot(dx, dy) < R + e.shellR) { this.shellHit(e, dmg, src); continue; }
       for (const q of e.parts) {
         if (!q.alive || q === skip) continue;
         const w = this.partWorld(e, q);
@@ -1028,7 +1133,7 @@ export class Game {
     this.ringFx(p.x, p.y, 380, "#7df9ff", 800);
     this.shake = 20;
     for (const h of this.harpoons) if (h.state !== 0) { this.retract(h); }
-    this.toast("Ship destroyed - rebuilding at base...", "#ff6b81");
+    this.toast("Core destroyed — reforming at the nest...", "#ff6b81");
   }
   private respawnPlayer() {
     const p = this.player;
@@ -1403,6 +1508,7 @@ export class Game {
       if (!q.alive || q.kind === "wing" || q.kind === "leg") continue;
       let x = lx, y = ly;
       if (q.g >= 0) { const g = e.groups[q.g]; const c = Math.cos(-g.ang), s = Math.sin(-g.ang); const ddx = lx - g.px, ddy = ly - g.py; x = g.px + ddx * c - ddy * s; y = g.py + ddx * s + ddy * c; }
+      if (q.seg >= 0 && e.bend) y -= this.bendOff(e, q);
       if (Math.hypot(x - q.cx, y - q.cy) > q.r + SHIP_R + extra) continue;
       if (distToPoly(x, y, q.poly) < SHIP_R + extra) return true;
     }
@@ -1425,7 +1531,7 @@ export class Game {
     }
     const safe = this.inSafe() || p.dead;
     // higher tiers refuse to let you disengage: bigger aggro radius and a much longer leash
-    const aggroR = (650 + e.radius * 1.2) * (1 + 0.12 * e.tier);
+    const aggroR = (650 + Math.min(e.radius, 700) * 1.2) * (1 + 0.12 * e.tier);
     if (!e.aggro) { if (!safe && dist < aggroR) e.aggro = true; }
     else if (safe || dist > aggroR * (2.4 + 0.6 * e.tier)) e.aggro = false;
     for (let i = 0; i < e.abilCd.length; i++) if (e.abilCd[i] > 0) e.abilCd[i] -= dt;
@@ -1499,7 +1605,8 @@ export class Game {
       this.runAct(e, dt, toP, dist);
     } else {
       if (e.aggro && !p.dead) {
-        faceTo = toP;
+        const weave = e.bend ? Math.sin(this.t * (e.spd.boss ? 1.7 : 2.6) + e.id) * (e.spd.boss ? 0.22 : 0.12) : 0;
+        faceTo = toP + weave;
         const nx = dx / (dist || 1), ny = dy / (dist || 1);
         if (e.spd.ranged) {
           e.strafeT -= dt;
@@ -1563,7 +1670,7 @@ export class Game {
       boss.aggro = true;
       this.enemies.push(boss);
       this.bossT = 120;
-      this.toast("THE WORLD SERPENT STIRS", "#c45cff");
+      this.toast("A SNAKE EMERGES", "#c45cff");
       this.shake = Math.max(this.shake, 16);
     }
     for (const e of this.enemies) {
@@ -1580,7 +1687,7 @@ export class Game {
       for (let j = i + 1; j < n; j++) {
         const b = this.enemies[j];
         const dx = b.x - a.x, dy = b.y - a.y;
-        const min = (a.radius + b.radius) * 0.55;
+        const min = (Math.min(a.radius, 420) + Math.min(b.radius, 420)) * 0.55;
         const d2 = dx * dx + dy * dy;
         if (d2 < min * min && d2 > 0.01) {
           const d = Math.sqrt(d2);
@@ -1608,8 +1715,12 @@ export class Game {
     for (const e of this.enemies) {
       if (e.dead) continue;
       const dx = b.x - e.x, dy = b.y - e.y;
-      const rr = e.radius + 12;
+      const rr = Math.max(e.radius, e.shellR) + 12;
       if (dx * dx + dy * dy > rr * rr) continue;
+      if (e.shells.length && b.kind !== 4 && dx * dx + dy * dy < e.shellR * e.shellR) {
+        this.shellHit(e, b.dmg, b.kind === 3 ? "explosive" : "kinetic");
+        return true;
+      }
       for (const s of e.shields) {
         if (s.part.alive && s.part.shieldHp > 0) {
           const sx = b.x - s.x, sy = b.y - s.y;
@@ -1658,6 +1769,25 @@ export class Game {
     for (let i = this.bullets.length - 1; i >= 0; i--) {
       const b = this.bullets[i];
       b.life -= dt;
+      if (b.kind === 4) {
+        const le = b.lockE, lq = b.lockP;
+        if (!le || !lq || le.dead || !lq.alive || !this.enemies.includes(le)) {
+          b.kind = 1; b.lockE = undefined; b.lockP = undefined; b.target = null;
+        } else {
+          const w = this.partWorld(le, lq);
+          const want = Math.atan2(w[1] - b.y, w[0] - b.x), cur = Math.atan2(b.vy, b.vx);
+          const na = cur + clamp(angDiff(cur, want), -9 * dt, 9 * dt);
+          const sp = Math.min(1500, Math.hypot(b.vx, b.vy) + 1000 * dt);
+          b.vx = Math.cos(na) * sp; b.vy = Math.sin(na) * sp;
+          if (Math.hypot(w[0] - b.x, w[1] - b.y) < lq.r * 0.55 + 10) {
+            this.damagePart(le, lq, b.dmg, w[0], w[1], "missile");
+            this.areaDamage(w[0], w[1], 74, b.dmg * 0.35, lq, "explosive");
+            this.ringFx(w[0], w[1], 74, "#ffb04d", 520);
+            this.burst(w[0], w[1], "#ffb04d", 12, 5, 300);
+            b.life = 0;
+          }
+        }
+      }
       if (b.kind === 1) {
         if (!b.target || b.target.dead) b.target = this.nearestEnemy(b.x, b.y, 1100);
         if (b.target) {
@@ -1672,7 +1802,7 @@ export class Game {
       let dead = b.life <= 0;
       for (let s = 0; s < steps && !dead; s++) {
         b.x += (b.vx * dt) / steps; b.y += (b.vy * dt) / steps;
-        if (this.tryHit(b)) dead = true;
+        if (b.kind !== 4 && this.tryHit(b)) dead = true;
       }
       if (dead) {
         if (b.split && b.split > 0) {
@@ -1691,7 +1821,7 @@ export class Game {
     let best: Enemy | null = null, bd = range;
     for (const e of this.enemies) {
       if (e.dead) continue;
-      const d = Math.hypot(e.x - x, e.y - y) - e.radius * 0.6;
+      const d = Math.hypot(e.x - x, e.y - y) - Math.min(e.radius, 500) * 0.6;
       if (d < bd) { bd = d; best = e; }
     }
     return best;
@@ -1708,6 +1838,11 @@ export class Game {
       for (const e of cands) {
         const dx = bx - e.x, dy = by - e.y;
         if (dx * dx + dy * dy > (e.radius + 6) * (e.radius + 6)) continue;
+        if (e.shells.length && (bx - e.x) * (bx - e.x) + (by - e.y) * (by - e.y) < e.shellR * e.shellR) {
+          this.shellHit(e, dmg, "laser");
+          endLen = d;
+          break outer;
+        }
         if (!bypass) for (const s of e.shields) {
           if (s.part.alive && s.part.shieldHp > 0 && (bx - s.x) ** 2 + (by - s.y) ** 2 < s.r * s.r) {
             s.part.shieldHp -= dmg; s.part.shieldHit = 3;
@@ -1737,7 +1872,6 @@ export class Game {
     if (p.dead) return;
     const want = this.input.lmb || this.input.keys.has("Space");
     p.fireCd -= dt;
-    const [mx, my] = this.mouseWorld();
     const base = p.a;
     if (want && p.fireCd <= 0 && !this.inSafe()) {
       p.fireCd = 1 / (st.rate * (p.overT > 0 ? 1.8 : 1));
@@ -1749,7 +1883,7 @@ export class Game {
       }
       p.vx -= Math.cos(base) * 6; p.vy -= Math.sin(base) * 6;
     }
-    this.fireWeapons(dt, base, want, mx, my);
+    this.fireWeapons(dt, base);
   }
 
   /* ---------------- crafted weapon firing systems ---------------- */
@@ -1757,7 +1891,7 @@ export class Game {
     let best: Enemy | null = null, bd = range;
     for (const e of this.enemies) {
       if (e.dead || skip.has(e.id)) continue;
-      const d = Math.hypot(e.x - x, e.y - y) - e.radius * 0.6;
+      const d = Math.hypot(e.x - x, e.y - y) - Math.min(e.radius, 500) * 0.6;
       if (d < bd) { bd = d; best = e; }
     }
     return best;
@@ -1767,6 +1901,7 @@ export class Game {
       if (e.dead) continue;
       if (Math.hypot(e.x - x, e.y - y) > R + e.radius) continue;
       e.stun = Math.max(e.stun, stun);
+      if (e.shells.length) continue; // plating shrugs off the electrical burn
       const alive = e.parts.filter((q) => q.alive);
       const q = alive[Math.floor(Math.random() * alive.length)];
       if (q) this.damagePart(e, q, dmg, 0, 0);
@@ -1775,8 +1910,13 @@ export class Game {
     this.burst(x, y, color, 18, 6, 380);
     this.shake = Math.max(this.shake, 8);
   }
-  private fireWeapons(dt: number, base: number, want: boolean, mx: number, my: number) {
+  /* Every crafted weapon is automatic: it picks its own target and fires when
+   * something is in range. B (or the AUTO button) disables the whole rack.
+   * Damage is always st.dmg (base cannon) * weapon multiplier * efficiency, so
+   * weapon damage scales with the Cannon Damage upgrade and overdrive. */
+  private fireWeapons(dt: number, base: number) {
     const p = this.player, st = this.stats;
+    if (!this.autoFire || p.dead) return;
     if (p.wCd.length < st.weapons.length) p.wCd = [...p.wCd, ...new Array(st.weapons.length - p.wCd.length).fill(0)];
     st.weapons.forEach((w, i) => {
       p.wCd[i] -= dt;
@@ -1790,97 +1930,95 @@ export class Game {
       const shot = (x: number, y: number, ang: number, sp: number, life: number, d: number, kind: Bullet["kind"], extra: Partial<Bullet> = {}) => {
         this.bullets.push({ x, y, vx: Math.cos(ang) * sp, vy: Math.sin(ang) * sp, life, dmg: d, pierce: 0, hit: [], kind, target: null, crit: false, ...extra });
       };
+      const aim = (t: Enemy) => Math.atan2(t.y - oy, t.x - ox);
       switch (w.rid) {
         case "pulse": {
           const t = this.nearestEnemy(p.x, p.y, 650);
           if (!t) return;
           p.wCd[i] = cd(0.45);
-          const ang = Math.atan2(t.y - oy, t.x - ox);
-          shot(ox, oy, ang, 1100, 0.8, dmg * 0.6 * eff, 0);
+          shot(ox, oy, aim(t), 1100, 0.8, dmg * 0.6 * eff, 0);
           break;
         }
         case "scatter": {
-          if (!want) return;
+          const t = this.nearestEnemy(p.x, p.y, 470);
+          if (!t) return;
           p.wCd[i] = cd(0.75);
-          for (let k = 0; k < 6; k++) {
-            const ang = base + (Math.random() - 0.5) * 0.55;
-            shot(ox, oy, ang, 650 + Math.random() * 250, 0.42, dmg * 0.55 * eff, 2);
-          }
+          const a0 = aim(t);
+          for (let k = 0; k < 6; k++) shot(ox, oy, a0 + (Math.random() - 0.5) * 0.42, 700 + Math.random() * 220, 0.42, dmg * 0.55 * eff, 2);
           break;
         }
         case "missile": {
-          if (!want) return;
+          const t = this.nearestEnemy(p.x, p.y, 1000);
+          if (!t) return;
           p.wCd[i] = cd(1.5);
-          for (let k = 0; k < 2; k++) {
-            const ang = base + (k ? 0.5 : -0.5);
-            shot(ox, oy, ang, 260, 3.2, dmg * 2.2 * eff, 1, { target: this.nearestEnemy(mx, my, 1100) });
-          }
+          for (let k = 0; k < 2; k++) shot(ox, oy, aim(t) + (k ? 0.4 : -0.4), 260, 3.2, dmg * 2.2 * eff, 1, { target: t });
           break;
         }
         case "lance": {
+          const t = this.nearestEnemy(p.x, p.y, 420);
+          if (!t) return;
           p.wCd[i] = cd(0.12);
-          this.beam(p.x, p.y, base, 320 + 80 * eff, dmg * 0.45 * eff, 2 + Math.floor(eff));
+          this.beam(p.x, p.y, aim(t), 320 + 80 * eff, dmg * 0.22 * eff, 2 + Math.floor(eff));
           break;
         }
         case "homing": {
-          if (!want) return;
           const lock = this.lock;
-          if (!lock) {
-            p.wCd[i] = 0.25;
-            return;
-          }
+          if (!lock || lock.e.dead || !lock.part.alive) return;
+          const wpos = this.partWorld(lock.e, lock.part);
           p.wCd[i] = cd(1.7);
-          const ang = Math.atan2(lock.e.y - oy, lock.e.x - ox);
-          shot(ox, oy, ang, 240, 4, dmg * 3.1 * eff, 1, { target: lock.e });
-          this.toast("Lock acquired", "#ffb04d");
+          shot(ox, oy, Math.atan2(wpos[1] - oy, wpos[0] - ox), 360, 4.4, dmg * 3.1 * eff, 4, { lockE: lock.e, lockP: lock.part });
           break;
         }
         case "bypass": {
           const t = this.nearestEnemy(p.x, p.y, 820);
-          if (!want && !t) return;
+          if (!t) return;
           p.wCd[i] = cd(0.1);
-          const ang = t && !want ? Math.atan2(t.y - p.y, t.x - p.x) : base;
-          this.beam(p.x, p.y, ang, 420 + 90 * eff, dmg * 0.5 * eff, 3, true);
+          this.beam(p.x, p.y, aim(t), 420 + 90 * eff, dmg * 0.16 * eff, 3, true);
           break;
         }
         case "hmg": {
-          if (!want) return;
+          const t = this.nearestEnemy(p.x, p.y, 780);
+          if (!t) return;
           p.wCd[i] = cd(0.075);
-          shot(ox, oy, base + (Math.random() - 0.5) * 0.16, 1150, 0.55, dmg * 0.32 * eff, 0);
+          shot(ox, oy, aim(t) + (Math.random() - 0.5) * 0.13, 1150, 0.55, dmg * 0.1 * eff, 0);
           break;
         }
         case "emp": {
+          const t = this.nearestEnemy(p.x, p.y, 640);
+          if (!t) return;
           p.wCd[i] = cd(2.6);
           this.empBlast(p.x, p.y, 620, 1.8, dmg * 1.4 * eff);
           break;
         }
         case "cutter": {
+          const t = this.nearestEnemy(p.x, p.y, 250);
+          if (!t) return;
           p.wCd[i] = cd(0.18);
-          this.beam(p.x, p.y, base, 175 + 20 * eff, dmg * 1.1 * eff, 1 + Math.floor(eff));
+          this.beam(p.x, p.y, aim(t), 175 + 20 * eff, dmg * 1.1 * eff, 1 + Math.floor(eff));
           break;
         }
         case "acid": {
-          if (!want) return;
+          const t = this.nearestEnemy(p.x, p.y, 460);
+          if (!t) return;
           p.wCd[i] = cd(0.16);
-          for (let k = 0; k < 3; k++) {
-            const ang = base + (k - 1) * 0.14 + (Math.random() - 0.5) * 0.1;
-            shot(ox, oy, ang, 520 + Math.random() * 90, 0.5, dmg * 0.3 * eff, 2, { melt: 0.32, dot: 1.6 * eff });
-          }
+          const a0 = aim(t);
+          for (let k = 0; k < 3; k++) shot(ox, oy, a0 + (k - 1) * 0.11 + (Math.random() - 0.5) * 0.08, 540 + Math.random() * 80, 0.5, dmg * 0.3 * eff, 2, { melt: 0.32, dot: 1.6 * eff });
           break;
         }
         case "chain": {
-          p.wCd[i] = cd(0.8);
           let cur = this.nearestEnemy(p.x, p.y, 900);
-          if (!cur) { p.wCd[i] = 0.15; return; }
+          if (!cur) return;
+          p.wCd[i] = cd(0.8);
           const seen = new Set<number>();
           let sx = p.x, sy = p.y;
           for (let k = 0; k < 5 && cur; k++) {
+            if (cur.shells.length) { seen.add(cur.id); cur = this.nearestEnemyExcept(sx, sy, 520, seen); continue; }
             const alive = cur.parts.filter((q) => q.alive);
             const q = alive[Math.floor(Math.random() * alive.length)];
             if (!q) break;
             const wq = this.partWorld(cur, q);
             this.beams.push({ x1: sx, y1: sy, x2: wq[0], y2: wq[1], life: 0.12 });
-            this.damagePart(cur, q, dmg * 1.6 * eff * Math.pow(0.75, k), wq[0], wq[1]);
+            this.damagePart(cur, q, dmg * 1.6 * eff * Math.pow(0.75, k), wq[0], wq[1], "shock");
             sx = wq[0]; sy = wq[1];
             seen.add(cur.id);
             cur = this.nearestEnemyExcept(sx, sy, 520, seen);
@@ -1888,26 +2026,32 @@ export class Game {
           break;
         }
         case "flak": {
-          if (!want) return;
+          const t = this.nearestEnemy(p.x, p.y, 950);
+          if (!t) return;
           p.wCd[i] = cd(0.9);
-          const d0 = Math.hypot(mx - ox, my - oy);
-          const ang = Math.atan2(my - oy, mx - ox);
-          shot(ox, oy, ang, 620, clamp(d0 / 620, 0.15, 1.4), dmg * 1.3 * eff, 3, { flak: true });
+          const d0 = Math.hypot(t.x - ox, t.y - oy);
+          shot(ox, oy, aim(t), 620, clamp(d0 / 620, 0.15, 1.4), dmg * 1.3 * eff, 3, { flak: true });
           break;
         }
         case "rail": {
+          const t = this.nearestEnemy(p.x, p.y, 1400);
+          if (!t) return;
           p.wCd[i] = cd(1.4);
-          this.beam(p.x, p.y, base, 1500, dmg * 2.4 * eff, 12);
+          this.beam(p.x, p.y, aim(t), 1500, dmg * 2.4 * eff, 12, true);
           this.shake = Math.max(this.shake, 5);
           break;
         }
         case "gravity": {
+          const t = this.nearestEnemy(p.x, p.y, 900);
+          if (!t) return;
           p.wCd[i] = cd(3.2);
-          const [gx, gy] = clampWorld(mx, my);
+          const [gx, gy] = clampWorld(t.x, t.y);
           this.wells.push({ x: gx, y: gy, life: 1.15, max: 1.15, dmg: dmg * 2.8 * eff, r: 230 });
           break;
         }
         case "mines": {
+          const t = this.nearestEnemy(p.x, p.y, 900);
+          if (!t) return;
           p.wCd[i] = cd(1.1);
           const ang = base + Math.PI;
           this.mines.push({ x: p.x + Math.cos(ang) * 22, y: p.y + Math.sin(ang) * 22, vx: Math.cos(ang) * 160, vy: Math.sin(ang) * 160, arm: 0.7, life: 26, dmg: dmg * 2.5 * eff, r: 150 });
@@ -1916,30 +2060,36 @@ export class Game {
         case "drones":
           break;
         case "venom": {
-          if (!want) return;
+          const t = this.nearestEnemy(p.x, p.y, 700);
+          if (!t) return;
           p.wCd[i] = cd(0.35);
-          for (let k = 0; k < 2; k++) shot(ox, oy, base + (k ? 0.05 : -0.05), 1000, 0.75, dmg * 0.45 * eff, 0, { dot: 3.2 * eff });
+          const a0 = aim(t);
+          for (let k = 0; k < 2; k++) shot(ox, oy, a0 + (k ? 0.05 : -0.05), 1000, 0.75, dmg * 0.45 * eff, 0, { dot: 3.2 * eff });
           break;
         }
         case "sonic": {
+          const t = this.nearestEnemy(p.x, p.y, 600);
+          if (!t) return;
           p.wCd[i] = cd(1.6);
           for (const e of this.enemies) {
             if (e.dead) continue;
-            const d = Math.hypot(e.x - p.x, e.y - p.y);
-            if (d > 540 + e.radius) continue;
+            const dd = Math.hypot(e.x - p.x, e.y - p.y);
+            if (dd > 540 + e.radius) continue;
             if (Math.abs(angDiff(p.a, Math.atan2(e.y - p.y, e.x - p.x))) > 0.8) continue;
             e.stun = Math.max(e.stun, 1.5);
+            if (e.shells.length) continue;
             const alive = e.parts.filter((q) => q.alive);
             const q = alive[Math.floor(Math.random() * alive.length)];
-            if (q) this.damagePart(e, q, dmg * 0.6 * eff, 0, 0);
+            if (q) this.damagePart(e, q, dmg * 0.6 * eff, 0, 0, "shock");
           }
           this.ringFx(p.x, p.y, 240, "#c0ffff", 700);
           break;
         }
         case "cluster": {
-          if (!want) return;
+          const t = this.nearestEnemy(p.x, p.y, 1100);
+          if (!t) return;
           p.wCd[i] = cd(2.2);
-          shot(ox, oy, base, 280, 3.2, dmg * 1.7 * eff, 1, { target: this.nearestEnemy(mx, my, 1200), split: 4 });
+          shot(ox, oy, aim(t), 280, 3.2, dmg * 1.7 * eff, 1, { target: t, split: 4 });
           break;
         }
         default: break;
@@ -2014,19 +2164,11 @@ export class Game {
     }
   }
   private updateLock(dt: number) {
-    if (this.lock) {
-      this.lock.t -= dt;
-      if (this.lock.t <= 0 || this.lock.e.dead || !this.lock.part.alive) this.lock = null;
-    }
-    if (!this.input.lmb) return;
-    const [mx, my] = this.mouseWorld();
-    for (const e of this.enemies) {
-      if (e.dead) continue;
-      const dx = mx - e.x, dy = my - e.y;
-      if (dx * dx + dy * dy > (e.radius + 24) * (e.radius + 24)) continue;
-      const ca = Math.cos(e.a), sa = Math.sin(e.a);
-      const part = this.partAt(e, dx * ca + dy * sa, -dx * sa + dy * ca);
-      if (part) { this.lock = { e, part, t: 0.8 }; return; }
+    void dt;
+    if (!this.lock) return;
+    if (this.lock.e.dead || !this.lock.part.alive || !this.enemies.includes(this.lock.e)) {
+      this.lock = null;
+      this.toast("Target lost", "#ff8a8a");
     }
   }
 
@@ -2113,7 +2255,7 @@ export class Game {
 
     // world
     this.chunkT -= dt;
-    if (this.chunkT <= 0) { this.chunkT = 0.4; this.manageChunks(); }
+    if (this.chunkT <= 0) { this.chunkT = 1.3; this.manageChunks(); }
     this.updateEnemies(dt);
     this.updateEProjs(dt);
     this.updateBullets(dt);
@@ -2216,6 +2358,7 @@ export class Game {
       }),
       admin: { ...this.admin },
       lock: !!this.lock,
+      autoFire: this.autoFire,
       overdrive: p.overT > 0,
     };
   }

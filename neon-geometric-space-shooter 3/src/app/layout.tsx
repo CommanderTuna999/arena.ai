@@ -3,8 +3,8 @@ import type { ReactNode } from "react";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Neon Hive",
-  description: "A neon open-world ship game: hunt geometric insects, harpoon their parts, craft and upgrade.",
+  title: "Neon Hive — hunt, harvest, evolve",
+  description: "A neon open-world hunt: strip geometric insects of their parts, harvest their plating, craft weapons and abilities, and push toward the thing at the centre of the map.",
 };
 
 export const viewport: Viewport = { width: "device-width", initialScale: 1, themeColor: "#04050c" };
