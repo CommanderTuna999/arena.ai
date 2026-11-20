@@ -166,6 +166,14 @@ export function render(g: Game, ctx: CanvasRenderingContext2D) {
     if (c.x < vx0 - 10 || c.x > vx1 + 10 || c.y < vy0 - 10 || c.y > vy1 + 10) continue;
     const fade = clamp(c.life / 2.5, 0, 1);
     const bob = Math.sin(t * 4 + c.spin) * 1.4;
+    if (z < 0.1) {
+      const px = Math.max(1.2, 3.2 * z / 0.1);
+      const w = px / z;
+      ctx.globalAlpha = fade;
+      ctx.fillStyle = "#ffd24d";
+      ctx.fillRect(c.x - w / 2, c.y + bob - w / 2, w, w);
+      continue;
+    }
     ctx.save(); ctx.translate(c.x, c.y + bob); ctx.rotate(c.spin);
     ctx.globalAlpha = fade;
     ctx.fillStyle = "#ffd24d"; ctx.shadowColor = "#ffd24d"; ctx.shadowBlur = 8;
@@ -244,7 +252,7 @@ export function render(g: Game, ctx: CanvasRenderingContext2D) {
   for (const pr of g.eprojs) {
     if (pr.x < vx0 || pr.x > vx1 || pr.y < vy0 || pr.y > vy1) continue;
     const col = pr.type === "missile" ? "#ffb04d" : `hsl(${pr.hue},100%,68%)`;
-    ctx.shadowColor = col; ctx.shadowBlur = 12;
+    ctx.shadowColor = col; ctx.shadowBlur = pr.r * z > 2 ? 12 : 0;
     ctx.fillStyle = col; ctx.strokeStyle = col;
     ctx.lineWidth = 2 / z;
     const ang = Math.atan2(pr.vy, pr.vx);
@@ -431,6 +439,11 @@ export function render(g: Game, ctx: CanvasRenderingContext2D) {
     ctx.strokeStyle = q.color; ctx.fillStyle = q.color;
     ctx.lineWidth = 1.5 / z;
     const s = q.size * (0.4 + 0.6 * a);
+    if (z < 0.1) {
+      const px = Math.max(0.8, s * z);
+      ctx.fillRect(q.x - px / 2 / z, q.y - px / 2 / z, px / z, px / z);
+      continue;
+    }
     ctx.beginPath();
     switch (q.shape) {
       case 0: for (let i = 0; i < 3; i++) { const an = q.rot + (i / 3) * TAU; const px = q.x + Math.cos(an) * s, py = q.y + Math.sin(an) * s; if (i) ctx.lineTo(px, py); else ctx.moveTo(px, py); } ctx.closePath(); break;
@@ -690,6 +703,16 @@ function drawTurret(g: Game, ctx: CanvasRenderingContext2D, z: number, t: number
 
 function drawComp(g: Game, ctx: CanvasRenderingContext2D, c: LComp, z: number, t: number) {
   const col = RARITIES[c.c.tier].color;
+  /* Far zoom: a clipped, hatched, glowing outline per component is far more
+   * expensive than it is legible. Show a compact rarity-coloured pip instead. */
+  if (z < 0.12) {
+    const r = Math.max(4, c.r * 0.35);
+    ctx.globalAlpha = 0.75;
+    ctx.fillStyle = col + "44"; ctx.strokeStyle = col; ctx.lineWidth = 1.2 / z;
+    ctx.beginPath(); ctx.arc(c.x, c.y, r, 0, TAU); ctx.fill(); ctx.stroke();
+    ctx.globalAlpha = 1;
+    return;
+  }
   const pulse = 0.5 + 0.5 * Math.sin(t * 3 + c.id);
   ctx.save();
   ctx.translate(c.x, c.y); ctx.rotate(c.a);
@@ -1129,7 +1152,44 @@ function drawPlayer(g: Game, ctx: CanvasRenderingContext2D, z: number, t: number
   }
 }
 
+/** appendages stay species-coloured: plating only wraps the solid body */
+const PLATE_KINDS = new Set(["segment", "armor"]);
+
 function drawEnemy(g: Game, ctx: CanvasRenderingContext2D, e: Enemy, z: number, t: number) {
+  const sr = e.radius * z;
+  /* At full optics zoom the viewport holds hundreds of insects; drawing every
+   * limb of a four-pixel enemy is invisible work. Far enemies collapse to a
+   * single species-coloured mote, and mid-range ones drop their plating and
+   * shadows. */
+  if (sr < 3) {
+    ctx.globalAlpha = 0.85;
+    ctx.fillStyle = `hsl(${e.spd.hue},85%,64%)`;
+    ctx.beginPath(); ctx.arc(e.x, e.y, Math.max(1.4, sr * 0.55), 0, TAU); ctx.fill();
+    ctx.globalAlpha = 1;
+    return;
+  }
+  /* Fully zoomed out, every insect becomes a cheap species-coloured marker.
+   * Drawing 70-part mythical bodies at this scale was the single biggest frame
+   * cost, and their overlapping translucent fills turned the centre white. */
+  if (z < 0.1) {
+    const rr = Math.max(2.5, Math.min(sr * 0.6, 26));
+    ctx.globalAlpha = 0.2;
+    ctx.fillStyle = `hsl(${e.spd.hue},80%,55%)`;
+    ctx.beginPath(); ctx.arc(e.x, e.y, rr, 0, TAU); ctx.fill();
+    ctx.globalAlpha = 0.9;
+    ctx.strokeStyle = `hsl(${e.spd.hue},85%,68%)`;
+    ctx.lineWidth = 1.4 / z;
+    ctx.stroke();
+    ctx.fillStyle = `hsl(${e.spd.hue},100%,82%)`;
+    ctx.beginPath(); ctx.arc(e.x, e.y, Math.max(1.2, Math.min(3.5, rr * 0.16)), 0, TAU); ctx.fill();
+    ctx.globalAlpha = 1;
+    return;
+  }
+  let detail = sr < 9 ? 2 : sr < 26 ? 1 : 0;
+  /* Zooming out is a strategic view: cap detail globally so a screen full of
+   * mythical insects costs roughly the same as a screen full of small ones. */
+  if (z < 0.35) detail = Math.max(detail, 1);
+  const simple = detail > 0;
   // telegraphs
   if (e.act && e.act.ph === 0 && e.act.t < e.act.def.wind + 0.01) {
     const d = e.act.def;
@@ -1151,24 +1211,60 @@ function drawEnemy(g: Game, ctx: CanvasRenderingContext2D, e: Enemy, z: number, 
   ctx.translate(e.x, e.y); ctx.rotate(e.a);
   ctx.lineJoin = "round";
   const lw = 1.7 / z;
-  const big = e.radius * z > 60;
-  for (const idx of e.order) {
+  const big = !simple && sr > 60;
+  const stride = Math.max(1, Math.ceil(e.order.length / (detail === 2 ? 7 : 12)));
+  const drawOrder = detail === 0
+    ? e.order
+    : e.order.filter((idx, i) => i % stride === 0 || e.parts[idx].kind === "core" || e.parts[idx].kind === "weapon");
+  const showPlate = !simple && sr > 28 && e.shells.length > 0;
+  const plateStyles: { grow: number; stroke: string; width: number }[] = [];
+  if (showPlate) {
+    /* One rim is enough to read as plating. Stacking a stroke per shell layer
+     * turned dense mythical packs into a solid white web of overlapping lines. */
+    const si = e.shells.length - 1;
+    const f = clamp(e.shells[si].hp / Math.max(1, e.shells[si].max), 0, 1);
+    const hit = e.shellHit > 0 ? 0.15 : 0;
+    plateStyles.push({
+      grow: 3 + si * 4.5,
+      stroke: `hsla(${e.spd.hue},48%,64%,${0.24 + 0.26 * f + hit})`,
+      width: 2 / z,
+    });
+  }
+  const plateMin = e.radius * 0.05;
+  for (const idx of drawOrder) {
     const p = e.parts[idx];
     if (!p.alive) continue;
     const gr = p.g >= 0 ? e.groups[p.g] : null;
     if (gr && gr.ang !== 0) { ctx.save(); ctx.translate(gr.px, gr.py); ctx.rotate(gr.ang); ctx.translate(-gr.px, -gr.py); }
     const bo = bend(e, p);
     if (bo !== 0) { ctx.save(); ctx.translate(0, bo); }
+    /* Plating sits *under* the part it wraps, so species colours stay visible
+     * and small covered plates cannot float on top of wings as grey hexes. */
+    if (plateStyles.length && p.r > plateMin && PLATE_KINDS.has(p.kind)) {
+      for (const st of plateStyles) {
+        const k = 1 + Math.min(st.grow, p.r * 0.45) / Math.max(1, p.r);
+        ctx.beginPath();
+        for (let i = 0; i < p.poly.length; i += 2) {
+          const vx = p.cx + (p.poly[i] - p.cx) * k;
+          const vy = p.cy + (p.poly[i + 1] - p.cy) * k;
+          if (i === 0) ctx.moveTo(vx, vy); else ctx.lineTo(vx, vy);
+        }
+        ctx.closePath();
+        ctx.strokeStyle = st.stroke; ctx.lineWidth = st.width; ctx.stroke();
+      }
+    }
     polyPath(ctx, p.poly);
     const hf = p.hp / p.maxHp;
     const hurt = p.hurt > 0;
     ctx.globalAlpha = 0.62 + 0.38 * hf;
     ctx.fillStyle = hurt ? "rgba(255,255,255,0.85)" : p.fill;
     ctx.fill();
-    if (p.glow) {
+    /* Canvas blur cost explodes with the area it covers. Keep the glow only
+     * on small on-screen pieces; large parts get a cheap echo stroke instead. */
+    const prs = p.r * z;
+    if (!simple && p.glow && prs > 10 && prs < 34) {
       ctx.shadowColor = p.stroke;
-      /* huge parts (giant cores, atlas wings) make canvas blur brutally slow */
-      ctx.shadowBlur = p.r * z > 160 ? 0 : p.kind === "core" ? 22 : 12;
+      ctx.shadowBlur = p.kind === "core" ? 22 : 12;
     }
     else if (big && p.r * z > 14) { ctx.save(); ctx.globalAlpha = 0.12; ctx.strokeStyle = p.stroke; ctx.lineWidth = lw * 3.2; ctx.stroke(); ctx.restore(); }
     ctx.strokeStyle = hurt ? "#ffffff" : p.stroke;
@@ -1190,50 +1286,18 @@ function drawEnemy(g: Game, ctx: CanvasRenderingContext2D, e: Enemy, z: number, 
   }
   ctx.restore();
 
-  // armour plating: solid grey layers wrapped around every part outline
-  if (e.shells.length) {
-    for (let si = e.shells.length - 1; si >= 0; si--) {
-      const f = clamp(e.shells[si].hp / Math.max(1, e.shells[si].max), 0, 1);
-      const hit = e.shellHit > 0 ? 0.25 : 0;
-      const grow = 3 + si * 4.5;
-      ctx.fillStyle = `rgba(138,148,162,${0.3 + 0.2 * f + hit * 0.3})`;
-      ctx.strokeStyle = `rgba(208,216,226,${0.55 + 0.3 * f + hit})`;
-      ctx.lineWidth = 2.6 / z;
-      for (const idx of e.order) {
-        const p = e.parts[idx];
-        if (!p.alive) continue;
-        const gr = p.g >= 0 ? e.groups[p.g] : null;
-        if (gr && gr.ang !== 0) { ctx.save(); ctx.translate(gr.px, gr.py); ctx.rotate(gr.ang); ctx.translate(-gr.px, -gr.py); }
-        const bo = bend(e, p);
-        if (bo !== 0) { ctx.save(); ctx.translate(0, bo); }
-        const k = 1 + grow / Math.max(1, p.r);
-        ctx.beginPath();
-        for (let i = 0; i < p.poly.length; i += 2) {
-          const vx = p.cx + (p.poly[i] - p.cx) * k;
-          const vy = p.cy + (p.poly[i + 1] - p.cy) * k;
-          if (i === 0) ctx.moveTo(vx, vy); else ctx.lineTo(vx, vy);
-        }
-        ctx.closePath();
-        ctx.fill();
-        ctx.stroke();
-        if (bo !== 0) ctx.restore();
-        if (gr && gr.ang !== 0) ctx.restore();
-      }
-    }
-  }
-
   // status auras
-  if (e.slowT > 0) {
+  if (!simple && sr > 30 && e.slowT > 0) {
     ctx.strokeStyle = "rgba(255,122,217,0.55)"; ctx.lineWidth = 2 / z;
     ctx.setLineDash([10 / z, 8 / z]); ctx.lineDashOffset = t * 30 / z;
     ctx.beginPath(); ctx.arc(e.x, e.y, e.radius + 14, 0, TAU); ctx.stroke();
     ctx.setLineDash([]); ctx.lineDashOffset = 0;
   }
-  if (e.melt > 0.05) {
+  if (!simple && sr > 30 && e.melt > 0.05) {
     ctx.strokeStyle = `rgba(120,255,90,${0.15 + 0.35 * Math.min(1, e.melt)})`; ctx.lineWidth = 3 / z;
     ctx.beginPath(); ctx.arc(e.x, e.y, e.radius + 6, 0, TAU); ctx.stroke();
   }
-  if (e.stun > 0) {
+  if (!simple && sr > 30 && e.stun > 0) {
     ctx.strokeStyle = "rgba(255,225,77,0.5)"; ctx.lineWidth = 2 / z;
     ctx.beginPath(); ctx.arc(e.x, e.y, e.radius + 20, 0, TAU); ctx.stroke();
     for (let k = 0; k < 3; k++) {
@@ -1245,10 +1309,11 @@ function drawEnemy(g: Game, ctx: CanvasRenderingContext2D, e: Enemy, z: number, 
 
   // shields
   for (const s of e.shields) {
+    if (s.r * z < 7) continue;
     const p = s.part;
     const f = p.shieldHp / p.shieldMax;
     const hit = p.shieldHit > 2.8 ? 1 : 0;
-    const blurry = s.r * z < 180; // canvas shadows on huge hexes are extremely slow
+    const blurry = s.r * z > 12 && s.r * z < 60; // canvas shadows on large hexes are extremely slow
     hexPath(ctx, s.x, s.y, s.r, t * 0.3);
     ctx.fillStyle = `rgba(70,210,255,${0.05 + 0.08 * f + hit * 0.12})`; ctx.fill();
     ctx.strokeStyle = `rgba(125,240,255,${0.35 + 0.5 * f})`; ctx.lineWidth = (2 + hit * 3) / z;
@@ -1262,6 +1327,8 @@ function drawEnemy(g: Game, ctx: CanvasRenderingContext2D, e: Enemy, z: number, 
 }
 
 function drawBars(g: Game, ctx: CanvasRenderingContext2D, e: Enemy, z: number) {
+  if (z < 0.1) return;
+  if (e.radius * z < 10 && e.barT <= 0) return;
   const showMain = e.barT > 0 || (e.aggro && e.dist < 1000);
   for (const p of e.parts) {
     if (!p.alive || p.barT <= 0 || p.hp >= p.maxHp) continue;

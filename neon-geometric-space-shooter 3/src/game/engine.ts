@@ -44,7 +44,7 @@ export const N_ROPE = 22;
  * ZONE_DENS is the relative spawn pressure per 1,500u chunk; the initial
  * world seed scales its per-chunk spawn probability by this curve. */
 const ZONE_DENS = [2.6, 2.2, 1.8, 0.56, 0.44, 0.36];
-const ZONE_CAP = [56, 48, 40, 22, 18, 15];
+const ZONE_CAP = [56, 48, 40, 18, 10, 5];
 /** whole-world population ceiling: every zone is seeded at load, then maintained */
 const HARD_MAX = 420;
 /** how many enemies one chunk may contribute during the initial world seed */
@@ -1985,7 +1985,9 @@ export class Game {
           tvx = (nx * radial - ny * e.strafe * 0.7) * sp;
           tvy = (ny * radial + nx * e.strafe * 0.7) * sp;
         } else {
-          const stop = e.S * 0.8 + SHIP_R;
+          /* Stop at the body's edge, not at a tiny fixed offset: a 1,300u
+           * locust used to walk its whole body through the player. */
+          const stop = e.radius * 0.9 + SHIP_R;
           if (dist > stop) {
             const f = Math.max(0, Math.cos(angDiff(e.a, toP)));
             tvx = Math.cos(e.a) * sp * f; tvy = Math.sin(e.a) * sp * f;
@@ -2049,18 +2051,21 @@ export class Game {
       this.updateEnemy(e, dt, dx, dy, e.dist);
     }
     // separation
+    /* Use the real body sizes here. The old 420u cap let two 1,300u mythical
+     * insects sit almost on top of each other, so the centre of the map turned
+     * into a pile whose translucent bodies stacked into a white blob. */
     const n = this.enemies.length;
     for (let i = 0; i < n; i++) {
       const a = this.enemies[i];
-      if (a.dist > 3000) continue;
+      if (a.dist > 3400) continue;
       for (let j = i + 1; j < n; j++) {
         const b = this.enemies[j];
         const dx = b.x - a.x, dy = b.y - a.y;
-        const min = (Math.min(a.radius, 420) + Math.min(b.radius, 420)) * 0.55;
+        const min = (Math.min(a.radius, 900) + Math.min(b.radius, 900)) * 0.8;
         const d2 = dx * dx + dy * dy;
         if (d2 < min * min && d2 > 0.01) {
           const d = Math.sqrt(d2);
-          const push = ((min - d) / min) * 90 * dt;
+          const push = ((min - d) / min) * 320 * dt;
           const wa = b.radius / (a.radius + b.radius), wb = 1 - wa;
           a.x -= (dx / d) * push * wa * 2; a.y -= (dy / d) * push * wa * 2;
           b.x += (dx / d) * push * wb * 2; b.y += (dy / d) * push * wb * 2;

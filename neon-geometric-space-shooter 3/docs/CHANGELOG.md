@@ -3,6 +3,39 @@
 Everything below is implemented in the current build. Numbers are the actual constants used by
 the simulation, not design targets.
 
+## 0. v2.0.1 — max-zoom performance and the white mythical pile
+
+### Enemy level of detail
+- `drawEnemy` computes `sr = e.radius × cam.z`. Below 3px it draws one mote; below 9px it draws a
+  stride-filtered body (about seven parts); below 26px it draws a heavier stride-filtered body
+  (about twelve parts).
+- Camera zoom caps detail independently of body size: `z < 0.1` forces the marker pass,
+  `z < 0.35` forces the mid pass. At full optics zoom the viewport is ~10,000u wide, so every
+  visible insect is a species-coloured marker with a bright core dot.
+- `drawBars` is skipped at `z < 0.1` and for enemies under 10px on screen.
+
+### Plating and the white blob
+- Plating is now one outer rim, drawn *before* each `segment` / `armor` part, tinted with
+  `hsl(speciesHue, 48%, 64%)` at 24-50% alpha. The old pass drew a grey fill for every shell layer
+  after the entire body, which washed multi-layer mythical insects to opaque white.
+- Plate growth is clamped to `min(grow, p.r × 0.45)`, so small plates cannot balloon into
+  free-floating hexes; `wing`, `leg`, `spike`, `weapon` and `shield` parts are not plated.
+- `ZONE_CAP` is now `[56, 48, 40, 18, 10, 5]` (was `[56, 48, 40, 22, 18, 15]`). The mythical
+  centre holds at most five residents instead of fifteen.
+
+### Large-body spacing
+- Separation uses true radii capped at 900u: `(min(rA,900) + min(rB,900)) × 0.8`, with a push of
+  320u/s. The old 420u radius cap let two 1,300u insects occupy almost the same point.
+- Ranged enemies already used `keep + radius × 0.9`; melee enemies now stop at
+  `radius × 0.9 + SHIP_R` instead of `S × 0.8 + SHIP_R`, so their bodies no longer walk through
+  the player.
+
+### Far-zoom effects
+- Canvas `shadowBlur` on glowing parts is limited to pieces between 10px and 34px on screen.
+- Enemy projectiles lose their 12px glow below 2px on screen.
+- Loose components use a single rarity-coloured pip below `z = 0.12`; particles become 1px
+  rectangles and credit motes become small squares below `z = 0.1`.
+
 ## 0. v2.0 — bulk upgrades, persistent admin, component shockwaves, global vision
 
 ### Admin mode lives for the tab, not the page

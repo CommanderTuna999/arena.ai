@@ -8,7 +8,7 @@
  *   CHANGELOG and mirror the details in docs/CHANGELOG.md.
  */
 
-export const VERSION = "2.0";
+export const VERSION = "2.0.1";
 
 export interface ChangeEntry {
   version: string;
@@ -19,6 +19,17 @@ export interface ChangeEntry {
 }
 
 export const CHANGELOG: ChangeEntry[] = [
+  {
+    version: "2.0.1",
+    date: "21 Nov 2026",
+    title: "Max-zoom performance pass and a cleaner mythical centre",
+    points: [
+      "Enemy detail now scales with both screen size and camera zoom. Close insects keep their full bodies; mid zoom drops plating and fine limbs; fully zoomed out turns every insect into a cheap species-coloured marker.",
+      "Shield plating is drawn as a single species-tinted rim under the body instead of stacked grey fills. Dense mythical packs no longer merge into a white blob, and small plates can no longer float over wings as grey hexes.",
+      "Large enemies separate using their real body sizes, melee insects stop at the edge of their own body, and the legendary/mythical population caps are lower. The centre of the map no longer piles a dozen titans on top of each other.",
+      "Canvas shadows are limited to small on-screen pieces. Enemy projectiles, particles, loose components and credit motes all switch to cheap markers at far zoom.",
+    ],
+  },
   {
     version: "2.0",
     date: "21 Nov 2026",

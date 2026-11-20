@@ -57,8 +57,8 @@ with socketserver.TCPServer(("0.0.0.0", PORT), handler) as httpd:
     httpd.serve_forever()
 TXT
 cd "$root/downloads"
-rm -f "wof gue-io-v2.0.zip"
-zip -qr "wof gue-io-v2.0.zip" "wof gue-io"
+rm -f "wof gue-io-v2.0.1.zip"
+zip -qr "wof gue-io-v2.0.1.zip" "wof gue-io"
 mkdir -p "$root/public"
-cp "wof gue-io-v2.0.zip" "$root/public/wof gue-io-v2.0.zip"
-echo "wrote $root/downloads/wof gue-io-v2.0.zip"
+cp "wof gue-io-v2.0.1.zip" "$root/public/wof gue-io-v2.0.1.zip"
+echo "wrote $root/downloads/wof gue-io-v2.0.1.zip"
