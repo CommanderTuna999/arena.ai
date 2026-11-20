@@ -1,10 +1,12 @@
 import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
+import { VERSION } from "@/game/changelog";
 import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Wofgue.io",
   description: "Wofgue.io — a neon geometric hunting ground. Strip insects of their parts, craft weapons and abilities, and survive the deeper zones.",
+  other: { "wof-version": VERSION },
 };
 
 export const viewport: Viewport = { width: "device-width", initialScale: 1, themeColor: "#04050c" };

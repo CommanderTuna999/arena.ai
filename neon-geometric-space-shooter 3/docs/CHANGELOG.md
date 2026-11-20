@@ -3,6 +3,32 @@
 Everything below is implemented in the current build. Numbers are the actual constants used by
 the simulation, not design targets.
 
+## 0. v1.6.1 — stable preview, solid bestiary cards, compact cores
+
+### Preview cannot serve an old release
+- The live preview now runs a **production build** (`scripts/preview.sh`) instead of the dev server.
+  Production chunk filenames are content-hashed, so a rebuilt release can never be assembled from
+  old cached JavaScript.
+- The preview script owns port 3000 and kills any process already listening, so a stale server from
+  an earlier release cannot keep answering.
+- Every response carries `Cache-Control: no-store, max-age=0, must-revalidate` (plus
+  `X-Wof-Version`) and the build id is `wof-<VERSION>`.
+- A `VersionGuard` on the title screen clears Cache Storage and legacy service workers, then polls
+  `/api/version`; if the server is newer than the running bundle it hard-navigates once with a
+  cache-busting query. The check also runs on bfcache restore (`pageshow`) and tab focus, so the
+  preview cannot keep showing a cached 1.1 page.
+
+### Bestiary legibility
+- Entry cards now use an opaque `#0b1224` panel (selected `#221c08`, hover `#141d33`) with a drop
+  shadow; the hover card is opaque `#070b1a`. The arena scene no longer bleeds through the text.
+- Inner art and stat wells use solid `#0a1020` instead of translucent black.
+
+### Compact cores
+- Core radius is back to `max(0.24, min(rx, ry) × 0.36)` — the previous ×√10 inflation (10× area)
+  is removed.
+- Cores stay on layer 0, underneath the body, so segments and plating draw over them and the core
+  only shows through gaps.
+
 ## 0. v1.6 — nest siege cannon and a destructible base
 
 ### Siege cannon

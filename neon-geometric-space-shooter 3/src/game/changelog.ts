@@ -8,7 +8,7 @@
  *   CHANGELOG and mirror the details in docs/CHANGELOG.md.
  */
 
-export const VERSION = "1.6";
+export const VERSION = "1.6.1";
 
 export interface ChangeEntry {
   version: string;
@@ -19,6 +19,16 @@ export interface ChangeEntry {
 }
 
 export const CHANGELOG: ChangeEntry[] = [
+  {
+    version: "1.6.1",
+    date: "20 Nov 2026",
+    title: "Stable preview, solid bestiary cards, compact cores",
+    points: [
+      "The live preview is now served from a fresh production build with versioned chunk names, no-store headers and a self-healing version watchdog, so it can no longer fall back to an old 1.1 page.",
+      "Bestiary entry cards and the hover detail card are fully opaque: the arena behind them no longer shows through.",
+      "Enemy cores are compact again and tucked underneath the body, so segments and plating cover them instead of the core swallowing the silhouette.",
+    ],
+  },
   {
     version: "1.6",
     date: "20 Nov 2026",

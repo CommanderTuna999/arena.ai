@@ -116,7 +116,7 @@ export default function Bestiary({ bestiary, onClose }: { bestiary: Record<strin
 
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-black/80 p-2 backdrop-blur-sm sm:p-4" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className="flex max-h-[94dvh] w-[min(97vw,74rem)] flex-col rounded-md border border-yellow-300/40 bg-[#060a18]/97 shadow-[0_0_50px_rgba(255,210,77,0.16)]">
+      <div className="flex max-h-[94dvh] w-[min(97vw,74rem)] flex-col rounded-md border border-yellow-300/40 bg-[#060a18] shadow-[0_0_50px_rgba(255,210,77,0.16)]">
         <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
           <div className="flex items-center gap-2.5">
             <BeeIcon size={26} />
@@ -146,7 +146,7 @@ export default function Bestiary({ bestiary, onClose }: { bestiary: Record<strin
                         onFocus={(e) => show(e as unknown as MouseEvent<HTMLButtonElement>, s.id)}
                         onClick={(e) => show(e, s.id)}
                         onMouseLeave={() => setHover(null)}
-                        className={`relative flex w-[7.4rem] flex-col items-center gap-1.5 rounded-sm border p-2 transition hover:scale-[1.04] ${hover?.id === s.id ? "border-yellow-300 bg-yellow-300/10" : "border-white/12 hover:bg-white/5"}`}
+                        className={`relative flex w-[7.4rem] flex-col items-center gap-1.5 rounded-sm border p-2 shadow-[0_2px_10px_rgba(0,0,0,0.45)] transition hover:scale-[1.04] ${hover?.id === s.id ? "border-yellow-300 bg-[#221c08]" : "border-white/15 bg-[#0b1224] hover:border-cyan-300/40 hover:bg-[#141d33]"}`}
                       >
                         <BugArt sp={s} tier={t ?? 0} seen={known} size={62} />
                         <span className={`w-full truncate text-center text-[10px] font-bold ${known ? "text-cyan-100" : "text-white/25"}`}>{known ? s.name : "???"}</span>
@@ -166,7 +166,7 @@ export default function Bestiary({ bestiary, onClose }: { bestiary: Record<strin
       </div>
 
       {sp && hover && (
-        <div className="pointer-events-none fixed z-[60] max-h-[80dvh] overflow-hidden rounded-md border border-yellow-300/50 bg-[#070b1a]/98 p-3 shadow-[0_10px_40px_rgba(0,0,0,0.7)]" style={{ left: hover.x, top: hover.y, width: hover.w }}>
+        <div className="pointer-events-none fixed z-[60] max-h-[80dvh] overflow-hidden rounded-md border border-yellow-300/50 bg-[#070b1a] p-3 shadow-[0_10px_40px_rgba(0,0,0,0.7)]" style={{ left: hover.x, top: hover.y, width: hover.w }}>
           {!seen ? (
             <div className="grid place-items-center gap-2 py-6 text-center">
               <BugArt sp={sp} tier={0} seen={false} size={96} />
@@ -187,7 +187,7 @@ function EntryInfo({ sp, tier }: { sp: SpeciesDef; tier: number }) {
   return (
     <div>
       <div className="flex items-center gap-3">
-        <div className="shrink-0 rounded-sm border border-white/10 bg-black/40 p-1">
+        <div className="shrink-0 rounded-sm border border-white/10 bg-[#0a1020] p-1">
           <BugArt sp={sp} tier={tier} seen size={84} />
         </div>
         <div className="min-w-0">
@@ -234,7 +234,7 @@ function dropList(sp: SpeciesDef, tier: number) {
 
 function Stat({ k, v }: { k: string; v: string | number }) {
   return (
-    <div className="flex justify-between gap-1 rounded-sm border border-white/10 bg-black/30 px-1.5 py-0.5">
+    <div className="flex justify-between gap-1 rounded-sm border border-white/10 bg-[#0a1020] px-1.5 py-0.5">
       <span className="text-white/40">{k}</span><span className="text-cyan-100">{v}</span>
     </div>
   );

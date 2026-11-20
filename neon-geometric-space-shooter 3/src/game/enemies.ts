@@ -250,10 +250,10 @@ export class Builder {
     return this.add("segment", name, secPoly(s), { layer: o.layer ?? 1, hpM: o.hpM, style: o.style, seg: o.seg });
   }
   core(s: Sec, host: number, nbrs: number[], seg = -1) {
-    /* Cores are 10x the old AREA (sqrt(10) ≈ 3.16x the radius): a big, obvious
-     * weak point that still sits inside the body instead of swallowing the parts
-     * around it. Nothing else about the body plan is shrunk. */
-    const r = Math.max(0.24, Math.min(s.rx, s.ry) * 0.36) * Math.sqrt(10);
+    /* Compact weak point tucked under the body. Layer 0 means the segments and
+     * plates draw over it, so the core only shows through gaps instead of
+     * swallowing the insect's silhouette. */
+    const r = Math.max(0.24, Math.min(s.rx, s.ry) * 0.36);
     const id = this.add("core", "Core", ell(s.cx, s.cy, r, r, 6, Math.PI / 6), { layer: 0, links: [host, ...nbrs], seg });
     if (this.tier >= 2) this.add("armor", "Core Guard", ell(s.cx, s.cy, r * 1.55, r * 1.55, 6), { layer: 6, links: [host], hpM: 1.6, style: 1, seg });
     if (this.tier >= 4) this.add("armor", "Core Guard", ell(s.cx, s.cy, r * 1.12, r * 1.12, 6, Math.PI / 6), { layer: 7, links: [host], hpM: 2.2, style: 2, seg });
