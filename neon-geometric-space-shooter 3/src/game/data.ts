@@ -286,8 +286,8 @@ export const WEAPON_TINT: Record<string, string> = {
  * Every weapon deals exactly one kind; shields and armour list what they block.
  * Enemy energy shields let energy, shock and thermal straight through, and stop
  * everything else dead. A blocked hit deals no damage and does not drain the
- * bubble: it stays up until its shield-generator part is destroyed. Area effects
- * skip the bubble check (see below); the Shield-Bypass Laser ignores bubbles, the
+ * panel: it stays up until its shield-generator part is destroyed. Area effects
+ * skip the panel check (see below); the Shield-Bypass Laser ignores panels, the
  * Rail Sniper does not.
  * Kinetic/explosive hull shells reduce incoming damage to 30%; lasers/shock do 0.
  */

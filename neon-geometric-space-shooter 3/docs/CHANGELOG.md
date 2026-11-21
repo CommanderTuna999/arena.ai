@@ -6,7 +6,7 @@ the simulation, not design targets.
 ## 0. v2.2.0 — shield projectors throw walls, not bubbles
 
 ### One panel per generator
-- `Part` gained `shieldKind` (0 arc / 1 bar), `shieldSpan`, `shieldAng` and `shieldSpin`, and `shieldStyle(sp, S)` picks the panel for a generator: flyers and serpents (`flying || bodyWave`) get a curved arc with a **0.5 rad** half-angle (~57°, about 29% of the ring), walkers get a straight bar with a **1.25 × body size** half-length. Panel radius is `1.9 × body size`, thickness `max(9, 0.07 × r)`.
+- `Part` gained `shieldKind` (0 arc / 1 bar), `shieldSpan`, `shieldAng` and `shieldSpin`, and `shieldStyle(sp, S)` picks the panel for a generator: flyers and serpents (`flying || bodyWave`) get a curved arc with a **0.5 rad** half-angle (~57°, about 29% of the ring), walkers get a straight bar with a **1.25 × body size** half-length. Panel radius is `1.45 × body size`, thickness `max(9, 0.07 × r)`.
 - The old closed hexagon bubble is gone from `enemies.ts`, `engine.ts` (shield resolution and hit test) and `render.ts`. Each panel is drawn as a thick translucent `rgba(70,210,255)` band with a bright core stroke, round caps, and a faint energy link back to the generator that projects it.
 
 ### Rarity buys coverage, never closure

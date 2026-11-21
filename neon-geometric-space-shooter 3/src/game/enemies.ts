@@ -395,7 +395,7 @@ function shieldStyle(sp: SpeciesDef, S: number) {
   if (sp.boss) spin = 0.5;
   else if (h === 0) spin = sp.flying ? 0.7 : -0.4;
   else if (h === 1 && sp.flying) spin = -0.55;
-  return { bar: !arc, span: arc ? 0.5 : 1.25 * S, r: 1.9 * S, spin };
+  return { bar: !arc, span: arc ? 0.5 : 1.25 * S, r: 1.45 * S, spin };
 }
 
 const GUN_ROLL: { kind: GunKind; w: number[] }[] = [
@@ -420,7 +420,7 @@ function loadout(b: Builder, mounts: Mount[], sp: SpeciesDef) {
   const armed = sp.armed;
   /* Guns and shield generators used to be hard-coded per species. Now every body
    * that does not carry one by design still rolls for it once the mounts exist
-   * (epic and up), so a Mantis can turn up with a rotary gun and a bubble. */
+   * (epic and up), so a Mantis can turn up with a rotary gun and a shield panel. */
   const chanceGun = t >= 3 && !armed.gun && b.rng() < 0.12 + 0.06 * t;
   const chanceShield = t >= 3 && !armed.shield && b.rng() < 0.1 + 0.05 * t;
   const nGun = (armed.gun || chanceGun) && t >= 3 ? t - 2 : 0;

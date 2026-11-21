@@ -1,6 +1,6 @@
 # wof gue — complete stat compendium
 
-Build 2.1.3 · generated 21 Nov 2026 · every figure is a live simulation constant, not a design target.
+Build 2.2.0 · generated 21 Nov 2026 · every figure is a live simulation constant, not a design target.
 
 How to read it: enemy health is the sum of every part at that rarity tier. Enemy damage is listed as a multiplier of the tier damage (eDmg), because every bite, bolt, blast and contact hit scales from that one number. Weapon damage is a multiplier of the player cannon damage (st.dmg = 10 x 1.2^Cannon Damage level). Efficiency (eff) is the crafted item quality: 0.30 minimum, 1.00 typical; the raw formula can reach 2.25 on an unrestricted tier-5 core build and 1.80 on a 7-part difficulty-5 recipe.
 
@@ -44,8 +44,8 @@ Corrosive | acid, venom | STOPPED dead; no shield drain | bullet: 30% | armour l
 Thermal | cutter | passes through | beam: 80% | crafting label: every player shield
 Physical | collisions, knockback, shockwave abilities | collisions are not projectiles; physical rounds stopped | no shell check on collisions | armour label: every armour blocks physical
 
-Enemy energy-shield bubble: a Shield Generator part projects a hex bubble of 1.9 x body size that covers only that generator, not the whole body; a shot outside the hex reaches the hull normally. Energy, shock and thermal projectiles and beams pass straight through and hit the generator inside. Every other projectile is stopped dead at the hex edge with no effect on the bubble or the hull: the bubble has no charge to strip, so it never collapses, re-arms or regenerates, and only disappears when its Shield Generator part is destroyed. The Shield-Bypass Laser still ignores bubbles; the Rail Sniper no longer does, and hull shells still stop the rail. Direct area effects (EMP, chain lightning, sonic, gravity, mines, explosions, collisions) do not run the bubble check.
-Enemy energy shields: each Shield Generator projects one wall - a curved arc for flyers and serpents, a straight bar for walkers - out at 1.9x body size, covering only a slice of the ring, so there are always gaps to shoot through. Some species sweep their panels (0.4-0.7 rad/s). Energy, shock and thermal pass straight through; every other round is stopped dead without draining the panel, and a panel only disappears when its generator part is destroyed.
+Enemy energy-shield panels: each Shield Generator part projects one wall 1.45 x body size out - a curved arc for flyers and serpents, a straight bar for walkers, some species sweeping them at 0.4-0.7 rad/s. A panel covers only a slice of the ring (2 generators at epic, 3 at legendary, 4 at mythical), so a shot through a gap reaches the hull normally. Energy, shock and thermal projectiles and beams pass straight through and hit the body inside. Every other projectile is stopped dead at the panel with no effect on it or the hull: a panel has no charge to strip, so it never collapses, re-arms or regenerates, and only disappears when its Shield Generator part is destroyed. The Shield-Bypass Laser still ignores panels; the Rail Sniper no longer does, and hull shells still stop the rail. Direct area effects (EMP, chain lightning, sonic, gravity, mines, explosions, collisions) do not run the panel check.
+Enemy energy shields: each Shield Generator projects one wall - a curved arc for flyers and serpents, a straight bar for walkers - out at 1.45x body size, covering only a slice of the ring, so there are always gaps to shoot through. Some species sweep their panels (0.4-0.7 rad/s). Energy, shock and thermal pass straight through; every other round is stopped dead without draining the panel, and a panel only disappears when its generator part is destroyed.
 Enemy hull shells (plating): tier 2+ enemies get tier-1 solid armour layers, each holding 60% of the enemy total hull, bolted over the body as steel slabs. A hit is swallowed by the outermost layer and only a share of it is lost: bullets 30%, missile/flak rounds 40%, beams 80% (plating resists only 20% of energy), area blasts 40%, shockwaves 15% (EMP, chain lightning and sonic skip shelled enemies entirely). Legendary legs carry 1 plating layer of their own and mythical legs 2, so shots that land on a plated limb are swallowed by the hull slabs instead of the leg. A layer shatters into a damaging shockwave when destroyed. Tier 5 mythical: 4 layers of 60% hull each, e.g. 943,872 HP per layer (3.8M total) on a 1,573,120 hull.
 Player defence labels: the Blocks column comes from damageProfile, which the crafting UI displays. Actual player mitigation is type-agnostic: armour reduces every incoming hit, then shield absorbs the remainder, then hull takes the rest. Kinetic Barrier adds another multiplier while shield holds; dodge is checked before all of it.
 
@@ -62,9 +62,9 @@ Hull by tier:
   T0: 310 HP total; core 30; largest part 30; 30 parts; radius 101u; no energy shield.
   T1: 1,405 HP total; core 120; largest part 120; 33 parts; radius 167u; no energy shield.
   T2: 9,792 HP total; core 540; largest part 540; 44 parts; radius 276u; no energy shield; 1 hull shell (5,875 HP).
-  T3: 64,576 HP total; core 2,400; largest part 2,400; 64 parts; radius 455u; 2 panels (curved arcs, 32% of the ring, 239u out); energy/shock/thermal pass; 2 hull shells (77,492 HP).
-  T4: 337,968 HP total; core 10,800; largest part 12,672; 70 parts; radius 751u; 3 panels (curved arcs, 48% of the ring, 394u out); energy/shock/thermal pass; 3 hull shells (608,343 HP).
-  T5: 1,656,320 HP total; core 48,000; largest part 56,320; 75 parts; radius 1,239u; 4 panels (curved arcs, 64% of the ring, 651u out); energy/shock/thermal pass; 4 hull shells (3,975,168 HP).
+  T3: 64,576 HP total; core 2,400; largest part 2,400; 64 parts; radius 455u; 2 panels (curved arcs, 32% of the ring, 182u out); energy/shock/thermal pass; 2 hull shells (77,492 HP).
+  T4: 337,968 HP total; core 10,800; largest part 12,672; 70 parts; radius 751u; 3 panels (curved arcs, 48% of the ring, 301u out); energy/shock/thermal pass; 3 hull shells (608,343 HP).
+  T5: 1,656,320 HP total; core 48,000; largest part 56,320; 75 parts; radius 1,239u; 4 panels (curved arcs, 64% of the ring, 497u out); energy/shock/thermal pass; 4 hull shells (3,975,168 HP).
 Defence: energy shield panels appear at tier 3+ (2 generators at epic, 3 at legendary, 4 at mythical, each covering only a slice of the ring); hull shells at tier 2+ (60% hull per layer, ~4x that in kinetic fire).
 Damage: eDmg 16 / 48 / 144 / 432 / 1,296 / 3,888 by tier. Contact = 0.25x eDmg every 0.7s. Weapon mounts: 0 gun(s) (0.4x eDmg, 1.1-1.7s cadence) and 0 missile pod(s) (1.1x eDmg, 4.5-6s cadence) at T5; no gun or missile mounts at T3. Destroying a weapon part explodes for 1.8x eDmg to the player; other parts explode for 1.3x.
 Abilities (4):
@@ -80,7 +80,7 @@ Hull by tier:
   T0: 486 HP total; core 30; largest part 30; 41 parts; radius 108u; no energy shield.
   T1: 1,987 HP total; core 120; largest part 120; 42 parts; radius 178u; no energy shield.
   T2: 12,262 HP total; core 540; largest part 540; 56 parts; radius 294u; no energy shield; 1 hull shell (7,357 HP).
-  T3: 89,920 HP total; core 2,400; largest part 2,400; 91 parts; radius 485u; 2 panels (straight bars, some sweeping, 42% of the ring, 239u out); energy/shock/thermal pass; 2 hull shells (107,904 HP).
+  T3: 89,920 HP total; core 2,400; largest part 2,400; 91 parts; radius 485u; 2 panels (straight bars, some sweeping, 55% of the ring, 182u out); energy/shock/thermal pass; 2 hull shells (107,904 HP).
   T4: 498,960 HP total; core 10,800; largest part 12,672; 103 parts; radius 800u; no energy shield; 3 hull shells (898,128 HP).
   T5: 2,288,000 HP total; core 48,000; largest part 56,320; 105 parts; radius 1,321u; no energy shield; 4 hull shells (5,491,200 HP).
 Defence: energy shield panels appear at tier 3+ (2 generators at epic, 3 at legendary, 4 at mythical, each covering only a slice of the ring); hull shells at tier 2+ (60% hull per layer, ~4x that in kinetic fire).
@@ -98,7 +98,7 @@ Hull by tier:
   T0: 406 HP total; core 30; largest part 30; 40 parts; radius 110u; no energy shield.
   T1: 1,644 HP total; core 120; largest part 120; 41 parts; radius 182u; no energy shield.
   T2: 9,947 HP total; core 540; largest part 540; 52 parts; radius 301u; no energy shield; 1 hull shell (5,968 HP).
-  T3: 82,608 HP total; core 2,400; largest part 2,400; 94 parts; radius 496u; 2 panels (straight bars, 42% of the ring, 239u out); energy/shock/thermal pass; 2 hull shells (99,130 HP).
+  T3: 82,608 HP total; core 2,400; largest part 2,400; 94 parts; radius 496u; 2 panels (straight bars, 55% of the ring, 182u out); energy/shock/thermal pass; 2 hull shells (99,130 HP).
   T4: 478,008 HP total; core 10,800; largest part 12,672; 107 parts; radius 818u; no energy shield; 3 hull shells (860,415 HP).
   T5: 2,194,880 HP total; core 48,000; largest part 56,320; 109 parts; radius 1,350u; no energy shield; 4 hull shells (5,267,712 HP).
 Defence: energy shield panels appear at tier 3+ (2 generators at epic, 3 at legendary, 4 at mythical, each covering only a slice of the ring); hull shells at tier 2+ (60% hull per layer, ~4x that in kinetic fire).
@@ -116,9 +116,9 @@ Hull by tier:
   T0: 350 HP total; core 30; largest part 30; 34 parts; radius 71u; no energy shield.
   T1: 1,683 HP total; core 120; largest part 120; 38 parts; radius 116u; no energy shield.
   T2: 8,957 HP total; core 540; largest part 540; 45 parts; radius 192u; no energy shield; 1 hull shell (5,374 HP).
-  T3: 72,832 HP total; core 2,400; largest part 2,400; 67 parts; radius 317u; 2 panels (curved arcs, 32% of the ring, 239u out); energy/shock/thermal pass; 2 hull shells (87,398 HP).
-  T4: 346,608 HP total; core 10,800; largest part 12,672; 69 parts; radius 523u; 3 panels (curved arcs, 48% of the ring, 394u out); energy/shock/thermal pass; 3 hull shells (623,895 HP).
-  T5: 1,582,080 HP total; core 48,000; largest part 56,320; 70 parts; radius 862u; 4 panels (curved arcs, 64% of the ring, 651u out); energy/shock/thermal pass; 4 hull shells (3,796,992 HP).
+  T3: 72,832 HP total; core 2,400; largest part 2,400; 67 parts; radius 317u; 2 panels (curved arcs, 32% of the ring, 182u out); energy/shock/thermal pass; 2 hull shells (87,398 HP).
+  T4: 346,608 HP total; core 10,800; largest part 12,672; 69 parts; radius 523u; 3 panels (curved arcs, 48% of the ring, 301u out); energy/shock/thermal pass; 3 hull shells (623,895 HP).
+  T5: 1,582,080 HP total; core 48,000; largest part 56,320; 70 parts; radius 862u; 4 panels (curved arcs, 64% of the ring, 497u out); energy/shock/thermal pass; 4 hull shells (3,796,992 HP).
 Defence: energy shield panels appear at tier 3+ (2 generators at epic, 3 at legendary, 4 at mythical, each covering only a slice of the ring); hull shells at tier 2+ (60% hull per layer, ~4x that in kinetic fire).
 Damage: eDmg 16 / 48 / 144 / 432 / 1,296 / 3,888 by tier. Contact = 0.25x eDmg every 0.7s. Weapon mounts: 0 gun(s) (0.4x eDmg, 1.1-1.7s cadence) and 0 missile pod(s) (1.1x eDmg, 4.5-6s cadence) at T5; no gun or missile mounts at T3. Destroying a weapon part explodes for 1.8x eDmg to the player; other parts explode for 1.3x.
 Abilities (4):
@@ -134,9 +134,9 @@ Hull by tier:
   T0: 428 HP total; core 30; largest part 30; 36 parts; radius 92u; no energy shield.
   T1: 1,710 HP total; core 120; largest part 120; 36 parts; radius 152u; no energy shield.
   T2: 9,022 HP total; core 540; largest part 540; 43 parts; radius 251u; no energy shield; 1 hull shell (5,413 HP).
-  T3: 72,544 HP total; core 2,400; largest part 2,400; 73 parts; radius 414u; 2 panels (straight bars, 42% of the ring, 239u out); energy/shock/thermal pass; 2 hull shells (87,052 HP).
-  T4: 360,000 HP total; core 10,800; largest part 12,672; 77 parts; radius 683u; 3 panels (straight bars, 63% of the ring, 394u out); energy/shock/thermal pass; 3 hull shells (648,000 HP).
-  T5: 1,928,320 HP total; core 48,000; largest part 56,320; 86 parts; radius 1,127u; 4 panels (straight bars, 84% of the ring, 651u out); energy/shock/thermal pass; 4 hull shells (4,627,968 HP).
+  T3: 72,544 HP total; core 2,400; largest part 2,400; 73 parts; radius 414u; 2 panels (straight bars, 55% of the ring, 182u out); energy/shock/thermal pass; 2 hull shells (87,052 HP).
+  T4: 360,000 HP total; core 10,800; largest part 12,672; 77 parts; radius 683u; 3 panels (straight bars, 82% of the ring, 301u out); energy/shock/thermal pass; 3 hull shells (648,000 HP).
+  T5: 1,928,320 HP total; core 48,000; largest part 56,320; 86 parts; radius 1,127u; 4 panels (straight bars, 110% of the ring, 497u out); energy/shock/thermal pass; 4 hull shells (4,627,968 HP).
 Defence: energy shield panels appear at tier 3+ (2 generators at epic, 3 at legendary, 4 at mythical, each covering only a slice of the ring); hull shells at tier 2+ (60% hull per layer, ~4x that in kinetic fire).
 Damage: eDmg 16 / 48 / 144 / 432 / 1,296 / 3,888 by tier. Contact = 0.25x eDmg every 0.7s. Weapon mounts: 0 gun(s) (0.4x eDmg, 1.1-1.7s cadence) and 0 missile pod(s) (1.1x eDmg, 4.5-6s cadence) at T5; no gun or missile mounts at T3. Destroying a weapon part explodes for 1.8x eDmg to the player; other parts explode for 1.3x.
 Abilities (4):
@@ -152,8 +152,8 @@ Hull by tier:
   T0: 899 HP total; core 30; largest part 30; 88 parts; radius 160u; no energy shield.
   T1: 4,411 HP total; core 120; largest part 120; 109 parts; radius 282u; no energy shield.
   T2: 23,983 HP total; core 540; largest part 540; 131 parts; radius 494u; no energy shield.
-  T3: 228,448 HP total; core 2,400; largest part 2,400; 275 parts; radius 863u; 2 panels (curved arcs, 32% of the ring, 239u out); energy/shock/thermal pass.
-  T4: 1,190,880 HP total; core 10,800; largest part 12,672; 316 parts; radius 1,505u; 3 panels (curved arcs, 48% of the ring, 394u out); energy/shock/thermal pass.
+  T3: 228,448 HP total; core 2,400; largest part 2,400; 275 parts; radius 863u; 2 panels (curved arcs, 32% of the ring, 182u out); energy/shock/thermal pass.
+  T4: 1,190,880 HP total; core 10,800; largest part 12,672; 316 parts; radius 1,505u; 3 panels (curved arcs, 48% of the ring, 301u out); energy/shock/thermal pass.
   T5: 5,793,920 HP total; core 48,000; largest part 56,320; 352 parts; radius 2,618u; no energy shield.
 Defence: serpentine body (no hull shells); energy shield panels appear at tier 3+ (2 generators at epic, 3 at legendary, 4 at mythical, each covering only a slice of the ring); hull shells at tier 2+ (60% hull per layer, ~4x that in kinetic fire).
 Damage: eDmg 16 / 48 / 144 / 432 / 1,296 / 3,888 by tier. Contact = 0.25x eDmg every 0.7s. Weapon mounts: 0 gun(s) (0.4x eDmg, 1.1-1.7s cadence) and 0 missile pod(s) (1.1x eDmg, 4.5-6s cadence) at T5; no gun or missile mounts at T3. Destroying a weapon part explodes for 1.8x eDmg to the player; other parts explode for 1.3x.
@@ -188,9 +188,9 @@ Hull by tier:
   T0: 362 HP total; core 30; largest part 30; 29 parts; radius 84u; no energy shield.
   T1: 1,448 HP total; core 120; largest part 120; 29 parts; radius 139u; no energy shield.
   T2: 8,768 HP total; core 540; largest part 540; 48 parts; radius 230u; no energy shield; 1 hull shell (5,261 HP).
-  T3: 73,528 HP total; core 2,400; largest part 2,400; 71 parts; radius 379u; 2 panels (straight bars, 42% of the ring, 239u out); energy/shock/thermal pass; 2 hull shells (88,234 HP).
-  T4: 416,268 HP total; core 10,800; largest part 12,672; 93 parts; radius 626u; 3 panels (straight bars, 63% of the ring, 394u out); energy/shock/thermal pass; 3 hull shells (749,283 HP).
-  T5: 2,390,880 HP total; core 48,000; largest part 56,320; 108 parts; radius 1,032u; 4 panels (straight bars, 84% of the ring, 651u out); energy/shock/thermal pass; 4 hull shells (5,738,112 HP).
+  T3: 73,528 HP total; core 2,400; largest part 2,400; 71 parts; radius 379u; 2 panels (straight bars, 55% of the ring, 182u out); energy/shock/thermal pass; 2 hull shells (88,234 HP).
+  T4: 416,268 HP total; core 10,800; largest part 12,672; 93 parts; radius 626u; 3 panels (straight bars, 82% of the ring, 301u out); energy/shock/thermal pass; 3 hull shells (749,283 HP).
+  T5: 2,390,880 HP total; core 48,000; largest part 56,320; 108 parts; radius 1,032u; 4 panels (straight bars, 110% of the ring, 497u out); energy/shock/thermal pass; 4 hull shells (5,738,112 HP).
 Defence: energy shield panels appear at tier 3+ (2 generators at epic, 3 at legendary, 4 at mythical, each covering only a slice of the ring); hull shells at tier 2+ (60% hull per layer, ~4x that in kinetic fire).
 Damage: eDmg 16 / 48 / 144 / 432 / 1,296 / 3,888 by tier. Contact = 0.25x eDmg every 0.7s. Weapon mounts: 0 gun(s) (0.4x eDmg, 1.1-1.7s cadence) and 4 missile pod(s) (1.1x eDmg, 4.5-6s cadence) at T5; no gun or missile mounts at T3. Destroying a weapon part explodes for 1.8x eDmg to the player; other parts explode for 1.3x.
 Abilities (3):
@@ -223,9 +223,9 @@ Hull by tier:
   T0: 352 HP total; core 30; largest part 30; 33 parts; radius 91u; no energy shield.
   T1: 1,522 HP total; core 120; largest part 120; 35 parts; radius 150u; no energy shield.
   T2: 7,308 HP total; core 540; largest part 540; 36 parts; radius 248u; no energy shield; 1 hull shell (4,385 HP).
-  T3: 69,728 HP total; core 2,400; largest part 2,400; 72 parts; radius 410u; 2 panels (curved arcs, some sweeping, 32% of the ring, 239u out); energy/shock/thermal pass; 2 hull shells (83,674 HP).
-  T4: 351,648 HP total; core 10,800; largest part 12,672; 76 parts; radius 676u; 3 panels (curved arcs, some sweeping, 48% of the ring, 394u out); energy/shock/thermal pass; 3 hull shells (632,967 HP).
-  T5: 1,674,880 HP total; core 48,000; largest part 56,320; 79 parts; radius 1,115u; 4 panels (curved arcs, some sweeping, 64% of the ring, 651u out); energy/shock/thermal pass; 4 hull shells (4,019,712 HP).
+  T3: 69,728 HP total; core 2,400; largest part 2,400; 72 parts; radius 410u; 2 panels (curved arcs, some sweeping, 32% of the ring, 182u out); energy/shock/thermal pass; 2 hull shells (83,674 HP).
+  T4: 351,648 HP total; core 10,800; largest part 12,672; 76 parts; radius 676u; 3 panels (curved arcs, some sweeping, 48% of the ring, 301u out); energy/shock/thermal pass; 3 hull shells (632,967 HP).
+  T5: 1,674,880 HP total; core 48,000; largest part 56,320; 79 parts; radius 1,115u; 4 panels (curved arcs, some sweeping, 64% of the ring, 497u out); energy/shock/thermal pass; 4 hull shells (4,019,712 HP).
 Defence: energy shield panels appear at tier 3+ (2 generators at epic, 3 at legendary, 4 at mythical, each covering only a slice of the ring); hull shells at tier 2+ (60% hull per layer, ~4x that in kinetic fire).
 Damage: eDmg 16 / 48 / 144 / 432 / 1,296 / 3,888 by tier. Contact = 0.25x eDmg every 0.7s. Weapon mounts: 0 gun(s) (0.4x eDmg, 1.1-1.7s cadence) and 0 missile pod(s) (1.1x eDmg, 4.5-6s cadence) at T5; no gun or missile mounts at T3. Destroying a weapon part explodes for 1.8x eDmg to the player; other parts explode for 1.3x.
 Abilities (4):
@@ -260,7 +260,7 @@ Hull by tier:
   T2: 10,787 HP total; core 540; largest part 540; 58 parts; radius 256u; no energy shield; 1 hull shell (6,472 HP).
   T3: 73,096 HP total; core 2,400; largest part 2,400; 75 parts; radius 422u; no energy shield; 2 hull shells (87,716 HP).
   T4: 363,780 HP total; core 10,800; largest part 12,672; 79 parts; radius 696u; no energy shield; 3 hull shells (654,804 HP).
-  T5: 1,881,760 HP total; core 48,000; largest part 56,320; 86 parts; radius 1,149u; 4 panels (curved arcs, 64% of the ring, 651u out); energy/shock/thermal pass; 4 hull shells (4,516,224 HP).
+  T5: 1,881,760 HP total; core 48,000; largest part 56,320; 86 parts; radius 1,149u; 4 panels (curved arcs, 64% of the ring, 497u out); energy/shock/thermal pass; 4 hull shells (4,516,224 HP).
 Defence: energy shield panels appear at tier 3+ (2 generators at epic, 3 at legendary, 4 at mythical, each covering only a slice of the ring); hull shells at tier 2+ (60% hull per layer, ~4x that in kinetic fire).
 Damage: eDmg 16 / 48 / 144 / 432 / 1,296 / 3,888 by tier. Contact = 0.25x eDmg every 0.7s. Weapon mounts: 0 gun(s) (0.4x eDmg, 1.1-1.7s cadence) and 0 missile pod(s) (1.1x eDmg, 4.5-6s cadence) at T5; T3 has 2 gun(s) / 0 pod(s). Destroying a weapon part explodes for 1.8x eDmg to the player; other parts explode for 1.3x.
 Abilities (3):
@@ -292,9 +292,9 @@ Hull by tier:
   T0: 497 HP total; core 30; largest part 30; 40 parts; radius 81u; no energy shield.
   T1: 1,989 HP total; core 120; largest part 120; 40 parts; radius 133u; no energy shield.
   T2: 11,066 HP total; core 540; largest part 540; 58 parts; radius 220u; no energy shield; 1 hull shell (6,640 HP).
-  T3: 90,464 HP total; core 2,400; largest part 2,400; 84 parts; radius 363u; 2 panels (straight bars, 42% of the ring, 239u out); energy/shock/thermal pass; 2 hull shells (108,556 HP).
-  T4: 486,720 HP total; core 10,800; largest part 12,672; 102 parts; radius 599u; 3 panels (straight bars, 63% of the ring, 394u out); energy/shock/thermal pass; 3 hull shells (876,096 HP).
-  T5: 2,275,200 HP total; core 48,000; largest part 56,320; 105 parts; radius 988u; 4 panels (straight bars, 84% of the ring, 651u out); energy/shock/thermal pass; 4 hull shells (5,460,480 HP).
+  T3: 90,464 HP total; core 2,400; largest part 2,400; 84 parts; radius 363u; 2 panels (straight bars, 55% of the ring, 182u out); energy/shock/thermal pass; 2 hull shells (108,556 HP).
+  T4: 486,720 HP total; core 10,800; largest part 12,672; 102 parts; radius 599u; 3 panels (straight bars, 82% of the ring, 301u out); energy/shock/thermal pass; 3 hull shells (876,096 HP).
+  T5: 2,275,200 HP total; core 48,000; largest part 56,320; 105 parts; radius 988u; 4 panels (straight bars, 110% of the ring, 497u out); energy/shock/thermal pass; 4 hull shells (5,460,480 HP).
 Defence: energy shield panels appear at tier 3+ (2 generators at epic, 3 at legendary, 4 at mythical, each covering only a slice of the ring); hull shells at tier 2+ (60% hull per layer, ~4x that in kinetic fire).
 Damage: eDmg 16 / 48 / 144 / 432 / 1,296 / 3,888 by tier. Contact = 0.25x eDmg every 0.7s. Weapon mounts: 6 gun(s) (0.4x eDmg, 1.1-1.7s cadence) and 0 missile pod(s) (1.1x eDmg, 4.5-6s cadence) at T5; no gun or missile mounts at T3. Destroying a weapon part explodes for 1.8x eDmg to the player; other parts explode for 1.3x.
 Abilities (3):
@@ -311,7 +311,7 @@ Hull by tier:
   T2: 6,930 HP total; core 540; largest part 540; 38 parts; radius 187u; no energy shield; 1 hull shell (4,158 HP).
   T3: 39,376 HP total; core 2,400; largest part 2,400; 52 parts; radius 308u; no energy shield; 2 hull shells (47,252 HP).
   T4: 189,864 HP total; core 10,800; largest part 12,672; 53 parts; radius 508u; no energy shield; 3 hull shells (341,754 HP).
-  T5: 1,221,440 HP total; core 48,000; largest part 56,320; 63 parts; radius 838u; 4 panels (curved arcs, 64% of the ring, 651u out); energy/shock/thermal pass; 4 hull shells (2,931,456 HP).
+  T5: 1,221,440 HP total; core 48,000; largest part 56,320; 63 parts; radius 838u; 4 panels (curved arcs, 64% of the ring, 497u out); energy/shock/thermal pass; 4 hull shells (2,931,456 HP).
 Defence: energy shield panels appear at tier 3+ (2 generators at epic, 3 at legendary, 4 at mythical, each covering only a slice of the ring); hull shells at tier 2+ (60% hull per layer, ~4x that in kinetic fire).
 Damage: eDmg 16 / 48 / 144 / 432 / 1,296 / 3,888 by tier. Contact = 0.25x eDmg every 0.7s. Weapon mounts: 0 gun(s) (0.4x eDmg, 1.1-1.7s cadence) and 0 missile pod(s) (1.1x eDmg, 4.5-6s cadence) at T5; no gun or missile mounts at T3. Destroying a weapon part explodes for 1.8x eDmg to the player; other parts explode for 1.3x.
 Abilities (3):
@@ -327,8 +327,8 @@ Hull by tier:
   T1: 1,645 HP total; core 120; largest part 120; 37 parts; radius 133u; no energy shield.
   T2: 9,518 HP total; core 540; largest part 540; 55 parts; radius 219u; no energy shield; 1 hull shell (5,711 HP).
   T3: 72,704 HP total; core 2,400; largest part 2,400; 76 parts; radius 361u; no energy shield; 2 hull shells (87,244 HP).
-  T4: 399,600 HP total; core 10,800; largest part 12,672; 84 parts; radius 596u; 3 panels (straight bars, 63% of the ring, 394u out); energy/shock/thermal pass; 3 hull shells (719,280 HP).
-  T5: 1,958,400 HP total; core 48,000; largest part 56,320; 89 parts; radius 984u; 4 panels (straight bars, 84% of the ring, 651u out); energy/shock/thermal pass; 4 hull shells (4,700,160 HP).
+  T4: 399,600 HP total; core 10,800; largest part 12,672; 84 parts; radius 596u; 3 panels (straight bars, 82% of the ring, 301u out); energy/shock/thermal pass; 3 hull shells (719,280 HP).
+  T5: 1,958,400 HP total; core 48,000; largest part 56,320; 89 parts; radius 984u; 4 panels (straight bars, 110% of the ring, 497u out); energy/shock/thermal pass; 4 hull shells (4,700,160 HP).
 Defence: energy shield panels appear at tier 3+ (2 generators at epic, 3 at legendary, 4 at mythical, each covering only a slice of the ring); hull shells at tier 2+ (60% hull per layer, ~4x that in kinetic fire).
 Damage: eDmg 16 / 48 / 144 / 432 / 1,296 / 3,888 by tier. Contact = 0.25x eDmg every 0.7s. Weapon mounts: 0 gun(s) (0.4x eDmg, 1.1-1.7s cadence) and 4 missile pod(s) (1.1x eDmg, 4.5-6s cadence) at T5; no gun or missile mounts at T3. Destroying a weapon part explodes for 1.8x eDmg to the player; other parts explode for 1.3x.
 Abilities (3):
@@ -343,9 +343,9 @@ Hull by tier:
   T0: 418 HP total; core 30; largest part 30; 37 parts; radius 91u; no energy shield.
   T1: 1,673 HP total; core 120; largest part 120; 37 parts; radius 160u; no energy shield.
   T2: 11,372 HP total; core 540; largest part 540; 60 parts; radius 279u; no energy shield; 1 hull shell (6,823 HP).
-  T3: 77,424 HP total; core 2,400; largest part 2,400; 78 parts; radius 485u; 2 panels (straight bars, 42% of the ring, 239u out); energy/shock/thermal pass; 2 hull shells (92,908 HP).
-  T4: 492,840 HP total; core 10,800; largest part 12,672; 104 parts; radius 842u; 3 panels (straight bars, 63% of the ring, 394u out); energy/shock/thermal pass; 3 hull shells (887,112 HP).
-  T5: 2,302,400 HP total; core 48,000; largest part 56,320; 107 parts; radius 1,457u; 4 panels (straight bars, 84% of the ring, 651u out); energy/shock/thermal pass; 4 hull shells (5,525,760 HP).
+  T3: 77,424 HP total; core 2,400; largest part 2,400; 78 parts; radius 485u; 2 panels (straight bars, 55% of the ring, 182u out); energy/shock/thermal pass; 2 hull shells (92,908 HP).
+  T4: 492,840 HP total; core 10,800; largest part 12,672; 104 parts; radius 842u; 3 panels (straight bars, 82% of the ring, 301u out); energy/shock/thermal pass; 3 hull shells (887,112 HP).
+  T5: 2,302,400 HP total; core 48,000; largest part 56,320; 107 parts; radius 1,457u; 4 panels (straight bars, 110% of the ring, 497u out); energy/shock/thermal pass; 4 hull shells (5,525,760 HP).
 Defence: energy shield panels appear at tier 3+ (2 generators at epic, 3 at legendary, 4 at mythical, each covering only a slice of the ring); hull shells at tier 2+ (60% hull per layer, ~4x that in kinetic fire).
 Damage: eDmg 16 / 48 / 144 / 432 / 1,296 / 3,888 by tier. Contact = 0.25x eDmg every 0.7s. Weapon mounts: 0 gun(s) (0.4x eDmg, 1.1-1.7s cadence) and 0 missile pod(s) (1.1x eDmg, 4.5-6s cadence) at T5; no gun or missile mounts at T3. Destroying a weapon part explodes for 1.8x eDmg to the player; other parts explode for 1.3x.
 Abilities (3):
@@ -362,7 +362,7 @@ Hull by tier:
   T2: 9,808 HP total; core 540; largest part 540; 47 parts; radius 287u; no energy shield; 1 hull shell (5,885 HP).
   T3: 74,504 HP total; core 2,400; largest part 2,400; 76 parts; radius 473u; no energy shield; 2 hull shells (89,404 HP).
   T4: 370,116 HP total; core 10,800; largest part 12,672; 80 parts; radius 780u; no energy shield; 3 hull shells (666,210 HP).
-  T5: 1,909,920 HP total; core 48,000; largest part 56,320; 87 parts; radius 1,288u; 4 panels (curved arcs, some sweeping, 64% of the ring, 651u out); energy/shock/thermal pass; 4 hull shells (4,583,808 HP).
+  T5: 1,909,920 HP total; core 48,000; largest part 56,320; 87 parts; radius 1,288u; 4 panels (curved arcs, some sweeping, 64% of the ring, 497u out); energy/shock/thermal pass; 4 hull shells (4,583,808 HP).
 Defence: energy shield panels appear at tier 3+ (2 generators at epic, 3 at legendary, 4 at mythical, each covering only a slice of the ring); hull shells at tier 2+ (60% hull per layer, ~4x that in kinetic fire).
 Damage: eDmg 16 / 48 / 144 / 432 / 1,296 / 3,888 by tier. Contact = 0.25x eDmg every 0.7s. Weapon mounts: 0 gun(s) (0.4x eDmg, 1.1-1.7s cadence) and 0 missile pod(s) (1.1x eDmg, 4.5-6s cadence) at T5; no gun or missile mounts at T3. Destroying a weapon part explodes for 1.8x eDmg to the player; other parts explode for 1.3x.
 Abilities (3):
@@ -377,9 +377,9 @@ Hull by tier:
   T0: 440 HP total; core 30; largest part 30; 37 parts; radius 81u; no energy shield.
   T1: 1,758 HP total; core 120; largest part 120; 37 parts; radius 133u; no energy shield.
   T2: 11,758 HP total; core 540; largest part 540; 60 parts; radius 220u; no energy shield; 1 hull shell (7,055 HP).
-  T3: 75,616 HP total; core 2,400; largest part 2,400; 76 parts; radius 363u; 2 panels (curved arcs, 32% of the ring, 239u out); energy/shock/thermal pass; 2 hull shells (90,740 HP).
-  T4: 393,984 HP total; core 10,800; largest part 12,672; 82 parts; radius 599u; 3 panels (curved arcs, 48% of the ring, 394u out); energy/shock/thermal pass; 3 hull shells (709,170 HP).
-  T5: 1,863,040 HP total; core 48,000; largest part 56,320; 85 parts; radius 988u; 4 panels (curved arcs, 64% of the ring, 651u out); energy/shock/thermal pass; 4 hull shells (4,471,296 HP).
+  T3: 75,616 HP total; core 2,400; largest part 2,400; 76 parts; radius 363u; 2 panels (curved arcs, 32% of the ring, 182u out); energy/shock/thermal pass; 2 hull shells (90,740 HP).
+  T4: 393,984 HP total; core 10,800; largest part 12,672; 82 parts; radius 599u; 3 panels (curved arcs, 48% of the ring, 301u out); energy/shock/thermal pass; 3 hull shells (709,170 HP).
+  T5: 1,863,040 HP total; core 48,000; largest part 56,320; 85 parts; radius 988u; 4 panels (curved arcs, 64% of the ring, 497u out); energy/shock/thermal pass; 4 hull shells (4,471,296 HP).
 Defence: energy shield panels appear at tier 3+ (2 generators at epic, 3 at legendary, 4 at mythical, each covering only a slice of the ring); hull shells at tier 2+ (60% hull per layer, ~4x that in kinetic fire).
 Damage: eDmg 16 / 48 / 144 / 432 / 1,296 / 3,888 by tier. Contact = 0.25x eDmg every 0.7s. Weapon mounts: 0 gun(s) (0.4x eDmg, 1.1-1.7s cadence) and 0 missile pod(s) (1.1x eDmg, 4.5-6s cadence) at T5; no gun or missile mounts at T3. Destroying a weapon part explodes for 1.8x eDmg to the player; other parts explode for 1.3x.
 Abilities (3):
@@ -394,9 +394,9 @@ Hull by tier:
   T0: 419 HP total; core 30; largest part 30; 36 parts; radius 92u; no energy shield.
   T1: 1,675 HP total; core 120; largest part 120; 36 parts; radius 158u; no energy shield.
   T2: 9,655 HP total; core 540; largest part 540; 54 parts; radius 273u; no energy shield; 1 hull shell (5,793 HP).
-  T3: 77,472 HP total; core 2,400; largest part 2,400; 77 parts; radius 469u; 2 panels (straight bars, 42% of the ring, 239u out); energy/shock/thermal pass; 2 hull shells (92,966 HP).
-  T4: 412,416 HP total; core 10,800; largest part 12,672; 93 parts; radius 805u; 3 panels (straight bars, 63% of the ring, 394u out); energy/shock/thermal pass; 3 hull shells (742,350 HP).
-  T5: 1,944,960 HP total; core 48,000; largest part 56,320; 96 parts; radius 1,379u; 4 panels (straight bars, 84% of the ring, 651u out); energy/shock/thermal pass; 4 hull shells (4,667,904 HP).
+  T3: 77,472 HP total; core 2,400; largest part 2,400; 77 parts; radius 469u; 2 panels (straight bars, 55% of the ring, 182u out); energy/shock/thermal pass; 2 hull shells (92,966 HP).
+  T4: 412,416 HP total; core 10,800; largest part 12,672; 93 parts; radius 805u; 3 panels (straight bars, 82% of the ring, 301u out); energy/shock/thermal pass; 3 hull shells (742,350 HP).
+  T5: 1,944,960 HP total; core 48,000; largest part 56,320; 96 parts; radius 1,379u; 4 panels (straight bars, 110% of the ring, 497u out); energy/shock/thermal pass; 4 hull shells (4,667,904 HP).
 Defence: energy shield panels appear at tier 3+ (2 generators at epic, 3 at legendary, 4 at mythical, each covering only a slice of the ring); hull shells at tier 2+ (60% hull per layer, ~4x that in kinetic fire).
 Damage: eDmg 16 / 48 / 144 / 432 / 1,296 / 3,888 by tier. Contact = 0.25x eDmg every 0.7s. Weapon mounts: 6 gun(s) (0.4x eDmg, 1.1-1.7s cadence) and 0 missile pod(s) (1.1x eDmg, 4.5-6s cadence) at T5; no gun or missile mounts at T3. Destroying a weapon part explodes for 1.8x eDmg to the player; other parts explode for 1.3x.
 Abilities (3):
@@ -411,9 +411,9 @@ Hull by tier:
   T0: 490 HP total; core 30; largest part 30; 39 parts; radius 99u; no energy shield.
   T1: 1,958 HP total; core 120; largest part 120; 39 parts; radius 164u; no energy shield.
   T2: 9,634 HP total; core 540; largest part 540; 45 parts; radius 270u; no energy shield; 1 hull shell (5,780 HP).
-  T3: 75,456 HP total; core 2,400; largest part 2,400; 75 parts; radius 445u; 2 panels (straight bars, some sweeping, 42% of the ring, 239u out); energy/shock/thermal pass; 2 hull shells (90,548 HP).
-  T4: 458,064 HP total; core 10,800; largest part 12,672; 89 parts; radius 735u; 3 panels (straight bars, some sweeping, 63% of the ring, 394u out); energy/shock/thermal pass; 3 hull shells (824,514 HP).
-  T5: 2,147,840 HP total; core 48,000; largest part 56,320; 92 parts; radius 1,212u; 4 panels (straight bars, some sweeping, 84% of the ring, 651u out); energy/shock/thermal pass; 4 hull shells (5,154,816 HP).
+  T3: 75,456 HP total; core 2,400; largest part 2,400; 75 parts; radius 445u; 2 panels (straight bars, some sweeping, 55% of the ring, 182u out); energy/shock/thermal pass; 2 hull shells (90,548 HP).
+  T4: 458,064 HP total; core 10,800; largest part 12,672; 89 parts; radius 735u; 3 panels (straight bars, some sweeping, 82% of the ring, 301u out); energy/shock/thermal pass; 3 hull shells (824,514 HP).
+  T5: 2,147,840 HP total; core 48,000; largest part 56,320; 92 parts; radius 1,212u; 4 panels (straight bars, some sweeping, 110% of the ring, 497u out); energy/shock/thermal pass; 4 hull shells (5,154,816 HP).
 Defence: energy shield panels appear at tier 3+ (2 generators at epic, 3 at legendary, 4 at mythical, each covering only a slice of the ring); hull shells at tier 2+ (60% hull per layer, ~4x that in kinetic fire).
 Damage: eDmg 16 / 48 / 144 / 432 / 1,296 / 3,888 by tier. Contact = 0.25x eDmg every 0.7s. Weapon mounts: 6 gun(s) (0.4x eDmg, 1.1-1.7s cadence) and 0 missile pod(s) (1.1x eDmg, 4.5-6s cadence) at T5; T3 has 2 gun(s) / 0 pod(s). Destroying a weapon part explodes for 1.8x eDmg to the player; other parts explode for 1.3x.
 Abilities (3):
@@ -428,9 +428,9 @@ Hull by tier:
   T0: 338 HP total; core 30; largest part 30; 32 parts; radius 94u; no energy shield.
   T1: 1,354 HP total; core 120; largest part 120; 32 parts; radius 154u; no energy shield.
   T2: 8,222 HP total; core 540; largest part 540; 41 parts; radius 255u; no energy shield; 1 hull shell (4,933 HP).
-  T3: 65,664 HP total; core 2,400; largest part 2,400; 69 parts; radius 420u; 2 panels (curved arcs, some sweeping, 32% of the ring, 239u out); energy/shock/thermal pass; 2 hull shells (78,796 HP).
-  T4: 317,520 HP total; core 10,800; largest part 12,672; 71 parts; radius 694u; 3 panels (curved arcs, some sweeping, 48% of the ring, 394u out); energy/shock/thermal pass; 3 hull shells (571,536 HP).
-  T5: 1,452,800 HP total; core 48,000; largest part 56,320; 72 parts; radius 1,145u; 4 panels (curved arcs, some sweeping, 64% of the ring, 651u out); energy/shock/thermal pass; 4 hull shells (3,486,720 HP).
+  T3: 65,664 HP total; core 2,400; largest part 2,400; 69 parts; radius 420u; 2 panels (curved arcs, some sweeping, 32% of the ring, 182u out); energy/shock/thermal pass; 2 hull shells (78,796 HP).
+  T4: 317,520 HP total; core 10,800; largest part 12,672; 71 parts; radius 694u; 3 panels (curved arcs, some sweeping, 48% of the ring, 301u out); energy/shock/thermal pass; 3 hull shells (571,536 HP).
+  T5: 1,452,800 HP total; core 48,000; largest part 56,320; 72 parts; radius 1,145u; 4 panels (curved arcs, some sweeping, 64% of the ring, 497u out); energy/shock/thermal pass; 4 hull shells (3,486,720 HP).
 Defence: energy shield panels appear at tier 3+ (2 generators at epic, 3 at legendary, 4 at mythical, each covering only a slice of the ring); hull shells at tier 2+ (60% hull per layer, ~4x that in kinetic fire).
 Damage: eDmg 16 / 48 / 144 / 432 / 1,296 / 3,888 by tier. Contact = 0.25x eDmg every 0.7s. Weapon mounts: 0 gun(s) (0.4x eDmg, 1.1-1.7s cadence) and 0 missile pod(s) (1.1x eDmg, 4.5-6s cadence) at T5; no gun or missile mounts at T3. Destroying a weapon part explodes for 1.8x eDmg to the player; other parts explode for 1.3x.
 Abilities (3):
@@ -446,8 +446,8 @@ Hull by tier:
   T1: 1,667 HP total; core 120; largest part 120; 36 parts; radius 131u; no energy shield.
   T2: 9,619 HP total; core 540; largest part 540; 54 parts; radius 216u; no energy shield; 1 hull shell (5,772 HP).
   T3: 73,152 HP total; core 2,400; largest part 2,400; 75 parts; radius 356u; no energy shield; 2 hull shells (87,782 HP).
-  T4: 354,096 HP total; core 10,800; largest part 12,672; 77 parts; radius 588u; 3 panels (straight bars, 63% of the ring, 394u out); energy/shock/thermal pass; 3 hull shells (637,374 HP).
-  T5: 1,615,360 HP total; core 48,000; largest part 56,320; 78 parts; radius 969u; 4 panels (straight bars, 84% of the ring, 651u out); energy/shock/thermal pass; 4 hull shells (3,876,864 HP).
+  T4: 354,096 HP total; core 10,800; largest part 12,672; 77 parts; radius 588u; 3 panels (straight bars, 82% of the ring, 301u out); energy/shock/thermal pass; 3 hull shells (637,374 HP).
+  T5: 1,615,360 HP total; core 48,000; largest part 56,320; 78 parts; radius 969u; 4 panels (straight bars, 110% of the ring, 497u out); energy/shock/thermal pass; 4 hull shells (3,876,864 HP).
 Defence: energy shield panels appear at tier 3+ (2 generators at epic, 3 at legendary, 4 at mythical, each covering only a slice of the ring); hull shells at tier 2+ (60% hull per layer, ~4x that in kinetic fire).
 Damage: eDmg 16 / 48 / 144 / 432 / 1,296 / 3,888 by tier. Contact = 0.25x eDmg every 0.7s. Weapon mounts: 0 gun(s) (0.4x eDmg, 1.1-1.7s cadence) and 0 missile pod(s) (1.1x eDmg, 4.5-6s cadence) at T5; T3 has 2 gun(s) / 0 pod(s). Destroying a weapon part explodes for 1.8x eDmg to the player; other parts explode for 1.3x.
 Abilities (3):
@@ -462,9 +462,9 @@ Hull by tier:
   T0: 401 HP total; core 30; largest part 30; 35 parts; radius 82u; no energy shield.
   T1: 1,605 HP total; core 120; largest part 120; 35 parts; radius 135u; no energy shield.
   T2: 8,978 HP total; core 540; largest part 540; 48 parts; radius 224u; no energy shield; 1 hull shell (5,387 HP).
-  T3: 72,544 HP total; core 2,400; largest part 2,400; 74 parts; radius 369u; 2 panels (straight bars, 42% of the ring, 239u out); energy/shock/thermal pass; 2 hull shells (87,052 HP).
-  T4: 390,240 HP total; core 10,800; largest part 12,672; 90 parts; radius 609u; 3 panels (straight bars, 63% of the ring, 394u out); energy/shock/thermal pass; 3 hull shells (702,432 HP).
-  T5: 1,846,400 HP total; core 48,000; largest part 56,320; 93 parts; radius 1,004u; 4 panels (straight bars, 84% of the ring, 651u out); energy/shock/thermal pass; 4 hull shells (4,431,360 HP).
+  T3: 72,544 HP total; core 2,400; largest part 2,400; 74 parts; radius 369u; 2 panels (straight bars, 55% of the ring, 182u out); energy/shock/thermal pass; 2 hull shells (87,052 HP).
+  T4: 390,240 HP total; core 10,800; largest part 12,672; 90 parts; radius 609u; 3 panels (straight bars, 82% of the ring, 301u out); energy/shock/thermal pass; 3 hull shells (702,432 HP).
+  T5: 1,846,400 HP total; core 48,000; largest part 56,320; 93 parts; radius 1,004u; 4 panels (straight bars, 110% of the ring, 497u out); energy/shock/thermal pass; 4 hull shells (4,431,360 HP).
 Defence: energy shield panels appear at tier 3+ (2 generators at epic, 3 at legendary, 4 at mythical, each covering only a slice of the ring); hull shells at tier 2+ (60% hull per layer, ~4x that in kinetic fire).
 Damage: eDmg 16 / 48 / 144 / 432 / 1,296 / 3,888 by tier. Contact = 0.25x eDmg every 0.7s. Weapon mounts: 0 gun(s) (0.4x eDmg, 1.1-1.7s cadence) and 4 missile pod(s) (1.1x eDmg, 4.5-6s cadence) at T5; no gun or missile mounts at T3. Destroying a weapon part explodes for 1.8x eDmg to the player; other parts explode for 1.3x.
 Abilities (3):
@@ -479,9 +479,9 @@ Hull by tier:
   T0: 383 HP total; core 30; largest part 30; 30 parts; radius 122u; no energy shield.
   T1: 1,533 HP total; core 120; largest part 120; 30 parts; radius 202u; no energy shield.
   T2: 8,942 HP total; core 540; largest part 540; 47 parts; radius 333u; no energy shield; 1 hull shell (5,365 HP).
-  T3: 60,288 HP total; core 2,400; largest part 2,400; 61 parts; radius 549u; 2 panels (straight bars, 42% of the ring, 239u out); energy/shock/thermal pass; 2 hull shells (72,346 HP).
-  T4: 293,328 HP total; core 10,800; largest part 12,672; 63 parts; radius 905u; 3 panels (straight bars, 63% of the ring, 394u out); energy/shock/thermal pass; 3 hull shells (527,991 HP).
-  T5: 1,345,280 HP total; core 48,000; largest part 56,320; 64 parts; radius 1,494u; 4 panels (straight bars, 84% of the ring, 651u out); energy/shock/thermal pass; 4 hull shells (3,228,672 HP).
+  T3: 60,288 HP total; core 2,400; largest part 2,400; 61 parts; radius 549u; 2 panels (straight bars, 55% of the ring, 182u out); energy/shock/thermal pass; 2 hull shells (72,346 HP).
+  T4: 293,328 HP total; core 10,800; largest part 12,672; 63 parts; radius 905u; 3 panels (straight bars, 82% of the ring, 301u out); energy/shock/thermal pass; 3 hull shells (527,991 HP).
+  T5: 1,345,280 HP total; core 48,000; largest part 56,320; 64 parts; radius 1,494u; 4 panels (straight bars, 110% of the ring, 497u out); energy/shock/thermal pass; 4 hull shells (3,228,672 HP).
 Defence: energy shield panels appear at tier 3+ (2 generators at epic, 3 at legendary, 4 at mythical, each covering only a slice of the ring); hull shells at tier 2+ (60% hull per layer, ~4x that in kinetic fire).
 Damage: eDmg 16 / 48 / 144 / 432 / 1,296 / 3,888 by tier. Contact = 0.25x eDmg every 0.7s. Weapon mounts: 0 gun(s) (0.4x eDmg, 1.1-1.7s cadence) and 0 missile pod(s) (1.1x eDmg, 4.5-6s cadence) at T5; no gun or missile mounts at T3. Destroying a weapon part explodes for 1.8x eDmg to the player; other parts explode for 1.3x.
 Abilities (3):
@@ -513,9 +513,9 @@ Hull by tier:
   T0: 505 HP total; core 30; largest part 30; 41 parts; radius 94u; no energy shield.
   T1: 2,021 HP total; core 120; largest part 120; 41 parts; radius 154u; no energy shield.
   T2: 11,210 HP total; core 540; largest part 540; 59 parts; radius 255u; no energy shield; 1 hull shell (6,726 HP).
-  T3: 82,464 HP total; core 2,400; largest part 2,400; 89 parts; radius 420u; 2 panels (straight bars, 42% of the ring, 239u out); energy/shock/thermal pass; 2 hull shells (98,956 HP).
-  T4: 489,600 HP total; core 10,800; largest part 12,672; 103 parts; radius 693u; 3 panels (straight bars, 63% of the ring, 394u out); energy/shock/thermal pass; 3 hull shells (881,280 HP).
-  T5: 2,288,000 HP total; core 48,000; largest part 56,320; 106 parts; radius 1,144u; 4 panels (straight bars, 84% of the ring, 651u out); energy/shock/thermal pass; 4 hull shells (5,491,200 HP).
+  T3: 82,464 HP total; core 2,400; largest part 2,400; 89 parts; radius 420u; 2 panels (straight bars, 55% of the ring, 182u out); energy/shock/thermal pass; 2 hull shells (98,956 HP).
+  T4: 489,600 HP total; core 10,800; largest part 12,672; 103 parts; radius 693u; 3 panels (straight bars, 82% of the ring, 301u out); energy/shock/thermal pass; 3 hull shells (881,280 HP).
+  T5: 2,288,000 HP total; core 48,000; largest part 56,320; 106 parts; radius 1,144u; 4 panels (straight bars, 110% of the ring, 497u out); energy/shock/thermal pass; 4 hull shells (5,491,200 HP).
 Defence: energy shield panels appear at tier 3+ (2 generators at epic, 3 at legendary, 4 at mythical, each covering only a slice of the ring); hull shells at tier 2+ (60% hull per layer, ~4x that in kinetic fire).
 Damage: eDmg 16 / 48 / 144 / 432 / 1,296 / 3,888 by tier. Contact = 0.25x eDmg every 0.7s. Weapon mounts: 0 gun(s) (0.4x eDmg, 1.1-1.7s cadence) and 0 missile pod(s) (1.1x eDmg, 4.5-6s cadence) at T5; no gun or missile mounts at T3. Destroying a weapon part explodes for 1.8x eDmg to the player; other parts explode for 1.3x.
 Abilities (3):
@@ -530,9 +530,9 @@ Hull by tier:
   T0: 350 HP total; core 30; largest part 30; 34 parts; radius 137u; no energy shield.
   T1: 1,542 HP total; core 120; largest part 120; 36 parts; radius 226u; no energy shield.
   T2: 7,690 HP total; core 540; largest part 540; 41 parts; radius 373u; no energy shield; 1 hull shell (4,614 HP).
-  T3: 55,872 HP total; core 2,400; largest part 2,400; 63 parts; radius 616u; 2 panels (curved arcs, 32% of the ring, 239u out); energy/shock/thermal pass; 2 hull shells (67,046 HP).
-  T4: 305,136 HP total; core 10,800; largest part 12,672; 69 parts; radius 1,016u; 3 panels (curved arcs, 48% of the ring, 394u out); energy/shock/thermal pass; 3 hull shells (549,246 HP).
-  T5: 1,468,160 HP total; core 48,000; largest part 56,320; 72 parts; radius 1,677u; 4 panels (curved arcs, 64% of the ring, 651u out); energy/shock/thermal pass; 4 hull shells (3,523,584 HP).
+  T3: 55,872 HP total; core 2,400; largest part 2,400; 63 parts; radius 616u; 2 panels (curved arcs, 32% of the ring, 182u out); energy/shock/thermal pass; 2 hull shells (67,046 HP).
+  T4: 305,136 HP total; core 10,800; largest part 12,672; 69 parts; radius 1,016u; 3 panels (curved arcs, 48% of the ring, 301u out); energy/shock/thermal pass; 3 hull shells (549,246 HP).
+  T5: 1,468,160 HP total; core 48,000; largest part 56,320; 72 parts; radius 1,677u; 4 panels (curved arcs, 64% of the ring, 497u out); energy/shock/thermal pass; 4 hull shells (3,523,584 HP).
 Defence: energy shield panels appear at tier 3+ (2 generators at epic, 3 at legendary, 4 at mythical, each covering only a slice of the ring); hull shells at tier 2+ (60% hull per layer, ~4x that in kinetic fire).
 Damage: eDmg 16 / 48 / 144 / 432 / 1,296 / 3,888 by tier. Contact = 0.25x eDmg every 0.7s. Weapon mounts: 6 gun(s) (0.4x eDmg, 1.1-1.7s cadence) and 0 missile pod(s) (1.1x eDmg, 4.5-6s cadence) at T5; no gun or missile mounts at T3. Destroying a weapon part explodes for 1.8x eDmg to the player; other parts explode for 1.3x.
 Abilities (3):
@@ -547,9 +547,9 @@ Hull by tier:
   T0: 390 HP total; core 30; largest part 30; 35 parts; radius 97u; no energy shield.
   T1: 1,558 HP total; core 120; largest part 120; 35 parts; radius 159u; no energy shield.
   T2: 7,834 HP total; core 540; largest part 540; 41 parts; radius 263u; no energy shield; 1 hull shell (4,700 HP).
-  T3: 75,136 HP total; core 2,400; largest part 2,400; 76 parts; radius 434u; 2 panels (straight bars, 42% of the ring, 239u out); energy/shock/thermal pass; 2 hull shells (90,164 HP).
-  T4: 375,984 HP total; core 10,800; largest part 12,672; 80 parts; radius 716u; 3 panels (straight bars, 63% of the ring, 394u out); energy/shock/thermal pass; 3 hull shells (676,770 HP).
-  T5: 1,783,040 HP total; core 48,000; largest part 56,320; 83 parts; radius 1,182u; 4 panels (straight bars, 84% of the ring, 651u out); energy/shock/thermal pass; 4 hull shells (4,279,296 HP).
+  T3: 75,136 HP total; core 2,400; largest part 2,400; 76 parts; radius 434u; 2 panels (straight bars, 55% of the ring, 182u out); energy/shock/thermal pass; 2 hull shells (90,164 HP).
+  T4: 375,984 HP total; core 10,800; largest part 12,672; 80 parts; radius 716u; 3 panels (straight bars, 82% of the ring, 301u out); energy/shock/thermal pass; 3 hull shells (676,770 HP).
+  T5: 1,783,040 HP total; core 48,000; largest part 56,320; 83 parts; radius 1,182u; 4 panels (straight bars, 110% of the ring, 497u out); energy/shock/thermal pass; 4 hull shells (4,279,296 HP).
 Defence: energy shield panels appear at tier 3+ (2 generators at epic, 3 at legendary, 4 at mythical, each covering only a slice of the ring); hull shells at tier 2+ (60% hull per layer, ~4x that in kinetic fire).
 Damage: eDmg 16 / 48 / 144 / 432 / 1,296 / 3,888 by tier. Contact = 0.25x eDmg every 0.7s. Weapon mounts: 0 gun(s) (0.4x eDmg, 1.1-1.7s cadence) and 0 missile pod(s) (1.1x eDmg, 4.5-6s cadence) at T5; no gun or missile mounts at T3. Destroying a weapon part explodes for 1.8x eDmg to the player; other parts explode for 1.3x.
 Abilities (3):
@@ -581,9 +581,9 @@ Hull by tier:
   T0: 553 HP total; core 30; largest part 30; 44 parts; radius 82u; no energy shield.
   T1: 2,210 HP total; core 120; largest part 120; 44 parts; radius 136u; no energy shield.
   T2: 12,064 HP total; core 540; largest part 540; 62 parts; radius 224u; no energy shield; 1 hull shell (7,238 HP).
-  T3: 80,496 HP total; core 2,400; largest part 2,400; 80 parts; radius 370u; 2 panels (curved arcs, some sweeping, 32% of the ring, 239u out); energy/shock/thermal pass; 2 hull shells (96,596 HP).
-  T4: 496,584 HP total; core 10,800; largest part 12,672; 96 parts; radius 611u; 3 panels (curved arcs, some sweeping, 48% of the ring, 394u out); energy/shock/thermal pass; 3 hull shells (893,850 HP).
-  T5: 2,389,440 HP total; core 48,000; largest part 56,320; 101 parts; radius 1,008u; 4 panels (curved arcs, some sweeping, 64% of the ring, 651u out); energy/shock/thermal pass; 4 hull shells (5,734,656 HP).
+  T3: 80,496 HP total; core 2,400; largest part 2,400; 80 parts; radius 370u; 2 panels (curved arcs, some sweeping, 32% of the ring, 182u out); energy/shock/thermal pass; 2 hull shells (96,596 HP).
+  T4: 496,584 HP total; core 10,800; largest part 12,672; 96 parts; radius 611u; 3 panels (curved arcs, some sweeping, 48% of the ring, 301u out); energy/shock/thermal pass; 3 hull shells (893,850 HP).
+  T5: 2,389,440 HP total; core 48,000; largest part 56,320; 101 parts; radius 1,008u; 4 panels (curved arcs, some sweeping, 64% of the ring, 497u out); energy/shock/thermal pass; 4 hull shells (5,734,656 HP).
 Defence: energy shield panels appear at tier 3+ (2 generators at epic, 3 at legendary, 4 at mythical, each covering only a slice of the ring); hull shells at tier 2+ (60% hull per layer, ~4x that in kinetic fire).
 Damage: eDmg 16 / 48 / 144 / 432 / 1,296 / 3,888 by tier. Contact = 0.25x eDmg every 0.7s. Weapon mounts: 0 gun(s) (0.4x eDmg, 1.1-1.7s cadence) and 4 missile pod(s) (1.1x eDmg, 4.5-6s cadence) at T5; no gun or missile mounts at T3. Destroying a weapon part explodes for 1.8x eDmg to the player; other parts explode for 1.3x.
 Abilities (3):
@@ -598,9 +598,9 @@ Hull by tier:
   T0: 2,607 HP total; core 30; largest part 30; 217 parts; radius 294u; no energy shield.
   T1: 11,669 HP total; core 120; largest part 122; 244 parts; radius 517u; no energy shield.
   T2: 58,984 HP total; core 540; largest part 547; 278 parts; radius 908u; no energy shield.
-  T3: 461,096 HP total; core 2,400; largest part 2,432; 415 parts; radius 1,589u; 2 panels (curved arcs, some sweeping, 32% of the ring, 239u out); energy/shock/thermal pass.
-  T4: 2,293,524 HP total; core 10,800; largest part 12,672; 456 parts; radius 2,773u; 3 panels (curved arcs, some sweeping, 48% of the ring, 394u out); energy/shock/thermal pass.
-  T5: 11,038,240 HP total; core 48,000; largest part 56,320; 494 parts; radius 4,827u; 4 panels (curved arcs, some sweeping, 64% of the ring, 651u out); energy/shock/thermal pass.
+  T3: 461,096 HP total; core 2,400; largest part 2,432; 415 parts; radius 1,589u; 2 panels (curved arcs, some sweeping, 32% of the ring, 182u out); energy/shock/thermal pass.
+  T4: 2,293,524 HP total; core 10,800; largest part 12,672; 456 parts; radius 2,773u; 3 panels (curved arcs, some sweeping, 48% of the ring, 301u out); energy/shock/thermal pass.
+  T5: 11,038,240 HP total; core 48,000; largest part 56,320; 494 parts; radius 4,827u; 4 panels (curved arcs, some sweeping, 64% of the ring, 497u out); energy/shock/thermal pass.
 Defence: serpentine body (no hull shells); energy shield panels appear at tier 3+ (2 generators at epic, 3 at legendary, 4 at mythical, each covering only a slice of the ring); hull shells at tier 2+ (60% hull per layer, ~4x that in kinetic fire).
 Damage: eDmg 16 / 48 / 144 / 432 / 1,296 / 3,888 by tier. Contact = 0.25x eDmg every 0.7s. Weapon mounts: 0 gun(s) (0.4x eDmg, 1.1-1.7s cadence) and 0 missile pod(s) (1.1x eDmg, 4.5-6s cadence) at T5; no gun or missile mounts at T3. Destroying a weapon part explodes for 1.8x eDmg to the player; other parts explode for 1.3x.
 Abilities (4):
@@ -643,7 +643,7 @@ Behaviour: Right-click any enemy piece to mark it. Missiles fly straight through
 --- Shield-Bypass Laser (bypass) ---
 Type: energy. Per projectile: 0.16x st.dmg. Per trigger/beam-part: 0.16x st.dmg. Cooldown 0.1s at eff 1.00 (0.127s at eff 0.30). Nominal DPS 16 at st.dmg 10 / eff 1.00 (0.16x st.dmg per second). Range 700u (capped at 95% of the visible radius when zoomed in).
 Craft: difficulty 5, exactly 7 components; 1x Core/Weapon + 1x Jewel Beetle / Firefly part. Efficiency = max(0.30, (0.60 + 0.30 x average component tier [+0.5 if core]) x (1 - 0.05 x (difficulty - 1))).
-Behaviour: Auto-firing beam that ignores shield generators but cannot cut through armour plating. Beam ignores enemy energy-shield bubbles and hits 3 parts; 0.16x st.dmg per part. Hull shells still block it.
+Behaviour: Auto-firing beam that ignores shield generators but cannot cut through armour plating. Beam ignores enemy energy-shield panels and hits 3 parts; 0.16x st.dmg per part. Hull shells still block it.
 
 --- Heavy Machine Gun (hmg) ---
 Type: kinetic. Per projectile: 0.1x st.dmg. Per trigger/beam-part: 0.1x st.dmg. Cooldown 0.075s at eff 1.00 (0.095s at eff 0.30). Nominal DPS 13.3 at st.dmg 10 / eff 1.00 (0.1x st.dmg per second). Range 650u (capped at 95% of the visible radius when zoomed in).
@@ -653,7 +653,7 @@ Behaviour: Very high rate of fire, wide spray, weak per hit. Good for stripping 
 --- EMP Cannon (emp) ---
 Type: shock. Per projectile: 1.4x st.dmg. Per trigger/beam-part: 1.4x st.dmg. Cooldown 2.6s at eff 1.00 (3.291s at eff 0.30). Nominal DPS 5.4 at st.dmg 10 / eff 1.00 (1.4x st.dmg per second). Range 560u (capped at 95% of the visible radius when zoomed in).
 Craft: difficulty 4, exactly 6 components; 1x Core/Shield + 1x Cicada / Firefly part. Efficiency = max(0.30, (0.60 + 0.30 x average component tier [+0.5 if core]) x (1 - 0.05 x (difficulty - 1))).
-Behaviour: Pulse that stuns every enemy within a wide radius. 620u radius EMP: 1.4x st.dmg to every enemy and 1.8s stun; ignores shield bubbles but not hull shells.
+Behaviour: Pulse that stuns every enemy within a wide radius. 620u radius EMP: 1.4x st.dmg to every enemy and 1.8s stun; ignores shield panels but not hull shells.
 
 --- Plasma Cutter (cutter) ---
 Type: thermal. Per projectile: 1.1x st.dmg. Per trigger/beam-part: 1.1x st.dmg. Cooldown 0.18s at eff 1.00 (0.228s at eff 0.30). Nominal DPS 61.1 at st.dmg 10 / eff 1.00 (1.1x st.dmg per second). Range 190u (capped at 95% of the visible radius when zoomed in).
@@ -804,8 +804,8 @@ Turning: common, uncommon, rare and epic all use the species turn rate; legendar
 Legs cripple before they snap: a limb (one leg chain) that has lost 65% of its health, i.e. drops below 35%, stops pushing and steering and its walk cycle freezes - the leg is still attached and still shootable, it just does nothing. A leg at 50% health still works normally.
 Enemy turrets: gun 900u/1.35s/0.4x contact dmg/560u/s; rotary gun 700u/0.16s/0.05x/720u/s with a 0.16 rad spray; scatter cannon 700u/2.6s, 7 pellets of 0.2x at 420u/s across 0.5 rad; heavy cannon 1200u/5.0s/1.8x as an instant hitscan line (no travel time, so it cannot be outrun) with a 260u/s recoil shove on the hull and a heavy screen shake when it connects; laser emitter 1000u/2.4s/1.0x at 1,500u/s and energy damage (kinetic shields do not reduce it). Turret mounts appear at epic+ (one pair per tier above rare).
 Every body can turn up armed: species with no natural gun roll one with 12% + 6%/tier and species with no natural shield generator roll one with 10% + 5%/tier, so 30%/25% at epic and 42%/35% at mythical. Rolled guns draw from rotary, scatter, laser and heavy patterns, weighted toward heavier gear at high tiers.
-Energy shields: a bubble has no charge to strip, so it never collapses, re-arms or regenerates. Destroying its Shield Generator part removes it.
+Energy shields: a panel has no charge to strip, so it never collapses, re-arms or regenerates. Destroying its Shield Generator part removes it.
 Destroyed parts: each dead part can drop a component; weapons and shield generators detonate for 1.8x eDmg to the player (other parts 1.3x) and damage enemies in the blast.
 Boss: the Snake is the only boss (217 parts, body wave, 294u radius at T0; no reflective shield). At most one is alive; it spawns in the mythical core and never counts as a normal resident. SNAKE_ENABLED is false in this build, so the dedicated core pass is dormant even though the encounter code exists.
 
-End of compendium · build 2.1.3
+End of compendium · build 2.2.0

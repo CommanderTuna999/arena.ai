@@ -1,5 +1,5 @@
 WOF GUE — STAT COMPENDIUM
-Build 2.1.3 · 21 November 2026
+Build 2.2.0 · 21 November 2026
 
 HOW TO READ THIS
 C / U / R / E / L / M = Common, Uncommon, Rare, Epic, Legendary, Mythic.
@@ -33,15 +33,15 @@ Chunk seed pass rate: Common 100% · Uncommon 84.6% · Rare 69.2% · Epic 12.3% 
 
 DAMAGE TYPES
 • Kinetic — base cannon, scatter driver, heavy machine gun, rail sniper, swarm drones. Enemy energy panels stop it dead where they are; the panel takes no damage, so aim at the gaps. Hull shells still stop the rail.
-• Energy — pulse turret, arc lance, shield-bypass laser. Passes straight through enemy energy-shield bubbles; the bypass laser also ignores the bubble entirely.
-• Explosive — seeker pod, homing missile launcher, flak cannon, mine layer, cluster rockets. Stopped dead by enemy energy-shield bubbles.
-• Shock — EMP cannon, chain lightning, gravity bomb, sonic disruptor. Passes through bubbles; direct area effects skip the bubble check anyway. EMP, chain and sonic skip hull shells.
-• Corrosive — acid sprayer, venom injector. Stopped dead by enemy energy-shield bubbles.
-• Thermal — plasma cutter. Passes straight through enemy energy-shield bubbles.
-• Physical — contact, knockback and direct impulses. Collisions are not projectiles, so the bubble never checks them; physical rounds are stopped.
+• Energy — pulse turret, arc lance, shield-bypass laser. Passes straight through enemy energy-shield panels; the bypass laser also ignores the panel entirely.
+• Explosive — seeker pod, homing missile launcher, flak cannon, mine layer, cluster rockets. Stopped dead by enemy energy-shield panels.
+• Shock — EMP cannon, chain lightning, gravity bomb, sonic disruptor. Passes through panels; direct area effects skip the panel check anyway. EMP, chain and sonic skip hull shells.
+• Corrosive — acid sprayer, venom injector. Stopped dead by enemy energy-shield panels.
+• Thermal — plasma cutter. Passes straight through enemy energy-shield panels.
+• Physical — contact, knockback and direct impulses. Collisions are not projectiles, so the panels never check them; physical rounds are stopped.
 
 ENEMY DEFENCE RULES
-Energy shield: each Shield Generator projects a hex bubble 1.9 × body size that only covers that generator, not the whole body. Energy, shock and thermal damage passes through it. Every other projectile or beam is stopped at the edge and does nothing to the bubble: it has no charge to strip, so it never drops or re-arms and only disappears when the generator part is destroyed.
+Energy shield: each Shield Generator projects one wall 1.45 × body size out — a curved arc for flyers and serpents, a straight bar for walkers, some species sweeping them at 0.4-0.7 rad/s. A panel covers only a slice of the ring (2 at epic, 3 at legendary, 4 at mythical), so the gaps between panels are open weak points. Energy, shock and thermal damage passes through. Every other projectile or beam is stopped at the panel and does nothing to it: it has no charge to strip, so it never drops or re-arms and only disappears when the generator part is destroyed.
 Hull shells (armour plating): tier 2 and above carry solid layers holding 60% of the enemy hull each, drawn as steel slabs over the body. A hit is swallowed by the outer layer and only part of it is lost: bullets 30%, missiles and flak 40%, beams 80% (energy is only resisted 20%), area blasts 40%, shock 15%; Legendary legs carry 1 plating layer of their own, mythical legs 2. Breaking a layer releases a damaging shockwave. A mythical tier-5 layer is 60% of its hull, e.g. 943,872 HP on a 1,573,120 hull (four layers).
 
 ════════════════════════════════════════
@@ -84,7 +84,7 @@ PARTS AT MYTHIC
 
 DEFENCES
 Shells: Rare 1 layer (5,875 HP each, 60% hull) · Epic 2 layers (38,746 HP each, 60% hull) · Legendary 3 layers (202,781 HP each, 60% hull) · Mythic 4 layers (993,792 HP each, 60% hull)
-Energy shields: Epic 2 panels (curved arcs, fixed, 32% of the ring, 239u out) · Legendary 3 panels (curved arcs, fixed, 48% of the ring, 394u out) · Mythic 4 panels (curved arcs, fixed, 64% of the ring, 651u out) — each generator projects one wall with gaps between them; blocked rounds deal nothing and the panel never depletes, energy/shock/thermal pass
+Energy shields: Epic 2 panels (curved arcs, fixed, 32% of the ring, 182u out) · Legendary 3 panels (curved arcs, fixed, 48% of the ring, 301u out) · Mythic 4 panels (curved arcs, fixed, 64% of the ring, 497u out) — each generator projects one wall with gaps between them; blocked rounds deal nothing and the panel never depletes, energy/shock/thermal pass
 
 MOUNTS AT MYTHIC
 0 gun mounts · 0 missile pods · gun 0.4× enemy damage at 1.1–1.7s cadence; missiles 1.1× at 4.5–6s
@@ -128,7 +128,7 @@ PARTS AT MYTHIC
 
 DEFENCES
 Shells: Rare 1 layer (7,357 HP each, 60% hull) · Epic 2 layers (53,952 HP each, 60% hull) · Legendary 3 layers (299,376 HP each, 60% hull) · Mythic 4 layers (1,372,800 HP each, 60% hull)
-Energy shields: Epic 2 panels (straight bars, some sweeping, 42% of the ring, 239u out) — each generator projects one wall with gaps between them; blocked rounds deal nothing and the panel never depletes, energy/shock/thermal pass
+Energy shields: Epic 2 panels (straight bars, some sweeping, 55% of the ring, 182u out) — each generator projects one wall with gaps between them; blocked rounds deal nothing and the panel never depletes, energy/shock/thermal pass
 
 MOUNTS AT MYTHIC
 0 gun mounts · 0 missile pods · gun 0.4× enemy damage at 1.1–1.7s cadence; missiles 1.1× at 4.5–6s
@@ -172,7 +172,7 @@ PARTS AT MYTHIC
 
 DEFENCES
 Shells: Rare 1 layer (5,968 HP each, 60% hull) · Epic 2 layers (49,565 HP each, 60% hull) · Legendary 3 layers (286,805 HP each, 60% hull) · Mythic 4 layers (1,316,928 HP each, 60% hull)
-Energy shields: Epic 2 panels (straight bars, fixed, 42% of the ring, 239u out) — each generator projects one wall with gaps between them; blocked rounds deal nothing and the panel never depletes, energy/shock/thermal pass
+Energy shields: Epic 2 panels (straight bars, fixed, 55% of the ring, 182u out) — each generator projects one wall with gaps between them; blocked rounds deal nothing and the panel never depletes, energy/shock/thermal pass
 
 MOUNTS AT MYTHIC
 0 gun mounts · 2 missile pods · gun 0.4× enemy damage at 1.1–1.7s cadence; missiles 1.1× at 4.5–6s
@@ -216,7 +216,7 @@ PARTS AT MYTHIC
 
 DEFENCES
 Shells: Rare 1 layer (5,374 HP each, 60% hull) · Epic 2 layers (43,699 HP each, 60% hull) · Legendary 3 layers (207,965 HP each, 60% hull) · Mythic 4 layers (949,248 HP each, 60% hull)
-Energy shields: Epic 2 panels (curved arcs, fixed, 32% of the ring, 239u out) · Legendary 3 panels (curved arcs, fixed, 48% of the ring, 394u out) · Mythic 4 panels (curved arcs, fixed, 64% of the ring, 651u out) — each generator projects one wall with gaps between them; blocked rounds deal nothing and the panel never depletes, energy/shock/thermal pass
+Energy shields: Epic 2 panels (curved arcs, fixed, 32% of the ring, 182u out) · Legendary 3 panels (curved arcs, fixed, 48% of the ring, 301u out) · Mythic 4 panels (curved arcs, fixed, 64% of the ring, 497u out) — each generator projects one wall with gaps between them; blocked rounds deal nothing and the panel never depletes, energy/shock/thermal pass
 
 MOUNTS AT MYTHIC
 0 gun mounts · 0 missile pods · gun 0.4× enemy damage at 1.1–1.7s cadence; missiles 1.1× at 4.5–6s
@@ -260,7 +260,7 @@ PARTS AT MYTHIC
 
 DEFENCES
 Shells: Rare 1 layer (5,413 HP each, 60% hull) · Epic 2 layers (43,526 HP each, 60% hull) · Legendary 3 layers (216,000 HP each, 60% hull) · Mythic 4 layers (1,156,992 HP each, 60% hull)
-Energy shields: Epic 2 panels (straight bars, fixed, 42% of the ring, 239u out) · Legendary 3 panels (straight bars, fixed, 63% of the ring, 394u out) · Mythic 4 panels (straight bars, fixed, 84% of the ring, 651u out) — each generator projects one wall with gaps between them; blocked rounds deal nothing and the panel never depletes, energy/shock/thermal pass
+Energy shields: Epic 2 panels (straight bars, fixed, 55% of the ring, 182u out) · Legendary 3 panels (straight bars, fixed, 82% of the ring, 301u out) · Mythic 4 panels (straight bars, fixed, 110% of the ring, 497u out) — each generator projects one wall with gaps between them; blocked rounds deal nothing and the panel never depletes, energy/shock/thermal pass
 
 MOUNTS AT MYTHIC
 0 gun mounts · 0 missile pods · gun 0.4× enemy damage at 1.1–1.7s cadence; missiles 1.1× at 4.5–6s
@@ -304,7 +304,7 @@ PARTS AT MYTHIC
 
 DEFENCES
 Shells: none — the body takes hits directly.
-Energy shields: Epic 2 panels (curved arcs, fixed, 32% of the ring, 239u out) · Legendary 3 panels (curved arcs, fixed, 48% of the ring, 394u out) — each generator projects one wall with gaps between them; blocked rounds deal nothing and the panel never depletes, energy/shock/thermal pass
+Energy shields: Epic 2 panels (curved arcs, fixed, 32% of the ring, 182u out) · Legendary 3 panels (curved arcs, fixed, 48% of the ring, 301u out) — each generator projects one wall with gaps between them; blocked rounds deal nothing and the panel never depletes, energy/shock/thermal pass
 
 MOUNTS AT MYTHIC
 0 gun mounts · 0 missile pods · gun 0.4× enemy damage at 1.1–1.7s cadence; missiles 1.1× at 4.5–6s
@@ -391,7 +391,7 @@ PARTS AT MYTHIC
 
 DEFENCES
 Shells: Rare 1 layer (5,261 HP each, 60% hull) · Epic 2 layers (44,117 HP each, 60% hull) · Legendary 3 layers (249,761 HP each, 60% hull) · Mythic 4 layers (1,434,528 HP each, 60% hull)
-Energy shields: Epic 2 panels (straight bars, fixed, 42% of the ring, 239u out) · Legendary 3 panels (straight bars, fixed, 63% of the ring, 394u out) · Mythic 4 panels (straight bars, fixed, 84% of the ring, 651u out) — each generator projects one wall with gaps between them; blocked rounds deal nothing and the panel never depletes, energy/shock/thermal pass
+Energy shields: Epic 2 panels (straight bars, fixed, 55% of the ring, 182u out) · Legendary 3 panels (straight bars, fixed, 82% of the ring, 301u out) · Mythic 4 panels (straight bars, fixed, 110% of the ring, 497u out) — each generator projects one wall with gaps between them; blocked rounds deal nothing and the panel never depletes, energy/shock/thermal pass
 
 MOUNTS AT MYTHIC
 0 gun mounts · 4 missile pods · gun 0.4× enemy damage at 1.1–1.7s cadence; missiles 1.1× at 4.5–6s
@@ -475,7 +475,7 @@ PARTS AT MYTHIC
 
 DEFENCES
 Shells: Rare 1 layer (4,385 HP each, 60% hull) · Epic 2 layers (41,837 HP each, 60% hull) · Legendary 3 layers (210,989 HP each, 60% hull) · Mythic 4 layers (1,004,928 HP each, 60% hull)
-Energy shields: Epic 2 panels (curved arcs, some sweeping, 32% of the ring, 239u out) · Legendary 3 panels (curved arcs, some sweeping, 48% of the ring, 394u out) · Mythic 4 panels (curved arcs, some sweeping, 64% of the ring, 651u out) — each generator projects one wall with gaps between them; blocked rounds deal nothing and the panel never depletes, energy/shock/thermal pass
+Energy shields: Epic 2 panels (curved arcs, some sweeping, 32% of the ring, 182u out) · Legendary 3 panels (curved arcs, some sweeping, 48% of the ring, 301u out) · Mythic 4 panels (curved arcs, some sweeping, 64% of the ring, 497u out) — each generator projects one wall with gaps between them; blocked rounds deal nothing and the panel never depletes, energy/shock/thermal pass
 
 MOUNTS AT MYTHIC
 0 gun mounts · 0 missile pods · gun 0.4× enemy damage at 1.1–1.7s cadence; missiles 1.1× at 4.5–6s
@@ -559,7 +559,7 @@ PARTS AT MYTHIC
 
 DEFENCES
 Shells: Rare 1 layer (6,472 HP each, 60% hull) · Epic 2 layers (43,858 HP each, 60% hull) · Legendary 3 layers (218,268 HP each, 60% hull) · Mythic 4 layers (1,129,056 HP each, 60% hull)
-Energy shields: Mythic 4 panels (curved arcs, fixed, 64% of the ring, 651u out) — each generator projects one wall with gaps between them; blocked rounds deal nothing and the panel never depletes, energy/shock/thermal pass
+Energy shields: Mythic 4 panels (curved arcs, fixed, 64% of the ring, 497u out) — each generator projects one wall with gaps between them; blocked rounds deal nothing and the panel never depletes, energy/shock/thermal pass
 
 MOUNTS AT MYTHIC
 0 gun mounts · 0 missile pods · gun 0.4× enemy damage at 1.1–1.7s cadence; missiles 1.1× at 4.5–6s
@@ -640,7 +640,7 @@ PARTS AT MYTHIC
 
 DEFENCES
 Shells: Rare 1 layer (6,640 HP each, 60% hull) · Epic 2 layers (54,278 HP each, 60% hull) · Legendary 3 layers (292,032 HP each, 60% hull) · Mythic 4 layers (1,365,120 HP each, 60% hull)
-Energy shields: Epic 2 panels (straight bars, fixed, 42% of the ring, 239u out) · Legendary 3 panels (straight bars, fixed, 63% of the ring, 394u out) · Mythic 4 panels (straight bars, fixed, 84% of the ring, 651u out) — each generator projects one wall with gaps between them; blocked rounds deal nothing and the panel never depletes, energy/shock/thermal pass
+Energy shields: Epic 2 panels (straight bars, fixed, 55% of the ring, 182u out) · Legendary 3 panels (straight bars, fixed, 82% of the ring, 301u out) · Mythic 4 panels (straight bars, fixed, 110% of the ring, 497u out) — each generator projects one wall with gaps between them; blocked rounds deal nothing and the panel never depletes, energy/shock/thermal pass
 
 MOUNTS AT MYTHIC
 6 gun mounts · 0 missile pods · gun 0.4× enemy damage at 1.1–1.7s cadence; missiles 1.1× at 4.5–6s
@@ -681,7 +681,7 @@ PARTS AT MYTHIC
 
 DEFENCES
 Shells: Rare 1 layer (4,158 HP each, 60% hull) · Epic 2 layers (23,626 HP each, 60% hull) · Legendary 3 layers (113,918 HP each, 60% hull) · Mythic 4 layers (732,864 HP each, 60% hull)
-Energy shields: Mythic 4 panels (curved arcs, fixed, 64% of the ring, 651u out) — each generator projects one wall with gaps between them; blocked rounds deal nothing and the panel never depletes, energy/shock/thermal pass
+Energy shields: Mythic 4 panels (curved arcs, fixed, 64% of the ring, 497u out) — each generator projects one wall with gaps between them; blocked rounds deal nothing and the panel never depletes, energy/shock/thermal pass
 
 MOUNTS AT MYTHIC
 0 gun mounts · 0 missile pods · gun 0.4× enemy damage at 1.1–1.7s cadence; missiles 1.1× at 4.5–6s
@@ -722,7 +722,7 @@ PARTS AT MYTHIC
 
 DEFENCES
 Shells: Rare 1 layer (5,711 HP each, 60% hull) · Epic 2 layers (43,622 HP each, 60% hull) · Legendary 3 layers (239,760 HP each, 60% hull) · Mythic 4 layers (1,175,040 HP each, 60% hull)
-Energy shields: Legendary 3 panels (straight bars, fixed, 63% of the ring, 394u out) · Mythic 4 panels (straight bars, fixed, 84% of the ring, 651u out) — each generator projects one wall with gaps between them; blocked rounds deal nothing and the panel never depletes, energy/shock/thermal pass
+Energy shields: Legendary 3 panels (straight bars, fixed, 82% of the ring, 301u out) · Mythic 4 panels (straight bars, fixed, 110% of the ring, 497u out) — each generator projects one wall with gaps between them; blocked rounds deal nothing and the panel never depletes, energy/shock/thermal pass
 
 MOUNTS AT MYTHIC
 0 gun mounts · 4 missile pods · gun 0.4× enemy damage at 1.1–1.7s cadence; missiles 1.1× at 4.5–6s
@@ -763,7 +763,7 @@ PARTS AT MYTHIC
 
 DEFENCES
 Shells: Rare 1 layer (6,823 HP each, 60% hull) · Epic 2 layers (46,454 HP each, 60% hull) · Legendary 3 layers (295,704 HP each, 60% hull) · Mythic 4 layers (1,381,440 HP each, 60% hull)
-Energy shields: Epic 2 panels (straight bars, fixed, 42% of the ring, 239u out) · Legendary 3 panels (straight bars, fixed, 63% of the ring, 394u out) · Mythic 4 panels (straight bars, fixed, 84% of the ring, 651u out) — each generator projects one wall with gaps between them; blocked rounds deal nothing and the panel never depletes, energy/shock/thermal pass
+Energy shields: Epic 2 panels (straight bars, fixed, 55% of the ring, 182u out) · Legendary 3 panels (straight bars, fixed, 82% of the ring, 301u out) · Mythic 4 panels (straight bars, fixed, 110% of the ring, 497u out) — each generator projects one wall with gaps between them; blocked rounds deal nothing and the panel never depletes, energy/shock/thermal pass
 
 MOUNTS AT MYTHIC
 0 gun mounts · 0 missile pods · gun 0.4× enemy damage at 1.1–1.7s cadence; missiles 1.1× at 4.5–6s
@@ -804,7 +804,7 @@ PARTS AT MYTHIC
 
 DEFENCES
 Shells: Rare 1 layer (5,885 HP each, 60% hull) · Epic 2 layers (44,702 HP each, 60% hull) · Legendary 3 layers (222,070 HP each, 60% hull) · Mythic 4 layers (1,145,952 HP each, 60% hull)
-Energy shields: Mythic 4 panels (curved arcs, some sweeping, 64% of the ring, 651u out) — each generator projects one wall with gaps between them; blocked rounds deal nothing and the panel never depletes, energy/shock/thermal pass
+Energy shields: Mythic 4 panels (curved arcs, some sweeping, 64% of the ring, 497u out) — each generator projects one wall with gaps between them; blocked rounds deal nothing and the panel never depletes, energy/shock/thermal pass
 
 MOUNTS AT MYTHIC
 0 gun mounts · 0 missile pods · gun 0.4× enemy damage at 1.1–1.7s cadence; missiles 1.1× at 4.5–6s
@@ -845,7 +845,7 @@ PARTS AT MYTHIC
 
 DEFENCES
 Shells: Rare 1 layer (7,055 HP each, 60% hull) · Epic 2 layers (45,370 HP each, 60% hull) · Legendary 3 layers (236,390 HP each, 60% hull) · Mythic 4 layers (1,117,824 HP each, 60% hull)
-Energy shields: Epic 2 panels (curved arcs, fixed, 32% of the ring, 239u out) · Legendary 3 panels (curved arcs, fixed, 48% of the ring, 394u out) · Mythic 4 panels (curved arcs, fixed, 64% of the ring, 651u out) — each generator projects one wall with gaps between them; blocked rounds deal nothing and the panel never depletes, energy/shock/thermal pass
+Energy shields: Epic 2 panels (curved arcs, fixed, 32% of the ring, 182u out) · Legendary 3 panels (curved arcs, fixed, 48% of the ring, 301u out) · Mythic 4 panels (curved arcs, fixed, 64% of the ring, 497u out) — each generator projects one wall with gaps between them; blocked rounds deal nothing and the panel never depletes, energy/shock/thermal pass
 
 MOUNTS AT MYTHIC
 0 gun mounts · 0 missile pods · gun 0.4× enemy damage at 1.1–1.7s cadence; missiles 1.1× at 4.5–6s
@@ -886,7 +886,7 @@ PARTS AT MYTHIC
 
 DEFENCES
 Shells: Rare 1 layer (5,793 HP each, 60% hull) · Epic 2 layers (46,483 HP each, 60% hull) · Legendary 3 layers (247,450 HP each, 60% hull) · Mythic 4 layers (1,166,976 HP each, 60% hull)
-Energy shields: Epic 2 panels (straight bars, fixed, 42% of the ring, 239u out) · Legendary 3 panels (straight bars, fixed, 63% of the ring, 394u out) · Mythic 4 panels (straight bars, fixed, 84% of the ring, 651u out) — each generator projects one wall with gaps between them; blocked rounds deal nothing and the panel never depletes, energy/shock/thermal pass
+Energy shields: Epic 2 panels (straight bars, fixed, 55% of the ring, 182u out) · Legendary 3 panels (straight bars, fixed, 82% of the ring, 301u out) · Mythic 4 panels (straight bars, fixed, 110% of the ring, 497u out) — each generator projects one wall with gaps between them; blocked rounds deal nothing and the panel never depletes, energy/shock/thermal pass
 
 MOUNTS AT MYTHIC
 6 gun mounts · 0 missile pods · gun 0.4× enemy damage at 1.1–1.7s cadence; missiles 1.1× at 4.5–6s
@@ -927,7 +927,7 @@ PARTS AT MYTHIC
 
 DEFENCES
 Shells: Rare 1 layer (5,780 HP each, 60% hull) · Epic 2 layers (45,274 HP each, 60% hull) · Legendary 3 layers (274,838 HP each, 60% hull) · Mythic 4 layers (1,288,704 HP each, 60% hull)
-Energy shields: Epic 2 panels (straight bars, some sweeping, 42% of the ring, 239u out) · Legendary 3 panels (straight bars, some sweeping, 63% of the ring, 394u out) · Mythic 4 panels (straight bars, some sweeping, 84% of the ring, 651u out) — each generator projects one wall with gaps between them; blocked rounds deal nothing and the panel never depletes, energy/shock/thermal pass
+Energy shields: Epic 2 panels (straight bars, some sweeping, 55% of the ring, 182u out) · Legendary 3 panels (straight bars, some sweeping, 82% of the ring, 301u out) · Mythic 4 panels (straight bars, some sweeping, 110% of the ring, 497u out) — each generator projects one wall with gaps between them; blocked rounds deal nothing and the panel never depletes, energy/shock/thermal pass
 
 MOUNTS AT MYTHIC
 6 gun mounts · 0 missile pods · gun 0.4× enemy damage at 1.1–1.7s cadence; missiles 1.1× at 4.5–6s
@@ -968,7 +968,7 @@ PARTS AT MYTHIC
 
 DEFENCES
 Shells: Rare 1 layer (4,933 HP each, 60% hull) · Epic 2 layers (39,398 HP each, 60% hull) · Legendary 3 layers (190,512 HP each, 60% hull) · Mythic 4 layers (871,680 HP each, 60% hull)
-Energy shields: Epic 2 panels (curved arcs, some sweeping, 32% of the ring, 239u out) · Legendary 3 panels (curved arcs, some sweeping, 48% of the ring, 394u out) · Mythic 4 panels (curved arcs, some sweeping, 64% of the ring, 651u out) — each generator projects one wall with gaps between them; blocked rounds deal nothing and the panel never depletes, energy/shock/thermal pass
+Energy shields: Epic 2 panels (curved arcs, some sweeping, 32% of the ring, 182u out) · Legendary 3 panels (curved arcs, some sweeping, 48% of the ring, 301u out) · Mythic 4 panels (curved arcs, some sweeping, 64% of the ring, 497u out) — each generator projects one wall with gaps between them; blocked rounds deal nothing and the panel never depletes, energy/shock/thermal pass
 
 MOUNTS AT MYTHIC
 0 gun mounts · 0 missile pods · gun 0.4× enemy damage at 1.1–1.7s cadence; missiles 1.1× at 4.5–6s
@@ -1009,7 +1009,7 @@ PARTS AT MYTHIC
 
 DEFENCES
 Shells: Rare 1 layer (5,772 HP each, 60% hull) · Epic 2 layers (43,891 HP each, 60% hull) · Legendary 3 layers (212,458 HP each, 60% hull) · Mythic 4 layers (969,216 HP each, 60% hull)
-Energy shields: Legendary 3 panels (straight bars, fixed, 63% of the ring, 394u out) · Mythic 4 panels (straight bars, fixed, 84% of the ring, 651u out) — each generator projects one wall with gaps between them; blocked rounds deal nothing and the panel never depletes, energy/shock/thermal pass
+Energy shields: Legendary 3 panels (straight bars, fixed, 82% of the ring, 301u out) · Mythic 4 panels (straight bars, fixed, 110% of the ring, 497u out) — each generator projects one wall with gaps between them; blocked rounds deal nothing and the panel never depletes, energy/shock/thermal pass
 
 MOUNTS AT MYTHIC
 0 gun mounts · 0 missile pods · gun 0.4× enemy damage at 1.1–1.7s cadence; missiles 1.1× at 4.5–6s
@@ -1050,7 +1050,7 @@ PARTS AT MYTHIC
 
 DEFENCES
 Shells: Rare 1 layer (5,387 HP each, 60% hull) · Epic 2 layers (43,526 HP each, 60% hull) · Legendary 3 layers (234,144 HP each, 60% hull) · Mythic 4 layers (1,107,840 HP each, 60% hull)
-Energy shields: Epic 2 panels (straight bars, fixed, 42% of the ring, 239u out) · Legendary 3 panels (straight bars, fixed, 63% of the ring, 394u out) · Mythic 4 panels (straight bars, fixed, 84% of the ring, 651u out) — each generator projects one wall with gaps between them; blocked rounds deal nothing and the panel never depletes, energy/shock/thermal pass
+Energy shields: Epic 2 panels (straight bars, fixed, 55% of the ring, 182u out) · Legendary 3 panels (straight bars, fixed, 82% of the ring, 301u out) · Mythic 4 panels (straight bars, fixed, 110% of the ring, 497u out) — each generator projects one wall with gaps between them; blocked rounds deal nothing and the panel never depletes, energy/shock/thermal pass
 
 MOUNTS AT MYTHIC
 0 gun mounts · 4 missile pods · gun 0.4× enemy damage at 1.1–1.7s cadence; missiles 1.1× at 4.5–6s
@@ -1091,7 +1091,7 @@ PARTS AT MYTHIC
 
 DEFENCES
 Shells: Rare 1 layer (5,365 HP each, 60% hull) · Epic 2 layers (36,173 HP each, 60% hull) · Legendary 3 layers (175,997 HP each, 60% hull) · Mythic 4 layers (807,168 HP each, 60% hull)
-Energy shields: Epic 2 panels (straight bars, fixed, 42% of the ring, 239u out) · Legendary 3 panels (straight bars, fixed, 63% of the ring, 394u out) · Mythic 4 panels (straight bars, fixed, 84% of the ring, 651u out) — each generator projects one wall with gaps between them; blocked rounds deal nothing and the panel never depletes, energy/shock/thermal pass
+Energy shields: Epic 2 panels (straight bars, fixed, 55% of the ring, 182u out) · Legendary 3 panels (straight bars, fixed, 82% of the ring, 301u out) · Mythic 4 panels (straight bars, fixed, 110% of the ring, 497u out) — each generator projects one wall with gaps between them; blocked rounds deal nothing and the panel never depletes, energy/shock/thermal pass
 
 MOUNTS AT MYTHIC
 0 gun mounts · 0 missile pods · gun 0.4× enemy damage at 1.1–1.7s cadence; missiles 1.1× at 4.5–6s
@@ -1172,7 +1172,7 @@ PARTS AT MYTHIC
 
 DEFENCES
 Shells: Rare 1 layer (6,726 HP each, 60% hull) · Epic 2 layers (49,478 HP each, 60% hull) · Legendary 3 layers (293,760 HP each, 60% hull) · Mythic 4 layers (1,372,800 HP each, 60% hull)
-Energy shields: Epic 2 panels (straight bars, fixed, 42% of the ring, 239u out) · Legendary 3 panels (straight bars, fixed, 63% of the ring, 394u out) · Mythic 4 panels (straight bars, fixed, 84% of the ring, 651u out) — each generator projects one wall with gaps between them; blocked rounds deal nothing and the panel never depletes, energy/shock/thermal pass
+Energy shields: Epic 2 panels (straight bars, fixed, 55% of the ring, 182u out) · Legendary 3 panels (straight bars, fixed, 82% of the ring, 301u out) · Mythic 4 panels (straight bars, fixed, 110% of the ring, 497u out) — each generator projects one wall with gaps between them; blocked rounds deal nothing and the panel never depletes, energy/shock/thermal pass
 
 MOUNTS AT MYTHIC
 0 gun mounts · 0 missile pods · gun 0.4× enemy damage at 1.1–1.7s cadence; missiles 1.1× at 4.5–6s
@@ -1213,7 +1213,7 @@ PARTS AT MYTHIC
 
 DEFENCES
 Shells: Rare 1 layer (4,614 HP each, 60% hull) · Epic 2 layers (33,523 HP each, 60% hull) · Legendary 3 layers (183,082 HP each, 60% hull) · Mythic 4 layers (880,896 HP each, 60% hull)
-Energy shields: Epic 2 panels (curved arcs, fixed, 32% of the ring, 239u out) · Legendary 3 panels (curved arcs, fixed, 48% of the ring, 394u out) · Mythic 4 panels (curved arcs, fixed, 64% of the ring, 651u out) — each generator projects one wall with gaps between them; blocked rounds deal nothing and the panel never depletes, energy/shock/thermal pass
+Energy shields: Epic 2 panels (curved arcs, fixed, 32% of the ring, 182u out) · Legendary 3 panels (curved arcs, fixed, 48% of the ring, 301u out) · Mythic 4 panels (curved arcs, fixed, 64% of the ring, 497u out) — each generator projects one wall with gaps between them; blocked rounds deal nothing and the panel never depletes, energy/shock/thermal pass
 
 MOUNTS AT MYTHIC
 6 gun mounts · 0 missile pods · gun 0.4× enemy damage at 1.1–1.7s cadence; missiles 1.1× at 4.5–6s
@@ -1254,7 +1254,7 @@ PARTS AT MYTHIC
 
 DEFENCES
 Shells: Rare 1 layer (4,700 HP each, 60% hull) · Epic 2 layers (45,082 HP each, 60% hull) · Legendary 3 layers (225,590 HP each, 60% hull) · Mythic 4 layers (1,069,824 HP each, 60% hull)
-Energy shields: Epic 2 panels (straight bars, fixed, 42% of the ring, 239u out) · Legendary 3 panels (straight bars, fixed, 63% of the ring, 394u out) · Mythic 4 panels (straight bars, fixed, 84% of the ring, 651u out) — each generator projects one wall with gaps between them; blocked rounds deal nothing and the panel never depletes, energy/shock/thermal pass
+Energy shields: Epic 2 panels (straight bars, fixed, 55% of the ring, 182u out) · Legendary 3 panels (straight bars, fixed, 82% of the ring, 301u out) · Mythic 4 panels (straight bars, fixed, 110% of the ring, 497u out) — each generator projects one wall with gaps between them; blocked rounds deal nothing and the panel never depletes, energy/shock/thermal pass
 
 MOUNTS AT MYTHIC
 0 gun mounts · 0 missile pods · gun 0.4× enemy damage at 1.1–1.7s cadence; missiles 1.1× at 4.5–6s
@@ -1312,7 +1312,7 @@ ABILITIES
 
 ────────────────────────────────────────
 31. JEWEL BEETLE
-Flying · Ranged, keeps 360u · Spawns Legendary–Mythic · Reflective bubbles
+Flying · Ranged, keeps 360u · Spawns Legendary–Mythic · Reflective shells
 Contact type: Physical · Pack size: C 1 · U 1 · R 1 · E 1 · L 1 · M 1
 
 BODY DAMAGE (contact hit)
@@ -1335,7 +1335,7 @@ PARTS AT MYTHIC
 
 DEFENCES
 Shells: Rare 1 layer (7,238 HP each, 60% hull) · Epic 2 layers (48,298 HP each, 60% hull) · Legendary 3 layers (297,950 HP each, 60% hull) · Mythic 4 layers (1,433,664 HP each, 60% hull)
-Energy shields: Epic 2 panels (curved arcs, some sweeping, 32% of the ring, 239u out) · Legendary 3 panels (curved arcs, some sweeping, 48% of the ring, 394u out) · Mythic 4 panels (curved arcs, some sweeping, 64% of the ring, 651u out) — each generator projects one wall with gaps between them; blocked rounds deal nothing and the panel never depletes, energy/shock/thermal pass
+Energy shields: Epic 2 panels (curved arcs, some sweeping, 32% of the ring, 182u out) · Legendary 3 panels (curved arcs, some sweeping, 48% of the ring, 301u out) · Mythic 4 panels (curved arcs, some sweeping, 64% of the ring, 497u out) — each generator projects one wall with gaps between them; blocked rounds deal nothing and the panel never depletes, energy/shock/thermal pass
 
 MOUNTS AT MYTHIC
 0 gun mounts · 4 missile pods · gun 0.4× enemy damage at 1.1–1.7s cadence; missiles 1.1× at 4.5–6s
@@ -1376,7 +1376,7 @@ PARTS AT MYTHIC
 
 DEFENCES
 Shells: none — the body takes hits directly.
-Energy shields: Epic 2 panels (curved arcs, some sweeping, 32% of the ring, 239u out) · Legendary 3 panels (curved arcs, some sweeping, 48% of the ring, 394u out) · Mythic 4 panels (curved arcs, some sweeping, 64% of the ring, 651u out) — each generator projects one wall with gaps between them; blocked rounds deal nothing and the panel never depletes, energy/shock/thermal pass
+Energy shields: Epic 2 panels (curved arcs, some sweeping, 32% of the ring, 182u out) · Legendary 3 panels (curved arcs, some sweeping, 48% of the ring, 301u out) · Mythic 4 panels (curved arcs, some sweeping, 64% of the ring, 497u out) — each generator projects one wall with gaps between them; blocked rounds deal nothing and the panel never depletes, energy/shock/thermal pass
 
 MOUNTS AT MYTHIC
 0 gun mounts · 0 missile pods · gun 0.4× enemy damage at 1.1–1.7s cadence; missiles 1.1× at 4.5–6s
@@ -1441,7 +1441,7 @@ SHIELD-BYPASS LASER — ENERGY
 Per hit: 0.16× base (1.6 damage) · Per trigger: 0.16× (1.6)
 DPS: 16.0 · Cooldown: 0.100s · Range: 700u
 Craft: Difficulty 5 · 7 parts · 1× Core/Weapon + 1× Jewel Beetle/Firefly part
-Behaviour: Beam ignores enemy shield bubbles; pierces 3 parts; hull shells stop it.
+Behaviour: Beam ignores enemy shield panels; pierces 3 parts; hull shells stop it.
 
 ────────────────────────────────────────
 HEAVY MACHINE GUN — KINETIC
@@ -1469,7 +1469,7 @@ ACID SPRAYER — CORROSIVE
 Per hit: 0.30× base (3.0 damage) · Per trigger: 0.90× (9.0)
 DPS: 56.3 · Cooldown: 0.160s · Range: 400u
 Craft: Difficulty 3 · 5 parts · 1× Body/Limb + 1× Soldier Ant/Worker Ant/Bombardier Beetle part
-Behaviour: Three globs; each hit adds 0.32 melt and a 1.6 × efficiency damage-over-time; stopped by energy bubbles.
+Behaviour: Three globs; each hit adds 0.32 melt and a 1.6 × efficiency damage-over-time; stopped by energy panels.
 
 ────────────────────────────────────────
 CHAIN LIGHTNING — SHOCK
@@ -1490,7 +1490,7 @@ RAIL SNIPER — KINETIC
 Per hit: 2.40× base (24.0 damage) · Per trigger: 2.40× (24.0)
 DPS: 13.2 · Cooldown: 1.820s · Range: 1,150u
 Craft: Difficulty 5 · 7 parts · 1× Core/Weapon + 1× Tiger Beetle/Assassin Bug part
-Behaviour: 1500u beam; pierces 12 parts; stopped by energy shield bubbles and hull shells.
+Behaviour: 1500u beam; pierces 12 parts; stopped by energy shield panels and hull shells.
 
 ────────────────────────────────────────
 GRAVITY BOMB — SHOCK
