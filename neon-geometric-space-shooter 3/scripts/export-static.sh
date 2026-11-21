@@ -12,7 +12,9 @@ cd "$(dirname "$0")/.."
 root="$(pwd)"
 api="$root/src/app/api"
 stash="$root/.api-stash"
-rm -rf "$stash" out "$root/downloads"
+ver="$(sed -n 's/^export const VERSION = "\([0-9.]*\)";.*/\1/p' "$root/src/game/changelog.ts")"
+[ -n "$ver" ] || { echo "could not read VERSION" >&2; exit 1; }
+rm -rf "$stash" out "$root/downloads/wof gue-io"
 # stale zips in public/ would be copied into the new site by next build
 rm -f "$root/public"/wof\ gue-io-v*.zip
 if [ -d "$api" ]; then mv "$api" "$stash"; fi
@@ -57,8 +59,8 @@ with socketserver.TCPServer(("0.0.0.0", PORT), handler) as httpd:
     httpd.serve_forever()
 TXT
 cd "$root/downloads"
-rm -f "wof gue-io-v2.0.3.zip"
-zip -qr "wof gue-io-v2.0.3.zip" "wof gue-io"
+rm -f "wof gue-io-v$ver.zip"
+zip -qr "wof gue-io-v$ver.zip" "wof gue-io"
 mkdir -p "$root/public"
-cp "wof gue-io-v2.0.3.zip" "$root/public/wof gue-io-v2.0.3.zip"
-echo "wrote $root/downloads/wof gue-io-v2.0.3.zip"
+cp "wof gue-io-v$ver.zip" "$root/public/wof gue-io-v$ver.zip"
+echo "wrote $root/downloads/wof gue-io-v$ver.zip"

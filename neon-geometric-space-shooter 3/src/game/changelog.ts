@@ -8,7 +8,7 @@
  *   CHANGELOG and mirror the details in docs/CHANGELOG.md.
  */
 
-export const VERSION = "2.0.3";
+export const VERSION = "2.0.4";
 
 export interface ChangeEntry {
   version: string;
@@ -19,6 +19,17 @@ export interface ChangeEntry {
 }
 
 export const CHANGELOG: ChangeEntry[] = [
+  {
+    version: "2.0.4",
+    date: "21 Nov 2026",
+    title: "Energy shields are hard walls",
+    points: [
+      "Enemy energy shields no longer have charge to strip. A blocked hit deals no damage and the bubble never depletes, collapses, re-arms or regenerates: it stays up until its Shield Generator part is destroyed.",
+      "Only energy, shock and thermal damage passes through a bubble. Kinetic, physical, explosive and corrosive rounds and beams now stop dead at the hex edge with a cyan flash instead of chipping the shield or slipping through.",
+      "The Rail Sniper no longer ignores energy shields. Only the Shield-Bypass Laser bypasses bubbles, and the rail is still stopped by hull shells.",
+      "Damage-type tooltips and the stat compendium now describe the new rule; the old 8% strip constant is gone.",
+    ],
+  },
   {
     version: "2.0.3",
     date: "21 Nov 2026",

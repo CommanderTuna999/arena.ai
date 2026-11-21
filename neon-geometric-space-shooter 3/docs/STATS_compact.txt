@@ -1,4 +1,4 @@
-WOF GUE — COMPLETE STAT COMPENDIUM (build 2.0.3)
+WOF GUE — COMPLETE STAT COMPENDIUM (build 2.0.4)
 Generated 21 Nov 2026. Every number below is a simulation constant. Health is the sum of all parts at that tier; enemy damage is a multiple of eDmg; weapon damage is a multiple of the player cannon damage st.dmg.
 
 1. FORMULAS
@@ -18,8 +18,8 @@ Tier | Zone | Radius | HP_MUL | DMG_MUL | eDmg | Contact | Density/chunk | Local
 Chunk seed pass rate = clamp(density/2.6, 0.03, 1): common 100%, uncommon 84.6%, rare 69.2%, epic 12.3%, legendary 6.2%, mythical 2.9%. Each seeded chunk gets 1 enemy. Top-up target = 85% of local cap (48/41/34/12/7/3 within 2,700u). Visibility floor 4 enemies in view in common-rare and 2 in legendary-mythical, capped at rare tier. Boss pass is disabled (SNAKE_ENABLED=false).
 
 3. DAMAGE TYPES AND ENEMY DEFENCES
-Kinetic: base cannon, scatter, hmg, drones; rail ignores bubbles. Energy shields block kinetic inside the hex and lose 8% shieldMax per hit. Energy: pulse/lance are blocked inside a hex with no drain; bypass ignores bubbles. Explosive: missile, homing, flak, mines, cluster. Passes through bubbles. Shock: emp, chain, gravity, sonic. Projectiles blocked/no drain; direct AoE bypasses. Corrosive: acid, venom. Passes through bubbles. Thermal: cutter. Blocked inside a hex, no drain. Physical: collisions/knockback, direct impulses bypass.
-Energy shield: each Shield Generator has shieldMax = 3x its part max HP and a hex bubble of 1.9x body size. The bubble is local, not body-wide. At 0 shield HP it drops for 4s, re-arms at 40%, regenerates 15%/s after 3s quiet. Bypass and rail beams ignore bubbles. Direct AoE (EMP, chain, sonic, gravity, mines, explosions) skips the bubble check.
+Energy shields: a blue hex stops every projectile dead except energy, shock and thermal, which pass straight through. Blocked hits do nothing to the bubble - it has no charge to strip and only disappears when its Shield Generator part is destroyed. Bypass laser ignores bubbles; rail sniper does not. Kinetic: base cannon, scatter, hmg, rail, drones. Explosive: missile, homing, flak, mines, cluster. Corrosive: acid, venom. All stopped. Shock: emp, chain, gravity, sonic; passes. Thermal: cutter; passes. Physical: collisions are not projectiles; physical rounds are stopped.
+Energy shield: each Shield Generator projects a 1.9x body-size hex bubble, local to that generator, not body-wide. Energy/shock/thermal pass through; all other projectiles and beams stop at the edge and deal nothing. The bubble never depletes and only vanishes when the generator part is destroyed. Bypass laser ignores bubbles. Direct AoE (EMP, chain, sonic, gravity, mines, explosions) skips the bubble check.
 Hull shells: tier 2+ gets tier-1 layers of 5 x HP_MUL[tier] HP (T5 = 4 x 8,000). Bullets deal 30% to a layer; beams deal 0; AoE deals 30%. Breaking a layer emits a damaging shockwave.
 
 4. ENEMIES (32 SPECIES)
@@ -194,10 +194,10 @@ Shield-Bypass Laser (bypass) — energy; 0.16x per hit, 0.16x per trigger/beam-p
 Heavy Machine Gun (hmg) — kinetic; 0.1x per hit, 0.1x per trigger/beam-part; 0.075s cd; 13.3 DPS; range 650u; craft D2, 4 parts (1x Weapon/Limb). one tracer, 0.13 rad spray.
 EMP Cannon (emp) — shock; 1.4x per hit, 1.4x per trigger/beam-part; 2.6s cd; 5.4 DPS; range 560u; craft D4, 6 parts (1x Core/Shield + 1x Cicada/Firefly part). 620u AoE, 1.8s stun, shelled enemies take no dmg.
 Plasma Cutter (cutter) — thermal; 1.1x per hit, 1.1x per trigger/beam-part; 0.18s cd; 61.1 DPS; range 190u; craft D3, 5 parts (1x Plate/Weapon). beam, 1+floor(eff) pierce, 175-195u.
-Acid Sprayer (acid) — corrosive; 0.3x per hit, 0.9x per trigger/beam-part; 0.16s cd; 56.3 DPS; range 400u; craft D3, 5 parts (1x Body/Limb + 1x Soldier Ant/Worker Ant/Bombardier Beetle part). 3 globs; +0.32 melt and 1.6x eff DoT per hit; ignores energy bubbles.
+Acid Sprayer (acid) — corrosive; 0.3x per hit, 0.9x per trigger/beam-part; 0.16s cd; 56.3 DPS; range 400u; craft D3, 5 parts (1x Body/Limb + 1x Soldier Ant/Worker Ant/Bombardier Beetle part). 3 globs; +0.32 melt and 1.6x eff DoT per hit; stopped by energy shields.
 Chain Lightning (chain) — shock; 1.6x per hit, 1.6x per trigger/beam-part; 0.8s cd; 20 DPS; range 780u; craft D4, 6 parts (1x Core/Wing + 1x Firefly/Jewel Beetle part). 5 jumps/520u, -25% per jump, skips shelled.
 Flak Cannon (flak) — explosive; 1.3x per hit, 2x per trigger/beam-part; 0.9s cd; 22.2 DPS; range 800u; craft D3, 5 parts (1x Plate/Body). 1.3x impact + 0.7x in 125u airburst.
-Rail Sniper (rail) — kinetic; 2.4x per hit, 2.4x per trigger/beam-part; 1.82s cd; 13.2 DPS; range 1150u; craft D5, 7 parts (1x Core/Weapon + 1x Tiger Beetle/Assassin Bug part). 1500u beam, 12 pierce, ignores bubbles, hull shells stop it.
+Rail Sniper (rail) — kinetic; 2.4x per hit, 2.4x per trigger/beam-part; 1.82s cd; 13.2 DPS; range 1150u; craft D5, 7 parts (1x Core/Weapon + 1x Tiger Beetle/Assassin Bug part). 1500u beam, 12 pierce; stopped by energy shields and hull shells.
 Gravity Bomb (gravity) — shock; 2.8x per hit, 2.8x per trigger/beam-part; 3.2s cd; 8.8 DPS; range 800u; craft D5, 7 parts (1x Core/Body + 1x Dung Beetle/Atlas Moth part). 230u well 1.15s then 2.8x in 270u.
 Mine Layer (mines) — explosive; 2.5x per hit, 2.5x per trigger/beam-part; 1.1s cd; 22.7 DPS; range 800u; craft D2, 4 parts (1x Plate/Weapon + 1x Weevil/Scarab part). 150u mine, 0.7s arm, 26s life.
 Swarm Drones (drones) — kinetic; 0.4x per hit, 0.8x per trigger/beam-part; 0.55s cd; 14.5 DPS; range 720u; craft D4, 6 parts (1x Wing/Core + 1x Honeybee/Yellowjacket/Hornet part). 2 orbiters, each 0.4x every 0.55s at 720u.

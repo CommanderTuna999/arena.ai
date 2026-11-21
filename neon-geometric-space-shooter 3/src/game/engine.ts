@@ -26,11 +26,11 @@ import { SPECIES_LIST, buildEnemy, type AbilityDef, type Group, type Part, type 
  *   Plating          : tier 2/3/4/5 get 1/2/3/4 grey layers of 5*HP_MUL[tier] HP.
  *                      Kinetic and explosive hits deal 30%; laser and shock deal 0.
  *                      Layers are drawn as solid grey copies of the part outlines.
- *   Energy shields   : blue hexes stop energy/shock/thermal completely, and solid
- *                      kinetic rounds are stopped too. Kinetic impacts strip 8%
- *                      of a generator's shield per hit; at zero the bubble drops
- *                      for 4s and restarts at 40%. Explosive/corrosive rounds
- *                      still slip through, while bypass beams ignore bubbles.
+ *   Energy shields   : blue hexes stop every damage type except energy, shock and
+ *                      thermal, which cut straight through. Blocked hits do not
+ *                      drain the bubble at all — it stays up until its generator
+ *                      part is destroyed. Bypass beams ignore bubbles entirely,
+ *                      and area effects skip the bubble check.
  *   Spawning         : every walkable 1,500u chunk is seeded once when the run starts,
  *                      so the whole map is already inhabited (no pop-in on arrival).
  *                      Seed probability follows the rarity curve (outer 100%, epic
@@ -55,8 +55,6 @@ const HARD_MAX = 420;
 const SEED_BUDGET = 1;
 /** shells shave 70% off kinetic hits; lasers and shockwaves do nothing to them */
 const SHELL_TAKE = 0.3;
-/** share of a shield generator's capacity stripped by one kinetic impact */
-const SHIELD_STRIP = 0.08;
 /* Nest defence tuning. The siege shell one-shots up to legendary; mythicals lose
  * a fixed chunk so they stay a genuine end-game threat. */
 const SHELL_DMG = 2_500_000;
@@ -2128,8 +2126,6 @@ export class Game {
           const sx = b.x - s.x, sy = b.y - s.y;
           if (sx * sx + sy * sy < s.r * s.r) {
             const energy = b.elem === "energy" || b.elem === "shock" || b.elem === "thermal";
-            const kinetic = b.elem === "kinetic" || b.elem === "physical";
-            if (!energy && !kinetic) break; // explosive/corrosive rounds slip through energy shields
             if (e.spd.reflectShell && energy) {
               this.eprojs.push({ x: b.x, y: b.y, vx: -b.vx * 0.9, vy: -b.vy * 0.9, life: 1.5, dmg: b.dmg * 0.6, r: 6, hue: e.spd.hue, type: "bolt", homing: 0, slow: 0, slowT: 0, poison: 0, pierce: false, hp: 1, speed: 620, src: e, puddle: null });
               this.ringFx(b.x, b.y, 46, "#7df9ff", 400);
@@ -2137,19 +2133,11 @@ export class Game {
             }
             s.part.shieldHit = 3;
             e.aggro = true; e.barT = 3;
-            if (kinetic) {
-              s.part.shieldHp -= s.part.shieldMax * SHIELD_STRIP;
-              if (s.part.shieldHp <= 0) {
-                s.part.shieldHp = 0;
-                s.part.shieldDown = 4;
-                s.part.shieldHit = 0;
-                this.burst(b.x, b.y, "#bff6ff", 12, 5, 320);
-                this.ringFx(b.x, b.y, s.r, "#7df9ff", 720);
-                if (Math.hypot(e.x - this.player.x, e.y - this.player.y) < 1600) this.toast("SHIELD DOWN", "#7df9ff");
-              }
-            }
-            this.addParticle(b.x, b.y, (Math.random() - 0.5) * 200, (Math.random() - 0.5) * 200, kinetic ? "#ffd24d" : "#7df9ff", 4, 0.35, 3, false);
-            this.ringFx(b.x, b.y, 40, kinetic ? "#ffd24d" : "#7df9ff", 500);
+            if (energy) break; // energy, shock and thermal cut straight through the bubble
+            /* every other damage type is stopped dead: the bubble takes no damage,
+             * so it stays up until its generator part is destroyed */
+            this.addParticle(b.x, b.y, (Math.random() - 0.5) * 200, (Math.random() - 0.5) * 200, "#7df9ff", 4, 0.35, 3, false);
+            this.ringFx(b.x, b.y, 40, "#7df9ff", 500);
             return true;
           }
         }
@@ -2261,19 +2249,9 @@ export class Game {
         if (!bypass) for (const s of e.shields) {
           if (s.part.alive && s.part.shieldHp > 0 && (bx - s.x) ** 2 + (by - s.y) ** 2 < s.r * s.r) {
             const energy = src === "laser" || src === "shock";
-            const kinetic = src === "kinetic";
-            if (!energy && !kinetic) break; // explosive/corrosive beams pass through
+            if (energy) break; // energy, shock and thermal beams cut straight through
+            /* anything else stops at the bubble without draining it */
             s.part.shieldHit = 3;
-            if (kinetic) {
-              s.part.shieldHp -= s.part.shieldMax * SHIELD_STRIP;
-              if (s.part.shieldHp <= 0) {
-                s.part.shieldHp = 0;
-                s.part.shieldDown = 4;
-                s.part.shieldHit = 0;
-                this.burst(bx, by, "#bff6ff", 12, 5, 320);
-                this.ringFx(bx, by, s.r, "#7df9ff", 720);
-              }
-            }
             this.ringFx(bx, by, 42, "#7df9ff", 520);
             endLen = d; break outer;
           }
@@ -2506,7 +2484,7 @@ export class Game {
           const t = this.nearestEnemy(p.x, p.y, R("rail"));
           if (!t) return;
           p.wCd[i] = cd(1.82);
-          this.beam(p.x, p.y, aim(t), 1500, dmg * 2.4 * eff, 12, true, "kinetic", "#ffe9a6");
+          this.beam(p.x, p.y, aim(t), 1500, dmg * 2.4 * eff, 12, false, "kinetic", "#ffe9a6");
           this.shake = Math.max(this.shake, 5);
           break;
         }

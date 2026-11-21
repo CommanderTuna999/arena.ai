@@ -287,21 +287,22 @@ export const WEAPON_TINT: Record<string, string> = {
 
 /* ---------- damage types ----------
  * Every weapon deals exactly one kind; shields and armour list what they block.
- * Enemy energy shields stop energy/shock/thermal completely, and now stop solid
- * kinetic rounds as well: each kinetic hit strips 8% of a generator's shield,
- * the bubble collapses for 4s at zero and restarts at 40%. Explosive/corrosive
- * rounds still slip through, while bypass beams ignore bubbles entirely.
+ * Enemy energy shields let energy, shock and thermal straight through, and stop
+ * everything else dead. A blocked hit deals no damage and does not drain the
+ * bubble: it stays up until its shield-generator part is destroyed. Area effects
+ * skip the bubble check (see below); the Shield-Bypass Laser ignores bubbles, the
+ * Rail Sniper does not.
  * Kinetic/explosive hull shells reduce incoming damage to 30%; lasers/shock do 0.
  */
 export type DmgKind = "kinetic" | "energy" | "explosive" | "shock" | "corrosive" | "thermal" | "physical";
 export interface DmgInfo { name: string; color: string; note: string }
 export const DMG_INFO: Record<DmgKind, DmgInfo> = {
-  kinetic: { name: "Kinetic", color: "#ffd24d", note: "solid rounds; blocked by energy shields (8% strip per hit); hull shells reduce it to 30%" },
-  energy: { name: "Energy", color: "#7df9ff", note: "lasers and beams; blocked by energy shields, hull shells block it" },
-  explosive: { name: "Explosive", color: "#ff7a5c", note: "blast damage; plating reduces it to 30%" },
-  shock: { name: "Shock", color: "#c77dff", note: "electrical arcs; blocked by energy shields, hull shells block it" },
-  corrosive: { name: "Corrosive", color: "#9dff6a", note: "acid; melts armour and slips through energy shields" },
-  thermal: { name: "Thermal", color: "#ff8ad6", note: "plasma heat; blocked by energy shields" },
+  kinetic: { name: "Kinetic", color: "#ffd24d", note: "solid rounds; stopped dead by energy shields; hull shells reduce it to 30%" },
+  energy: { name: "Energy", color: "#7df9ff", note: "lasers and beams; passes through enemy energy shields; hull shells block it" },
+  explosive: { name: "Explosive", color: "#ff7a5c", note: "blast damage; stopped by energy shields; plating reduces it to 30%" },
+  shock: { name: "Shock", color: "#c77dff", note: "electrical arcs; passes through energy shields; hull shells block it" },
+  corrosive: { name: "Corrosive", color: "#9dff6a", note: "acid; melts armour; stopped dead by energy shields" },
+  thermal: { name: "Thermal", color: "#ff8ad6", note: "plasma heat; passes through enemy energy shields" },
   physical: { name: "Physical", color: "#c3ccd6", note: "blunt impacts and collisions" },
 };
 

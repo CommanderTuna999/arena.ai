@@ -1,5 +1,5 @@
 WOF GUE — STAT COMPENDIUM
-Build 2.0.3 · 21 November 2026
+Build 2.0.4 · 21 November 2026
 
 HOW TO READ THIS
 C / U / R / E / L / M = Common, Uncommon, Rare, Epic, Legendary, Mythic.
@@ -32,16 +32,16 @@ Radius 0–2,200u · health ×1600 · damage ×243 · contact 972 · density 0.0
 Chunk seed pass rate: Common 100% · Uncommon 84.6% · Rare 69.2% · Epic 12.3% · Legendary 6.2% · Mythic 2.9%. Each seeded chunk gets one enemy. Top-up target is 85% of the local cap within 2,700u. The visibility floor is four enemies in view through Rare and two in Legendary–Mythic, capped at Rare tier. The Snake boss pass is disabled in this build.
 
 DAMAGE TYPES
-• Kinetic — base cannon, scatter driver, heavy machine gun, swarm drones. Enemy energy shields stop kinetic rounds inside their hex and lose 8% of shield maximum per hit. Rail sniper ignores shield bubbles but hull shells still stop it.
-• Energy — pulse turret, arc lance, shield-bypass laser. Enemy energy shields stop pulse and lance inside a hex without draining the shield. Bypass ignores bubbles.
-• Explosive — seeker pod, homing missile launcher, flak cannon, mine layer, cluster rockets. Passes through energy-shield bubbles.
-• Shock — EMP cannon, chain lightning, gravity bomb, sonic disruptor. Projectiles are stopped by bubbles; direct area effects skip the bubble check. EMP, chain and sonic skip hull shells.
-• Corrosive — acid sprayer, venom injector. Passes through energy-shield bubbles.
-• Thermal — plasma cutter. Energy shields stop it inside a hex without shield drain.
-• Physical — contact, knockback and direct impulses. Bypasses energy bubbles.
+• Kinetic — base cannon, scatter driver, heavy machine gun, rail sniper, swarm drones. Enemy energy shields stop it dead inside their hex; the bubble takes no damage. Hull shells still stop the rail.
+• Energy — pulse turret, arc lance, shield-bypass laser. Passes straight through enemy energy-shield bubbles; the bypass laser also ignores the bubble entirely.
+• Explosive — seeker pod, homing missile launcher, flak cannon, mine layer, cluster rockets. Stopped dead by enemy energy-shield bubbles.
+• Shock — EMP cannon, chain lightning, gravity bomb, sonic disruptor. Passes through bubbles; direct area effects skip the bubble check anyway. EMP, chain and sonic skip hull shells.
+• Corrosive — acid sprayer, venom injector. Stopped dead by enemy energy-shield bubbles.
+• Thermal — plasma cutter. Passes straight through enemy energy-shield bubbles.
+• Physical — contact, knockback and direct impulses. Collisions are not projectiles, so the bubble never checks them; physical rounds are stopped.
 
 ENEMY DEFENCE RULES
-Energy shield: each Shield Generator has shield maximum = 3 × its own part health. Its hex bubble is 1.9 × body size and only covers that generator, not the whole body. At 0 shield the bubble drops for 4s, re-arms at 40%, and regenerates 15%/s after 3s without a hit.
+Energy shield: each Shield Generator projects a hex bubble 1.9 × body size that only covers that generator, not the whole body. Energy, shock and thermal damage passes through it. Every other projectile or beam is stopped at the edge and does nothing to the bubble: it has no charge to strip, so it never drops or re-arms and only disappears when the generator part is destroyed.
 Hull shells: tier 2 and above can carry layers of 5 × tier health. Bullets deal 30% of their damage to a shell layer; beams deal 0; area effects deal 30%. Breaking a layer releases a damaging shockwave. T5 layers have 8,000 HP each.
 
 ════════════════════════════════════════
@@ -73,7 +73,7 @@ PARTS AT MYTHIC
 
 DEFENCES
 Shells: Rare 1 layer (90 HP each) · Epic 2 layers (400 HP each) · Legendary 3 layers (1,800 HP each) · Mythic 4 layers (8,000 HP each)
-Energy shields: Epic 1 (6,240 HP, 239u) · Legendary 2 (56,160 HP; 394–434u) · Mythic 2 (249,600 HP; 651–716u)
+Energy shields: Epic 1 bubble (239u) · Legendary 2 bubbles (394–434u) · Mythic 2 bubbles (651–716u) — permanent, energy/shock/thermal pass
 
 MOUNTS AT MYTHIC
 6 gun mounts · 0 missile pods · gun 0.4× enemy damage at 1.1–1.7s cadence; missiles 1.1× at 4.5–6s
@@ -203,7 +203,7 @@ PARTS AT MYTHIC
 
 DEFENCES
 Shells: Rare 1 layer (90 HP each) · Epic 2 layers (400 HP each) · Legendary 3 layers (1,800 HP each) · Mythic 4 layers (8,000 HP each)
-Energy shields: Epic 1 (6,240 HP, 239u) · Legendary 2 (56,160 HP; 394–434u) · Mythic 3 (374,400 HP; 651–781u)
+Energy shields: Epic 1 bubble (239u) · Legendary 2 bubbles (394–434u) · Mythic 3 bubbles (651–781u) — permanent, energy/shock/thermal pass
 
 MOUNTS AT MYTHIC
 0 gun mounts · 0 missile pods · gun 0.4× enemy damage at 1.1–1.7s cadence; missiles 1.1× at 4.5–6s
@@ -247,7 +247,7 @@ PARTS AT MYTHIC
 
 DEFENCES
 Shells: Rare 1 layer (90 HP each) · Epic 2 layers (400 HP each) · Legendary 3 layers (1,800 HP each) · Mythic 4 layers (8,000 HP each)
-Energy shields: Epic 1 (6,240 HP, 239u) · Legendary 2 (56,160 HP; 394–434u) · Mythic 3 (374,400 HP; 651–781u)
+Energy shields: Epic 1 bubble (239u) · Legendary 2 bubbles (394–434u) · Mythic 3 bubbles (651–781u) — permanent, energy/shock/thermal pass
 
 MOUNTS AT MYTHIC
 0 gun mounts · 0 missile pods · gun 0.4× enemy damage at 1.1–1.7s cadence; missiles 1.1× at 4.5–6s
@@ -377,7 +377,7 @@ PARTS AT MYTHIC
 
 DEFENCES
 Shells: Rare 1 layer (90 HP each) · Epic 2 layers (400 HP each) · Legendary 3 layers (1,800 HP each) · Mythic 4 layers (8,000 HP each)
-Energy shields: Epic 1 (6,240 HP, 239u) · Legendary 2 (56,160 HP; 394–434u) · Mythic 2 (249,600 HP; 651–716u)
+Energy shields: Epic 1 bubble (239u) · Legendary 2 bubbles (394–434u) · Mythic 2 bubbles (651–716u) — permanent, energy/shock/thermal pass
 
 MOUNTS AT MYTHIC
 6 gun mounts · 4 missile pods · gun 0.4× enemy damage at 1.1–1.7s cadence; missiles 1.1× at 4.5–6s
@@ -461,7 +461,7 @@ PARTS AT MYTHIC
 
 DEFENCES
 Shells: Rare 1 layer (90 HP each) · Epic 2 layers (400 HP each) · Legendary 3 layers (1,800 HP each) · Mythic 4 layers (8,000 HP each)
-Energy shields: Epic 1 (6,240 HP, 239u) · Legendary 2 (56,160 HP; 394–434u) · Mythic 3 (374,400 HP; 651–781u)
+Energy shields: Epic 1 bubble (239u) · Legendary 2 bubbles (394–434u) · Mythic 3 bubbles (651–781u) — permanent, energy/shock/thermal pass
 
 MOUNTS AT MYTHIC
 6 gun mounts · 0 missile pods · gun 0.4× enemy damage at 1.1–1.7s cadence; missiles 1.1× at 4.5–6s
@@ -745,7 +745,7 @@ PARTS AT MYTHIC
 
 DEFENCES
 Shells: Rare 1 layer (90 HP each) · Epic 2 layers (400 HP each) · Legendary 3 layers (1,800 HP each) · Mythic 4 layers (8,000 HP each)
-Energy shields: Epic 1 (6,240 HP, 239u) · Legendary 2 (56,160 HP; 394–434u) · Mythic 3 (374,400 HP; 651–781u)
+Energy shields: Epic 1 bubble (239u) · Legendary 2 bubbles (394–434u) · Mythic 3 bubbles (651–781u) — permanent, energy/shock/thermal pass
 
 MOUNTS AT MYTHIC
 6 gun mounts · 0 missile pods · gun 0.4× enemy damage at 1.1–1.7s cadence; missiles 1.1× at 4.5–6s
@@ -826,7 +826,7 @@ PARTS AT MYTHIC
 
 DEFENCES
 Shells: Rare 1 layer (90 HP each) · Epic 2 layers (400 HP each) · Legendary 3 layers (1,800 HP each) · Mythic 4 layers (8,000 HP each)
-Energy shields: Epic 1 (6,240 HP, 239u) · Legendary 2 (56,160 HP; 394–434u) · Mythic 3 (374,400 HP; 651–781u)
+Energy shields: Epic 1 bubble (239u) · Legendary 2 bubbles (394–434u) · Mythic 3 bubbles (651–781u) — permanent, energy/shock/thermal pass
 
 MOUNTS AT MYTHIC
 0 gun mounts · 0 missile pods · gun 0.4× enemy damage at 1.1–1.7s cadence; missiles 1.1× at 4.5–6s
@@ -867,7 +867,7 @@ PARTS AT MYTHIC
 
 DEFENCES
 Shells: Rare 1 layer (90 HP each) · Epic 2 layers (400 HP each) · Legendary 3 layers (1,800 HP each) · Mythic 4 layers (8,000 HP each)
-Energy shields: Epic 1 (6,240 HP, 239u) · Legendary 2 (56,160 HP; 394–434u) · Mythic 3 (374,400 HP; 651–781u)
+Energy shields: Epic 1 bubble (239u) · Legendary 2 bubbles (394–434u) · Mythic 3 bubbles (651–781u) — permanent, energy/shock/thermal pass
 
 MOUNTS AT MYTHIC
 0 gun mounts · 0 missile pods · gun 0.4× enemy damage at 1.1–1.7s cadence; missiles 1.1× at 4.5–6s
@@ -908,7 +908,7 @@ PARTS AT MYTHIC
 
 DEFENCES
 Shells: Rare 1 layer (90 HP each) · Epic 2 layers (400 HP each) · Legendary 3 layers (1,800 HP each) · Mythic 4 layers (8,000 HP each)
-Energy shields: Epic 1 (6,240 HP, 239u) · Legendary 2 (56,160 HP; 394–434u) · Mythic 1 (124,800 HP, 651u)
+Energy shields: Epic 1 bubble (239u) · Legendary 2 bubbles (394–434u) · Mythic 1 bubble (651u) — permanent, energy/shock/thermal pass
 
 MOUNTS AT MYTHIC
 6 gun mounts · 0 missile pods · gun 0.4× enemy damage at 1.1–1.7s cadence; missiles 1.1× at 4.5–6s
@@ -949,7 +949,7 @@ PARTS AT MYTHIC
 
 DEFENCES
 Shells: Rare 1 layer (90 HP each) · Epic 2 layers (400 HP each) · Legendary 3 layers (1,800 HP each) · Mythic 4 layers (8,000 HP each)
-Energy shields: Epic 1 (6,240 HP, 239u) · Legendary 2 (56,160 HP; 394–434u) · Mythic 3 (374,400 HP; 651–781u)
+Energy shields: Epic 1 bubble (239u) · Legendary 2 bubbles (394–434u) · Mythic 3 bubbles (651–781u) — permanent, energy/shock/thermal pass
 
 MOUNTS AT MYTHIC
 0 gun mounts · 0 missile pods · gun 0.4× enemy damage at 1.1–1.7s cadence; missiles 1.1× at 4.5–6s
@@ -1070,7 +1070,7 @@ PARTS AT MYTHIC
 
 DEFENCES
 Shells: Rare 1 layer (90 HP each) · Epic 2 layers (400 HP each) · Legendary 3 layers (1,800 HP each) · Mythic 4 layers (8,000 HP each)
-Energy shields: Epic 1 (6,240 HP, 239u) · Legendary 2 (56,160 HP; 394–434u) · Mythic 3 (374,400 HP; 651–781u)
+Energy shields: Epic 1 bubble (239u) · Legendary 2 bubbles (394–434u) · Mythic 3 bubbles (651–781u) — permanent, energy/shock/thermal pass
 
 MOUNTS AT MYTHIC
 0 gun mounts · 0 missile pods · gun 0.4× enemy damage at 1.1–1.7s cadence; missiles 1.1× at 4.5–6s
@@ -1151,7 +1151,7 @@ PARTS AT MYTHIC
 
 DEFENCES
 Shells: Rare 1 layer (90 HP each) · Epic 2 layers (400 HP each) · Legendary 3 layers (1,800 HP each) · Mythic 4 layers (8,000 HP each)
-Energy shields: Epic 1 (6,240 HP, 239u) · Legendary 2 (56,160 HP; 394–434u) · Mythic 3 (374,400 HP; 651–781u)
+Energy shields: Epic 1 bubble (239u) · Legendary 2 bubbles (394–434u) · Mythic 3 bubbles (651–781u) — permanent, energy/shock/thermal pass
 
 MOUNTS AT MYTHIC
 6 gun mounts · 0 missile pods · gun 0.4× enemy damage at 1.1–1.7s cadence; missiles 1.1× at 4.5–6s
@@ -1192,7 +1192,7 @@ PARTS AT MYTHIC
 
 DEFENCES
 Shells: Rare 1 layer (90 HP each) · Epic 2 layers (400 HP each) · Legendary 3 layers (1,800 HP each) · Mythic 4 layers (8,000 HP each)
-Energy shields: Epic 1 (6,240 HP, 239u) · Legendary 2 (56,160 HP; 394–434u) · Mythic 3 (374,400 HP; 651–781u)
+Energy shields: Epic 1 bubble (239u) · Legendary 2 bubbles (394–434u) · Mythic 3 bubbles (651–781u) — permanent, energy/shock/thermal pass
 
 MOUNTS AT MYTHIC
 0 gun mounts · 0 missile pods · gun 0.4× enemy damage at 1.1–1.7s cadence; missiles 1.1× at 4.5–6s
@@ -1233,7 +1233,7 @@ PARTS AT MYTHIC
 
 DEFENCES
 Shells: Rare 1 layer (90 HP each) · Epic 2 layers (400 HP each) · Legendary 3 layers (1,800 HP each) · Mythic 4 layers (8,000 HP each)
-Energy shields: Epic 1 (6,240 HP, 239u) · Legendary 2 (56,160 HP; 394–434u) · Mythic 3 (374,400 HP; 651–781u)
+Energy shields: Epic 1 bubble (239u) · Legendary 2 bubbles (394–434u) · Mythic 3 bubbles (651–781u) — permanent, energy/shock/thermal pass
 
 MOUNTS AT MYTHIC
 6 gun mounts · 0 missile pods · gun 0.4× enemy damage at 1.1–1.7s cadence; missiles 1.1× at 4.5–6s
@@ -1314,7 +1314,7 @@ PARTS AT MYTHIC
 
 DEFENCES
 Shells: Rare 1 layer (90 HP each) · Epic 2 layers (400 HP each) · Legendary 3 layers (1,800 HP each) · Mythic 4 layers (8,000 HP each)
-Energy shields: Epic 1 (6,240 HP, 239u) · Legendary 2 (56,160 HP; 394–434u) · Mythic 2 (249,600 HP; 651–716u)
+Energy shields: Epic 1 bubble (239u) · Legendary 2 bubbles (394–434u) · Mythic 2 bubbles (651–716u) — permanent, energy/shock/thermal pass
 
 MOUNTS AT MYTHIC
 6 gun mounts · 4 missile pods · gun 0.4× enemy damage at 1.1–1.7s cadence; missiles 1.1× at 4.5–6s
@@ -1355,7 +1355,7 @@ PARTS AT MYTHIC
 
 DEFENCES
 Shells: none — the body takes hits directly.
-Energy shields: Epic 1 (6,240 HP, 239u) · Legendary 1 (28,080 HP, 394u) · Mythic 1 (124,800 HP, 651u)
+Energy shields: Epic 1 bubble (239u) · Legendary 1 bubble (394u) · Mythic 1 bubble (651u) — permanent, energy/shock/thermal pass
 
 MOUNTS AT MYTHIC
 4 gun mounts · 0 missile pods · gun 0.4× enemy damage at 1.1–1.7s cadence; missiles 1.1× at 4.5–6s
@@ -1448,7 +1448,7 @@ ACID SPRAYER — CORROSIVE
 Per hit: 0.30× base (3.0 damage) · Per trigger: 0.90× (9.0)
 DPS: 56.3 · Cooldown: 0.160s · Range: 400u
 Craft: Difficulty 3 · 5 parts · 1× Body/Limb + 1× Soldier Ant/Worker Ant/Bombardier Beetle part
-Behaviour: Three globs; each hit adds 0.32 melt and a 1.6 × efficiency damage-over-time; ignores energy bubbles.
+Behaviour: Three globs; each hit adds 0.32 melt and a 1.6 × efficiency damage-over-time; stopped by energy bubbles.
 
 ────────────────────────────────────────
 CHAIN LIGHTNING — SHOCK
@@ -1469,7 +1469,7 @@ RAIL SNIPER — KINETIC
 Per hit: 2.40× base (24.0 damage) · Per trigger: 2.40× (24.0)
 DPS: 13.2 · Cooldown: 1.820s · Range: 1,150u
 Craft: Difficulty 5 · 7 parts · 1× Core/Weapon + 1× Tiger Beetle/Assassin Bug part
-Behaviour: 1500u beam; pierces 12 parts; ignores shield bubbles; hull shells stop it.
+Behaviour: 1500u beam; pierces 12 parts; stopped by energy shield bubbles and hull shells.
 
 ────────────────────────────────────────
 GRAVITY BOMB — SHOCK

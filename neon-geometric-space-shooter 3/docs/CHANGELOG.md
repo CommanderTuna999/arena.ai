@@ -3,6 +3,20 @@
 Everything below is implemented in the current build. Numbers are the actual constants used by
 the simulation, not design targets.
 
+## 0. v2.0.4 — energy shields are hard walls
+
+### Enemy energy shields
+- Shields no longer have a charge to drain. `SHIELD_STRIP` (0.08) is deleted; blocked hits change nothing about the bubble, so `shieldDown`, the 4s collapse, the 40% re-arm and the 15%/s regeneration never trigger. A bubble lives until its Shield Generator part is destroyed.
+- Only `energy`, `shock` and `thermal` damage passes through a bubble. Kinetic, physical, explosive and corrosive projectiles and beams stop at the hex edge and deal nothing to the shield or the hull.
+- `tryHit` and `beam` share the same rule: energy family breaks out of the bubble check and continues to the parts; everything else returns/ends the beam with a cyan impact ring.
+- The "SHIELD DOWN" toast and its collapse/re-arm branches are removed.
+
+### Rail Sniper
+- The rail beam is now fired with `bypass = false`, so it is stopped by enemy energy shields like any other kinetic weapon. The Shield-Bypass Laser keeps `bypass = true` and is the only weapon that ignores bubbles. Hull shells still stop the rail.
+
+### Documentation
+- `DMG_INFO` tooltips, `docs/STATS.md` damage-type table and the bubble rules paragraph all describe the new behaviour.
+
 ## 0. v2.0.3 — particle budget pass
 
 ### Particle lifecycle
