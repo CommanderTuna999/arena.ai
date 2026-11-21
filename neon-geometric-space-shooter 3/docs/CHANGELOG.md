@@ -3,10 +3,17 @@
 Everything below is implemented in the current build. Numbers are the actual constants used by
 the simulation, not design targets.
 
+## 0. v2.2.1 — shield panels ride outside the armour
+
+- Panels were sized off body scale alone, which put them *inside* the plating on anything above rare (a mythical dragonfly's plates reach ~1,167u while the panel ring sat at ~497u).
+- `makeEnemy` now measures, per panel, how far the torso plates reach along that panel's own ray (ray/circle exit distance over every `segment` and `armor` part, including its `plateGrow` slab thickness) and pushes `shieldR` out past it with a `max(28u, 6%)` margin.
+- The result is a wall that hugs the hull instead of a single distant circle: a mythical dragonfly's four panels now sit at 497/858/1016/497u depending on the direction, and every one of them is outside the armour.
+- Legs and wings are deliberately excluded from the measurement — they stick far past the hull, and a ring out there would float in empty space. A plated limb can therefore poke through the shield line, which reads as an exposed weak point.
+
 ## 0. v2.2.0 — shield projectors throw walls, not bubbles
 
 ### One panel per generator
-- `Part` gained `shieldKind` (0 arc / 1 bar), `shieldSpan`, `shieldAng` and `shieldSpin`, and `shieldStyle(sp, S)` picks the panel for a generator: flyers and serpents (`flying || bodyWave`) get a curved arc with a **0.5 rad** half-angle (~57°, about 29% of the ring), walkers get a straight bar with a **1.25 × body size** half-length. Panel radius is `1.45 × body size`, thickness `max(9, 0.07 × r)`.
+- `Part` gained `shieldKind` (0 arc / 1 bar), `shieldSpan`, `shieldAng` and `shieldSpin`, and `shieldStyle(sp, S)` picks the panel for a generator: flyers and serpents (`flying || bodyWave`) get a curved arc with a **0.5 rad** half-angle (~57°, about 29% of the ring), walkers get a straight bar with a **1.25 × body size** half-length. Panel radius starts at `1.45 × body size` and is then pushed out so it sits at least `28u` (or 6%) beyond the outermost torso plate along that panel's ray, so the wall always stands outside the armour; thickness is `max(9, 0.07 × r)`.
 - The old closed hexagon bubble is gone from `enemies.ts`, `engine.ts` (shield resolution and hit test) and `render.ts`. Each panel is drawn as a thick translucent `rgba(70,210,255)` band with a bright core stroke, round caps, and a faint energy link back to the generator that projects it.
 
 ### Rarity buys coverage, never closure

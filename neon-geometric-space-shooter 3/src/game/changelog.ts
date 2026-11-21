@@ -8,7 +8,7 @@
  *   CHANGELOG and mirror the details in docs/CHANGELOG.md.
  */
 
-export const VERSION = "2.2.0";
+export const VERSION = "2.2.1";
 
 export interface ChangeEntry {
   version: string;
@@ -19,6 +19,17 @@ export interface ChangeEntry {
 }
 
 export const CHANGELOG: ChangeEntry[] = [
+  {
+    version: "2.2.1",
+    date: "21 Nov 2026",
+    title: "Shield panels ride outside the armour",
+    points: [
+      "Panels were sized off body scale alone, so on legendary and mythical bodies the plating reached past them and the wall ended up buried inside the armour.",
+      "Each panel now measures how far the torso plates reach along its own direction and sits just past them, so the shield is always the outer layer: a shot has to clear the plating before it meets energy.",
+      "Because the radius follows the hull, panels hug a long or lopsided body instead of forming one distant circle - a mythical dragonfly's four panels now sit at different distances depending on which way they face.",
+      "Legs and wings are ignored on purpose (they stick far past the hull), so a plated limb can poke through the shield line as an exposed weak point.",
+    ],
+  },
   {
     version: "2.2.0",
     date: "21 Nov 2026",

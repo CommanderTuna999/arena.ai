@@ -34,9 +34,11 @@ import { GUN_SPECS, SPECIES_LIST, buildEnemy, type AbilityDef, type Group, type 
  *                      once every 1.4s, and stunned bodies cannot do it.
  *   Energy shields   : every Shield Generator projects ONE wall, never a bubble:
  *                      a curved arc for flyers and serpents, a straight bar for
- *                      walkers, some species sweeping their panels. Panels sit at
- *                      1.9x body size and cover only a slice of the ring, so the
- *                      gaps between them are the weak points. Generators scale
+ *                      walkers, some species sweeping their panels. Every panel
+ *                      rides just outside the torso armour plates it faces, so a
+ *                      shot has to clear the plating before it meets energy, and
+ *                      only a slice of the ring is covered — the gaps between
+ *                      panels are the weak points. Generators scale
  *                      with rarity (epic 2, legendary 3, mythical 4). Panels stop
  *                      every damage type except energy, shock and thermal, which
  *                      cut straight through, and blocked hits never drain them —
@@ -1214,6 +1216,28 @@ export class Game {
     const coreR = b.parts[b.parts.findIndex((q) => q.id === b.coreId)]?.r ?? 0;
     if (shellN && plateR <= 0) plateR = b.radius;
     if (shellN) plateR = Math.max(plateR, coreR + 10);
+    /* Shield panels are the outer layer: every panel rides just outside the
+     * torso plates it faces, so a shot must clear the armour before it can meet
+     * energy. Measured per panel (a ray from the core through that panel), so
+     * long bodies get a wall that hugs the hull instead of a distant circle.
+     * Legs and wings are ignored - they stick far past the hull. */
+    for (const p of b.parts) {
+      if (p.shieldR <= 0) continue;
+      const dx = Math.cos(p.shieldAng), dy = Math.sin(p.shieldAng);
+      let reach = 0;
+      if (shellN) {
+        const n = Math.max(1, shellN);
+        for (const q of b.parts) {
+          if (q.kind !== "segment" && q.kind !== "armor") continue;
+          const R = q.r + plateGrow(q.r, n);
+          const along = q.cx * dx + q.cy * dy;
+          const perp = q.cy * dx - q.cx * dy;
+          const disc = R * R - perp * perp;
+          if (disc > 0) reach = Math.max(reach, along + Math.sqrt(disc));
+        }
+      }
+      p.shieldR = Math.max(p.shieldR, Math.max(1.2 * b.size, reach + Math.max(28, reach * 0.06)));
+    }
     b.groups.forEach((g, i) => { if (roleGroups[g.role]) roleGroups[g.role].push(i); });
     // ability gating: tier 0 enemies have none, tier 1 has one, tier 2 two, and so on
     const gate = Math.min(tier, spd.abilities.length);

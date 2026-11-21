@@ -1,5 +1,5 @@
 WOF GUE — STAT COMPENDIUM
-Build 2.2.0 · 21 November 2026
+Build 2.2.1 · 21 November 2026
 
 HOW TO READ THIS
 C / U / R / E / L / M = Common, Uncommon, Rare, Epic, Legendary, Mythic.
@@ -41,7 +41,7 @@ DAMAGE TYPES
 • Physical — contact, knockback and direct impulses. Collisions are not projectiles, so the panels never check them; physical rounds are stopped.
 
 ENEMY DEFENCE RULES
-Energy shield: each Shield Generator projects one wall 1.45 × body size out — a curved arc for flyers and serpents, a straight bar for walkers, some species sweeping them at 0.4-0.7 rad/s. A panel covers only a slice of the ring (2 at epic, 3 at legendary, 4 at mythical), so the gaps between panels are open weak points. Energy, shock and thermal damage passes through. Every other projectile or beam is stopped at the panel and does nothing to it: it has no charge to strip, so it never drops or re-arms and only disappears when the generator part is destroyed.
+Energy shield: each Shield Generator projects one wall just outside the torso armour plates — a curved arc for flyers and serpents, a straight bar for walkers, some species sweeping them at 0.4-0.7 rad/s. A panel covers only a slice of the ring (2 at epic, 3 at legendary, 4 at mythical), so the gaps between panels are open weak points. Energy, shock and thermal damage passes through. Every other projectile or beam is stopped at the panel and does nothing to it: it has no charge to strip, so it never drops or re-arms and only disappears when the generator part is destroyed.
 Hull shells (armour plating): tier 2 and above carry solid layers holding 60% of the enemy hull each, drawn as steel slabs over the body. A hit is swallowed by the outer layer and only part of it is lost: bullets 30%, missiles and flak 40%, beams 80% (energy is only resisted 20%), area blasts 40%, shock 15%; Legendary legs carry 1 plating layer of their own, mythical legs 2. Breaking a layer releases a damaging shockwave. A mythical tier-5 layer is 60% of its hull, e.g. 943,872 HP on a 1,573,120 hull (four layers).
 
 ════════════════════════════════════════
