@@ -1,6 +1,6 @@
 # wof gue — complete stat compendium
 
-Build 2.0.8 · generated 21 Nov 2026 · every figure is a live simulation constant, not a design target.
+Build 2.0.9 · generated 21 Nov 2026 · every figure is a live simulation constant, not a design target.
 
 How to read it: enemy health is the sum of every part at that rarity tier. Enemy damage is listed as a multiplier of the tier damage (eDmg), because every bite, bolt, blast and contact hit scales from that one number. Weapon damage is a multiplier of the player cannon damage (st.dmg = 10 x 1.2^Cannon Damage level). Efficiency (eff) is the crafted item quality: 0.30 minimum, 1.00 typical; the raw formula can reach 2.25 on an unrestricted tier-5 core build and 1.80 on a 7-part difficulty-5 recipe.
 
@@ -803,9 +803,9 @@ Melt: acid adds 0.32 per hit, caps at 0.90; every later hit on that enemy deals 
 Poison/venom: damage-over-time, refreshed to 4s; Venom Guard reduces it by up to 90%.
 Slow: enemy slow fields multiply speed; Inertial Dampers reduce both strength and duration.
 Stun: enemy stops moving, turning and firing; EMP and Sonic apply it.
-Turning: common, uncommon, rare and epic all use the species turn rate; legendary turns at 0.9x and mythical at 0.8x of it. Destroyed legs scale turn rate down in proportion to the legs still attached, and a legless body cannot turn at all.
+Turning: common, uncommon, rare and epic all use the species turn rate; legendary turns at 0.9x and mythical at 0.8x of it. Legs only drive walking speed: losing them does not slow or stop turning.
 Energy shields: a bubble has no charge to strip, so it never collapses, re-arms or regenerates. Destroying its Shield Generator part removes it.
 Destroyed parts: each dead part can drop a component; weapons and shield generators detonate for 1.8x eDmg to the player (other parts 1.3x) and damage enemies in the blast.
 Boss: the Snake is the only boss (217 parts, body wave, 294u radius at T0; no reflective shield). At most one is alive; it spawns in the mythical core and never counts as a normal resident. SNAKE_ENABLED is false in this build, so the dedicated core pass is dormant even though the encounter code exists.
 
-End of compendium · build 2.0.8
+End of compendium · build 2.0.9

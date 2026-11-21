@@ -8,7 +8,7 @@
  *   CHANGELOG and mirror the details in docs/CHANGELOG.md.
  */
 
-export const VERSION = "2.0.8";
+export const VERSION = "2.0.9";
 
 export interface ChangeEntry {
   version: string;
@@ -19,6 +19,15 @@ export interface ChangeEntry {
 }
 
 export const CHANGELOG: ChangeEntry[] = [
+  {
+    version: "2.0.9",
+    date: "21 Nov 2026",
+    title: "Legs no longer drag the turn rate",
+    points: [
+      "Turning is a pure species stat again: the leg-damage penalty from 2.0.8 is gone. Losing half the legs, or all of them, leaves the turn rate untouched.",
+      "Legs still drive walking speed (mobility), so a shredded body still slows to a crawl, it just keeps its full steering.",
+    ],
+  },
   {
     version: "2.0.8",
     date: "21 Nov 2026",

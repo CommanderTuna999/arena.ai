@@ -3,6 +3,13 @@
 Everything below is implemented in the current build. Numbers are the actual constants used by
 the simulation, not design targets.
 
+## 0. v2.0.9 — legs no longer drag the turn rate
+
+### Turning is a pure species stat
+- Removed `Enemy.turnFrac` and the leg-fraction logic added in 2.0.8. `updateEnemies` uses `turnMul = 1`, and `runAct`'s `turnTo` is back to `e.turn * rate` with no limb scaling.
+- `refreshMobility` still rebuilds `mobility` from surviving legs/wings, so a de-legged body still crawls (or stops, if it has no wings); it simply keeps its full turn rate.
+- Rarity scaling from 2.0.8 is unchanged: `TIER_TURN = [1, 1, 1, 1, 0.9, 0.8]`.
+
 ## 0. v2.0.8 — enemies that can actually turn
 
 ### Turn rate by rarity

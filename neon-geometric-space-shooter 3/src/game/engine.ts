@@ -100,8 +100,6 @@ export interface Enemy {
   S: number; radius: number; parts: Part[]; groups: Group[]; order: number[]; coreId: number;
   chunk: string; home: { x: number; y: number }; aggro: boolean; barT: number;
   speed: number; turn: number; mobility: number; legCount: number; wingCount: number;
-  /** share of the legs still attached; 0 means the body cannot turn at all */
-  turnFrac: number;
   abil: AbilityDef[]; abilCd: number[]; gap: number; act: Act | null; stun: number;
   wander: { x: number; y: number; t: number }; roleGroups: Record<string, number[]>;
   walk: number; dead: boolean; eDmg: number; keep: number; strafe: number; strafeT: number;
@@ -1169,7 +1167,7 @@ export class Game {
     return {
       id: this.idc++, sp: spi, spd, tier, x, y, a: Math.random() * TAU, vx: 0, vy: 0, S: b.size, radius: b.radius,
       parts: b.parts, groups: b.groups, order: b.order, coreId: b.coreId, chunk: key, home: { x, y }, aggro: false, barT: 0,
-      speed: spd.speed * (1 + 0.04 * tier), turn: (spd.turn * TIER_TURN[clamp(tier, 0, 5)]) / (1 + b.radius / (b.size * 6)), mobility: 1, legCount: b.legCount, wingCount: b.wingCount, turnFrac: 1,
+      speed: spd.speed * (1 + 0.04 * tier), turn: (spd.turn * TIER_TURN[clamp(tier, 0, 5)]) / (1 + b.radius / (b.size * 6)), mobility: 1, legCount: b.legCount, wingCount: b.wingCount,
       abil, abilCd: abil.map(() => 1 + Math.random() * 3), gap: 1, act: null, stun: 0, wander: { x, y, t: 0 }, roleGroups,
       walk: Math.random() * 6, dead: false, eDmg: 16 * DMG_MUL[tier], keep: spd.keep + b.radius * 0.9, strafe: Math.random() < 0.5 ? 1 : -1, strafeT: 2,
       tags, shields: [], weaponParts, shieldParts, dist: 9999, bdist: 9999, contactCd: 0, hasChange: false, gen: 0,
@@ -1373,12 +1371,9 @@ export class Game {
     if (p.hp <= 0 && p.alive) this.breakPart(e, p, !fromBase, fromBase);
   }
   private refreshMobility(e: Enemy) {
-    if (e.spd.id === "serpent") { e.mobility = 1; e.turnFrac = 1; return; } // snakes have no legs to lose
+    if (e.spd.id === "serpent") { e.mobility = 1; return; } // snakes have no legs to lose
     let legs = 0, wings = 0;
     for (const p of e.parts) { if (!p.alive) continue; if (p.kind === "leg") legs++; else if (p.kind === "wing") wings++; }
-    /* Losing legs costs steering: a half-legged insect turns at half rate and a
-     * legless one cannot turn at all (it also stops walking, since mobility 0). */
-    e.turnFrac = e.legCount ? clamp(legs / e.legCount, 0, 1) : 1;
     if (e.spd.flying) {
       const wf = e.wingCount ? wings / e.wingCount : 0;
       const lf = e.legCount ? legs / e.legCount : 0;
@@ -1809,7 +1804,7 @@ export class Game {
     const a = e.act!, d = a.def, p = this.player;
     a.t += dt;
     const S = e.S;
-    const turnTo = (rate: number) => { const tr = e.turn * e.turnFrac * rate; e.a += clamp(angDiff(e.a, toP), -tr * dt, tr * dt); };
+    const turnTo = (rate: number) => { e.a += clamp(angDiff(e.a, toP), -e.turn * rate * dt, e.turn * rate * dt); };
     const damp = (k: number) => { const f = Math.exp(-k * dt); e.vx *= f; e.vy *= f; };
     const done = () => { e.act = null; e.gap = 0.4 + Math.random() * 0.6; };
     const mx = e.x + Math.cos(e.a) * e.spd.muzzle * S, my = e.y + Math.sin(e.a) * e.spd.muzzle * S;
@@ -2148,7 +2143,7 @@ export class Game {
     // ---- behaviour / movement ----
     let tvx = 0, tvy = 0;
     let faceTo = e.a;
-    let turnMul = e.turnFrac;
+    const turnMul = 1;
     if (e.stun > 0) { e.stun -= dt; e.vx *= Math.exp(-4 * dt); e.vy *= Math.exp(-4 * dt); }
     else if (e.act) {
       this.runAct(e, dt, toP, dist);

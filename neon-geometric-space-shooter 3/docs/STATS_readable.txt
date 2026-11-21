@@ -1,5 +1,5 @@
 WOF GUE — STAT COMPENDIUM
-Build 2.0.8 · 21 November 2026
+Build 2.0.9 · 21 November 2026
 
 HOW TO READ THIS
 C / U / R / E / L / M = Common, Uncommon, Rare, Epic, Legendary, Mythic.
@@ -47,7 +47,7 @@ Hull shells (armour plating): tier 2 and above carry solid layers holding 60% of
 ════════════════════════════════════════
 ENEMIES — 32 SPECIES
 ════════════════════════════════════════
-Turn speed: common through epic share the species rate; legendary ×0.9, mythical ×0.8. Destroyed legs scale it down and a legless body cannot turn.
+Turn speed: common through epic share the species rate; legendary ×0.9, mythical ×0.8. Legs drive walking speed only — losing them never slows or stops turning.
 
 ────────────────────────────────────────
 1. DRAGONFLY

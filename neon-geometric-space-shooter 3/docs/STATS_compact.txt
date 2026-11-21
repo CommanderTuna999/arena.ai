@@ -1,4 +1,4 @@
-WOF GUE — COMPLETE STAT COMPENDIUM (build 2.0.8)
+WOF GUE — COMPLETE STAT COMPENDIUM (build 2.0.9)
 Generated 21 Nov 2026. Every number below is a simulation constant. Health is the sum of all parts at that tier; enemy damage is a multiple of eDmg; weapon damage is a multiple of the player cannon damage st.dmg.
 
 1. FORMULAS
@@ -246,7 +246,7 @@ Time Warp: 24s base cd; 4s slow within 900u to max(0.10,0.25-0.05f) speed. D5, 7
 Shockwave: 16s base cd; 520u, 5f x st.dmg, 900u/s knockback, 0.5s stun. D4, 6 parts (1x Plate/Body + 1x Dung/Scarab).
 All active cooldowns = base / (0.7 + 0.30 x f).
 
-Turning: common through epic share the species turn rate (legendary x0.9, mythical x0.8). Destroyed legs scale it down; a legless body cannot turn.
+Turning: common through epic share the species turn rate (legendary x0.9, mythical x0.8). Legs affect walking speed only, never turning.
 9. BASE CANNON AND UPGRADES
 Cannon Damage max 30: 10 x 1.2^L per shot. Fire Rate max 12: 4+0.7L shots/s. Extra Barrels max 4: 1+L shots. Piercing Rounds max 5: +L pierce, each pierce hit at 80%. Targeting Matrix max 10: 5+4L% crit for 2.5x. Plate Breaker max 10: +15L% vs armour/shield/spike. Core Seeker max 8: +20L% vs core. Fragmentation max 6: 18+9L splash radius, 35% to neighbours. Rail Coils max 8: +10L% speed, +8L% range.
 Hull Plating max 30: 100 x 1.22^L HP. Nano Repair max 10: 0.5L%/s. Reactive Armour max 14: -3.5L% damage. Energy Shield Core max 25: 60 x 1.28^(L-1) at L1+. Inertial Dampers max 6: 12L% slow/pull resist. Thrusters max 12: 450+40L. Handling max 10: 1,500+200L accel. Afterburner max 8: x(1.7+0.1(L-1)) burst at L1+.
