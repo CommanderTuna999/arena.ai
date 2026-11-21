@@ -8,7 +8,7 @@
  *   CHANGELOG and mirror the details in docs/CHANGELOG.md.
  */
 
-export const VERSION = "2.1.2";
+export const VERSION = "2.1.3";
 
 export interface ChangeEntry {
   version: string;
@@ -19,6 +19,16 @@ export interface ChangeEntry {
 }
 
 export const CHANGELOG: ChangeEntry[] = [
+  {
+    version: "2.1.3",
+    date: "21 Nov 2026",
+    title: "Energy cuts plating, hulls swat you off",
+    points: [
+      "Energy damage now only loses 20% to armour plating (it used to lose 78%): beams put 80% of their damage into the slabs instead of 22%. High-rarity hulls are no longer invulnerable to energy builds. Kinetic (30%), missiles (32%), blasts (40%) and shockwaves (15%) are unchanged.",
+      "Fly inside an enemy body to shoot past its plating and it now reacts instantly, before you can do anything: 2.2x its contact damage and a 1,500 + 90 x tier u/s shove away from the hull (about 1,770 u/s at legendary), plus a hard screen shake.",
+      "The swat has a 1.4s cooldown per enemy, only triggers when the ship is genuinely over the hull (half the body radius, clamped to 45-260u), and stunned bodies cannot swat.",
+    ],
+  },
   {
     version: "2.1.2",
     date: "21 Nov 2026",

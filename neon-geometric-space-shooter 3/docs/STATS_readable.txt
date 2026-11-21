@@ -42,11 +42,12 @@ DAMAGE TYPES
 
 ENEMY DEFENCE RULES
 Energy shield: each Shield Generator projects a hex bubble 1.9 × body size that only covers that generator, not the whole body. Energy, shock and thermal damage passes through it. Every other projectile or beam is stopped at the edge and does nothing to the bubble: it has no charge to strip, so it never drops or re-arms and only disappears when the generator part is destroyed.
-Hull shells (armour plating): tier 2 and above carry solid layers holding 60% of the enemy hull each, drawn as steel slabs over the body. A hit is swallowed by the outer layer and only part of it is lost: bullets 30%, missiles and flak 40%, beams 22%, area blasts 40%, shock 15%; Legendary legs carry 1 plating layer of their own, mythical legs 2. Breaking a layer releases a damaging shockwave. A mythical tier-5 layer is 60% of its hull, e.g. 943,872 HP on a 1,573,120 hull (four layers).
+Hull shells (armour plating): tier 2 and above carry solid layers holding 60% of the enemy hull each, drawn as steel slabs over the body. A hit is swallowed by the outer layer and only part of it is lost: bullets 30%, missiles and flak 40%, beams 80% (energy is only resisted 20%), area blasts 40%, shock 15%; Legendary legs carry 1 plating layer of their own, mythical legs 2. Breaking a layer releases a damaging shockwave. A mythical tier-5 layer is 60% of its hull, e.g. 943,872 HP on a 1,573,120 hull (four layers).
 
 ════════════════════════════════════════
 ENEMIES — 32 SPECIES
 ════════════════════════════════════════
+Overflying a body: if the ship gets inside an enemy (half its radius, clamped to 45–260u) the body swats it away instantly — 2.2× its contact damage plus a 1,500 + 90×tier u/s shove — with a 1.4s cooldown per enemy. Stunned bodies cannot swat.
 Turn speed: common through epic share the species rate; legendary ×0.9, mythical ×0.8. Turning and walking scale with the share of healthy limbs, so broken or crippled legs slow both, and a body with no working legs cannot turn at all.
 Legs cripple before they snap: a limb that falls below 35% health stops carrying weight or steering and stops swinging, even though it is still attached. At 50% it still works.
 

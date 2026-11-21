@@ -3,6 +3,17 @@
 Everything below is implemented in the current build. Numbers are the actual constants used by
 the simulation, not design targets.
 
+## 0. v2.1.3 — energy vs plating, and the overfly swat
+
+### Energy only loses 20% to plating
+- `SHELL_TAKE.laser`: 0.22 → **0.8**. Beams (and the thermal cutter, which shares the `laser` source) now put 80% of their damage into the slabs; kinetic 0.3, missile 0.32, explosive 0.4, shock 0.15 and DoT 0.1 are unchanged.
+- This is the intended answer to high-rarity hulls shrugging off energy builds: energy already ignores bubble shields, so it is now the anti-plating branch too.
+
+### Overflying a body gets you swatted
+- New per-enemy `swatCd` (1.4s) and `engine.swat()`: when the ship is inside the hull footprint — `dist < clamp(enemy.radius * 0.5, 45, 260) + SHIP_R` — the body reacts the same frame, before the player can act.
+- Effect: `2.2 × eDmg` with knockback of `1,500 + 90 × tier` u/s away from the core, `shake >= 30`, a 1300 u/s shock ring plus twin spark bursts. Cooldown-gated so it cannot chain-stun a player.
+- Suppressed in the safe zone and on stunned bodies.
+
 ## 0. v2.1.2 — legs cripple, legendary and mythical legs get plating
 
 ### Crippling

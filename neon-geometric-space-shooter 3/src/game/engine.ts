@@ -27,8 +27,11 @@ import { GUN_SPECS, SPECIES_LIST, buildEnemy, type AbilityDef, type Group, type 
  *   Plating          : tier 2/3/4/5 get 1/2/3/4 bolted armour layers, each holding
  *                      60% of the enemy's total hull. A layer swallows the whole hit
  *                      and only loses a share of it (kinetic 30%, explosive 40%,
- *                      laser 22%, shock 15%, damage-over-time 10%). Layers are drawn
+ *                      laser 80%, shock 15%, damage-over-time 10%). Layers are drawn
  *                      as solid steel plates under the body, one rim per layer.
+ *   Swat             : sitting inside a body (flying over its plating and shields)
+ *                      is punished instantly: 2.2x its bite and a ~1,700 u/s shove,
+ *                      once every 1.4s, and stunned bodies cannot do it.
  *   Energy shields   : blue hexes stop every damage type except energy, shock and
  *                      thermal, which cut straight through. Blocked hits do not
  *                      drain the bubble at all — it stays up until its generator
@@ -57,7 +60,10 @@ const HARD_MAX = 420;
 /** how many enemies one chunk may contribute during the initial world seed */
 const SEED_BUDGET = 1;
 /** a plating layer stops the whole hit but only loses this share of it */
-const SHELL_TAKE: Record<DmgSrc, number> = { kinetic: 0.3, missile: 0.32, explosive: 0.4, laser: 0.22, shock: 0.15, dot: 0.1 };
+/* How much damage each source actually does to a slab. Energy is the anti-plating
+ * tool: plating only resists about 20% of a beam, otherwise high-rarity hulls were
+ * simply invulnerable to energy builds. */
+const SHELL_TAKE: Record<DmgSrc, number> = { kinetic: 0.3, missile: 0.32, explosive: 0.4, laser: 0.8, shock: 0.15, dot: 0.1 };
 /** each plating layer carries this share of the enemy's total part hull */
 export const SHELL_HP_FRAC = 0.6;
 
@@ -114,7 +120,7 @@ export interface Enemy {
   wander: { x: number; y: number; t: number }; roleGroups: Record<string, number[]>;
   walk: number; dead: boolean; eDmg: number; keep: number; strafe: number; strafeT: number;
   tags: Record<string, number>; shields: ShieldInfo[]; weaponParts: number[]; shieldParts: number[];
-  dist: number; contactCd: number; hasChange: boolean;
+  dist: number; contactCd: number; /** cooldown on the "get off my hull" swat */ swatCd: number; hasChange: boolean;
   dot: number; dotT: number; melt: number; slowT: number; slowF: number;
   /** summon generation: 0 = natural spawn, children are +1 (hard stop at 2) */
   gen: number;
@@ -1187,7 +1193,7 @@ export class Game {
       speed: spd.speed * (1 + 0.04 * tier), turn: (spd.turn * TIER_TURN[clamp(tier, 0, 5)]) / (1 + b.radius / (b.size * 6)), mobility: 1, legCount: b.legCount, wingCount: b.wingCount, turnFrac: 1, legPlate: tier >= 4 ? tier - 3 : 0, crippledLegs: [],
       abil, abilCd: abil.map(() => 1 + Math.random() * 3), gap: 1, act: null, stun: 0, wander: { x, y, t: 0 }, roleGroups,
       walk: Math.random() * 6, dead: false, eDmg: 16 * DMG_MUL[tier], keep: spd.keep + b.radius * 0.9, strafe: Math.random() < 0.5 ? 1 : -1, strafeT: 2,
-      tags, shields: [], weaponParts, shieldParts, dist: 9999, bdist: 9999, contactCd: 0, hasChange: false, gen: 0,
+      tags, shields: [], weaponParts, shieldParts, dist: 9999, bdist: 9999, contactCd: 0, swatCd: 0, hasChange: false, gen: 0,
       dmgTaken: 0, baseDmg: 0,
       dot: 0, dotT: 0, melt: 0, slowT: 0, slowF: 1,
       shells: Array.from({ length: shellN }, () => ({ hp: shellMax, max: shellMax })),
@@ -2058,6 +2064,22 @@ export class Game {
     }
     return false;
   }
+  /** A body the ship has climbed inside swats it away: huge knockback, big damage. */
+  private swat(e: Enemy, dx: number, dy: number, dist: number) {
+    const p = this.player;
+    e.swatCd = 1.4;
+    e.aggro = true;
+    const ang = dist > 1 ? Math.atan2(dy, dx) : e.a;
+    const push = 1500 + 90 * e.tier;
+    this.hurtPlayer(e.eDmg * 2.2, { kb: push, kbx: Math.cos(ang), kby: Math.sin(ang) });
+    this.shake = Math.max(this.shake, 30);
+    this.ringFx(p.x, p.y, clamp(120 + e.radius * 0.3, 160, 320), "#ff6b81", 1300);
+    this.ringFx(p.x, p.y, 90, "#fff1d6", 900);
+    this.burst(p.x, p.y, "#ff8a8a", 24, 9, 640);
+    this.burst(p.x, p.y, "#fff6e0", 12, 5, 420);
+    if (p.flash <= 0) p.flash = 0.2;
+  }
+
   private swingRope(e: Enemy, d: AbilityDef) {
     const ca = Math.cos(e.a), sa = Math.sin(e.a);
     for (const h of this.harpoons) {
@@ -2105,6 +2127,7 @@ export class Game {
     for (const q of e.parts) { if (q.hurt > 0) q.hurt -= dt; if (q.barT > 0) q.barT -= dt; }
     if (e.barT > 0) e.barT -= dt;
     if (e.contactCd > 0) e.contactCd -= dt;
+    if (e.swatCd > 0) e.swatCd -= dt;
     if (e.melt > 0) e.melt = Math.max(0, e.melt - dt * 0.3);
     if (e.slowT > 0) { e.slowT -= dt; if (e.slowT <= 0) e.slowF = 1; }
     if (e.dotT > 0) {
@@ -2121,6 +2144,12 @@ export class Game {
     else if (safe || dist > aggroR * (2.4 + 0.6 * e.tier)) e.aggro = false;
     for (let i = 0; i < e.abilCd.length; i++) if (e.abilCd[i] > 0) e.abilCd[i] -= dt;
     if (e.gap > 0) e.gap -= dt;
+
+    /* Flying over the hull to shoot its protected belly is not allowed: the body
+     * reacts the instant the ship crosses into it, before the player can act. */
+    if (!safe && e.swatCd <= 0 && e.stun <= 0 && dist < clamp(e.radius * 0.5, 45, 260) + SHIP_R) {
+      this.swat(e, dx, dy, dist);
+    }
 
     const toP = Math.atan2(dy, dx);
     const sp = e.speed * e.mobility * (e.slowT > 0 ? e.slowF : 1) * (e.aggro && e.tier >= 3 ? 1 + 0.03 * e.tier : 1);
