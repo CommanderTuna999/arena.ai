@@ -710,7 +710,7 @@ function CannonTree({ game }: { game: Game }) {
           </span>
         </button>
 
-        {isOpen && (
+        {isOpen && !dim && (
           <div
             className={`absolute z-40 w-[248px] ${align === "left" ? "left-0" : align === "right" ? "right-0" : "left-1/2 -translate-x-1/2"} ${
               down ? "top-full pt-1" : "bottom-full pb-1"
@@ -722,7 +722,7 @@ function CannonTree({ game }: { game: Game }) {
                 <span className={`min-w-0 flex-1 truncate text-[12px] font-black ${selected ? "text-yellow-100" : "text-white"}`}>{c.name}</span>
                 <span className="shrink-0 rounded-sm border border-yellow-300/40 bg-yellow-300/10 px-1 py-0.5 text-[8px] font-black text-yellow-200">TIER {c.tier}</span>
               </div>
-              <p className="mt-1 text-[10px] italic leading-snug text-white/55">{c.desc}</p>
+              <p className="mt-1 text-[10px] italic leading-snug text-white/55">&ldquo;{c.desc}&rdquo;</p>
               <div className="mt-1 flex flex-wrap gap-x-2 gap-y-0.5 text-[10px] text-white/60">
                 <span>
                   <b className="text-white/90">{fmtNum(cannonDmg(c, cl))}</b>
@@ -774,7 +774,6 @@ function CannonTree({ game }: { game: Game }) {
       <div className="rounded-sm border border-white/10 bg-white/[0.02] p-3">
         <div className="mb-1 flex items-baseline justify-between">
           <div className="text-[10px] font-bold tracking-[0.22em] text-cyan-200/60">CANNON TREE</div>
-          <div className="text-[10px] text-white/30">root at the bottom</div>
         </div>
         {msg && <div className="mb-1 rounded-sm border border-red-400/40 bg-red-500/10 px-2 py-1 text-[11px] text-red-200">{msg}</div>}
         <div className="pt-1">

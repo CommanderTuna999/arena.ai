@@ -1,12 +1,12 @@
 import { TAU, angDiff, clamp, distToPoly, hash2, lerp, mulberry32, pointInPoly } from "./math";
 import {
   ABILITY_BY_ID, BASE, BASE_MAX_HP, BASE_RING, BASE_TAKE, CANNONS, CANNON_BY_ID, CANNON_TRACKS, CANNON_TRACK_BY_ID,
-  DMG_MUL, KIND_CAT, RARITIES, RECIPE_BY_ID, SHIP_R, UPGRADES, WORLD_R, W_SLOTS, cannonBillPicks, cannonBillProblem,
+  DMG_MUL, KIND_CAT, KIND_DROP_RATE, RARITIES, RECIPE_BY_ID, SHIP_R, UPGRADES, WORLD_R, W_SLOTS, cannonBillPicks, cannonBillProblem,
   cannonDmg, cannonOwned, cannonRate, cannonTrackCost,
   compMass, compValue, computeStats, craftEfficiency,
   recipeProblem, upgradeCost, zoneTier, WEAPON_DMG, WEAPON_RANGE, type Comp, type DmgKind, type PartKind, type SaveData, type Slot, type Stats,
 } from "./data";
-import { GUN_SPECS, LASER_RAMP, LASER_RAMP_MIN, SPECIES_LIST, buildEnemy, type AbilityDef, type Group, type GunKind, type Part, type ProjType, type SpeciesDef } from "./enemies";
+import { ABILITY_INTERVALS, GUN_SPECS, LASER_RAMP, LASER_RAMP_MIN, SPECIES_LIST, buildEnemy, type AbilityDef, type Group, type GunKind, type Part, type ProjType, type SpeciesDef } from "./enemies";
 
 /* ---------------------------------------------------------------------------
  * COMBAT & WORLD REFERENCE (live constants)
@@ -137,12 +137,12 @@ const MINI_SPEED = 1450;
 /** The segmented snake boss is disabled for now; the species stays in the bestiary. */
 const SNAKE_ENABLED = false;
 const BOSS_SP = SNAKE_ENABLED ? SPECIES_LIST.findIndex((s) => s.boss) : -1;
-const KIND_DROP: Record<PartKind, number> = { core: 1, segment: 1, armor: 0.8, leg: 0.6, arm: 1, wing: 0.6, weapon: 1.4, shield: 1.4, spike: 0.35 };
+
 /** last base position this browser session, so consecutive runs never overlap */
 let lastBasePos: { x: number; y: number } | null = null;
 
 /* ---------------- entity types ---------------- */
-export interface Act { i: number; def: AbilityDef; t: number; ph: number; hit: boolean; dir: number; fired: boolean }
+export interface Act { i: number; def: AbilityDef; t: number; ph: number; hit: boolean; dir: number; fired: boolean; chompT?: number; spin?: number; beamAng?: number[] }
 export interface ShieldInfo {
   part: Part;
   /** body centre the panel is projected from */
@@ -176,6 +176,14 @@ export interface Enemy {
   provoked: number;
   /** rotary gun heat: seconds fired this burst, and seconds left cooling */
   mgHeat: number; mgCool: number;
+  /** seconds left while the moth's domain is open (0 = closed) */
+  domainT: number;
+  /** damage/health multiplier while the domain is open (3x → 10x by phase) */
+  domainMul: number;
+  /** the enemy's unscaled damage output (eDmg = baseEDmg × domainMul) */
+  baseEDmg: number;
+  /** original part maxHp values, restored when the domain closes */
+  domainOrig: number[];
   tags: Record<string, number>; shields: ShieldInfo[]; weaponParts: number[]; shieldParts: number[];
   dist: number; contactCd: number; /** cooldown on the "get off my hull" swat */ swatCd: number; hasChange: boolean;
   dot: number; dotT: number; melt: number; slowT: number; slowF: number;
@@ -275,7 +283,7 @@ export interface Player {
   x: number; y: number; vx: number; vy: number; a: number;
   hp: number; shield: number; boost: number; boosting: boolean;
   slowF: number; slowT: number; poison: number; poisonT: number;
-  pull: { e: Enemy; t: number } | null; dead: boolean; respawn: number;
+  pull: { e: Enemy; x: number; y: number; t: number; max: number } | null; dead: boolean; respawn: number;
   fireCd: number; wCd: number[]; hitT: number; shieldT: number; flash: number; thornCd: number;
   /** fitted cannon: recoil spring, barrel heat, the barrel that fires next, its
    *  flash, a per-barrel recoil so a twin visibly alternates, and the forced
@@ -1427,7 +1435,7 @@ export class Game {
       speed: spd.speed * (1 + 0.04 * tier), turn: (spd.turn * TIER_TURN[clamp(tier, 0, 5)]) / (1 + b.radius / (b.size * 6)), mobility: 1, legCount: b.legCount, wingCount: b.wingCount, turnFrac: 1, legPlate: tier >= 4 ? tier - 3 : 0, crippledLegs: [], shieldReach: shieldParts.reduce((m, id) => Math.max(m, b.parts[id].shieldR), 0),
       abil, abilCd: abil.map(() => 1 + Math.random() * 3), gap: 1, act: null, stun: 0, wander: { x, y, t: 0 }, roleGroups,
       walk: Math.random() * 6, dead: false, eDmg: spd.dmg * DMG_MUL[tier], keep: spd.keep + b.radius * 0.9, strafe: Math.random() < 0.5 ? 1 : -1, strafeT: 2,
-      provoked: 0, mgHeat: 0, mgCool: 0, tags, shields: [], weaponParts, shieldParts, dist: 9999, bdist: 9999, contactCd: 0, swatCd: 0, hasChange: false, gen: 0,
+      provoked: 0, mgHeat: 0, mgCool: 0, domainT: 0, domainMul: 1, baseEDmg: spd.dmg * DMG_MUL[tier], domainOrig: [], tags, shields: [], weaponParts, shieldParts, dist: 9999, bdist: 9999, contactCd: 0, swatCd: 0, hasChange: false, gen: 0,
       dmgTaken: 0, baseDmg: 0,
       dot: 0, dotT: 0, melt: 0, slowT: 0, slowF: 1,
       shells: Array.from({ length: shellN }, () => ({ hp: shellMax, max: shellMax })),
@@ -1834,7 +1842,10 @@ export class Game {
     if (this.baseMajority(e)) return;
     const isCore = p.kind === "core";
     const boss = !!e.spd.boss;
-    const chance = boss ? 1 : isCore ? 0.92 : this.stats.dropChance * KIND_DROP[p.kind] * Math.min(1, 40 / e.parts.length) * mul;
+    /* Strict drop rates: the bestiary lists KIND_DROP_RATE per kind, and the
+     * engine rolls exactly that (scaled only by the player's salvage upgrade
+     * and the per-call multiplier). No hidden size-based drift. */
+    const chance = boss ? 1 : KIND_DROP_RATE[p.kind] * this.stats.dropChance * mul;
     if (Math.random() > chance) return;
     const tier = boss ? 5 : this.rollTier(e.tier, isCore);
     const poly = p.poly.map((v, i) => +(v - (i % 2 === 0 ? p.cx : p.cy)).toFixed(1));
@@ -2070,7 +2081,7 @@ export class Game {
             this.ringFx(pr.x, pr.y, 40, "#7df9ff", 300);
             dead = true;
           } else if (pr.type === "hook") {
-            if (!this.inSafe()) { p.pull = { e: pr.src!, t: 1.8 }; this.toast("Grabbed! Break free or fight!", "#ff8a8a"); }
+            if (!this.inSafe()) { const tgt = pr.src!; p.pull = { e: tgt, x: tgt.x, y: tgt.y, t: 1.8, max: 1.8 }; this.toast("Grabbed! Break free or fight!", "#ff8a8a"); }
             this.hurtPlayer(pr.dmg);
             dead = true;
           } else {
@@ -2110,7 +2121,7 @@ export class Game {
   private startAct(e: Enemy, i: number) {
     const def = e.abil[i];
     e.act = { i, def, t: 0, ph: 0, hit: false, dir: e.a, fired: false };
-    e.abilCd[i] = def.cd * (0.85 + Math.random() * 0.3);
+    e.abilCd[i] = (def.cd ?? ABILITY_INTERVALS[clamp(e.tier, 0, 5) | 0]) * (0.85 + Math.random() * 0.3);
   }
   private alive(e: Enemy, name?: string) { return !name || (e.tags[name] ?? 0) > 0; }
   private chooseAct(e: Enemy, dist: number, toP: number) {
@@ -2333,6 +2344,118 @@ export class Game {
           this.puddles.push({ x, y, r: (d.size ?? 3) * S, life: 6.5, max: 6.5, arm: d.atPlayer ? 0.8 : 0.5, dps: e.eDmg * d.dmg, slow: d.slow ?? 0.6, hue: e.spd.hue });
         }
         if (a.t >= d.wind + 0.3) done();
+        break;
+      }
+      case "grab": {
+        /* the enemy lunges in and holds the player: the ship is pinned, cannot
+         * fire, and takes a chomp every chompCd seconds for hold seconds. A
+         * scorpion's tail sting or a dragonfly's four mouth-chomps both ride
+         * this: the hold is the setup, the chomps are the payoff. */
+        if (a.ph === 0) {
+          turnTo(1.4); damp(4);
+          if (a.t >= d.wind && this.touching(e, 10)) {
+            a.ph = 1; a.t = 0;
+            p.pull = { e, x: e.x, y: e.y, t: 0, max: d.hold ?? 2 };
+            p.fireCd = Math.max(p.fireCd, 1);
+          } else if (a.t >= d.wind + 2) { a.ph = 2; a.t = 0; }
+        } else if (a.ph === 1) {
+          /* the enemy stays clamped onto the ship */
+          p.x = e.x + Math.cos(e.a) * (e.radius + SHIP_R + 2);
+          p.y = e.y + Math.sin(e.a) * (e.radius + SHIP_R + 2);
+          p.vx *= Math.exp(-8 * dt); p.vy *= Math.exp(-8 * dt);
+          a.chompT = (a.chompT ?? 0) - dt;
+          if (a.chompT <= 0) {
+            a.chompT = d.chompCd ?? 0.8;
+            this.hurtPlayer(e.eDmg * d.dmg, { kb: 240, kbx: Math.cos(e.a), kby: Math.sin(e.a) });
+            this.burst(p.x, p.y, `hsl(${e.spd.hue},100%,60%)`, 8, 4, 200);
+            this.shake = Math.max(this.shake, 6);
+          }
+          if (a.t >= (d.hold ?? 2)) { a.ph = 2; a.t = 0; }
+        } else {
+          p.pull = null;
+          if (a.t >= 0.3) done();
+        }
+        break;
+      }
+      case "beam": {
+        /* the moth fires N beams that start rotating after a short wind-up,
+         * dealing damage per tick along each beam. The beams sweep in a circle,
+         * so the player has to keep moving to avoid them. */
+        turnTo(0.3); damp(3);
+        if (!a.fired && a.t >= d.wind) {
+          a.fired = true;
+          a.spin = 0;
+          a.beamAng = [];
+          for (let i = 0; i < (d.beams ?? 4); i++) a.beamAng.push((i / (d.beams ?? 4)) * TAU);
+        }
+        if (a.fired) {
+          a.spin = (a.spin ?? 0) + dt * (d.beamSpin ?? 1.5);
+          const beamAng = a.beamAng ?? [];
+          const n = beamAng.length;
+          for (let i = 0; i < n; i++) {
+            const ang = e.a + (beamAng[i] ?? 0) + (a.spin ?? 0);
+            const bx = e.x + Math.cos(ang) * e.radius * 0.5, by = e.y + Math.sin(ang) * e.radius * 0.5;
+            /* damage the player if they sit on a beam */
+            const dx = p.x - bx, dy = p.y - by;
+            const proj = Math.abs(dx * Math.sin(ang) - dy * Math.cos(ang));
+            const along = dx * Math.cos(ang) + dy * Math.sin(ang);
+            if (proj < 16 && along > 0 && along < 600 && !p.dead) {
+              this.hurtPlayer(e.eDmg * d.dmg * dt, { dot: true, energy: true });
+            }
+            this.beams.push({ x1: bx, y1: by, x2: bx + Math.cos(ang) * 550, y2: by + Math.sin(ang) * 550, life: 0.06, color: `hsl(${e.spd.hue} 100% 65%)` });
+          }
+        }
+        if (a.t >= (d.dur ?? 4)) done();
+        break;
+      }
+      case "domain": {
+        /* the moth opens its domain: a dark arena with a shadowy moon. The moth
+         * heals to full and gains a damage/health boost that scales with the
+         * moon's phase (3x at the start, 10x by the last phase). The moon image
+         * slowly grinds the player (5% max hp/sec) and heals the moth
+         * (1% max hp/sec), both scaling with the phase. The domain lasts three
+         * minutes, then closes. It cannot be reused while open. */
+        const DUR = d.dur ?? 180;
+        if (!a.fired && a.t >= d.wind && !(e.domainT > 0)) {
+          a.fired = true;
+          /* remember the moth's original health, then heal to full and boost it */
+          e.domainOrig = e.parts.map((q) => q.maxHp);
+          for (const q of e.parts) if (q.alive) { q.hp = q.maxHp; q.maxHp = q.maxHp * 3; }
+          for (const sh of e.shells) sh.hp = sh.max;
+          e.domainT = DUR;
+          e.domainMul = 3;
+          this.ringFx(e.x, e.y, e.radius * 3, `hsl(${e.spd.hue},100%,60%)`, 1200);
+          this.shake = Math.max(this.shake, 12);
+          this.toast("DOMAIN OPENED", `hsl(${e.spd.hue},100%,70%)`);
+        }
+        if (a.fired && e.domainT > 0) {
+          e.domainT = (e.domainT ?? 0) - dt;
+          /* phase 0 → 1 across the domain: the moon swells, the moth grows */
+          const phase = clamp(1 - (e.domainT / DUR), 0, 1);
+          e.domainMul = 3 + 7 * phase;                 /* 3x → 10x damage/health */
+          e.eDmg = e.baseEDmg * e.domainMul;           /* scale all its attacks */
+          /* rescale the moth's max health to match the phase */
+          for (let i = 0; i < e.parts.length; i++) {
+            const q = e.parts[i];
+            const target = e.domainOrig[i] * e.domainMul;
+            if (q.maxHp !== target) { const frac = q.maxHp > 0 ? q.hp / q.maxHp : 0; q.maxHp = target; q.hp = clamp(frac * target, 1, target); }
+          }
+          /* the moon image grinds the player and feeds the moth, both scaling */
+          const mothMax = e.parts.reduce((a2, q) => a2 + q.maxHp, 0) + e.shells.reduce((a2, sh) => a2 + sh.max, 0);
+          const moonDmg = 0.05 * (1 + phase * 2) * this.stats.hull * dt;
+          this.hurtPlayer(moonDmg, { dot: true, energy: true });
+          const mothHeal = 0.01 * (1 + phase * 2) * mothMax * dt;
+          const alive = e.parts.filter((q) => q.alive);
+          if (alive.length) { const q = alive[Math.floor(Math.random() * alive.length)]; q.hp = Math.min(q.maxHp, q.hp + mothHeal); }
+          /* domain visual: a dark ring closing in as the moon fills */
+          this.ringFx(e.x, e.y, e.radius * 2 + phase * 400, `hsl(${e.spd.hue},60%,20%)`, 1000);
+        }
+        if (e.domainT <= 0 && a.fired) {
+          /* the domain closes: restore the moth's original health */
+          for (let i = 0; i < e.parts.length; i++) { const q = e.parts[i]; q.maxHp = e.domainOrig[i] ?? q.maxHp; q.hp = Math.min(q.hp, q.maxHp); }
+          e.domainOrig = [];
+          e.domainT = 0; e.domainMul = 1; e.eDmg = e.baseEDmg; done();
+        }
         break;
       }
     }
@@ -3750,7 +3873,11 @@ export class Game {
         p.jam = Math.max(0, p.jam - dt);
         p.heat = st.overheat > 0 ? Math.min(p.heat, p.jam / st.overheat) : 0;
         if (p.jam <= 0) p.heat = 0;
-      } else if (p.heat > 0) p.heat = Math.max(0, p.heat - dt * 0.34);
+      } else if (p.heat > 0 && !this.input.lmb && !this.input.keys.has("Space")) {
+        /* heat only bleeds off when the trigger is released: while firing the
+         * gauge climbs, and a gun that cools faster than it heats can never cook */
+        p.heat = Math.max(0, p.heat - dt * 0.34);
+      }
       if (p.poisonT > 0) { p.poisonT -= dt; this.hurtPlayer(p.poison * dt, { dot: true }); if (p.poisonT <= 0) p.poison = 0; }
       if (this.inSafe()) { p.hp = Math.min(st.hull, p.hp + st.hull * 0.5 * dt); p.shield = Math.min(st.shieldMax, p.shield + st.shieldMax * 0.6 * dt); p.poison = 0; p.slowF = 1; }
       else {

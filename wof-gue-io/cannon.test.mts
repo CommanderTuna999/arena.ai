@@ -170,8 +170,10 @@ assert(gf.player.barrelRec[1] === 1 && gf.player.barrelRec[0] === 0, "and it is 
 assert(gf.player.recoil === 1 && gf.player.muzzleFlash === 1, "firing kicks the gun back and lights the muzzle");
 assert(gf.player.heat > 0, "firing heats the barrel");
 const hot = gf.player.heat;
+gf.input.lmb = false;
 gf.player.dead = false; gf.update(0.5);
 assert(gf.player.heat < hot, "and it cools off when you stop");
+gf.input.lmb = true;
 
 /* --- a cold round is 55, a hot one is the sheet's 300 --- */
 gf.player.heat = 0;
@@ -213,6 +215,7 @@ assert(guard > 10, `it takes a dozen rounds to cook (${guard})`);
 gh.player.fireCd = 0; gh.bullets = [];
 gh.firePlayer(1 / 60);
 assert(gh.bullets.length === 0, "a jammed gun does not fire");
+gh.input.lmb = false;   /* release the trigger so the gauge cools while jammed */
 /* nothing hunts a test range: keep the ship clean so the clock is the only thing moving */
 const step = (n: number) => {
   for (let i = 0; i < n; i++) {
@@ -230,6 +233,7 @@ gh.firePlayer(1 / 60);
 assert(gh.bullets.length === 0, "and it stays dead until the timer runs out");
 step(45);   // and the rest of the cool-off
 assert(gh.player.jam === 0 && gh.player.heat < 0.05, `then it is cold and ready again (${gh.player.jam.toFixed(2)}s)`);
+gh.input.lmb = true;
 gh.player.fireCd = 0; gh.bullets = [];
 gh.firePlayer(1 / 60);
 assert(gh.bullets.length === 1, "and it fires again");

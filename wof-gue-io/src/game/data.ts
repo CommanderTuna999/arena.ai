@@ -60,6 +60,14 @@ export const CAT_NAME: Record<Category, string> = {
   core: "Core", plate: "Plate", body: "Body", limb: "Limb", wing: "Wing", weapon: "Weapon", shield: "Shield",
 };
 
+/* Drop rates per part kind. This is the single source of truth: the bestiary
+ * displays these numbers and the engine rolls exactly these (scaled only by
+ * the player's salvage upgrade), so what is listed is what enemies follow. */
+export const KIND_DROP_RATE: Record<PartKind, number> = {
+  core: 0.9, segment: 0.35, armor: 0.3, leg: 0.25, arm: 0.35, wing: 0.25, weapon: 0.5, shield: 0.5, spike: 0.12,
+};
+export const KIND_DROP_PCT = (k: PartKind) => `${Math.round(KIND_DROP_RATE[k] * 100)}%`;
+
 export interface Comp {
   id: string;
   species: string;
@@ -110,7 +118,7 @@ export const UPGRADES: UpgradeDef[] = [
   { id: "hspeed", name: "Winch Motor", cat: "harpoon", desc: "Launch speed, reel speed and less towing drag.", max: 8, base: 60, growth: 1.5, fmt: (l) => `${1000 + 140 * l} u/s` },
 
   { id: "value", name: "Salvage Contracts", cat: "salvage", desc: "Credits received when selling components.", max: 20, base: 50, growth: 1.5, fmt: (l) => `x${(1 + 0.25 * l).toFixed(2)}` },
-  { id: "drops", name: "Scavenger Drones", cat: "salvage", desc: "Chance for pieces to drop components.", max: 10, base: 60, growth: 1.55, fmt: (l) => `${30 + 4 * l}% drop` },
+  { id: "drops", name: "Scavenger Drones", cat: "salvage", desc: "Increases the chance of pieces dropping components.", max: 10, base: 60, growth: 1.55, fmt: (l) => `x${(1 + 0.25 * l).toFixed(2)} drop` },
   { id: "luck", name: "Rarity Scanner", cat: "salvage", desc: "Better rarity rolls on dropped components.", max: 8, base: 100, growth: 1.7, fmt: (l) => `+${l * 5}% luck` },
   { id: "cargo", name: "Cargo Bay", cat: "salvage", desc: "Storage capacity for components.", max: 8, base: 80, growth: 1.7, fmt: (l) => `${24 + 12 * l} slots` },
 ];
@@ -964,7 +972,7 @@ export function computeStats(s: SaveData): Stats {
     hSpeed: 1000 + 140 * L("hspeed"),
     towRelief: 0.06 * L("hspeed"),
     sellMul: 1 + 0.25 * L("value"),
-    dropChance: 0.3 + 0.04 * L("drops"),
+    dropChance: 1 + 0.25 * L("drops"),
     luck: 0.05 * L("luck"),
     cargo: 24 + 12 * L("cargo"),
     zoomMin,

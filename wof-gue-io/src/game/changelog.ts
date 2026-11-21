@@ -8,7 +8,7 @@
  *   CHANGELOG and mirror the details in docs/CHANGELOG.md.
  */
 
-export const VERSION = "2.14.1";
+export const VERSION = "2.15.0";
 
 export interface ChangeEntry {
   version: string;
@@ -19,6 +19,19 @@ export interface ChangeEntry {
 }
 
 export const CHANGELOG: ChangeEntry[] = [
+  {
+    version: "2.15.0",
+    date: "20 Nov 2026",
+    title: "Enemy abilities, bestiary drops and cannon quality of life",
+    points: [
+      "Four enemies gained their full ability kits: the dragonfly now dashes, sprays, chomps and unleashes a shockwave; the scorpion pincer-grabs and tail-stings; the spider webs, volleys, bites and pulls; and the moth fires shot bursts, rotating lasers, homing missiles and opens a three-minute moon Domain that scales its damage and health from 3x to 10x by phase.",
+      "The moth's Domain heals it to full, grinds the ship for 5% of max hull per second and feeds the moth 1% of max health per second, both scaling with the moon phase, and it cannot be reused until it closes.",
+      "The bestiary now shows each ability as a single word and each component drop with its kind, rarity and drop percentage.",
+      "Drop rates are now driven by a single kind table (core 90%, segment 35%, armor 30%, leg 25%, arm 35%, wing 25%, weapon 50%, shield 50%, spike 12%) scaled by the salvage stat, which is now a multiplier rather than a percentage.",
+      "Cannon quality of life: the greyed weapon-stats hover card no longer shows when the cannon is disabled, descriptions are quoted, and the hover helper text is gone.",
+      "Enemy ability intervals now follow a rarity ladder (17, 12, 8, 3, 1.75, 1 seconds) instead of a flat cooldown.",
+    ],
+  },
   {
     version: "2.14.1",
     date: "20 Nov 2026",

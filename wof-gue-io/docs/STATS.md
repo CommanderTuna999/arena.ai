@@ -1,6 +1,6 @@
 # wof gue — complete stat compendium
 
-Build 2.14.1 · generated 20 Nov 2026 · every figure is a live simulation constant, not a design target.
+Build 2.15.0 · generated 20 Nov 2026 · every figure is a live simulation constant, not a design target.
 
 How to read it: enemy health is the sum of every part at that rarity tier. Enemy damage is listed as a multiplier of the tier damage (eDmg), because every bite, bolt, blast and contact hit scales from that one number. Weapon damage is a multiplier of the player cannon damage (st.dmg = 10 x 1.2^Cannon Damage level). Efficiency (eff) is the crafted item quality: 0.30 minimum, 1.00 typical; the raw formula can reach 2.25 on an unrestricted tier-5 core build and 1.80 on a 7-part difficulty-5 recipe.
 
@@ -53,7 +53,7 @@ Player defence labels: the Blocks column comes from damageProfile, which the cra
 4. ENEMY COMPENDIUM (32 SPECIES)
 ============================================================
 
-Every species block lists spawn band, movement, total hull by tier, shell/shield defence, mounts and abilities. Ability availability is gated by index as well as minTier: tier T can only use the first min(T, 4) ability entries, so the "from Tn" value is exact.
+Every species block lists spawn band, movement, total hull by tier, shell/shield defence, mounts and abilities. Ability availability is gated by index as well as minTier: tier T can only use the first min(T, n) ability entries where n is the species' ability count, so the "from Tn" value is exact.
 
 --- 1. Dragonfly (dragonfly) ---
 Spawn: zones 0-4 (Common (outer) to Legendary). Pack per tier: 1 / 1 / 1 / 1 / 1 / 1.
@@ -68,10 +68,10 @@ Hull by tier:
 Defence: energy shield panels appear at tier 3+ (2 generators at epic, 3 at legendary, 4 at mythical, each covering only a slice of the ring); hull shells at tier 2+ (60% hull per layer, ~4x that in kinetic fire).
 Damage: eDmg 16 / 48 / 144 / 432 / 1,296 / 3,888 by tier. Contact = 0.25x eDmg every 0.7s. Weapon mounts: 0 gun(s) (0.5x eDmg, 1.1-1.7s cadence) and 0 missile pod(s) (1.1x eDmg, 4.5-6s cadence) at T5; no gun or missile mounts at T3. Destroying a weapon part explodes for 1.8x eDmg to the player; other parts explode for 1.3x.
 Abilities (4):
-  - Ion Bolt [shoot], from T1, 1.8s cooldown: 0.7x eDmg damage (2,722 at T5); 0.3s wind-up; 2 projectiles at T5 (1 + 0.3/tier); 0.15 rad spread; 700 u/s; 1.4s life; size 6; slow to 0.75x for 1.2s; range 0-950u; bolt projectile.
-  - Strafe Run [charge], from T2, 7s cooldown: 1.5x eDmg damage (5,832 at T5); 0.5s wind-up; 880 u/s; 0.5s duration; range 220-750u.
-  - Fan Burst [shoot], from T3, 6s cooldown: 0.6x eDmg damage (2,333 at T5); 0.5s wind-up; 8 projectiles at T5 (5 + 0.6/tier); 0.9 rad spread; 600 u/s; 1.2s life; size 6; range 0-800u; bolt projectile.
-  - Wing Shear [nova], from T4, 10s cooldown: 0.7x eDmg damage (2,722 at T5); 0.8s wind-up; 17 projectiles at T5 (10 + 1.5/tier); 420 u/s; 1.6s life; size 7; range 0-600u; wave projectile.
+  - Dash [charge], from T0, 17s cooldown: 1x eDmg damage (3,888 at T5); 0.4s wind-up; 620 u/s; 0.4s duration; range 150-700u.
+  - Spray [shoot], from T0, 17s cooldown: 5x eDmg damage (19,440 at T5); 0.5s wind-up; 9 projectiles at T5 (4 + 1/tier); 0.6 rad spread; 220 u/s; 3s life; size 11; range 0-700u; orb projectile.
+  - Chomp [grab], from T3, 8s cooldown: 7x eDmg damage (27,216 at T5); 0.5s wind-up; 4 chomps at 0.8s each over a 3s hold; range 0-3 body-size units.
+  - Shockwave [ring], from T4, 3s cooldown: 8x eDmg damage (31,104 at T5); 0.7s wind-up; 520 u/s; size 6; range 0-4 body-size units.
 
 --- 2. Scorpion (scorpion) ---
 Spawn: zones 0-3 (Common (outer) to Epic). Pack per tier: 1 / 1 / 1 / 1 / 1 / 1.
@@ -85,11 +85,9 @@ Hull by tier:
   T5: 2,288,000 HP total; core 48,000; largest part 56,320; 105 parts; radius 1,321u; no energy shield; 4 hull shells (5,491,200 HP).
 Defence: energy shield panels appear at tier 3+ (2 generators at epic, 3 at legendary, 4 at mythical, each covering only a slice of the ring); hull shells at tier 2+ (60% hull per layer, ~4x that in kinetic fire).
 Damage: eDmg 16 / 48 / 144 / 432 / 1,296 / 3,888 by tier. Contact = 0.25x eDmg every 0.7s. Weapon mounts: 0 gun(s) (0.5x eDmg, 1.1-1.7s cadence) and 0 missile pod(s) (1.1x eDmg, 4.5-6s cadence) at T5; no gun or missile mounts at T3. Destroying a weapon part explodes for 1.8x eDmg to the player; other parts explode for 1.3x.
-Abilities (4):
-  - Pincer Clamp [swing], from T1, 2.6s cooldown: 2x eDmg damage (7,776 at T5); 0.5s wind-up; range 0-3.5 body-size units; arm swing; requires intact Pincer.
-  - Tail Lash [swing], from T2, 4.2s cooldown: 2.6x eDmg damage (10,109 at T5); 0.6s wind-up; poison 0.3x eDmg; range 0-3.9 body-size units; tail swing; requires intact Stinger.
-  - Venom Bolt [shoot], from T3, 4.5s cooldown: 0.9x eDmg damage (3,499 at T5); 0.4s wind-up; 3 projectiles at T5 (1 + 0.5/tier); 0.3 rad spread; 560 u/s; 1.5s life; size 7; poison 0.25x eDmg; range 200-800u; bolt projectile.
-  - Claw Grapple [pull], from T4, 11s cooldown: 0.5x eDmg damage (1,944 at T5); 0.5s wind-up; 760 u/s; range 260-800u.
+Abilities (2):
+  - Pincer Grab [grab], from T0, 17s cooldown: 2x eDmg damage (7,776 at T5); 0.5s wind-up; chomps at 0.8s each over a 2s hold; range 0-3.5 body-size units.
+  - Tail Sting [grab], from T3, 8s cooldown: 3.6x eDmg damage (13,997 at T5); 0.7s wind-up; chomps at 1s each over a 5s hold; range 0-3.5 body-size units.
 
 --- 3. Widow Spider (spider) ---
 Spawn: zones 0-4 (Common (outer) to Legendary). Pack per tier: 1 / 1 / 1 / 1 / 1 / 1.
@@ -104,10 +102,10 @@ Hull by tier:
 Defence: energy shield panels appear at tier 3+ (2 generators at epic, 3 at legendary, 4 at mythical, each covering only a slice of the ring); hull shells at tier 2+ (60% hull per layer, ~4x that in kinetic fire).
 Damage: eDmg 16 / 48 / 144 / 432 / 1,296 / 3,888 by tier. Contact = 0.25x eDmg every 0.7s. Weapon mounts: 0 gun(s) (0.5x eDmg, 1.1-1.7s cadence) and 2 missile pod(s) (1.1x eDmg, 4.5-6s cadence) at T5; no gun or missile mounts at T3. Destroying a weapon part explodes for 1.8x eDmg to the player; other parts explode for 1.3x.
 Abilities (4):
-  - Web Shot [shoot], from T1, 6s cooldown: 0.4x eDmg damage (1,555 at T5); 0.5s wind-up; 1 projectile at T5 (1); 460 u/s; 1.8s life; size 12; slow to 0.5x for 2.5s; range 120-800u; web projectile.
-  - Fang Strike [swing], from T2, 2s cooldown: 1.7x eDmg damage (6,610 at T5); 0.4s wind-up; range 0-2.3 body-size units; mandible swing; requires intact Fang.
-  - Acid Glob [spit], from T3, 7s cooldown: 0.6x eDmg damage (2,333 at T5); 0.5s wind-up; 480 u/s; size 1.5; range 0-800u.
-  - Silk Line [pull], from T4, 12s cooldown: 0.5x eDmg damage (1,944 at T5); 0.5s wind-up; 760 u/s; range 250-850u.
+  - Web [shoot], from T0, 17s cooldown: 0.4x eDmg damage (1,555 at T5); 0.5s wind-up; 1 projectile; 380 u/s; 2s life; size 14; slow to 0.4x for 3s; poison 0.2x eDmg; range 120-800u; web projectile.
+  - Web Volley [shoot], from T0, 17s cooldown: 0.3x eDmg damage (1,166 at T5); 0.5s wind-up; 3 projectiles; 0.2 rad spread; 680 u/s; 1.5s life; size 7; range 120-800u; web projectile.
+  - Bite [grab], from T4, 1.75s cooldown: 1.67x eDmg damage (6,493 at T5); 0.4s wind-up; chomps at 1s each over a 3s hold; range 0-2.5 body-size units.
+  - Pull [pull], from T4, 1.75s cooldown: 17x eDmg damage (66,096 at T5); 0.5s wind-up; 760 u/s; range 250-850u.
 
 --- 4. Luna Moth (moth) ---
 Spawn: zones 0-4 (Common (outer) to Legendary). Pack per tier: 1 / 1 / 1 / 1 / 1 / 1.
@@ -122,10 +120,10 @@ Hull by tier:
 Defence: energy shield panels appear at tier 3+ (2 generators at epic, 3 at legendary, 4 at mythical, each covering only a slice of the ring); hull shells at tier 2+ (60% hull per layer, ~4x that in kinetic fire).
 Damage: eDmg 16 / 48 / 144 / 432 / 1,296 / 3,888 by tier. Contact = 0.25x eDmg every 0.7s. Weapon mounts: 0 gun(s) (0.5x eDmg, 1.1-1.7s cadence) and 0 missile pod(s) (1.1x eDmg, 4.5-6s cadence) at T5; no gun or missile mounts at T3. Destroying a weapon part explodes for 1.8x eDmg to the player; other parts explode for 1.3x.
 Abilities (4):
-  - Scale Dust [cloud], from T1, 8s cooldown: 0.4x eDmg damage (1,555 at T5); 0.6s wind-up; size 2.8; slow to 0.55x for 1.5s; range 0-700u; spawns on the player.
-  - Spore Orbs [shoot], from T2, 5s cooldown: 0.8x eDmg damage (3,110 at T5); 0.5s wind-up; 4 projectiles at T5 (2 + 0.5/tier); 0.7 rad spread; 260 u/s; 4s life; size 9; slow to 0.8x for 1s; homing 1.6 rad/s; range 0-800u; orb projectile.
-  - Lunar Lure [pull], from T3, 12s cooldown: 0.5x eDmg damage (1,944 at T5); 0.6s wind-up; 700 u/s; range 250-800u.
-  - Gust Pulse [ring], from T4, 9s cooldown: 1.2x eDmg damage (4,666 at T5); 0.9s wind-up; 460 u/s; size 6; range 0-4 body-size units.
+  - Shot Burst [shoot], from T0, 17s cooldown: 2x eDmg damage (7,776 at T5); 0.4s wind-up; 5 projectiles; 1.2 rad spread; 600 u/s; 1.2s life; size 5; range 0-600u; bolt projectile.
+  - Rotating Lasers [beam], from T3, 8s cooldown: 1x eDmg per tick (3,888 at T5); 0.6s wind-up; 4 rotating beams at 1.5 rad/s over a 4s duration; range 0-4 body-size units.
+  - Missiles [shoot], from T4, 3s cooldown: 3x eDmg damage (11,664 at T5); 0.6s wind-up; 20 homing projectiles; 0.3 rad spread; 480 u/s; 3s life; size 7; homing 2.5 rad/s; range 0-800u; orb projectile.
+  - Domain [domain], from T5, 1s cooldown: opens a three-minute moon domain; the moth heals to full and scales its damage and health from 3x to 10x by phase; the moon grinds the ship for 5% max hull/sec and feeds the moth 1% max health/sec; cannot be reused while open.
 
 --- 5. Mantis (mantis) ---
 Spawn: zones 0-4 (Common (outer) to Legendary). Pack per tier: 1 / 1 / 1 / 1 / 1 / 1.
@@ -803,7 +801,7 @@ Launcher Range (hrange) | 10 | How far the harpoon flies. 440 u at L1, 980 u at 
 Cable Armouring (hhp) | 12 | Durability of the cable against enemy attacks. 54 HP at L1, 1.47K HP at max | 50 x 1.5^level credits
 Winch Motor (hspeed) | 8 | Launch speed, reel speed and less towing drag. 1140 u/s at L1, 2120 u/s at max | 60 x 1.5^level credits
 Salvage Contracts (value) | 20 | Credits received when selling components. x1.25 at L1, x6.00 at max | 50 x 1.5^level credits
-Scavenger Drones (drops) | 10 | Chance for pieces to drop components. 34% drop at L1, 70% drop at max | 60 x 1.55^level credits
+Scavenger Drones (drops) | 10 | Multiplier for pieces dropping components. x1.25 drop at L1, x3.50 drop at max | 60 x 1.55^level credits
 Rarity Scanner (luck) | 8 | Better rarity rolls on dropped components. +5% luck at L1, +40% luck at max | 100 x 1.7^level credits
 Cargo Bay (cargo) | 8 | Storage capacity for components. 36 slots at L1, 120 slots at max | 80 x 1.7^level credits
 
@@ -823,7 +821,7 @@ Legs cripple before they snap: a limb (one leg chain) that has lost 65% of its h
 Enemy turrets: gun 900u/1.35s/0.4x contact dmg/560u/s; rotary gun 700u/0.16s/0.05x/720u/s with a 0.16 rad spray; scatter cannon 700u/2.6s, 7 pellets of 0.2x at 420u/s across 0.5 rad; heavy cannon 1200u/5.0s/1.8x as an instant hitscan line (no travel time, so it cannot be outrun) with a 260u/s recoil shove on the hull and a heavy screen shake when it connects; laser emitter 1000u/2.4s/1.0x at 1,500u/s and energy damage (kinetic shields do not reduce it). Turret mounts appear at epic+ (one pair per tier above rare).
 Every body can turn up armed: species with no natural gun roll one with 12% + 6%/tier and species with no natural shield generator roll one with 10% + 5%/tier, so 30%/25% at epic and 42%/35% at mythical. Rolled guns draw from rotary, scatter, laser and heavy patterns, weighted toward heavier gear at high tiers.
 Energy shields: a panel has no charge to strip, so it never collapses, re-arms or regenerates. Destroying its Shield Generator part removes it.
-Destroyed parts: each dead part can drop a component; weapons and shield generators detonate for 1.8x eDmg to the player (other parts 1.3x) and damage enemies in the blast.
+Destroyed parts: each dead part can drop a component; weapons and shield generators detonate for 1.8x eDmg to the player (other parts 1.3x) and damage enemies in the blast. The drop roll uses one kind table — core 90%, segment 35%, armor 30%, leg 25%, arm 35%, wing 25%, weapon 50%, shield 50%, spike 12% — scaled by the salvage stat's multiplier.
 Boss: the Snake is the only boss (217 parts, body wave, 294u radius at T0; no reflective shield). At most one is alive; it spawns in the mythical core and never counts as a normal resident. SNAKE_ENABLED is false in this build, so the dedicated core pass is dormant even though the encounter code exists.
 
-End of compendium · build 2.4.0
+End of compendium · build 2.15.0

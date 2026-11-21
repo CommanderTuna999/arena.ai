@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, type MouseEvent } from "react";
-import { RARITIES, CAT_NAME, KIND_CAT } from "@/game/data";
+import { RARITIES, CAT_NAME, KIND_CAT, KIND_DROP_PCT } from "@/game/data";
 import { buildEnemy, SPECIES_LIST, type SpeciesDef } from "@/game/enemies";
 import { fmtNum } from "@/game/math";
 
@@ -54,6 +54,43 @@ const FLAVOUR: Record<string, string> = {
   assassin: "A bug whose entire job description is you.",
   centipede: "Forty legs and every single one of them wants a turn.",
   serpent: "The long shadow in the middle of the map. Currently asleep.",
+};
+
+/* Ask 6: every attack in the bestiary is shown as a single word. */
+const SHORT: Record<string, string> = {
+  "Acid Burst": "Burst", "Acid Puddle": "Puddle", "Ambush Lunge": "Lunge",
+  "Bite": "Bite", "Blade Wave": "Wave", "Blood Drain": "Drain",
+  "Boiling Jet": "Jet", "Boring Charge": "Charge", "Boulder Toss": "Toss",
+  "Burrow Ambush": "Burrow", "Call Colony": "Summon", "Call Swarm": "Summon",
+  "Camo Shift": "Camo", "Chemical Spray": "Spray", "Chomp": "Chomp",
+  "Chorus Field": "Field", "Crushing Bite": "Bite", "Dash": "Dash",
+  "Digger Claws": "Claws", "Dive Bomb": "Dive", "Dive": "Dive",
+  "Domain": "Domain", "Downdraft": "Gust", "Drill Shock": "Shock",
+  "Drill Strike": "Strike", "Earth Shock": "Shock", "Fang Slash": "Slash",
+  "Firework": "Burst", "Flash Dive": "Dive", "Flash Pulse": "Pulse",
+  "Forcipule Bite": "Bite", "Formic Acid": "Acid", "Formic Haze": "Haze",
+  "Glow Orb": "Orb", "Goring Rush": "Rush", "Ground Slam": "Slam",
+  "Horn Charge": "Charge", "Horn Toss": "Toss", "Hornet Dive": "Dive",
+  "Impact Wave": "Wave", "Kick": "Kick", "Leaf Shards": "Shards",
+  "Leaping Charge": "Charge", "Lunge": "Lunge", "Mandible Crush": "Crush",
+  "Mandible Snap": "Snap", "Missiles": "Missiles", "Piercing Proboscis": "Pierce",
+  "Pincer Grab": "Grab", "Pollen Burst": "Burst", "Prism Pulse": "Pulse",
+  "Prismatic Beam": "Beam", "Pull": "Pull", "Quake Stomp": "Stomp",
+  "Ram": "Ram", "Refraction": "Refract", "Repel Pulse": "Pulse",
+  "Resonance": "Resonance", "Rolling Slam": "Slam", "Rotating Lasers": "Lasers",
+  "Rush": "Rush", "Scuttle Acid": "Acid", "Scythe Strike": "Strike",
+  "Second Dash": "Dash", "Serpent Rush": "Rush", "Shard Storm": "Storm",
+  "Shell Bash": "Bash", "Shockwave": "Shock", "Shot Burst": "Burst",
+  "Sickle Jaws": "Jaws", "Slow Powder": "Powder", "Sonic Screech": "Screech",
+  "Spit Seeds": "Seeds", "Spore Burst": "Burst", "Spore Cloud": "Cloud",
+  "Spray": "Spray", "Sting Dive": "Sting", "Stinger Burst": "Burst",
+  "Stinger Thrust": "Sting", "Stinger Volley": "Volley", "Summon Swarm": "Summon",
+  "Swarm Bite": "Bite", "Swarm Rush": "Rush", "Tail Sting": "Sting",
+  "Tail Sweep": "Sweep", "Toss": "Toss", "Venom Darts": "Darts",
+  "Venom Glob": "Glob", "Venom Ring": "Ring", "Venom Spray": "Spray",
+  "Venom Sting": "Sting", "Web Volley": "Volley", "Web": "Web",
+  "Whirling Blades": "Blades", "Wind Gust": "Gust", "Wing Flare": "Flare",
+  "Wing Storm": "Storm",
 };
 
 const cache = new Map<string, ReturnType<typeof buildEnemy>>();
@@ -240,12 +277,12 @@ function EntryInfo({ sp, tier }: { sp: SpeciesDef; tier: number }) {
         <Stat k="Turn" v={sp.turn.toFixed(1)} />
         <Stat k="Pack" v={sp.pack[tier]} />
       </div>
-      <div className="mt-1.5 text-[10px] leading-snug text-white/45">Abilities: {sp.abilities.filter((a) => a.minTier <= tier).map((a) => a.name).join(", ") || "none"}</div>
+      <div className="mt-1.5 text-[10px] leading-snug text-white/45">Abilities: {sp.abilities.filter((a) => a.minTier <= tier).map((a) => SHORT[a.name] ?? a.name).join(", ") || "none"}</div>
       <div className="mt-2 text-[10px] font-bold tracking-[0.2em] text-white/40">DROPS</div>
       <div className="mt-1 flex flex-wrap gap-1">
         {dropList(sp, tier).map((d) => (
           <span key={d.kind} className="rounded-sm border px-1.5 py-0.5 text-[10px] font-bold" style={{ borderColor: d.color + "88", color: d.color, background: d.color + "12" }}>
-            {d.name} · {d.rarity}
+            {d.name} · {d.rarity} · {KIND_DROP_PCT(d.kind)}
           </span>
         ))}
       </div>

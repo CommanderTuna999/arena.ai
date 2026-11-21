@@ -124,18 +124,22 @@ export const GUN_SPECS: Record<GunKind, GunSpec> = {
   laser:   { name: "Laser Emitter",  range: 1000, cd: 2.4,  dmg: 1.0,  speed: 1500, r: 6,  life: 0.45, hue: 188, energy: true, type: "laser", track: true },
 };
 
+/** base ability cooldown by rarity tier, per the sheet's 17/12/8/3/1.75/1s */
+export const ABILITY_INTERVALS = [17, 12, 8, 3, 1.75, 1];
+
 /** how long a laser mount has to hold the beam before it reaches full damage */
 export const LASER_RAMP = 3;
 /** the beam's damage multiplier when it first touches down, and at full ramp */
 export const LASER_RAMP_MIN = 0.35;
 
-export type AbilityType = "swing" | "charge" | "shoot" | "nova" | "ring" | "pull" | "spit" | "cloud" | "summon" | "blink" | "drain";
+export type AbilityType = "swing" | "charge" | "shoot" | "nova" | "ring" | "pull" | "spit" | "cloud" | "summon" | "blink" | "drain" | "grab" | "beam" | "domain";
 export type ProjType = "bolt" | "missile" | "web" | "orb" | "wave" | "hook" | "glob" | "pellet" | "slug" | "laser";
 export interface AbilityDef {
   type: AbilityType;
   name: string;
   minTier: number;
-  cd: number;
+  /** base cooldown; falls back to the tier-based interval when omitted */
+  cd?: number;
   wind: number;
   dmg: number;
   minS?: number;
@@ -158,6 +162,16 @@ export interface AbilityDef {
   dur?: number;
   kind?: ProjType;
   atPlayer?: boolean;
+  /** grab: how many chomps/stings to deal while holding the player */
+  chomps?: number;
+  /** grab: seconds between each chomp */
+  chompCd?: number;
+  /** grab: how long the enemy holds the player */
+  hold?: number;
+  /** beam: how many beams to fire */
+  beams?: number;
+  /** beam: rotation speed in rad/s */
+  beamSpin?: number;
 }
 
 export interface Mount {
@@ -532,10 +546,10 @@ const SPECIES: SpeciesDef[] = [
     id: "dragonfly", hp: 19, dmg: 30, gunType: "laser", name: "Dragonfly", hue: 188, flying: true, speed: 210, turn: 3.4, ranged: true, keep: 330, muzzle: 2.2,
     armed: { gun: true, missile: false, shield: true }, pack: [1, 1, 1, 1, 1, 1],
     abilities: [
-      { type: "shoot", name: "Ion Bolt", minTier: 0, cd: 1.8, wind: 0.3, dmg: 0.7, n: 1, ns: 0.3, spread: 0.15, speed: 700, life: 1.4, size: 6, slow: 0.75, slowT: 1.2, kind: "bolt", maxP: 950 },
-      { type: "charge", name: "Strafe Run", minTier: 1, cd: 7, wind: 0.5, dmg: 1.5, speed: 880, dur: 0.5, minP: 220, maxP: 750 },
-      { type: "shoot", name: "Fan Burst", minTier: 2, cd: 6, wind: 0.5, dmg: 0.6, n: 5, ns: 0.6, spread: 0.9, speed: 600, life: 1.2, size: 6, kind: "bolt", maxP: 800 },
-      { type: "nova", name: "Wing Shear", minTier: 3, cd: 10, wind: 0.8, dmg: 0.7, n: 10, ns: 1.5, speed: 420, life: 1.6, size: 7, kind: "wave", maxP: 600 },
+      { type: "charge", name: "Dash", minTier: 0, wind: 0.4, dmg: 1, speed: 620, dur: 0.4, minP: 150, maxP: 700 },
+      { type: "shoot", name: "Spray", minTier: 0, wind: 0.5, dmg: 5, n: 4, ns: 1, spread: 0.6, speed: 220, life: 3, size: 11, kind: "orb", maxP: 700 },
+      { type: "grab", name: "Chomp", minTier: 3, wind: 0.5, dmg: 7, chomps: 4, chompCd: 0.8, hold: 3, maxS: 3 },
+      { type: "ring", name: "Shockwave", minTier: 4, wind: 0.7, dmg: 8, size: 6, speed: 520, maxS: 4 },
     ],
     build(b, t) {
       const pl = 1 + (t >= 3 ? 1 : 0), lg = 1 + (t >= 3 ? 1 : 0);
@@ -597,10 +611,8 @@ const SPECIES: SpeciesDef[] = [
     id: "scorpion", hp: 25, dmg: 34, gunType: "scatter", name: "Scorpion", hue: 2, flying: false, speed: 115, turn: 2.4, ranged: false, keep: 0, muzzle: 2.6,
     armed: { gun: true, missile: false, shield: false }, pack: [1, 1, 1, 1, 1, 1],
     abilities: [
-      { type: "swing", name: "Pincer Clamp", minTier: 0, cd: 2.6, wind: 0.5, dmg: 2, maxS: 3.5, role: "arm", needs: "Pincer" },
-      { type: "swing", name: "Tail Lash", minTier: 0, cd: 4.2, wind: 0.6, dmg: 2.6, maxS: 3.9, role: "tail", needs: "Stinger", poison: 0.3 },
-      { type: "shoot", name: "Venom Bolt", minTier: 1, cd: 4.5, wind: 0.4, dmg: 0.9, n: 1, ns: 0.5, spread: 0.3, speed: 560, life: 1.5, size: 7, poison: 0.25, kind: "bolt", minP: 200, maxP: 800 },
-      { type: "pull", name: "Claw Grapple", minTier: 2, cd: 11, wind: 0.5, dmg: 0.5, speed: 760, minP: 260, maxP: 800 },
+      { type: "grab", name: "Pincer Grab", minTier: 0, wind: 0.5, dmg: 2, chompCd: 0.8, hold: 2, maxS: 3.5 },
+      { type: "grab", name: "Tail Sting", minTier: 3, wind: 0.7, dmg: 3.6, chompCd: 1, hold: 5, maxS: 3.5 },
     ],
     build(b, t) {
       const pl = 1 + (t >= 2 ? 1 : 0) + (t >= 4 ? 1 : 0), lg = 1 + (t >= 3 ? 1 : 0), ed = t >= 3 ? 1 : 2;
@@ -656,10 +668,10 @@ const SPECIES: SpeciesDef[] = [
     id: "spider", hp: 19, dmg: 50, name: "Widow Spider", hue: 272, flying: false, speed: 140, turn: 2.8, ranged: true, keep: 300, muzzle: 2.2,
     armed: { gun: false, missile: true, shield: false }, pack: [1, 1, 1, 1, 1, 1],
     abilities: [
-      { type: "shoot", name: "Web Shot", minTier: 0, cd: 6, wind: 0.5, dmg: 0.4, n: 1, speed: 460, life: 1.8, size: 12, slow: 0.5, slowT: 2.5, kind: "web", minP: 120, maxP: 800 },
-      { type: "swing", name: "Fang Strike", minTier: 0, cd: 2, wind: 0.4, dmg: 1.7, maxS: 2.3, role: "mandible", needs: "Fang" },
-      { type: "spit", name: "Acid Glob", minTier: 1, cd: 7, wind: 0.5, dmg: 0.6, speed: 480, size: 1.5, maxP: 800 },
-      { type: "pull", name: "Silk Line", minTier: 2, cd: 12, wind: 0.5, dmg: 0.5, speed: 760, minP: 250, maxP: 850 },
+      { type: "shoot", name: "Web", minTier: 0, wind: 0.5, dmg: 0.4, n: 1, speed: 380, life: 2, size: 14, slow: 0.4, slowT: 3, poison: 0.2, kind: "web", minP: 120, maxP: 800 },
+      { type: "shoot", name: "Web Volley", minTier: 0, wind: 0.5, dmg: 0.3, n: 3, spread: 0.2, speed: 680, life: 1.5, size: 7, kind: "web", minP: 120, maxP: 800 },
+      { type: "grab", name: "Bite", minTier: 4, wind: 0.4, dmg: 1.67, chompCd: 1, hold: 3, maxS: 2.5 },
+      { type: "pull", name: "Pull", minTier: 4, wind: 0.5, dmg: 17, speed: 760, minP: 250, maxP: 850 },
     ],
     build(b, t) {
       const pl = 1 + (t >= 2 ? 1 : 0) + (t >= 4 ? 1 : 0), lg = 1 + (t >= 3 ? 1 : 0), ed = t >= 3 ? 1 : 2;
@@ -694,10 +706,10 @@ const SPECIES: SpeciesDef[] = [
     id: "moth", hp: 20, dmg: 20, name: "Luna Moth", hue: 236, flying: true, speed: 130, turn: 2.6, ranged: true, keep: 380, muzzle: 1.4,
     armed: { gun: false, missile: false, shield: true }, pack: [1, 1, 1, 1, 1, 1],
     abilities: [
-      { type: "cloud", name: "Scale Dust", minTier: 0, cd: 8, wind: 0.6, dmg: 0.4, size: 2.8, slow: 0.55, atPlayer: true, maxP: 700 },
-      { type: "shoot", name: "Spore Orbs", minTier: 1, cd: 5, wind: 0.5, dmg: 0.8, n: 2, ns: 0.5, spread: 0.7, speed: 260, life: 4, size: 9, homing: 1.6, slow: 0.8, slowT: 1, kind: "orb", maxP: 800 },
-      { type: "pull", name: "Lunar Lure", minTier: 2, cd: 12, wind: 0.6, dmg: 0.5, speed: 700, minP: 250, maxP: 800 },
-      { type: "ring", name: "Gust Pulse", minTier: 3, cd: 9, wind: 0.9, dmg: 1.2, size: 6, speed: 460, maxS: 4 },
+      { type: "shoot", name: "Shot Burst", minTier: 0, wind: 0.4, dmg: 2, n: 5, spread: 1.2, speed: 600, life: 1.2, size: 5, kind: "bolt", maxP: 600 },
+      { type: "beam", name: "Rotating Lasers", minTier: 3, wind: 0.6, dmg: 1, beams: 4, beamSpin: 1.5, dur: 4, maxS: 4 },
+      { type: "shoot", name: "Missiles", minTier: 4, wind: 0.6, dmg: 3, n: 20, spread: 0.3, speed: 480, life: 3, size: 7, homing: 2.5, kind: "orb", maxP: 800 },
+      { type: "domain", name: "Domain", minTier: 5, wind: 1.0, dmg: 0.1, dur: 180, maxS: 5 },
     ],
     build(b, t) {
       const pl = 1 + (t >= 3 ? 1 : 0), ed = t >= 3 ? 1 : 2;

@@ -1,4 +1,40 @@
-## 0. v2.14.1 — enemy attachment damage, and overheat reads on screen
+## 0. v2.15.0 — enemy abilities, bestiary drops and cannon quality of life
+
+- **Four enemies gained their full ability kits** (`enemies.ts`, `engine.ts`): the **dragonfly**
+  dashes, sprays an orb volley, chomps the ship and unleashes a shockwave ring; the **scorpion**
+  pincer-grabs the ship and tail-stings it; the **spider** webs, fires a fast web volley, bites and
+  pulls the ship; and the **moth** fires shot bursts, rotating lasers, homing missiles and opens a
+  moon **Domain**.
+- **The moth's Domain** (`engine.ts`): on open it heals the moth to full and boosts its damage and
+  health, scaling with the moon phase from **3x to 10x** over the domain's three minutes. The moon
+  image grinds the ship for **5% of max hull per second** and feeds the moth **1% of max health per
+  second**, both scaling with the phase. It cannot be reused while open and restores the moth to its
+  original health when it closes.
+- **Bestiary drops and one-word abilities** (`Bestiary.tsx`): each ability renders as a single word
+  (e.g. "Pincer Grab" → Grab, "Rotating Lasers" → Lasers), and every component drop chip now shows
+  its kind, rarity and drop percentage.
+- **Drop rates driven by one kind table** (`data.ts`, `engine.ts`): `KIND_DROP_RATE` is the single
+  source of truth — core 90%, segment 35%, armor 30%, leg 25%, arm 35%, wing 25%, weapon 50%,
+  shield 50%, spike 12% — rolled against the salvage stat, which is now a **multiplier** (1 + 0.25
+  per salvage level) rather than a percentage.
+- **Cannon quality of life** (`GameClient.tsx`): the weapon-stats hover card no longer shows when
+  the cannon is disabled, weapon descriptions are quoted, and the hover helper text is gone.
+- **Ability intervals follow rarity** (`enemies.ts`): cooldowns step down a rarity ladder —
+  17, 12, 8, 3, 1.75, 1 seconds — instead of a flat cooldown.
+
+### Under the hood
+
+- **New `AbilityType` members** (`enemies.ts`): `grab`, `beam` and `domain` join the existing set;
+  `AbilityDef` gains `chomps`, `chompCd`, `hold`, `beams`, `beamSpin` and an optional `cd`.
+- **`runAct` cases** (`engine.ts`): `grab` lunges, holds and chomps on a period, then releases;
+  `beam` winds up then rotates one or more beams that deal per-tick damage and shove the ship;
+  `domain` runs the open/scale/close lifecycle described above.
+- **`ABILITY_INTERVALS`** (`enemies.ts`): `[17, 12, 8, 3, 1.75, 1]` indexed by rarity tier;
+  `startAct` falls back to it when an ability has no explicit cooldown.
+- **`KIND_DROP_RATE`** (`data.ts`): the kind table plus `KIND_DROP_PCT` helper; `dropChance` is now
+  `1 + 0.25 * L('drops')` and the `drops` upgrade reads `x1.25 drop`.
+
+## 1. v2.14.1 — enemy attachment damage, and overheat reads on screen
 
 - **Enemy attachment damage matches the sheet** (`enemies.ts`): every mount's per-projectile
   damage multiple is now the sheet's own — basic cannon **0.5x**, scatter shotgun **1.2x**,
