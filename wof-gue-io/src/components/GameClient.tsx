@@ -454,7 +454,7 @@ function Help({ onClose }: { onClose: () => void }) {
           <li>Rare and above enemies wear grey armour layers around their parts; the deeper the zone, the more layers. Energy shield panels stop solid rounds dead but let energy, shock and thermal straight through — shoot the gaps between the panels.</li>
           <li>The nest only repairs after <b className="text-cyan-200">120s</b> without damage. Enemies finished mostly by the nest or its hex turrets drop no components.</li>
           <li>Hover a loose component to read its name, rarity, value and mass. Turn that off in ⚙ SETTINGS.</li>
-          <li>Danger rises toward the centre of the map: bigger, deadlier, more layered enemies. Your progress autosaves.</li>
+          <li>Danger rises toward the centre of the map: bigger, deadlier, more layered enemies. Accounts autosave; a guest run is never written down.</li>
         </ul>
         <button onClick={onClose} className="mt-5 w-full rounded-sm border-2 border-cyan-300 bg-cyan-400/20 py-2 font-bold tracking-widest text-cyan-100 hover:bg-cyan-400/40">LAUNCH</button>
       </div>
