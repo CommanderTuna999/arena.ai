@@ -8,7 +8,7 @@
  *   CHANGELOG and mirror the details in docs/CHANGELOG.md.
  */
 
-export const VERSION = "2.5.0";
+export const VERSION = "2.6.0";
 
 export interface ChangeEntry {
   version: string;
@@ -19,6 +19,18 @@ export interface ChangeEntry {
 }
 
 export const CHANGELOG: ChangeEntry[] = [
+  {
+    version: "2.6.0",
+    date: "21 Nov 2026",
+    title: "Guest runs, the mantis icon and a stricter magnet",
+    points: [
+      "The site icon is now the mantis itself: the exact plating and scythe geometry the game builds for a mythic mantis, neon green on a dark tile.",
+      "The browser tab reads wofgue on every page.",
+      "Guests play as Guest with a random three-digit tag. There is no name field to fill in until you sign in, and a guest run is never written down: nothing goes to this browser and nothing goes to the server, so a reload starts over.",
+      "Accounts autosave every few seconds, when you leave the run, and when the tab closes. With a database attached, that save follows the account to any device.",
+      "Only light parts (mass 7 or less) can be dragged in by the component magnet or scooped up by touching them. Anything heavier has to be harpooned and towed.",
+    ],
+  },
   {
     version: "2.5.0",
     date: "21 Nov 2026",

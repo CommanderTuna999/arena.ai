@@ -13,7 +13,7 @@ import { SPECIES_LIST } from "@/game/enemies";
 import SettingsPanel from "@/components/SettingsPanel";
 import RecipeIcon from "@/components/RecipeIcon";
 import Bestiary, { BeeIcon } from "@/components/Bestiary";
-import { resolveSession, saveKeyFor } from "@/game/accounts";
+import { guestName, readGuestSave, resolveSession, saveKeyFor, writeGuestSave } from "@/game/accounts";
 
 const PID_KEY = "neon-hive-pid";
 
@@ -102,12 +102,16 @@ export default function GameClient() {
       setAccount(sess?.name ?? null);
       const pid = sess ? sess.id : getPid();
       const saveKey = saveKeyFor(sess);
-      const save = await loadSave(pid, saveKey);
+      const save = sess ? await loadSave(pid, saveKey) : readGuestSave() ?? newSave();
       if (stopped) return;
+      if (!sess) save.name = guestName();
       const canvas = canvasRef.current!;
       const ctx = canvas.getContext("2d")!;
       const game = new Game(save, pid);
       game.localSaveKey = saveKey;
+      /* Guests get a run that lives only in this page: no disk, no server. */
+      game.persistent = Boolean(sess);
+      if (!sess) game.saveSink = writeGuestSave;
       gameRef.current = game;
       setGame(game);
       if (!localStorage.getItem("neon-hive-help")) setHelp(true);
@@ -443,7 +447,7 @@ function Help({ onClose }: { onClose: () => void }) {
           {rows.map(([k, v]) => (<><div key={k} className="text-yellow-300">{k}</div><div key={v}>{v}</div></>))}
         </div>
         <ul className="mt-4 list-disc space-y-1 pl-5 text-xs text-cyan-100/80">
-          <li>Destroyed pieces drop components. Light parts (mass 14 or less) are scooped into storage the moment you touch them.</li>
+          <li>Destroyed pieces drop components. Only light parts (mass 7 or less) can be dragged by the magnet or scooped up on contact.</li>
           <li>Heavy pieces need the tether: tow them into the <b className="text-yellow-300">yellow hex</b> at the nest.</li>
           <li>Too heavy? Stronger cables, more harpoons on one part, or a better winch help. Overloaded cables snap.</li>
           <li>Sell components for credits or store them to craft weapons, shields, armour, optics, utilities and active abilities.</li>
@@ -823,6 +827,7 @@ function Settings({ game }: { game: Game }) {
   return (
     <SettingsPanel
       save={game.save}
+      nameLocked={!game.persistent}
       onAutoFire={(v) => { game.setAutoFire(v); }}
       onShowCompInfo={(v) => { game.setShowCompInfo(v); }}
       onShowRanges={(v) => { game.setShowRanges(v); }}

@@ -34,6 +34,20 @@ cd wof-gue-io
 npx vercel --prod
 ```
 
+## Cross-device play
+
+Saves follow the **account**, not the browser, but only when the project has a database:
+
+1. Vercel → project **wofgue.io** → **Storage** → **Create Database** → pick the Postgres/Neon
+   integration (free tier is enough) → connect it to this project.
+2. Vercel writes `DATABASE_URL` into the project environment automatically. Nothing else to do:
+   `ensureSchema()` creates `users` and `players` on the first auth or save call.
+3. Redeploy (or wait for the next deploy) so the running functions pick the variable up.
+
+Without a database the account layer falls back to browser-local accounts (`/api/auth/me` reports
+`{"db": false}`) and progress cannot leave the device. The cloud SQL is exercised against an
+in-memory Postgres by `npx tsx cloud-path.test.mts`.
+
 ## Environment variables
 
 | Name | Needed for | Notes |

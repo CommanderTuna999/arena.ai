@@ -19,9 +19,10 @@ import { GUN_SPECS, SPECIES_LIST, buildEnemy, type AbilityDef, type Group, type 
  *                      ~4% of the part's component value (x salvage multiplier). They
  *                      fly straight into the HUD counter and pay out when they land —
  *                      there is nothing to pick up.
- *   Loose cargo      : light parts (mass <= 14) are scooped straight into storage the
- *                      moment the ship touches them. Heavier pieces still need the
- *                      harpoon and a tow back to the nest dock.
+ *   Loose cargo      : only light parts (mass <= 7) can be handled without machinery —
+ *                      the magnet drags them and the ship scoops them up on contact.
+ *                      Anything heavier needs the harpoon and a tow back to the nest
+ *                      dock, and refuses both the magnet and the scoop.
  *   Crafted weapons  : fully automatic; damage = st.dmg * multiplier * efficiency.
  *                      B / AUTO pill toggles the rack (persisted in save.autoFire).
  *                      Each weapon has its own range (data.ts WEAPON_RANGE); auto-fire
@@ -93,6 +94,8 @@ export const plateGrow = (r: number, layers: number) =>
  * a fixed chunk so they stay a genuine end-game threat. */
 const SHELL_DMG = 2_500_000;
 const MYTHIC_SHELL_FRAC = 0.55;
+/** Only parts this light can be dragged by the magnet or scooped on contact. */
+const PICKUP_MASS = 7;
 const BASE_REPAIR_IDLE = 120;
 /** the siege cannon stays powered for this long after the last intruder leaves */
 const BASE_POWER_IDLE = 120;
@@ -661,18 +664,28 @@ export class Game {
 
   /* ---------------- saving / net ---------------- */
   localSaveKey = "neon-hive-save-v1";
+  /* Guests play a throwaway run: nothing is written to this browser or to the
+   * server until the pilot signs in. */
+  persistent = true;
+  /* Guest runs hand their save to an in-memory sink instead of the disk. */
+  saveSink: ((save: SaveData) => void) | null = null;
   persist(force = false) {
     if (!this.dirty && !force) return;
     this.dirty = false;
-    try { localStorage.setItem(this.localSaveKey, JSON.stringify(this.save)); } catch { /* ignore */ }
+    if (this.persistent) {
+      try { localStorage.setItem(this.localSaveKey, JSON.stringify(this.save)); } catch { /* ignore */ }
+    }
+    this.saveSink?.(this.save);
   }
   async pushServer() {
+    if (!this.persistent) return;
     this.lastServerSave = Date.now();
     try {
       await fetch("/api/save", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ id: this.pid, name: this.save.name || "Pilot", save: this.save }), keepalive: true });
     } catch { /* offline is fine */ }
   }
   beaconSave() {
+    if (!this.persistent) return;
     this.persist(true);
     try {
       const blob = new Blob([JSON.stringify({ id: this.pid, name: this.save.name || "Pilot", save: this.save })], { type: "application/json" });
@@ -1021,7 +1034,7 @@ export class Game {
           else c.hooks.pop();
         }
       } else {
-        if (st.magnet > 0 && c.c.mass < 14) {
+        if (st.magnet > 0 && c.c.mass <= PICKUP_MASS) {
           const dx = p.x - c.x, dy = p.y - c.y, d = Math.hypot(dx, dy);
           if (d < st.magnetRange && d > 1) {
             const f = 780 * (1 - d / st.magnetRange);
@@ -1033,7 +1046,7 @@ export class Game {
         c.stress = 0;
         /* Light salvage is scooped up on contact: no harpoon, no tow. Heavy
          * pieces still need a cable and the nest dock. */
-        if (c.c.mass <= 14 && Math.hypot(p.x - c.x, p.y - c.y) < SHIP_R + c.r + 12) {
+        if (c.c.mass <= PICKUP_MASS && Math.hypot(p.x - c.x, p.y - c.y) < SHIP_R + c.r + 12) {
           this.comps.splice(i, 1);
           this.dockComp(c);
           continue;

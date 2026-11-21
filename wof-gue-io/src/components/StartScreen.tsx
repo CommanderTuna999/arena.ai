@@ -9,13 +9,16 @@ import ChangelogPanel from "@/components/ChangelogPanel";
 import Backdrop from "@/components/Backdrop";
 import AuthPanel from "@/components/AuthPanel";
 import {
-  GUEST_SAVE_KEY, resolveSession, saveKeyFor, signOut,
+  GUEST_SAVE_KEY, guestName, readGuestSave, resolveSession, saveKeyFor, signOut, writeGuestSave,
   type Session,
 } from "@/game/accounts";
 
 /* Which save this browser is showing: the guest profile, or the signed-in
- * profile's own slot. Signing in swaps the key and the store re-reads. */
+ * profile's own slot. Signing in swaps the key and the store re-reads.
+ * Guests are "volatile": their save never leaves memory. */
 let activeSaveKey = GUEST_SAVE_KEY;
+let volatileStore = true;
+let guestFallback: SaveData | null = null;
 
 /* ------------------------------------------------------------------ store
  * A tiny external store for the local save so the title screen can read it
@@ -26,7 +29,13 @@ let clientSave: SaveData | null = null;
 let clientRaw: string | null = null;
 const listeners = new Set<() => void>();
 
+function guestSave(): SaveData {
+  if (!guestFallback) guestFallback = readGuestSave() ?? newSave();
+  return guestFallback;
+}
+
 function readLocal(): SaveData {
+  if (volatileStore) return guestSave();
   try {
     const raw = localStorage.getItem(activeSaveKey);
     if (raw) return migrate(JSON.parse(raw));
@@ -35,6 +44,7 @@ function readLocal(): SaveData {
 }
 
 function currentSave(): SaveData {
+  if (volatileStore) return guestSave();
   /* Always compare against the stored string: the game writes the save while
    * unmounting on the way back to this screen, and a stale module-level cache
    * used to resurrect pre-run progress (wiping the run on the next PLAY). */
@@ -49,7 +59,12 @@ function currentSave(): SaveData {
 
 function storeSave(save: SaveData) {
   clientSave = save;
-  try { clientRaw = JSON.stringify(save); localStorage.setItem(activeSaveKey, clientRaw); } catch { /* ignore */ }
+  if (volatileStore) {
+    guestFallback = save;
+    writeGuestSave(save);
+  } else {
+    try { clientRaw = JSON.stringify(save); localStorage.setItem(activeSaveKey, clientRaw); } catch { /* ignore */ }
+  }
   listeners.forEach((l) => l());
 }
 
@@ -68,12 +83,16 @@ function subscribe(listener: () => void) {
   };
 }
 
+const noSubscribe = () => () => {};
+
 /** Point the store at another profile's save slot and re-read it. */
-function activateKey(key: string) {
-  if (key === activeSaveKey) return;
+function activateKey(key: string, guest: boolean) {
+  if (key === activeSaveKey && guest === volatileStore) return;
   activeSaveKey = key;
+  volatileStore = guest;
   clientSave = null;
   clientRaw = null;
+  guestFallback = null;
   listeners.forEach((l) => l());
 }
 
@@ -88,12 +107,14 @@ export default function StartScreen() {
   const [authOpen, setAuthOpen] = useState(false);
   const [sess, setSess] = useState<Session | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const name = typedName ?? (save.name || sess?.name || "");
+  /* Guests are anonymous: a throwaway tag, no name field, no saved progress. */
+  const guest = useSyncExternalStore(noSubscribe, guestName, () => "Guest");
+  const name = typedName ?? (sess ? save.name || sess.name : guest);
 
   /* Signing in swaps the save slot under the title screen, so the store is
    * pointed at the right key as soon as the session is known. */
   const enterProfile = useCallback((next: Session | null) => {
-    activateKey(saveKeyFor(next));
+    activateKey(saveKeyFor(next), next === null);
     setSess(next);
     setTypedName(null);
   }, []);
@@ -112,8 +133,8 @@ export default function StartScreen() {
   const persist = (next: SaveData) => storeSave(next);
 
   const play = () => {
-    const n = name.trim().slice(0, 16);
-    if (!n) {
+    const n = (sess ? name.trim().slice(0, 16) : guest);
+    if (sess && !n) {
       setErr("Enter a name to play.");
       inputRef.current?.focus();
       return;
@@ -153,21 +174,35 @@ export default function StartScreen() {
         </h1>
 
         <div className="mt-10 flex w-full max-w-[19rem] flex-col items-center sm:mt-12">
-          <input
-            id="name"
-            ref={inputRef}
-            aria-label="Name"
-            value={name}
-            maxLength={16}
-            autoComplete="nickname"
-            autoCapitalize="off"
-            spellCheck={false}
-            onChange={(e) => { setTypedName(e.target.value); setErr(""); }}
-            onKeyDown={(e) => { if (e.key === "Enter") play(); }}
-            placeholder="name"
-            className="h-11 w-full border-b border-white/25 bg-transparent px-2 text-center text-lg tracking-[0.18em] text-cyan-50 outline-none transition placeholder:tracking-[0.2em] placeholder:text-white/30 focus:border-cyan-300"
-          />
+          {sess ? (
+            <input
+              id="name"
+              ref={inputRef}
+              aria-label="Name"
+              value={name}
+              maxLength={16}
+              autoComplete="nickname"
+              autoCapitalize="off"
+              spellCheck={false}
+              onChange={(e) => { setTypedName(e.target.value); setErr(""); }}
+              onKeyDown={(e) => { if (e.key === "Enter") play(); }}
+              placeholder="name"
+              className="h-11 w-full border-b border-white/25 bg-transparent px-2 text-center text-lg tracking-[0.18em] text-cyan-50 outline-none transition placeholder:tracking-[0.2em] placeholder:text-white/30 focus:border-cyan-300"
+            />
+          ) : (
+            <button
+              onClick={() => setAuthOpen(true)}
+              title="Log in to pick a name and keep your progress"
+              aria-label={`Playing as ${guest}. Log in to save progress.`}
+              className="h-11 w-full cursor-pointer border-b border-white/10 bg-transparent px-2 text-center text-lg tracking-[0.18em] text-white/25 transition hover:text-white/45"
+            >
+              {guest}
+            </button>
+          )}
           {err && <div className="mt-2 text-[11px] text-red-300">{err}</div>}
+          {!sess && (
+            <div className="mt-2 text-[10px] tracking-[0.2em] text-white/25">GUEST RUN · NOT SAVED</div>
+          )}
 
           <button
             onClick={play}
@@ -205,6 +240,7 @@ export default function StartScreen() {
         <Modal title="SETTINGS" onClose={() => setSettings(false)}>
           <SettingsPanel
             save={save}
+            nameLocked={!sess}
             onAutoFire={(v) => persist({ ...save, autoFire: v, ts: Date.now() })}
             onShowCompInfo={(v) => persist({ ...save, showCompInfo: v, ts: Date.now() })}
             onShowRanges={(v) => persist({ ...save, showRanges: v, ts: Date.now() })}

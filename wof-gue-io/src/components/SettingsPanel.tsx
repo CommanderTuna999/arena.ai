@@ -12,6 +12,8 @@ export interface SettingsPanelProps {
   onShowRanges: (v: boolean) => void;
   onAutoSell: (v: boolean) => void;
   onName: (v: string) => void;
+  /** Guests cannot choose a callsign: the field is shown read-only. */
+  nameLocked?: boolean;
   onReset: () => void;
   onRestore: (s: SaveData) => void;
 }
@@ -20,7 +22,7 @@ export interface SettingsPanelProps {
  * All player-facing settings in one place. Used by the title screen and by the
  * in-game gear / Nest → SYSTEM tab, so both always expose the same options.
  */
-export default function SettingsPanel({ save, onAutoFire, onShowCompInfo, onShowRanges, onAutoSell, onName, onReset, onRestore }: SettingsPanelProps) {
+export default function SettingsPanel({ save, onAutoFire, onShowCompInfo, onShowRanges, onAutoSell, onName, onReset, onRestore, nameLocked = false }: SettingsPanelProps) {
   const [name, setName] = useState(save.name);
   const [confirm, setConfirm] = useState(false);
   const [code, setCode] = useState("");
@@ -57,14 +59,18 @@ export default function SettingsPanel({ save, onAutoFire, onShowCompInfo, onShow
         <div className="mb-1.5 text-[10px] font-bold tracking-[0.28em] text-white/45">CALLSIGN</div>
         <div className="flex gap-2">
           <input
-            value={name}
+            value={nameLocked ? "Guest" : name}
+            disabled={nameLocked}
             maxLength={16}
             onChange={(e) => setName(e.target.value)}
             placeholder="enter your name"
-            className="h-10 min-w-0 flex-1 rounded-sm border border-white/20 bg-black/70 px-2.5 text-sm text-cyan-100 outline-none focus:border-cyan-300/70"
+            className="h-10 min-w-0 flex-1 rounded-sm border border-white/20 bg-black/70 px-2.5 text-sm text-cyan-100 outline-none focus:border-cyan-300/70 disabled:border-white/10 disabled:bg-black/40 disabled:text-white/25"
           />
-          <button onClick={commitName} className="rounded-sm border border-cyan-300/60 px-3 text-xs font-bold text-cyan-200 transition hover:bg-cyan-400/20">SAVE</button>
+          {!nameLocked && (
+            <button onClick={commitName} className="rounded-sm border border-cyan-300/60 px-3 text-xs font-bold text-cyan-200 transition hover:bg-cyan-400/20">SAVE</button>
+          )}
         </div>
+        {nameLocked && <div className="mt-1.5 text-[10px] tracking-[0.16em] text-white/30">LOG IN TO PICK A CALLSIGN AND KEEP PROGRESS</div>}
       </section>
 
       <section className="space-y-1.5">

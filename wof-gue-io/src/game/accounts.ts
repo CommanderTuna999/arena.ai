@@ -10,12 +10,15 @@
  * is in play behind one small API.
  */
 
+import type { SaveData } from "./data";
+
 export type Session = { id: string; name: string; server: boolean };
 
 export const GUEST_SAVE_KEY = "neon-hive-save-v1";
 const SESSION_KEY = "wof.session.v1";
 const ACCOUNTS_KEY = "wof.accounts.v1";
 const PBKDF2_ROUNDS = 120_000;
+const GUEST_TAG_KEY = "wof.guest.v1";
 
 type LocalAccount = { id: string; name: string; salt: string; hash: string; rounds: number };
 
@@ -43,6 +46,37 @@ function accounts(): Record<string, LocalAccount> {
 
 function keyOf(name: string) {
   return name.trim().toLowerCase();
+}
+
+/* --------------------------------------------------------------- guest */
+
+/**
+ * Guests never pick a name and never keep progress: each browser tab is handed
+ * a stable throwaway tag (Guest100-Guest999) and the run lives in memory only.
+ */
+export function guestName(): string {
+  const roll = () => String(100 + Math.floor(Math.random() * 900));
+  try {
+    const raw = sessionStorage.getItem(GUEST_TAG_KEY);
+    if (raw && /^\d{3}$/.test(raw)) return `Guest${raw}`;
+    const tag = roll();
+    sessionStorage.setItem(GUEST_TAG_KEY, tag);
+    return `Guest${tag}`;
+  } catch {
+    return `Guest${roll()}`;
+  }
+}
+
+/* A guest's run is held here for the life of the page and is never written to
+ * disk or to the server, so a reload starts the guest over. */
+let guestSave: SaveData | null = null;
+
+export function readGuestSave(): SaveData | null {
+  return guestSave;
+}
+
+export function writeGuestSave(save: SaveData) {
+  guestSave = save;
 }
 
 /* ------------------------------------------------------------- hashing */

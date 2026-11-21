@@ -1,10 +1,6 @@
-import { eq } from "drizzle-orm";
 import { db } from "@/db";
-import { users } from "@/db/schema";
-import {
-  ensureSchema, hashPassword, nameKey, newSalt, newUserId, startSession,
-  validateName, validatePassword, type AuthUser,
-} from "@/server/auth";
+import { createAccount, ensureSchema, startSession, validateName, validatePassword } from "@/server/auth";
+import type { Db } from "@/server/auth-store";
 
 export const dynamic = "force-dynamic";
 
@@ -20,21 +16,14 @@ export async function POST(req: Request) {
   const badPass = validatePassword(body.password);
   if (badPass) return Response.json({ ok: false, error: badPass }, { status: 400 });
 
-  if (!(await ensureSchema()) || !db) return Response.json({ ok: false, error: "no-db" }, { status: 200 });
+  if (!(await ensureSchema()) || !db) return Response.json({ ok: false, error: "no-db" });
 
-  const name = String(body.name).trim();
-  const key = nameKey(name);
   try {
-    const existing = await db.select({ id: users.id }).from(users).where(eq(users.nameKey, key)).limit(1);
-    if (existing.length) return Response.json({ ok: false, error: "taken" }, { status: 409 });
-    const salt = newSalt();
-    const id = newUserId();
-    await db.insert(users).values({ id, name, nameKey: key, salt, hash: hashPassword(String(body.password), salt) });
-    const user: AuthUser = { id, name };
-    await startSession(user);
-    return Response.json({ ok: true, user });
+    const res = await createAccount(db as unknown as Db, String(body.name), String(body.password));
+    if (!res.ok) return Response.json({ ok: false, error: res.error }, { status: 409 });
+    await startSession(res.user);
+    return Response.json({ ok: true, user: res.user });
   } catch {
-    /* unique violation racing another registration, or the table is missing */
-    return Response.json({ ok: false, error: "taken" }, { status: 409 });
+    return Response.json({ ok: false, error: "db" }, { status: 500 });
   }
 }

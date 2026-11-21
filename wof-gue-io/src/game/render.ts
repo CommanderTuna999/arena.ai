@@ -167,7 +167,7 @@ export function render(g: Game, ctx: CanvasRenderingContext2D) {
   if (g.stats.magnet > 0) {
     const mpl = g.player;
     for (const c of g.comps) {
-      if (c.hooks.length || c.c.mass >= 14) continue;
+      if (c.hooks.length || c.c.mass > 7) continue;
       const d = Math.hypot(c.x - mpl.x, c.y - mpl.y);
       if (d > g.stats.magnetRange) continue;
       ctx.strokeStyle = `rgba(255,225,77,${0.06 + 0.28 * (1 - d / g.stats.magnetRange)})`;

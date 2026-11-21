@@ -3,6 +3,38 @@
 Everything below is implemented in the current build. Numbers are the actual constants used by
 the simulation, not design targets.
 
+## 0. v2.6.0 — guest runs, mantis icon, magnet cap at mass 7
+
+### Guests are anonymous and non-persistent
+- The title screen no longer offers a name to guests: the field is greyed and reads
+  `GuestNNN`, a random 3-digit tag kept in `sessionStorage` (`wof.guest.v1`) so it is stable for
+  the life of the tab. Clicking it opens the ACCOUNT dialog.
+- A guest run lives in memory only. `Game.persistent = false` plus `Game.saveSink = writeGuestSave`
+  means `persist()` writes to a module-level object instead of `localStorage`, `pushServer()` and
+  `beaconSave()` return immediately, and `/api/save` is never called. The title screen's store has
+  the same split (`volatileStore`), so toggling settings as a guest changes nothing on disk.
+- Settings → CALLSIGN is disabled while signed out (`nameLocked`), with a one-line hint.
+- Accounts are unchanged and still autosave: `persist()` every 5 s, `pushServer()` every 20 s, on
+  leaving the run, and on tab close via `sendBeacon`.
+
+### Icon and title
+- `src/app/icon.svg` is generated from the game's own geometry: `buildEnemy(mantis, tier 5, seed 7)`
+  polygons (armour, segments, scythes and legs; shields and spikes dropped), rotated -35°, scaled to
+  fill a 64x64 rounded tile with a dark background and a soft neon bloom.
+- Both `layout.tsx` and `play/page.tsx` now title the tab `wofgue`.
+
+### Component handling
+- `PICKUP_MASS = 7` in `engine.ts` gates both the magnet drag (`st.magnet > 0 && mass <= 7`) and the
+  contact scoop (`mass <= 7`), and `render.ts` only draws magnet tethers to parts under the cap.
+  Anything heavier must be harpooned and towed.
+
+### Cloud path proof
+- `src/server/auth-store.ts` holds the account/save SQL against any Postgres, and
+  `cloud-path.test.mts` runs it on an in-memory Postgres (`pg-mem`): table creation, unique
+  callsigns, password validation, login, wrong password, save round-trip through `jsonb` and the
+  upsert all pass. Attaching `DATABASE_URL` to the Vercel project is the only step left for
+  cross-device accounts and saves.
+
 ## 0. v2.5.0 — accounts, neon ladybug, real name on the tab
 
 ### Accounts
