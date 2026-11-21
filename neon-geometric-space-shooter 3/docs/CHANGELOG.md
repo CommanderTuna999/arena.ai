@@ -3,6 +3,18 @@
 Everything below is implemented in the current build. Numbers are the actual constants used by
 the simulation, not design targets.
 
+## 0. v2.0.5 — admin test range
+
+### Test range
+- `AdminState` gains a `sandbox` flag (session-only: `readAdminFlags` always returns `false` for it and `writeAdminFlags` leaves it out of `wof-admin-flags`).
+- `adminTestRange(true)` clears `enemies`, `eprojs` and `mines`, teleports the ship to the outer ring at `atan2(-BASE.y, -BASE.x) × (WORLD_R - 900)` — the point farthest from the nest — caps hull/shield, clears status effects and snaps the camera. It also forces admin mode on. `adminTestRange(false)` restores the saved pre-teleport position and lets the world resume.
+- While `admin.sandbox` is set, the update loop skips `seedWorld()` and the `manageChunks()` tick entirely, `seedWorld()` early-returns, and the boss-spawn branch in `updateEnemies` is suppressed. Nothing spawns on its own.
+
+### Spawner
+- `adminSpawn(spi, tier, n)` takes any index from `SPECIES_LIST` and any rarity 0–5, places up to 20 copies in a line perpendicular to the aim, 520–1,100u toward the cursor (clamped inside `WORLD_R - 40`), marks them `aggro = true` and reports `SPAWNED n × NAME · RARITY`.
+- `adminClearEnemies()` empties enemies, hostile projectiles and mines in one call.
+- Both are gated on `admin.on`; species and rarity pickers live in the admin panel's new TEST RANGE section, with SPAWN, SPAWN ×5 and CLEAR buttons.
+
 ## 0. v2.0.4 — energy shields are hard walls
 
 ### Enemy energy shields

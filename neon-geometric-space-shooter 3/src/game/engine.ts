@@ -1,6 +1,6 @@
 import { TAU, angDiff, clamp, distToPoly, hash2, lerp, mulberry32, pointInPoly } from "./math";
 import {
-  ABILITY_BY_ID, BASE, BASE_MAX_HP, BASE_RING, BASE_TAKE, DMG_MUL, HP_MUL, KIND_CAT, RECIPE_BY_ID, SHIP_R, UPGRADES, WORLD_R, W_SLOTS, compMass, compValue, computeStats, craftEfficiency,
+  ABILITY_BY_ID, BASE, BASE_MAX_HP, BASE_RING, BASE_TAKE, DMG_MUL, HP_MUL, KIND_CAT, RARITIES, RECIPE_BY_ID, SHIP_R, UPGRADES, WORLD_R, W_SLOTS, compMass, compValue, computeStats, craftEfficiency,
   recipeProblem, upgradeCost, zoneTier, WEAPON_DMG, WEAPON_RANGE, type Comp, type DmgKind, type PartKind, type SaveData, type Slot, type Stats,
 } from "./data";
 import { SPECIES_LIST, buildEnemy, type AbilityDef, type Group, type Part, type ProjType, type SpeciesDef } from "./enemies";
@@ -157,21 +157,24 @@ export interface MiniTurret {
 export interface BaseBolt {
   x: number; y: number; vx: number; vy: number; life: number; dmg: number; target: Enemy | null; trail: number;
 }
-export interface AdminState { on: boolean; credits: boolean; health: boolean; damage: boolean; components: boolean }
+export interface AdminState { on: boolean; credits: boolean; health: boolean; damage: boolean; components: boolean; sandbox: boolean }
 /** Admin flags survive the trip home: sessionStorage keeps them for this tab,
  *  while the pilot save stays clean. */
 const ADMIN_KEY = "wof-admin-flags";
-const ADMIN_DEFAULT: AdminState = { on: false, credits: false, health: false, damage: false, components: false };
+const ADMIN_DEFAULT: AdminState = { on: false, credits: false, health: false, damage: false, components: false, sandbox: false };
 function readAdminFlags(): AdminState {
   try {
     const raw = globalThis.sessionStorage?.getItem(ADMIN_KEY);
     if (!raw) return { ...ADMIN_DEFAULT };
     const o = JSON.parse(raw) as Partial<AdminState>;
-    return { on: !!o.on, credits: !!o.credits, health: !!o.health, damage: !!o.damage, components: !!o.components };
+    return { on: !!o.on, credits: !!o.credits, health: !!o.health, damage: !!o.damage, components: !!o.components, sandbox: false };
   } catch { return { ...ADMIN_DEFAULT }; }
 }
 function writeAdminFlags(a: AdminState) {
-  try { globalThis.sessionStorage?.setItem(ADMIN_KEY, JSON.stringify(a)); } catch { /* storage unavailable */ }
+  /* the test-range flag is deliberately not persisted: a reload should always
+   * drop you back into the live hive, never into a half-empty map */
+  const flags = { on: a.on, credits: a.credits, health: a.health, damage: a.damage, components: a.components };
+  try { globalThis.sessionStorage?.setItem(ADMIN_KEY, JSON.stringify(flags)); } catch { /* storage unavailable */ }
 }
 
 export interface HudAbility { key: string; name: string; icon: string; color: string; cd: number; max: number; ready: boolean; active: boolean; empty: boolean }
@@ -372,7 +375,7 @@ export class Game {
     this.rev++;
   }
   adminAll(v: boolean) {
-    this.admin = { on: v || this.admin.on, credits: v, health: v, damage: v, components: v };
+    this.admin = { on: v || this.admin.on, credits: v, health: v, damage: v, components: v, sandbox: false };
     writeAdminFlags(this.admin);
     this.rev++;
   }
@@ -380,6 +383,80 @@ export class Game {
     this.save.credits += n;
     this.markDirty();
   }
+  /* ---------------- admin test range ----------------
+   * A blank stretch of the outer ring with every ambient spawn switched off:
+   * no chunk seeding, no top-up and no visibility floor. Enemies only exist
+   * here if the admin spawns them by hand. */
+  private testReturn: { x: number; y: number } | null = null;
+
+  adminTestRange(on: boolean) {
+    const p = this.player;
+    if (on) {
+      this.testReturn = { x: p.x, y: p.y };
+      this.admin.on = true;
+      this.admin.sandbox = true;
+      this.enemies.length = 0;
+      this.eprojs.length = 0;
+      this.mines.length = 0;
+      /* the far side of the outer ring, directly opposite the nest */
+      const a = Math.atan2(-BASE.y, -BASE.x) || 0;
+      const [tx, ty] = clampWorld(Math.cos(a) * (WORLD_R - 900), Math.sin(a) * (WORLD_R - 900));
+      p.x = tx; p.y = ty; p.vx = p.vy = 0;
+      p.dead = false; p.respawn = 0; p.hp = this.stats.hull; p.shield = this.stats.shieldMax;
+      p.slowF = 1; p.slowT = 0; p.poison = 0; p.poisonT = 0; p.pull = null;
+      this.cam.x = tx; this.cam.y = ty;
+      this.toast("TEST RANGE — NO SPAWNS", "#ff7ad9");
+    } else {
+      this.admin.sandbox = false;
+      if (this.testReturn) {
+        p.x = this.testReturn.x; p.y = this.testReturn.y; p.vx = p.vy = 0;
+        this.cam.x = p.x; this.cam.y = p.y;
+        this.testReturn = null;
+      }
+      this.toast("BACK TO THE HIVE", "#7df9ff");
+    }
+    writeAdminFlags(this.admin);
+    this.rev++;
+  }
+
+  /** Wipe every enemy and hostile projectile in the test range. */
+  adminClearEnemies() {
+    if (!this.admin.on) return;
+    this.enemies.length = 0;
+    this.eprojs.length = 0;
+    this.mines.length = 0;
+    this.toast("TEST RANGE CLEARED", "#ff7ad9");
+    this.rev++;
+  }
+
+  /** Spawn n copies of one species at one rarity, in front of the cursor. */
+  adminSpawn(spi: number, tier: number, n = 1) {
+    if (!this.admin.on) return;
+    const p = this.player;
+    const sp = clamp(Math.round(spi), 0, SPECIES_LIST.length - 1);
+    const t = clamp(Math.round(tier), 0, 5);
+    const [mx, my] = this.mouseWorld();
+    let dx = mx - p.x, dy = my - p.y;
+    let d = Math.hypot(dx, dy);
+    if (d < 120) { dx = 0; dy = -1; d = 1; }
+    const dist = clamp(d, 520, 1100);
+    const ux = dx / d, uy = dy / d;
+    let made = 0;
+    const count = clamp(Math.round(n), 1, 20);
+    for (let i = 0; i < count; i++) {
+      if (this.enemies.length >= HARD_MAX) break;
+      const off = (i - (count - 1) / 2) * 110;
+      const [x, y] = clampWorld(p.x + ux * dist - uy * off, p.y + uy * dist + ux * off);
+      const e = this.makeEnemy(sp, t, x, y, "sandbox", (Math.random() * 1e9) | 0);
+      e.aggro = true;
+      this.enemies.push(e);
+      made++;
+    }
+    if (made) this.toast(`SPAWNED ${made} × ${SPECIES_LIST[sp].name.toUpperCase()} · ${RARITIES[t].name}`, "#ff7ad9");
+    else this.toast("SPAWN LIMIT REACHED", "#ff7ad9");
+    this.rev++;
+  }
+
   private dmgMul() { return this.admin.on && this.admin.damage ? 100 : 1; }
 
   recompute() {
@@ -1088,7 +1165,7 @@ export class Game {
    *  Enemies therefore exist across the whole map immediately instead of
    *  materialising only when the player enters a chunk. */
   private seedWorld() {
-    if (this.worldSeeded) return;
+    if (this.worldSeeded || this.admin.sandbox) return;
     this.worldSeeded = true;
     const keys: string[] = [];
     const lim = Math.ceil((WORLD_R + CH) / CH);
@@ -2059,7 +2136,7 @@ export class Game {
     const p = this.player;
     // boss availability: one at a time, only while the player is in the mythical core
     this.bossT -= dt;
-    if (BOSS_SP >= 0 && this.bossT <= 0 && !p.dead && !this.bossAlive() && Math.hypot(p.x, p.y) < 2500) {
+    if (!this.admin.sandbox && BOSS_SP >= 0 && this.bossT <= 0 && !p.dead && !this.bossAlive() && Math.hypot(p.x, p.y) < 2500) {
       const ang = Math.random() * TAU, rr = 900 + Math.random() * 700;
       const boss = this.makeEnemy(BOSS_SP, 5, p.x + Math.cos(ang) * rr, p.y + Math.sin(ang) * rr, "boss", (Math.random() * 1e9) | 0);
       boss.aggro = true;
@@ -3016,9 +3093,12 @@ export class Game {
 
     // world
     if (!this.baseLost) {
-      if (!this.worldSeeded) this.seedWorld();
-      this.chunkT -= dt;
-      if (this.chunkT <= 0) { this.chunkT = 1.0; this.manageChunks(); }
+      /* the admin test range is a blank map: no seeding, top-up or visibility floor */
+      if (!this.admin.sandbox) {
+        if (!this.worldSeeded) this.seedWorld();
+        this.chunkT -= dt;
+        if (this.chunkT <= 0) { this.chunkT = 1.0; this.manageChunks(); }
+      }
       this.updateEnemies(dt);
       this.updateEProjs(dt);
     }

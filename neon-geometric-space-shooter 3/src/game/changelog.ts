@@ -8,7 +8,7 @@
  *   CHANGELOG and mirror the details in docs/CHANGELOG.md.
  */
 
-export const VERSION = "2.0.4";
+export const VERSION = "2.0.5";
 
 export interface ChangeEntry {
   version: string;
@@ -19,6 +19,17 @@ export interface ChangeEntry {
 }
 
 export const CHANGELOG: ChangeEntry[] = [
+  {
+    version: "2.0.5",
+    date: "21 Nov 2026",
+    title: "Admin test range",
+    points: [
+      "The admin panel gains a TEST RANGE section. TELEPORT TO EMPTY MAP drops the ship on a blank stretch of the outer ring, directly opposite the nest, and switches off every ambient spawn: world seeding, chunk top-up, the visibility floor and the boss pass all stay silent until you leave.",
+      "Enemies, hostile projectiles and mines are wiped on entry; LEAVING EMPTY MAP puts the ship back where it stood (or at the nest if the run never seeded) and normal spawning resumes.",
+      "A spawner picks any enemy species and any rarity from Common to Mythical, spawning one or five copies toward the cursor at 520–1,100u. Hand-spawned enemies are hostile immediately, and the world serpent can be summoned by hand even though its ambient boss pass stays disabled.",
+      "CLEAR wipes the test range in one press. The test-range flag is session-only: a reload always returns to the live hive, and spawning is ignored unless admin mode is on.",
+    ],
+  },
   {
     version: "2.0.4",
     date: "21 Nov 2026",

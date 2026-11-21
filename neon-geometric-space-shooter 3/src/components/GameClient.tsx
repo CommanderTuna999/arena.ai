@@ -9,6 +9,7 @@ import {
   type Comp, type Recipe, type SaveData, type Slot, type UpCat,
 } from "@/game/data";
 import { clamp, fmtNum } from "@/game/math";
+import { SPECIES_LIST } from "@/game/enemies";
 import SettingsPanel from "@/components/SettingsPanel";
 import RecipeIcon from "@/components/RecipeIcon";
 import Bestiary, { BeeIcon } from "@/components/Bestiary";
@@ -808,6 +809,8 @@ function Settings({ game }: { game: Game }) {
 /* ---------------------------------------------------------------- Admin */
 function AdminPanel({ game, hud, onClose }: { game: Game; hud: Hud; onClose: () => void }) {
   const a = hud.admin;
+  const [spi, setSpi] = useState(0);
+  const [tier, setTier] = useState(2);
   const rows: [keyof typeof a, string, string][] = [
     ["credits", "Infinite Credits", "Upgrades cost nothing and crafting stays affordable."],
     ["health", "Infinite Health", "Hull and shield are pinned at maximum."],
@@ -815,7 +818,7 @@ function AdminPanel({ game, hud, onClose }: { game: Game; hud: Hud; onClose: () 
     ["components", "Infinite Components", "Craft anything without spending components."],
   ];
   return (
-    <div className="absolute left-3 top-24 z-40 w-72 rounded-md border border-fuchsia-400/60 bg-[#0b0714]/95 p-3 text-xs shadow-[0_0_30px_rgba(255,122,217,0.25)]">
+    <div className="absolute left-3 top-24 z-40 max-h-[calc(100vh-7rem)] w-80 overflow-y-auto rounded-md border border-fuchsia-400/60 bg-[#0b0714]/95 p-3 text-xs shadow-[0_0_30px_rgba(255,122,217,0.25)]">
       <div className="flex items-center justify-between">
         <div className="text-sm font-black tracking-[0.25em] text-fuchsia-300">ADMIN</div>
         <button onClick={onClose} className="rounded-sm border border-white/25 px-2 py-0.5 text-[10px] text-white/70 hover:bg-white/10">CLOSE [`]</button>
@@ -834,6 +837,45 @@ function AdminPanel({ game, hud, onClose }: { game: Game; hud: Hud; onClose: () 
             </span>
           </label>
         ))}
+      </div>
+      <div className={`mt-2 rounded-sm border border-fuchsia-300/30 bg-fuchsia-500/5 p-2 ${a.on ? "" : "opacity-50"}`}>
+        <div className="flex items-center justify-between">
+          <span className="text-[10px] font-black tracking-[0.2em] text-fuchsia-200">TEST RANGE</span>
+          <span className={`text-[9px] ${a.sandbox ? "text-emerald-300" : "text-white/35"}`}>{a.sandbox ? "EMPTY MAP" : "LIVE MAP"}</span>
+        </div>
+        <button
+          disabled={!a.on}
+          onClick={() => game.adminTestRange(!a.sandbox)}
+          className={`mt-1 w-full rounded-sm border px-2 py-1 text-[10px] font-black tracking-wide ${a.sandbox ? "border-emerald-300/60 bg-emerald-400/15 text-emerald-200 hover:bg-emerald-400/30" : "border-fuchsia-300/60 bg-fuchsia-400/15 text-fuchsia-100 hover:bg-fuchsia-400/30"} disabled:cursor-not-allowed disabled:opacity-40`}
+        >
+          {a.sandbox ? "LEAVE EMPTY MAP" : "TELEPORT TO EMPTY MAP"}
+        </button>
+        <div className="mt-2 flex gap-1">
+          <select
+            value={spi}
+            disabled={!a.on}
+            onChange={(e) => setSpi(Number(e.target.value))}
+            className="min-w-0 flex-1 rounded-sm border border-white/15 bg-[#120a1e] px-1 py-1 text-[10px] text-white/85"
+          >
+            {SPECIES_LIST.map((s, i) => (
+              <option key={s.id} value={i}>{s.name}{s.boss ? " (boss)" : ""}</option>
+            ))}
+          </select>
+          <select
+            value={tier}
+            disabled={!a.on}
+            onChange={(e) => setTier(Number(e.target.value))}
+            className="w-24 rounded-sm border border-white/15 bg-[#120a1e] px-1 py-1 text-[10px] text-white/85"
+          >
+            {RARITIES.map((r, i) => <option key={r.id} value={i}>{r.name}</option>)}
+          </select>
+        </div>
+        <div className="mt-1 flex gap-1">
+          <button disabled={!a.on} onClick={() => game.adminSpawn(spi, tier, 1)} className="flex-1 rounded-sm border border-fuchsia-300/50 bg-fuchsia-400/15 px-2 py-1 text-[10px] font-black text-fuchsia-100 hover:bg-fuchsia-400/30 disabled:opacity-40">SPAWN</button>
+          <button disabled={!a.on} onClick={() => game.adminSpawn(spi, tier, 5)} className="flex-1 rounded-sm border border-fuchsia-300/50 bg-fuchsia-400/15 px-2 py-1 text-[10px] font-black text-fuchsia-100 hover:bg-fuchsia-400/30 disabled:opacity-40">SPAWN ×5</button>
+          <button disabled={!a.on} onClick={() => game.adminClearEnemies()} className="rounded-sm border border-white/20 px-2 py-1 text-[10px] text-white/70 hover:bg-white/10 disabled:opacity-40">CLEAR</button>
+        </div>
+        <div className="mt-1 text-[9px] leading-tight text-white/35">Empty map disables all ambient seeding, top-up and the visibility floor. Spawns appear toward the cursor.</div>
       </div>
       <div className="mt-2 flex gap-2">
         <button onClick={() => game.adminAll(true)} className="flex-1 rounded-sm border border-fuchsia-300/50 bg-fuchsia-400/15 px-2 py-1 text-[10px] font-bold text-fuchsia-200 hover:bg-fuchsia-400/30">ALL ON</button>
