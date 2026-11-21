@@ -67,11 +67,11 @@ Hull by tier:
   T5: 1,656,320 HP total; core 48,000; largest part 56,320; 75 parts; radius 1,239u; 4 panels (curved arcs, 64% of the ring, 497u out); energy/shock/thermal pass; 4 hull shells (3,975,168 HP).
 Defence: energy shield panels appear at tier 3+ (2 generators at epic, 3 at legendary, 4 at mythical, each covering only a slice of the ring); hull shells at tier 2+ (60% hull per layer, ~4x that in kinetic fire).
 Damage: eDmg 16 / 48 / 144 / 432 / 1,296 / 3,888 by tier. Contact = 0.25x eDmg every 0.7s. Weapon mounts: 0 gun(s) (0.5x eDmg, 1.1-1.7s cadence) and 0 missile pod(s) (1.1x eDmg, 4.5-6s cadence) at T5; no gun or missile mounts at T3. Destroying a weapon part explodes for 1.8x eDmg to the player; other parts explode for 1.3x.
-Abilities (4): cooldowns scale down with rarity (T1 12s, T2 8s, T3 3s, T4 1.75s, T5 1s).
-  - Dash [charge], from T1: 1x eDmg damage (3,888 at T5); 0.4s wind-up; 620 u/s; 0.4s duration; range 150-700u.
-  - Spray [shoot], from T2: 5x eDmg damage (19,440 at T5); 0.5s wind-up; 9 projectiles at T5 (4 + 1/tier); 0.6 rad spread; 220 u/s; 3s life; size 11; range 0-700u; orb projectile.
-  - Chomp [grab], from T3: 7x eDmg damage (27,216 at T5); 0.5s wind-up; 4 chomps at 0.8s each over a 3s hold; range 0-3 body-size units.
-  - Shockwave [ring], from T4: 8x eDmg damage (31,104 at T5); 0.7s wind-up; 520 u/s; size 6; range 0-4 body-size units.
+Abilities (4): cooldowns scale down with rarity (T1 12s, T2 8s, T3 3s, T4 1.75s, T5 1s). Ranges scale with body size so they reach the kite's stand-off distance.
+  - Dash [charge], from T1: 1x eDmg damage (3,888 at T5); 0.4s wind-up; 620 u/s; 0.4s duration; range 150-~1300u.
+  - Spray [shoot], from T2: 5x eDmg damage (19,440 at T5); 0.5s wind-up; 9 projectiles at T5 (4 + 1/tier); 0.6 rad spread; 220 u/s; 3s life; size 11; range 0-~1300u; orb projectile.
+  - Chomp [grab], from T3: 7x eDmg damage (27,216 at T5); 0.5s wind-up; 4 chomps at 0.8s each over a 3s hold; lunges in to close the gap; range 0-~1300u.
+  - Shockwave [ring], from T4: 8x eDmg damage (31,104 at T5); 0.7s wind-up; 520 u/s; size 6; knocks the ship back 700 u/s; range 0-~1100u.
 
 --- 2. Scorpion (scorpion) ---
 Spawn: zones 0-3 (Common (outer) to Epic). Pack per tier: 1 / 1 / 1 / 1 / 1 / 1.
@@ -85,7 +85,7 @@ Hull by tier:
   T5: 2,288,000 HP total; core 48,000; largest part 56,320; 105 parts; radius 1,321u; no energy shield; 4 hull shells (5,491,200 HP).
 Defence: energy shield panels appear at tier 3+ (2 generators at epic, 3 at legendary, 4 at mythical, each covering only a slice of the ring); hull shells at tier 2+ (60% hull per layer, ~4x that in kinetic fire).
 Damage: eDmg 16 / 48 / 144 / 432 / 1,296 / 3,888 by tier. Contact = 0.25x eDmg every 0.7s. Weapon mounts: 0 gun(s) (0.5x eDmg, 1.1-1.7s cadence) and 0 missile pod(s) (1.1x eDmg, 4.5-6s cadence) at T5; no gun or missile mounts at T3. Destroying a weapon part explodes for 1.8x eDmg to the player; other parts explode for 1.3x.
-Abilities (2): cooldowns scale down with rarity (T1 12s, T2 8s, T3 3s, T4 1.75s, T5 1s).
+Abilities (2): cooldowns scale down with rarity (T1 12s, T2 8s, T3 3s, T4 1.75s, T5 1s). Both lunge in to close the gap.
   - Pincer Grab [grab], from T1: 2x eDmg damage (7,776 at T5); 0.5s wind-up; chomps at 0.8s each over a 2s hold; range 0-3.5 body-size units.
   - Tail Sting [grab], from T3: 3.6x eDmg damage (13,997 at T5); 0.7s wind-up; chomps at 1s each over a 5s hold; range 0-3.5 body-size units.
 
@@ -101,11 +101,11 @@ Hull by tier:
   T5: 2,194,880 HP total; core 48,000; largest part 56,320; 109 parts; radius 1,350u; no energy shield; 4 hull shells (5,267,712 HP).
 Defence: energy shield panels appear at tier 3+ (2 generators at epic, 3 at legendary, 4 at mythical, each covering only a slice of the ring); hull shells at tier 2+ (60% hull per layer, ~4x that in kinetic fire).
 Damage: eDmg 16 / 48 / 144 / 432 / 1,296 / 3,888 by tier. Contact = 0.25x eDmg every 0.7s. Weapon mounts: 0 gun(s) (0.5x eDmg, 1.1-1.7s cadence) and 2 missile pod(s) (1.1x eDmg, 4.5-6s cadence) at T5; no gun or missile mounts at T3. Destroying a weapon part explodes for 1.8x eDmg to the player; other parts explode for 1.3x.
-Abilities (4): cooldowns scale down with rarity (T1 12s, T2 8s, T3 3s, T4 1.75s, T5 1s).
-  - Web [shoot], from T1: 0.4x eDmg damage (1,555 at T5); 0.5s wind-up; 1 projectile; 380 u/s; 2s life; size 14; slow to 0.4x for 3s; poison 0.2x eDmg; range 120-800u; web projectile.
-  - Web Volley [shoot], from T2: 0.3x eDmg damage (1,166 at T5); 0.5s wind-up; 3 projectiles; 0.2 rad spread; 680 u/s; 1.5s life; size 7; range 120-800u; web projectile.
-  - Bite [grab], from T4: 1.67x eDmg damage (6,493 at T5); 0.4s wind-up; chomps at 1s each over a 3s hold; range 0-2.5 body-size units.
-  - Pull [pull], from T4: 17x eDmg damage (66,096 at T5); 0.5s wind-up; 760 u/s; range 250-850u.
+Abilities (4): cooldowns scale down with rarity (T1 12s, T2 8s, T3 3s, T4 1.75s, T5 1s). Ranges scale with body size so they reach the kite's stand-off distance.
+  - Web [shoot], from T1: 0.4x eDmg damage (1,555 at T5); 0.5s wind-up; 1 projectile; 380 u/s; 2s life; size 14; slow to 0.4x for 3s; poison 0.2x eDmg; range 120-~1300u; web projectile.
+  - Web Volley [shoot], from T2: 0.3x eDmg damage (1,166 at T5); 0.5s wind-up; 3 projectiles; 0.2 rad spread; 680 u/s; 1.5s life; size 7; range 120-~1300u; web projectile.
+  - Bite [grab], from T4: 1.67x eDmg damage (6,493 at T5); 0.4s wind-up; chomps at 1s each over a 3s hold; lunges in to close the gap; range 0-~1300u.
+  - Pull [pull], from T4: 17x eDmg damage (66,096 at T5); 0.5s wind-up; 760 u/s; range 250-~1300u.
 
 --- 4. Luna Moth (moth) ---
 Spawn: zones 0-4 (Common (outer) to Legendary). Pack per tier: 1 / 1 / 1 / 1 / 1 / 1.
@@ -119,11 +119,11 @@ Hull by tier:
   T5: 1,582,080 HP total; core 48,000; largest part 56,320; 70 parts; radius 862u; 4 panels (curved arcs, 64% of the ring, 497u out); energy/shock/thermal pass; 4 hull shells (3,796,992 HP).
 Defence: energy shield panels appear at tier 3+ (2 generators at epic, 3 at legendary, 4 at mythical, each covering only a slice of the ring); hull shells at tier 2+ (60% hull per layer, ~4x that in kinetic fire).
 Damage: eDmg 16 / 48 / 144 / 432 / 1,296 / 3,888 by tier. Contact = 0.25x eDmg every 0.7s. Weapon mounts: 0 gun(s) (0.5x eDmg, 1.1-1.7s cadence) and 0 missile pod(s) (1.1x eDmg, 4.5-6s cadence) at T5; no gun or missile mounts at T3. Destroying a weapon part explodes for 1.8x eDmg to the player; other parts explode for 1.3x.
-Abilities (4): cooldowns scale down with rarity (T1 12s, T2 8s, T3 3s, T4 1.75s, T5 1s).
-  - Shot Burst [shoot], from T1: 2x eDmg damage (7,776 at T5); 0.4s wind-up; 5 projectiles; 1.2 rad spread; 600 u/s; 1.2s life; size 5; range 0-600u; bolt projectile.
-  - Rotating Lasers [beam], from T3: 1x eDmg per tick (3,888 at T5); 0.6s wind-up; 4 rotating beams at 1.5 rad/s over a 4s duration; range 0-4 body-size units.
-  - Missiles [shoot], from T4: 3x eDmg damage (11,664 at T5); 0.6s wind-up; 20 homing projectiles; 0.3 rad spread; 480 u/s; 3s life; size 7; homing 2.5 rad/s; range 0-800u; orb projectile.
-  - Domain [domain], from T5: opens a three-minute moon domain; the moth heals to full and scales its damage and health from 3x to 10x by phase; the moon grinds the ship for 5% max hull/sec and feeds the moth 1% max health/sec; cannot be reused while open.
+Abilities (4): cooldowns scale down with rarity (T1 12s, T2 8s, T3 3s, T4 1.75s, T5 1s). Ranges scale with body size so they reach the kite's stand-off distance.
+  - Shot Burst [shoot], from T1: 2x eDmg damage (7,776 at T5); 0.4s wind-up; 5 projectiles; 1.2 rad spread; 600 u/s; 1.2s life; size 5; range 0-~1000u; bolt projectile.
+  - Rotating Lasers [beam], from T3: 1x eDmg per tick (3,888 at T5); 0.6s wind-up; 4 rotating beams at 1.5 rad/s over a 4s duration; range 0-~1000u.
+  - Missiles [shoot], from T4: 3x eDmg damage (11,664 at T5); 0.6s wind-up; 20 homing projectiles; 0.3 rad spread; 480 u/s; 3s life; size 7; homing 2.5 rad/s; range 0-~1300u; orb projectile.
+  - Domain [domain], from T5: opens a three-minute moon domain; the moth heals to full and scales its damage and health from 3x to 10x by phase; the moon grinds the ship for 5% max hull/sec and feeds the moth 1% max health/sec; cannot be reused while open; range 0-~1500u.
 
 --- 5. Mantis (mantis) ---
 Spawn: zones 0-4 (Common (outer) to Legendary). Pack per tier: 1 / 1 / 1 / 1 / 1 / 1.

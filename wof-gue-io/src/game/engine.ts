@@ -2352,11 +2352,17 @@ export class Game {
          * scorpion's tail sting or a dragonfly's four mouth-chomps both ride
          * this: the hold is the setup, the chomps are the payoff. */
         if (a.ph === 0) {
-          turnTo(1.4); damp(4);
-          if (a.t >= d.wind && this.touching(e, 10)) {
+          turnTo(1.4);
+          /* lunge toward the ship so a ranged enemy closes the gap and can pin
+           * it: without this a kite hovers at keep distance and the grab never
+           * reaches. The lunge runs until contact or the wind-up timeout. */
+          const ls = d.lunge ?? 900;
+          e.vx = Math.cos(toP) * ls; e.vy = Math.sin(toP) * ls;
+          if (this.touching(e, 10)) {
             a.ph = 1; a.t = 0;
             p.pull = { e, x: e.x, y: e.y, t: 0, max: d.hold ?? 2 };
             p.fireCd = Math.max(p.fireCd, 1);
+            e.vx *= 0.2; e.vy *= 0.2;
           } else if (a.t >= d.wind + 2) { a.ph = 2; a.t = 0; }
         } else if (a.ph === 1) {
           /* the enemy stays clamped onto the ship */

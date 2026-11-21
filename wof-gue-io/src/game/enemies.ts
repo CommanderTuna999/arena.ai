@@ -168,6 +168,8 @@ export interface AbilityDef {
   chompCd?: number;
   /** grab: how long the enemy holds the player */
   hold?: number;
+  /** grab: speed of the closing lunge toward the player during wind-up */
+  lunge?: number;
   /** beam: how many beams to fire */
   beams?: number;
   /** beam: rotation speed in rad/s */
@@ -546,10 +548,10 @@ const SPECIES: SpeciesDef[] = [
     id: "dragonfly", hp: 19, dmg: 30, gunType: "laser", name: "Dragonfly", hue: 188, flying: true, speed: 210, turn: 3.4, ranged: true, keep: 330, muzzle: 2.2,
     armed: { gun: true, missile: false, shield: true }, pack: [1, 1, 1, 1, 1, 1],
     abilities: [
-      { type: "charge", name: "Dash", minTier: 0, wind: 0.4, dmg: 1, speed: 620, dur: 0.4, minP: 150, maxP: 700 },
-      { type: "shoot", name: "Spray", minTier: 0, wind: 0.5, dmg: 5, n: 4, ns: 1, spread: 0.6, speed: 220, life: 3, size: 11, kind: "orb", maxP: 700 },
-      { type: "grab", name: "Chomp", minTier: 3, wind: 0.5, dmg: 7, chomps: 4, chompCd: 0.8, hold: 3, maxS: 3 },
-      { type: "ring", name: "Shockwave", minTier: 4, wind: 0.7, dmg: 8, size: 6, speed: 520, maxS: 4 },
+      { type: "charge", name: "Dash", minTier: 0, wind: 0.4, dmg: 1, speed: 620, dur: 0.4, minP: 150, maxS: 2, maxP: 900 },
+      { type: "shoot", name: "Spray", minTier: 0, wind: 0.5, dmg: 5, n: 4, ns: 1, spread: 0.6, speed: 220, life: 3, size: 11, kind: "orb", maxS: 2, maxP: 900 },
+      { type: "grab", name: "Chomp", minTier: 3, wind: 0.5, dmg: 7, chomps: 4, chompCd: 0.8, hold: 3, maxS: 4, maxP: 500, lunge: 950 },
+      { type: "ring", name: "Shockwave", minTier: 4, wind: 0.7, dmg: 8, size: 6, speed: 520, maxS: 4, maxP: 300 },
     ],
     build(b, t) {
       const pl = 1 + (t >= 3 ? 1 : 0), lg = 1 + (t >= 3 ? 1 : 0);
@@ -611,8 +613,8 @@ const SPECIES: SpeciesDef[] = [
     id: "scorpion", hp: 25, dmg: 34, gunType: "scatter", name: "Scorpion", hue: 2, flying: false, speed: 115, turn: 2.4, ranged: false, keep: 0, muzzle: 2.6,
     armed: { gun: true, missile: false, shield: false }, pack: [1, 1, 1, 1, 1, 1],
     abilities: [
-      { type: "grab", name: "Pincer Grab", minTier: 0, wind: 0.5, dmg: 2, chompCd: 0.8, hold: 2, maxS: 3.5 },
-      { type: "grab", name: "Tail Sting", minTier: 3, wind: 0.7, dmg: 3.6, chompCd: 1, hold: 5, maxS: 3.5 },
+      { type: "grab", name: "Pincer Grab", minTier: 0, wind: 0.5, dmg: 2, chompCd: 0.8, hold: 2, maxS: 3.5, lunge: 850 },
+      { type: "grab", name: "Tail Sting", minTier: 3, wind: 0.7, dmg: 3.6, chompCd: 1, hold: 5, maxS: 3.5, lunge: 750 },
     ],
     build(b, t) {
       const pl = 1 + (t >= 2 ? 1 : 0) + (t >= 4 ? 1 : 0), lg = 1 + (t >= 3 ? 1 : 0), ed = t >= 3 ? 1 : 2;
@@ -668,10 +670,10 @@ const SPECIES: SpeciesDef[] = [
     id: "spider", hp: 19, dmg: 50, name: "Widow Spider", hue: 272, flying: false, speed: 140, turn: 2.8, ranged: true, keep: 300, muzzle: 2.2,
     armed: { gun: false, missile: true, shield: false }, pack: [1, 1, 1, 1, 1, 1],
     abilities: [
-      { type: "shoot", name: "Web", minTier: 0, wind: 0.5, dmg: 0.4, n: 1, speed: 380, life: 2, size: 14, slow: 0.4, slowT: 3, poison: 0.2, kind: "web", minP: 120, maxP: 800 },
-      { type: "shoot", name: "Web Volley", minTier: 0, wind: 0.5, dmg: 0.3, n: 3, spread: 0.2, speed: 680, life: 1.5, size: 7, kind: "web", minP: 120, maxP: 800 },
-      { type: "grab", name: "Bite", minTier: 4, wind: 0.4, dmg: 1.67, chompCd: 1, hold: 3, maxS: 2.5 },
-      { type: "pull", name: "Pull", minTier: 4, wind: 0.5, dmg: 17, speed: 760, minP: 250, maxP: 850 },
+      { type: "shoot", name: "Web", minTier: 0, wind: 0.5, dmg: 0.4, n: 1, speed: 380, life: 2, size: 14, slow: 0.4, slowT: 3, poison: 0.2, kind: "web", minP: 120, maxS: 2, maxP: 900 },
+      { type: "shoot", name: "Web Volley", minTier: 0, wind: 0.5, dmg: 0.3, n: 3, spread: 0.2, speed: 680, life: 1.5, size: 7, kind: "web", minP: 120, maxS: 2, maxP: 900 },
+      { type: "grab", name: "Bite", minTier: 4, wind: 0.4, dmg: 1.67, chompCd: 1, hold: 3, maxS: 3, maxP: 500, lunge: 950 },
+      { type: "pull", name: "Pull", minTier: 4, wind: 0.5, dmg: 17, speed: 760, minP: 250, maxS: 2, maxP: 900 },
     ],
     build(b, t) {
       const pl = 1 + (t >= 2 ? 1 : 0) + (t >= 4 ? 1 : 0), lg = 1 + (t >= 3 ? 1 : 0), ed = t >= 3 ? 1 : 2;
@@ -706,10 +708,10 @@ const SPECIES: SpeciesDef[] = [
     id: "moth", hp: 20, dmg: 20, name: "Luna Moth", hue: 236, flying: true, speed: 130, turn: 2.6, ranged: true, keep: 380, muzzle: 1.4,
     armed: { gun: false, missile: false, shield: true }, pack: [1, 1, 1, 1, 1, 1],
     abilities: [
-      { type: "shoot", name: "Shot Burst", minTier: 0, wind: 0.4, dmg: 2, n: 5, spread: 1.2, speed: 600, life: 1.2, size: 5, kind: "bolt", maxP: 600 },
-      { type: "beam", name: "Rotating Lasers", minTier: 3, wind: 0.6, dmg: 1, beams: 4, beamSpin: 1.5, dur: 4, maxS: 4 },
-      { type: "shoot", name: "Missiles", minTier: 4, wind: 0.6, dmg: 3, n: 20, spread: 0.3, speed: 480, life: 3, size: 7, homing: 2.5, kind: "orb", maxP: 800 },
-      { type: "domain", name: "Domain", minTier: 5, wind: 1.0, dmg: 0.1, dur: 180, maxS: 5 },
+      { type: "shoot", name: "Shot Burst", minTier: 0, wind: 0.4, dmg: 2, n: 5, spread: 1.2, speed: 600, life: 1.2, size: 5, kind: "bolt", maxS: 2, maxP: 800 },
+      { type: "beam", name: "Rotating Lasers", minTier: 3, wind: 0.6, dmg: 1, beams: 4, beamSpin: 1.5, dur: 4, maxS: 4, maxP: 200 },
+      { type: "shoot", name: "Missiles", minTier: 4, wind: 0.6, dmg: 3, n: 20, spread: 0.3, speed: 480, life: 3, size: 7, homing: 2.5, kind: "orb", maxS: 2, maxP: 900 },
+      { type: "domain", name: "Domain", minTier: 5, wind: 1.0, dmg: 0.1, dur: 180, maxS: 5, maxP: 200 },
     ],
     build(b, t) {
       const pl = 1 + (t >= 3 ? 1 : 0), ed = t >= 3 ? 1 : 2;

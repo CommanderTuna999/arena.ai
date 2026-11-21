@@ -44,6 +44,22 @@ const moth = SPECIES_LIST[idx[3]];
 assert(moth.abilities.map((a) => a.name).join(",") === "Shot Burst,Rotating Lasers,Missiles,Domain", `moth abilities: ${moth.abilities.map((a) => a.name).join(",")}`);
 assert(moth.abilities[3].minTier === 5 && moth.abilities[3].type === "domain", "moth: domain mythic+");
 
+/* ---- every ability's reach must cover the enemy's stand-off distance ---- */
+/* ranged enemies kite at keep = spd.keep + radius*0.9; if an ability's max
+ * range falls short of that, it can never fire and silently dead-codes. */
+const SHIP_R = 14;
+for (const id of ids) {
+  const spi = SPECIES_LIST.findIndex((s) => s.id === id);
+  for (const tier of [1, 2, 3, 4, 5]) {
+    const e = g.makeEnemy(spi, tier, 5000, 5000, "test", 3);
+    for (const a of e.abil) {
+      const maxD = (a.maxS ?? 0) * e.S + (a.maxP ?? 0);
+      const reach = maxD === 0 ? Infinity : maxD;
+      assert(reach + SHIP_R >= e.keep, `${id} T${tier} ${a.name}: reach ${reach.toFixed(0)} reaches keep ${e.keep.toFixed(0)}`);
+    }
+  }
+}
+
 /* ---- abilities fire when their cooldown expires ------------------------- */
 const spawnAt = (i: number, tier: number) => g.makeEnemy(i, tier, g.player.x + 600, g.player.y, "test", 7);
 
