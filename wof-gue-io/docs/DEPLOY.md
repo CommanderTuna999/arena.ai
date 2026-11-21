@@ -40,6 +40,10 @@ Saves follow the **account**, not the browser, but only when the project has a d
 
 1. Vercel → project **wofgue.io** → **Storage** → **Create Database** → pick the Postgres/Neon
    integration (free tier is enough) → connect it to this project.
+   - **Neon Auth: no.** Sign-in is already handled by `/api/auth/*` with our own callsign + password
+     hashes, so a second identity provider would only duplicate it.
+   - **Realtime / Data API: no.** Saves are a single row the owner writes a few times a minute;
+     nothing subscribes to changes. The app speaks plain Postgres over `pg`.
 2. Vercel writes `DATABASE_URL` into the project environment automatically. Nothing else to do:
    `ensureSchema()` creates `users` and `players` on the first auth or save call.
 3. Redeploy (or wait for the next deploy) so the running functions pick the variable up.
