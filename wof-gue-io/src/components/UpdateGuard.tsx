@@ -68,7 +68,7 @@ export default function UpdateGuard() {
           let last = "";
           try { last = sessionStorage.getItem(RELOAD_KEY) ?? ""; } catch { /* ignore */ }
           if (last === j.version) return; // already tried once; do not loop
-          hold("PAUSING GAMEPLAY FOR UPDATE · PLEASE STAND BY");
+          hold("Pausing gameplay for update - please stand by");
           reloading = true;
           try { sessionStorage.setItem(RELOAD_KEY, j.version); } catch { /* ignore */ }
           const u = new URL(window.location.href);
@@ -80,7 +80,7 @@ export default function UpdateGuard() {
         if (j.updating) {
           if (!waitingSince) waitingSince = Date.now();
           if (Date.now() - waitingSince < STALE_LIMIT_MS) {
-            hold("PAUSING GAMEPLAY FOR UPDATE · PLEASE STAND BY");
+            hold("Pausing gameplay for update - please stand by");
             return;
           }
         }
@@ -110,7 +110,7 @@ export default function UpdateGuard() {
       <div className="pointer-events-none absolute inset-0 opacity-40" style={{ background: "radial-gradient(ellipse at center, rgba(77,255,210,0.12), transparent 62%)" }} />
       <div className="relative flex max-w-[34rem] flex-col items-center gap-5 text-center">
         <div className="text-[11px] tracking-[0.42em] text-cyan-300/70">WOFGUE</div>
-        <div className="text-[clamp(1.05rem,4.4vw,1.7rem)] font-black uppercase leading-tight tracking-[0.14em] text-white [text-shadow:0_0_18px_rgba(77,255,210,0.45)]">
+        <div className="text-[clamp(1.05rem,4.4vw,1.7rem)] font-black uppercase leading-tight tracking-[0.14em] uppercase text-white [text-shadow:0_0_18px_rgba(77,255,210,0.45)]">
           {state.text}
         </div>
         <div className="h-[3px] w-56 overflow-hidden rounded-sm bg-white/10">
