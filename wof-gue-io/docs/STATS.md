@@ -763,13 +763,15 @@ Shockwave (ab_shockwave): 16s base cooldown. 520u blast: 5x st.dmg x eff, 900u/s
 9. BASE CANNON AND UPGRADES
 ============================================================
 
-The tree is drawn bottom-up: the free **Stinger** at the bottom, the three tier 1 chassis above it. Only one gun is fitted at a time; fitting another is free and every chassis keeps its own levels.
+The tree is drawn bottom-up: the free **Stinger** at the bottom, the three tier 1 chassis above it. Only one gun is fitted at a time; fitting another is free and every chassis keeps its own levels. Each chassis is drawn on the hull and in the tree icon from its `look` entry, with its own muzzle points, recoil kick and per-shot heat.
 
 Chassis | Tier | Damage | Interval | Round | Upgrades | Bill
 Stinger | 0 | 20 | 0.7s | 640u/s bolt, 820u reach, small charge (0.3x the round in a 44u radius) | Damage | free, fitted at the start
-Skewer | 1 (needs Stinger) | 200 | 1.5s | hitscan line, 2400u, drawn as a hard white line | Damage, Crit Chance, Crit Damage, Physical Penetration | 300 CR + 2x Common carapace plate, 2x Common antenna arm, 1x Uncommon core
-Peashooter | 1 (needs Stinger) | 15 | 0.1s | 430u/s seed, 720u reach, 12.6 deg base spread | Damage, Accuracy, Projectile Speed | 300 CR + 1x Common carapace plate, 1x Common antenna arm, 1x Common wing, 1x Uncommon core
-Workhorse | 1 (needs Stinger) | 45 | 0.55s | 720u/s round, 900u reach, 1.7 deg base spread | Damage, Fire Rate, Physical Penetration, Barrels (2) | 300 CR + 2x Common carapace plate, 1x Common antenna arm, 1x Common body segment, 1x Uncommon core
+Skewer | 1 (needs Stinger) | 200 | 1.5s | hitscan line, 2400u, drawn as a hard white line | Damage, Crit Chance, Crit Damage, Physical Penetration | 300 CR + 2x Common leg, 1x Common antenna, 1x Common head, 1x Uncommon core
+Peashooter | 1 (needs Stinger) | 35 | 0.1s | 430u/s seed, 720u reach, 12.6 deg base spread | Damage, Accuracy, Projectile Speed, Crit Chance, Crit Damage | 300 CR + 2x Common leg, 1x Common core, 1x Uncommon core
+Workhorse | 1 (needs Stinger) | 45 | 0.55s | 720u/s round, 900u reach, 1.7 deg base spread | Damage, Fire Rate, Physical Penetration, Barrels (2) | 300 CR + 2x Common leg, 1x Common head, 1x Common core, 1x Uncommon core
+
+Feel per chassis: Stinger — one muzzle at 19u, barrel 20u long, kick 9 u/s, 5.5% heat per shot. Skewer — one muzzle at 37u, barrel 38u, kick 34, 34% heat. Peashooter — one muzzle at 16u, three spigots drawn, kick 3, 1.2% heat. Workhorse — two muzzles at 25u/±5.5u, kick 16, 6% heat; a single-round trigger alternates barrels. Heat bleeds at 34%/s and only glows in the bore: nothing overheats or locks out yet. Recoil springs to 1 on the trigger and decays at 5.5/s, sliding the gun 30% of its length back into the mount.
 
 Bills are mostly legs, common cores, heads and antennae, and never name a species: any insect's leg will do. A head is a body segment part called "Head" and an antenna is a spike part called "Antenna", so a plain body segment or a tail spike does not fill those lines. The tree consumes the cheapest matching parts in storage when you build, and admin mode's infinite components skips the bill (but not the 300 credits).
 

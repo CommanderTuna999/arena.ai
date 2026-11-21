@@ -556,6 +556,58 @@ function Hangar({ game, hud, onClose }: { game: Game; hud: Hud; onClose: () => v
   );
 }
 
+/** The chassis as a side profile, drawn from the same `look` data the hull uses:
+ *  fat bolt thrower, long lance, three spigots or a genuine twin. */
+function CannonIcon({ c, className }: { c: CannonDef; className?: string }) {
+  const { style, bore, len, hue } = c.look;
+  const trim = `hsl(${hue} 92% 64%)`;
+  const steel = "#0b1a26";
+  const edge = `hsl(${hue} 70% 48%)`;
+  const cy = 13;
+  const x1 = Math.min(46, 10 + len);
+  const barrel = (y: number, w: number, xEnd: number, key: string) => (
+    <g key={key}>
+      <rect x={10} y={y - w} width={Math.max(2, xEnd - 10)} height={w * 2} rx={0.8} fill={steel} stroke={edge} strokeWidth={0.7} />
+      <line x1={12} y1={y} x2={xEnd - 1.5} y2={y} stroke={trim} strokeWidth={0.8} opacity={0.9} />
+      <ellipse cx={xEnd} cy={y} rx={0.8} ry={w + 0.4} fill="none" stroke={trim} strokeWidth={0.7} />
+    </g>
+  );
+  return (
+    <svg viewBox="0 0 48 26" className={className} aria-hidden>
+      {/* breech block bolted to the hull */}
+      <path d={`M6 ${cy - bore - 2} L11 ${cy - bore - 3.4} L11 ${cy + bore + 3.4} L6 ${cy + bore + 2} Z`} fill={steel} stroke={edge} strokeWidth={0.7} />
+      {style === "spray" && (
+        <>
+          {barrel(cy - 3.4, bore * 0.62, x1 - 2, "a")}
+          {barrel(cy + 3.4, bore * 0.62, x1 - 2, "c")}
+          {barrel(cy, bore * 0.72, x1, "b")}
+        </>
+      )}
+      {style === "lance" && (
+        <>
+          <rect x={11} y={cy - bore - 2.6} width={Math.max(2, x1 - 16)} height={(bore + 2.6) * 2} fill="rgba(120,200,235,0.10)" stroke={`hsl(${hue} 80% 70% / 0.45)`} strokeWidth={0.6} />
+          {barrel(cy, bore, x1, "a")}
+          {[0, 1].map((k) => (
+            <line key={k} x1={18 + k * 7} y1={cy - bore - 2.2} x2={18 + k * 7} y2={cy + bore + 2.2} stroke={trim} strokeWidth={1.1} />
+          ))}
+        </>
+      )}
+      {style === "twin" && (
+        <>
+          {c.muzzles.map((m, i) => barrel(cy + m.y, bore * 0.72, x1, `m${i}`))}
+          <line x1={13} y1={cy + c.muzzles[0].y} x2={13} y2={cy + c.muzzles[c.muzzles.length - 1].y} stroke={edge} strokeWidth={1} />
+        </>
+      )}
+      {style === "bolt" && (
+        <>
+          {barrel(cy, bore, x1 - 4, "a")}
+          <path d={`M${x1 - 4} ${cy - bore - 2.4} L${x1 + 1} ${cy - bore - 3.6} L${x1 + 1} ${cy + bore + 3.6} L${x1 - 4} ${cy + bore + 2.4} Z`} fill={steel} stroke={edge} strokeWidth={0.7} />
+        </>
+      )}
+    </svg>
+  );
+}
+
 /* Cannon tree, drawn bottom-up exactly like the sheet: the free Stinger at the
  * bottom, the tier 1 chassis above it. Every gun owns its own tracks, and only
  * one chassis can be fitted at a time — buying another does not erase the work
@@ -606,19 +658,24 @@ function CannonTree({ game }: { game: Game }) {
                           disabled={!owned}
                           className={`w-full px-2.5 py-2 text-left ${owned && !selected ? "hover:bg-cyan-400/10" : ""} ${owned ? "" : "cursor-default"}`}
                         >
-                          <div className="flex items-center justify-between gap-1">
-                            <div className="flex min-w-0 items-center gap-1.5">
-                              <span className="grid h-5 w-5 shrink-0 place-items-center rounded-sm border border-yellow-300/50 bg-yellow-300/10 text-[10px] font-black text-yellow-200">{c.tier}</span>
-                              <span className={`truncate text-[13px] font-black tracking-wide ${selected ? "text-yellow-100" : "text-white"}`}>{c.name}</span>
+                          <div className="flex items-start gap-1.5">
+                            <CannonIcon c={c} className="mt-0.5 h-6 w-11 shrink-0 opacity-90" />
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center justify-between gap-1">
+                                <div className="flex min-w-0 items-center gap-1.5">
+                                  <span className="grid h-5 w-5 shrink-0 place-items-center rounded-sm border border-yellow-300/50 bg-yellow-300/10 text-[10px] font-black text-yellow-200">{c.tier}</span>
+                                  <span className={`truncate text-[13px] font-black tracking-wide ${selected ? "text-yellow-100" : "text-white"}`}>{c.name}</span>
+                                </div>
+                                {selected ? <span className="shrink-0 rounded-sm bg-yellow-300/20 px-1 py-0.5 text-[8px] font-black tracking-[0.14em] text-yellow-200">FITTED</span>
+                                  : owned ? <span className="shrink-0 rounded-sm bg-cyan-400/15 px-1 py-0.5 text-[8px] font-black tracking-[0.14em] text-cyan-200">OWNED</span>
+                                    : <span className="shrink-0 rounded-sm bg-white/10 px-1 py-0.5 text-[8px] font-black tracking-[0.14em] text-white/40">LOCKED</span>}
+                              </div>
+                              <div className="mt-1 flex flex-wrap gap-x-2 gap-y-0.5 text-[10px] text-white/60">
+                                <span><b className="text-white/85">{fmtNum(cannonDmg(c, cl))}</b> dmg</span>
+                                <span><b className="text-white/85">{cannonRate(c, cl).toFixed(c.hitscan ? 2 : 1)}</b>/s</span>
+                                <span>{c.hitscan ? "hitscan" : `${c.range}u`}</span>
+                              </div>
                             </div>
-                            {selected ? <span className="shrink-0 rounded-sm bg-yellow-300/20 px-1 py-0.5 text-[8px] font-black tracking-[0.14em] text-yellow-200">FITTED</span>
-                              : owned ? <span className="shrink-0 rounded-sm bg-cyan-400/15 px-1 py-0.5 text-[8px] font-black tracking-[0.14em] text-cyan-200">OWNED</span>
-                                : <span className="shrink-0 rounded-sm bg-white/10 px-1 py-0.5 text-[8px] font-black tracking-[0.14em] text-white/40">LOCKED</span>}
-                          </div>
-                          <div className="mt-1 flex flex-wrap gap-x-2 gap-y-0.5 text-[10px] text-white/60">
-                            <span><b className="text-white/85">{fmtNum(cannonDmg(c, cl))}</b> dmg</span>
-                            <span><b className="text-white/85">{cannonRate(c, cl).toFixed(c.hitscan ? 2 : 1)}</b>/s</span>
-                            <span>{c.hitscan ? "hitscan" : `${c.range}u`}</span>
                           </div>
                         </button>
                         {!owned && (
@@ -657,12 +714,9 @@ function CannonTree({ game }: { game: Game }) {
           <div className="text-[10px] font-bold tracking-[0.22em] text-cyan-200/60">FITTED · {fitted.name.toUpperCase()}</div>
           <div className="text-[10px] text-white/40">tier {fitted.tier}</div>
         </div>
-        <p className="mt-1 text-[11px] leading-snug text-white/55">{fitted.desc}</p>
-        <div className="mt-2 flex flex-wrap gap-x-3 gap-y-0.5 rounded-sm border border-cyan-300/15 bg-cyan-400/5 px-2 py-1 text-[10px] text-white/55">
-          <span>{fitted.hitscan ? "hitscan line" : `${fmtNum(Math.round(fitted.speed))} u/s`}</span>
-          <span>{fitted.range}u reach</span>
-          <span>{fmtNum(fitted.dmg)} base dmg</span>
-          <span>{fitted.interval}s base interval</span>
+        <div className="mt-1.5 flex items-center gap-2">
+          <CannonIcon c={fitted} className="h-10 w-20 shrink-0" />
+          <p className="text-[11px] leading-snug text-white/55">{fitted.desc}</p>
         </div>
         <div className="mt-3 grid gap-2">
           {cannonTracks(fitted).map((t) => {

@@ -1,5 +1,5 @@
 import { TAU, clamp, fmtNum } from "./math";
-import { BASE, CAT_NAME, KIND_CAT, RARITIES, SHIP_R, W_SLOTS, WEAPON_RANGE, WEAPON_TINT, WORLD_R, ZONE_EDGES } from "./data";
+import { BASE, CANNON_BY_ID, CANNONS, CAT_NAME, KIND_CAT, RARITIES, SHIP_R, W_SLOTS, WEAPON_RANGE, WEAPON_TINT, WORLD_R, ZONE_EDGES } from "./data";
 import { N_ROPE, legHealthy, plateGrow, type Enemy, type Game, type LComp } from "./engine";
 
 function bend(e: Enemy, p: { seg: number }) {
@@ -878,6 +878,115 @@ function drawRope(g: Game, ctx: CanvasRenderingContext2D, h: { state: number; no
   ctx.restore(); ctx.shadowBlur = 0;
 }
 
+/* The fitted chassis, drawn barrel-forward from the same look data the CANNON
+ * tree icon uses. Recoil slides the whole gun back into its mount on every
+ * trigger, heat tints the shroud and puts a glow in the bore, and the barrel
+ * that actually fired flashes. Silhouettes differ per gun: fat bolt thrower,
+ * long lance, three stubby spigots, or a genuine twin. */
+function drawCannon(g: Game, ctx: CanvasRenderingContext2D, z: number, t: number) {
+  const p = g.player, st = g.stats;
+  const c = CANNON_BY_ID[st.cannonId] ?? CANNONS[0];
+  const look = c.look;
+  const rec = p.recoil * p.recoil;                     // fast out, settles in
+  const back = rec * look.len * 0.3;
+  const heat = p.heat;
+  const trim = `hsl(${look.hue} 92% ${58 + 10 * heat}%)`;
+  const steel = "#0a1723";
+  const edge = `hsl(${look.hue} 70% 46%)`;
+  const bore = look.bore;
+  const mz = c.muzzles;
+
+  /* breech block, bolted to the hull's nose */
+  ctx.fillStyle = steel; ctx.strokeStyle = `hsla(${look.hue} 70% 60% / 0.5)`; ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(6 - back, -bore - 2.2); ctx.lineTo(11 - back, -bore - 3.4);
+  ctx.lineTo(11 - back, bore + 3.4); ctx.lineTo(6 - back, bore + 2.2); ctx.closePath();
+  ctx.fill(); ctx.stroke();
+
+  const barrel = (y: number, w: number, len: number, alpha: number) => {
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = steel;
+    ctx.strokeStyle = edge;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.rect(9 - back, y - w, Math.max(1, len - 9), w * 2);
+    ctx.fill(); ctx.stroke();
+    /* energy seam down the barrel: this is what heats up */
+    ctx.strokeStyle = heat > 0.05 ? `hsl(${Math.max(6, 40 - 34 * heat)} 100% ${62 + 8 * heat}%)` : trim;
+    ctx.globalAlpha = alpha * (0.55 + 0.45 * heat);
+    ctx.lineWidth = 1.1;
+    ctx.beginPath(); ctx.moveTo(11 - back, y); ctx.lineTo(len - back - 2, y); ctx.stroke();
+    ctx.globalAlpha = alpha;
+    /* muzzle ring */
+    ctx.strokeStyle = `hsla(${look.hue} 90% 78% / 0.9)`;
+    ctx.lineWidth = 1.2;
+    ctx.beginPath(); ctx.ellipse(len - back, y, 1.4, w + 0.6, 0, 0, TAU); ctx.stroke();
+  };
+
+  if (look.style === "spray") {
+    /* three stubby spigots: a hose, not a rifle */
+    barrel(-3.4, bore * 0.62, look.len - 2, 0.95);
+    barrel(0, bore * 0.7, look.len, 1);
+    barrel(3.4, bore * 0.62, look.len - 2, 0.95);
+  } else if (look.style === "lance") {
+    /* long slim tube with a cooling shroud and two coils */
+    ctx.fillStyle = "rgba(120,200,235,0.10)";
+    ctx.strokeStyle = `hsla(${look.hue} 80% 70% / 0.45)`;
+    ctx.beginPath(); ctx.rect(11 - back, -bore - 2.6, look.len - 16, (bore + 2.6) * 2); ctx.fill(); ctx.stroke();
+    barrel(0, bore, look.len, 1);
+    for (let k = 0; k < 2; k++) {
+      const x = 18 + k * 7 - back;
+      ctx.strokeStyle = trim; ctx.lineWidth = 1.4;
+      ctx.beginPath(); ctx.moveTo(x, -bore - 2.2); ctx.lineTo(x, bore + 2.2); ctx.stroke();
+    }
+  } else if (look.style === "twin") {
+    /* two real barrels on two real muzzles */
+    for (const m of mz) barrel(m.y, bore * 0.72, look.len, 1);
+    /* shared yoke across both barrels */
+    ctx.strokeStyle = `hsla(${look.hue} 70% 62% / 0.6)`; ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.moveTo(13 - back, mz[0].y); ctx.lineTo(13 - back, mz[mz.length - 1].y); ctx.stroke();
+  } else {
+    /* bolt: one fat barrel with a flared muzzle brake */
+    barrel(0, bore, look.len, 1);
+    ctx.fillStyle = steel; ctx.strokeStyle = edge; ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(look.len - back - 4, -bore - 2.4); ctx.lineTo(look.len - back + 0.5, -bore - 3.6);
+    ctx.lineTo(look.len - back + 0.5, bore + 3.6); ctx.lineTo(look.len - back - 4, bore + 2.4);
+    ctx.closePath(); ctx.fill(); ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+
+  /* heat: the bore glows and the shroud vents steam once it is properly hot */
+  if (heat > 0.18) {
+    const glowA = (heat - 0.18) * 0.85;
+    const tip = look.len - back;
+    const gr = 5 + 9 * heat;
+    const grad = ctx.createRadialGradient(tip, 0, 0.5, tip, 0, gr);
+    grad.addColorStop(0, `rgba(255,${180 - 120 * heat},90,${glowA})`);
+    grad.addColorStop(1, "rgba(255,120,40,0)");
+    ctx.fillStyle = grad;
+    ctx.beginPath(); ctx.arc(tip, 0, gr, 0, TAU); ctx.fill();
+  }
+
+  /* flash on the barrel that last fired */
+  if (p.muzzleFlash > 0) {
+    const m = mz[p.muzzle % mz.length] ?? mz[0];
+    const f = p.muzzleFlash;
+    const len = 6 + 12 * f;
+    const tip = look.len - back;
+    ctx.fillStyle = `rgba(255,${240 - 40 * (1 - f)},${200 - 80 * (1 - f)},${0.55 + 0.45 * f})`;
+    ctx.shadowColor = trim; ctx.shadowBlur = 12 * f;
+    ctx.beginPath();
+    ctx.moveTo(tip, m.y - 2.6 * f); ctx.lineTo(tip + len, m.y);
+    ctx.lineTo(tip, m.y + 2.6 * f); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = "rgba(255,255,255,0.75)"; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(tip + 1, m.y); ctx.lineTo(tip + len * 0.6, m.y); ctx.stroke();
+    ctx.shadowBlur = 0;
+  }
+  void z; void t;
+}
+
 function drawShipShape(ctx: CanvasRenderingContext2D, color: string, alpha: number, z: number, t = 0) {
   const lw = 1.4 / Math.max(z, 0.6);
   const seam = "rgba(150,215,240,0.22)";
@@ -1177,6 +1286,7 @@ function drawPlayer(g: Game, ctx: CanvasRenderingContext2D, z: number, t: number
     ctx.restore(); ctx.shadowBlur = 0;
   }
   drawShipShape(ctx, p.flash > 0 ? "#ff6b81" : "#7df9ff", 1, z, t);
+  drawCannon(g, ctx, z, t);
 
   /* ---- fitted hardware ---- */
   const armor = equipped(g, "armor");

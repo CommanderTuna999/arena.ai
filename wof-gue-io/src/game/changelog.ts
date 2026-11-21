@@ -8,7 +8,7 @@
  *   CHANGELOG and mirror the details in docs/CHANGELOG.md.
  */
 
-export const VERSION = "2.12.1";
+export const VERSION = "2.13.0";
 
 export interface ChangeEntry {
   version: string;
@@ -19,6 +19,20 @@ export interface ChangeEntry {
 }
 
 export const CHANGELOG: ChangeEntry[] = [
+  {
+    version: "2.13.0",
+    date: "20 Nov 2026",
+    title: "Guns you can see, and barrels you can feel",
+    points: [
+      "Every chassis has a picture in the CANNON tree now, drawn from the same data the hull uses: fat bolt thrower, long lance, three spigots, or a genuine twin.",
+      "The fitted gun is drawn on your ship, and it changes when you change guns. The Skewer's barrel is almost twice the length of the Peashooter's.",
+      "Recoil is real: the gun slides back into its mount on every trigger, the ship is shoved along the shot (hard for the Skewer, barely at all for the Peashooter) and the barrel that fired flashes.",
+      "Barrels carry heat. It builds with every trigger, glows in the bore and cools when you stop. The overheat lockout is not wired yet - the gauge and the glow are in place for it.",
+      "The Workhorse is a twin: rounds alternate between its two barrels, one per trigger, and the barrel upgrade fires both at once.",
+      "Descriptions are the sheet's lines and nothing else: 'Everyone's gotta start somewhere.', 'Pretty accurate.', 'Spray and pray, huh?', 'Boring...'.",
+      "The sheet's latest numbers are in: the Peashooter hits for 35 a seed now and carries Crit Chance and Crit Damage of its own.", 
+    ],
+  },
   {
     version: "2.12.1",
     date: "20 Nov 2026",

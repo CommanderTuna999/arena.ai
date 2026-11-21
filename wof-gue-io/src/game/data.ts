@@ -152,6 +152,18 @@ export interface PartBill {
   label: string;
 }
 
+/** How a chassis is drawn — on the hull and in the tree icon, from the same data. */
+export interface CannonLook {
+  /** barrel length measured from the hull centre, in ship-space units */
+  len: number;
+  /** barrel bore (half-thickness) */
+  bore: number;
+  /** hue of the gun's energy trim */
+  hue: number;
+  /** silhouette: fat bolt thrower, long lance, stubby spray, paired barrels */
+  style: "bolt" | "lance" | "spray" | "twin";
+}
+
 export interface CannonDef {
   id: string;
   name: string;
@@ -175,6 +187,16 @@ export interface CannonDef {
   credits: number;
   /** component bill, on top of the credits */
   parts: PartBill[];
+  /** where rounds actually leave the gun, in ship space. Two entries means two
+   *  barrels: a single-round trigger alternates between them, and the barrel
+   *  upgrade fires both at once. */
+  muzzles: { x: number; y: number }[];
+  /** hull shove (world units/s) applied along the shot */
+  kick: number;
+  /** heat added per trigger, 0..1 of the gauge. Cooling is shared; each gun's
+   *  own curve and the overheat lockout arrive with the cooling tracks. */
+  heat: number;
+  look: CannonLook;
   /** tracks this chassis owns, in display order */
   tracks: CannonTrackId[];
   /** every track price on this chassis is scaled by this */
@@ -185,13 +207,15 @@ export interface CannonDef {
 export const CANNONS: CannonDef[] = [
   {
     id: "sting", name: "Stinger", tier: 0,
-    desc: "The gun the yard gives every pilot: one fat round bolt at a time, slow enough to watch, with a small charge that pops on impact.",
+    desc: "Everyone’s gotta start somewhere.",
     dmg: 20, interval: 0.7, speed: 640, range: 820, boom: 1,
     credits: 0, parts: [], tracks: ["dmg"], costMul: 1, requires: null,
+    muzzles: [{ x: 19, y: 0 }], kick: 9, heat: 0.055,
+    look: { len: 20, bore: 5.2, hue: 188, style: "bolt" },
   },
   {
     id: "skewer", name: "Skewer", tier: 1,
-    desc: "Pretty accurate. A hitscan slug drawn as a hard white line from the muzzle to whatever it stops inside — and at 200 a shot, that is usually the core.",
+    desc: "Pretty accurate.",
     dmg: 200, interval: 1.5, speed: 0, range: 2400, hitscan: true,
     credits: 300,
     parts: [
@@ -201,22 +225,26 @@ export const CANNONS: CannonDef[] = [
       { kind: "core", tier: 1, count: 1, label: "core" },
     ],
     tracks: ["dmg", "crit", "critDmg", "pen"], costMul: 2.4, requires: "sting",
+    muzzles: [{ x: 37, y: 0 }], kick: 34, heat: 0.34,
+    look: { len: 38, bore: 3.2, hue: 196, style: "lance" },
   },
   {
     id: "peashooter", name: "Peashooter", tier: 1,
-    desc: "Spray and pray, huh? A hose of weak little seeds at a ludicrous rate: light, fast-firing and hopeless past knife range until you buy the accuracy.",
-    dmg: 15, interval: 0.1, speed: 430, range: 720, spread: 0.22,
+    desc: "Spray and pray, huh?",
+    dmg: 35, interval: 0.1, speed: 430, range: 720, spread: 0.22,
     credits: 300,
     parts: [
       { kind: "leg", tier: 0, count: 2, label: "leg" },
       { kind: "core", tier: 0, count: 1, label: "core" },
       { kind: "core", tier: 1, count: 1, label: "core" },
     ],
-    tracks: ["dmg", "acc", "speed"], costMul: 1, requires: "sting",
+    tracks: ["dmg", "acc", "speed", "crit", "critDmg"], costMul: 1, requires: "sting",
+    muzzles: [{ x: 16, y: 0 }], kick: 3, heat: 0.012,
+    look: { len: 16, bore: 3.4, hue: 142, style: "spray" },
   },
   {
     id: "workhorse", name: "Workhorse", tier: 1,
-    desc: "Boring... and that is the point. Medium pace, medium accuracy, medium punch, and a barrel upgrade that doubles the whole thing if you can pay for it.",
+    desc: "Boring...",
     dmg: 45, interval: 0.55, speed: 720, range: 900, spread: 0.03,
     credits: 300,
     parts: [
@@ -226,6 +254,9 @@ export const CANNONS: CannonDef[] = [
       { kind: "core", tier: 1, count: 1, label: "core" },
     ],
     tracks: ["dmg", "rate", "pen", "barrels"], costMul: 1.6, requires: "sting",
+    /* a genuine twin: rounds alternate barrels, and the barrel upgrade fires both */
+    muzzles: [{ x: 25, y: -5.5 }, { x: 25, y: 5.5 }], kick: 16, heat: 0.06,
+    look: { len: 26, bore: 4.6, hue: 34, style: "twin" },
   },
 ];
 export const CANNON_BY_ID: Record<string, CannonDef> = Object.fromEntries(CANNONS.map((c) => [c.id, c]));
@@ -766,6 +797,8 @@ export interface Stats {
   hitscan: boolean;
   /** round speed and reach, from the chassis and its projectile-speed track */
   bulletSpeed: number; bulletRange: number;
+  /** the fitted chassis and everything the hull and the HUD need to draw it */
+  cannonId: string; muzzles: { x: number; y: number }[]; kick: number; heatPerShot: number;
   hull: number; regen: number; armor: number; reactive: number; thorn: number; poisonResist: number;
   shieldMax: number; shieldRegen: number; shieldDelay: number; reflect: boolean; dampers: number;
   dodge: number; kinetic: number; novaOnHit: number; nullField: number;
@@ -868,6 +901,10 @@ export function computeStats(s: SaveData): Stats {
     hitscan: !!cannon.hitscan,
     bulletSpeed: cannonSpeed(cannon, cl),
     bulletRange: cannon.range,
+    cannonId: cannon.id,
+    muzzles: cannon.muzzles,
+    kick: cannon.kick,
+    heatPerShot: cannon.heat,
     hull,
     regen,
     armor,

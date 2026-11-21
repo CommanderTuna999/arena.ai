@@ -26,7 +26,7 @@ assert(sting.tier === lowest, `the Stinger is the bottom row of the tree (tier $
 const tier1 = CANNONS.filter((c) => c.tier === 1);
 assert(tier1.length === 3, `three tier 1 chassis (${tier1.map((c) => c.name).join(", ")})`);
 assert(tier1.every((c) => c.requires === "sting"), "every tier 1 chassis requires the Stinger");
-assert(tier1.every((c) => c.name !== "" && c.desc.length > 20), "every tier 1 chassis has a name and a description");
+assert(tier1.every((c) => c.name !== "" && c.desc.length > 6), "every tier 1 chassis has a name and a description");
 
 /* --- bills: 3-4 common legs/cores/heads/antennae plus an uncommon core --- */
 const ALLOWED = new Set(["leg", "core", "segment", "spike"]);
@@ -45,10 +45,10 @@ assert(tier1.every((c) => c.parts.every((b) => !("species" in b))), "no bill lin
 /* --- the frames' upgrades, per chassis --- */
 assert(cannonTracks(sting).map((t) => t.id).join() === "dmg", "the Stinger has a damage track and nothing else");
 assert(cannonTracks(skewer).map((t) => t.id).join() === "dmg,crit,critDmg,pen", "the Skewer carries damage, crit chance, crit damage and penetration");
-assert(cannonTracks(pea).map((t) => t.id).join() === "dmg,acc,speed", "the Peashooter carries damage, accuracy and projectile speed");
+assert(cannonTracks(pea).map((t) => t.id).join() === "dmg,acc,speed,crit,critDmg", "the Peashooter carries damage, accuracy, projectile speed, crit chance and crit damage");
 assert(cannonTracks(horse).map((t) => t.id).join() === "dmg,rate,pen,barrels", "the Workhorse carries damage, fire rate, penetration and barrels");
 assert(skewer.hitscan === true && skewer.dmg === 200 && skewer.interval === 1.5, "the Skewer is a 200-damage hitscan with a 1.5s interval");
-assert(pea.dmg === 15 && Math.abs(pea.interval - 0.1) < 1e-9 && (pea.spread ?? 0) > 0.1, "the Peashooter is a 15-damage spray gun");
+assert(pea.dmg === 35 && Math.abs(pea.interval - 0.1) < 1e-9 && (pea.spread ?? 0) > 0.1, "the Peashooter is a 35-damage spray gun");
 assert(horse.dmg === 45 && (horse.spread ?? 0) < 0.1, "the Workhorse sits in the middle");
 
 /* --- barrels stop at two, and cost a fortune to get there --- */
@@ -118,6 +118,35 @@ assert(computeStats(g.save).barrels === 2, "two barrels on the Workhorse");
 assert(g.buyCannon("barrels", 1) === 0, "no third barrel");
 g.selectCannon("sting");
 assert(g.buyCannon("barrels", 1) === 0, "the Stinger has no barrel track to buy");
+
+/* --- barrels are real places on the hull, not one point --- */
+assert(sting.muzzles.length === 1 && skewer.muzzles.length === 1, "single-barrel guns have one muzzle");
+assert(horse.muzzles.length === 2, "the Workhorse has two barrels");
+assert(horse.desc === "Boring..." && skewer.desc === "Pretty accurate." && pea.desc === "Spray and pray, huh?", "the tier 1 descriptions are the sheet's lines, nothing appended");
+assert(sting.desc === "Everyone’s gotta start somewhere.", "the Stinger carries the sheet's description");
+assert(new Set(CANNONS.map((c) => c.look.style)).size === 4, "every chassis wears a different silhouette");
+
+const gf = new Game(newSave(), "t") as any;
+gf.player.x = 5200; gf.player.y = 0; gf.player.dead = false;
+gf.save.cannon.owned.push("workhorse");
+gf.selectCannon("workhorse");
+gf.input.lmb = true;
+const fire = () => { gf.player.fireCd = 0; gf.bullets = []; (gf as any).firePlayer(1 / 60); return gf.bullets as { x: number; y: number }[]; };
+let shots = fire();
+assert(shots.length === 1, `one round per trigger before the barrel upgrade (got ${shots.length})`);
+assert(gf.player.muzzle === 1, "the second barrel is up next: a twin alternates");
+shots = fire();
+assert(shots.length === 1 && gf.player.muzzle === 0, "the next trigger comes out of the other barrel");
+assert(gf.player.recoil === 1 && gf.player.muzzleFlash === 1, "firing kicks the gun back and lights the muzzle");
+assert(gf.player.heat > 0, "firing heats the barrel");
+const hot = gf.player.heat;
+gf.player.dead = false; gf.update(0.5);
+assert(gf.player.heat < hot, "and it cools off when you stop");
+gf.save.credits = 100000;
+gf.buyCannon("barrels", 1);
+shots = fire();
+assert(shots.length === 2, `the barrel upgrade throws two rounds (got ${shots.length})`);
+assert(Math.hypot(shots[0].x - shots[1].x, shots[0].y - shots[1].y) > 5, "and they leave from two different muzzles");
 
 /* --- accuracy and speed tracks only move what they should --- */
 assert(cannonSpread(pea, { acc: 0 }) > cannonSpread(pea, { acc: 10 }), "accuracy tightens the Peashooter's spray");
