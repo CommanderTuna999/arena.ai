@@ -224,29 +224,29 @@ function Bar({ v, max, color, h = 10 }: { v: number; max: number; color: string;
   );
 }
 
-/** An ancient cash coin: struck gold with a square hole through the middle. */
+/** Neon credit chip: a glowing hexagonal coin with a square hole cut through it. */
 function CreditCoin({ size = 18 }: { size?: number }) {
+  const outer = "30,16 23,28.12 9,28.12 2,16 9,3.88 23,3.88";
+  const inner = "26,16 21,24.66 11,24.66 6,16 11,7.34 21,7.34";
   return (
-    <svg viewBox="0 0 32 32" width={size} height={size} className="block">
+    <svg viewBox="0 0 32 32" width={size} height={size} className="block" style={{ filter: "drop-shadow(0 0 4px rgba(255,225,77,0.8))" }}>
       <defs>
-        <radialGradient id="coinGold" cx="34%" cy="28%" r="78%">
-          <stop offset="0%" stopColor="#fff6c2" />
-          <stop offset="42%" stopColor="#ffd24d" />
-          <stop offset="82%" stopColor="#e0a728" />
-          <stop offset="100%" stopColor="#a87a12" />
-        </radialGradient>
+        <linearGradient id="coinFace" x1="0" y1="0" x2="0.85" y2="1">
+          <stop offset="0%" stopColor="#fff8cf" />
+          <stop offset="38%" stopColor="#ffd24d" />
+          <stop offset="72%" stopColor="#e0a728" />
+          <stop offset="100%" stopColor="#9c7010" />
+        </linearGradient>
         <mask id="coinHole">
           <rect width="32" height="32" fill="#fff" />
-          <rect x="11.7" y="11.7" width="8.6" height="8.6" rx="0.7" fill="#000" />
+          <rect x="11.9" y="11.9" width="8.2" height="8.2" rx="0.6" fill="#000" />
         </mask>
       </defs>
-      <circle cx="16" cy="16" r="13.4" fill="url(#coinGold)" mask="url(#coinHole)" />
-      <circle cx="16" cy="16" r="13.4" fill="none" stroke="#8a6410" strokeWidth="1.1" />
-      <circle cx="16" cy="16" r="11.1" fill="none" stroke="#8a6410" strokeWidth="0.8" opacity="0.8" />
-      <rect x="11.7" y="11.7" width="8.6" height="8.6" rx="0.7" fill="none" stroke="#7d5a0c" strokeWidth="1.1" />
-      <path d="M16 3.4v1.9M16 26.7v1.9M3.4 16h1.9M26.7 16h1.9" stroke="#7d5a0c" strokeWidth="1" strokeLinecap="round" opacity="0.85" />
-      <path d="M16 3.4v1.2M16 27.4v1.2M3.4 16h1.2M27.4 16h1.2" stroke="#fff4c0" strokeWidth="0.7" strokeLinecap="round" opacity="0.7" />
-      <ellipse cx="11.4" cy="10.6" rx="3.1" ry="2" fill="#fffbe0" opacity="0.45" transform="rotate(-32 11.4 10.6)" />
+      <polygon points={outer} fill="url(#coinFace)" mask="url(#coinHole)" stroke="#ffe98a" strokeWidth="0.9" strokeLinejoin="miter" />
+      <polygon points={inner} fill="none" stroke="#7df9ff" strokeWidth="0.8" strokeLinejoin="miter" opacity="0.7" />
+      <rect x="11.9" y="11.9" width="8.2" height="8.2" rx="0.6" fill="none" stroke="#7df9ff" strokeWidth="0.9" opacity="0.9" />
+      <path d="M16 3.88v1.9M16 26.22v1.9" stroke="#fff8cf" strokeWidth="0.7" strokeLinecap="round" opacity="0.55" />
+      <path d="M6.2 10.1l1.7 1M24.1 20.9l1.7 1" stroke="#fff8cf" strokeWidth="0.7" strokeLinecap="round" opacity="0.4" />
     </svg>
   );
 }

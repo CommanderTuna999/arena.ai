@@ -8,7 +8,7 @@
  *   CHANGELOG and mirror the details in docs/CHANGELOG.md.
  */
 
-export const VERSION = "2.3.0";
+export const VERSION = "2.4.0";
 
 export interface ChangeEntry {
   version: string;
@@ -19,6 +19,16 @@ export interface ChangeEntry {
 }
 
 export const CHANGELOG: ChangeEntry[] = [
+  {
+    version: "2.4.0",
+    date: "21 Nov 2026",
+    title: "Neon credit chip, and a bestiary by rarity",
+    points: [
+      "The credit counter icon is now a neon geometric chip: a hexagonal coin with a glowing cyan rim, a gold face and a square hole cut clean through it. The coins that fly into the counter use the same silhouette.",
+      "The bestiary catalogs every species once per rarity: 32 species x 6 rarities = 192 entries. Each chip carries its own silhouette, rarity colour and short label (COM/UNC/RAR/EPI/LEG/MYT).",
+      "Undiscovered rarities stay dark until you beat that species at that rarity, and the detail card now shows the exact tier's hull, radius, plating layers, shield panels, mounts, pack size and drop rarity.",
+    ],
+  },
   {
     version: "2.3.0",
     date: "21 Nov 2026",

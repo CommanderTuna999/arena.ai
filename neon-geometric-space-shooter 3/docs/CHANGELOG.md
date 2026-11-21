@@ -3,6 +3,18 @@
 Everything below is implemented in the current build. Numbers are the actual constants used by
 the simulation, not design targets.
 
+## 0. v2.4.0 — neon credit chip, bestiary by rarity
+
+### Credit chip
+- `CreditCoin` (HUD) and `drawCreditFlights` (canvas) now draw the same neon hexagon: gold radial face, `#7df9ff` rim, square hole punched through the middle, corner ticks and a drop-shadow glow. It reads as currency without breaking the neon palette.
+- The coin keeps a constant screen size at any zoom, since both the icon and the flight are drawn in screen space.
+
+### Bestiary: one entry per rarity
+- The catalog is now `32 species x 6 rarities = 192 entries`. Each species block holds six chips (one per rarity), each with that tier's own silhouette, its rarity colour, a three-letter label and a lit/unlit state.
+- An entry lights up only when that species has been killed at that rarity (`bestiary[id] >= tier`, from the persisted `save.bestiary`), so a mythic kill lights all six chips while a rare kill lights three.
+- The detail card is now tier-specific: rarity banner, parts, hull, radius, hull-shell layers (`tier - 1` from rare), shield panels (`tier - 1` from epic), mounts, speed, turn, pack size and the drop rarities that tier actually yields.
+- The header counts both: species discovered and rarity entries filled in.
+
 ## 0. v2.3.0 — salvage on contact, cash on the counter
 
 ### Light parts are scooped on touch

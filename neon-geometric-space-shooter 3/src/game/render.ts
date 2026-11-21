@@ -512,14 +512,26 @@ function drawCreditFlights(g: Game, ctx: CanvasRenderingContext2D) {
     ctx.translate(x, y);
     ctx.scale(s, s);
     ctx.rotate(c.spin * 0.35);
+    /* neon hexagon chip with a square hole, matching the HUD counter icon */
+    const hex = (r: number, rot: number) => {
+      ctx.beginPath();
+      for (let i = 0; i < 6; i++) {
+        const a = rot + (i / 6) * TAU;
+        const px = Math.cos(a) * r, py = Math.sin(a) * r;
+        if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+      }
+      ctx.closePath();
+    };
     ctx.fillStyle = "#ffd24d";
-    ctx.shadowColor = "#ffd24d"; ctx.shadowBlur = 9;
-    ctx.beginPath(); ctx.arc(0, 0, 5, 0, TAU); ctx.fill();
+    ctx.shadowColor = "#ffd24d"; ctx.shadowBlur = 10;
+    hex(5.2, 0); ctx.fill();
     ctx.shadowBlur = 0;
-    ctx.strokeStyle = "rgba(255,246,200,0.9)"; ctx.lineWidth = 0.8;
-    ctx.beginPath(); ctx.arc(0, 0, 3.4, 0, TAU); ctx.stroke();
-    ctx.fillStyle = "#3b2704";
+    ctx.fillStyle = "#05070c";
     ctx.fillRect(-1.5, -1.5, 3, 3);
+    ctx.strokeStyle = "rgba(125,249,255,0.95)"; ctx.lineWidth = 0.85;
+    hex(5.2, 0); ctx.stroke();
+    ctx.strokeStyle = "rgba(255,248,207,0.75)"; ctx.lineWidth = 0.6;
+    ctx.strokeRect(-1.5, -1.5, 3, 3);
     ctx.restore();
   }
   ctx.globalAlpha = 1;
