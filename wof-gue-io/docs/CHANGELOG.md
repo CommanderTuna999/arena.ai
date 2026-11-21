@@ -3,6 +3,22 @@
 Everything below is implemented in the current build. Numbers are the actual constants used by
 the simulation, not design targets.
 
+## 0. v2.11.0 — part-aware weapon targeting, weapons shop removed
+
+- **Targeting** (`engine.ts`): new `anyPartInRange()`, `priorityPart()`, `aimPoint()` and
+  `combatTarget()`. A crafted weapon engages when *any* living piece is inside its range
+  (`dist - min(part.r, 90) <= range`), and fires at the piece chosen by the sheet's order — core,
+  then shield generators/weapons, then the closest living piece. All `nearestEnemy(p.x, p.y, R(id))`
+  calls in `fireWeapons`, the hardpoint aiming, flak lead, rail and the drones go through it.
+- **Weapons shop removed** (`data.ts`): `barrels` and `crit` upgrade entries and the `weapons`
+  category are gone; `Stats.barrels = 1`, `Stats.crit = 0`. The Upgrades tab now opens on Hull.
+- **Cannon** per the updated sheet: chassis renamed to **Stinger**, and its only track is
+  **Damage** (30 levels, `20 x 1.45^l`). The rate track is gone — `cannonRate()` returns
+  `1 / interval`, so the 0.7s interval is a property of the gun. Existing damage levels still
+  migrate; stale rate levels are ignored.
+- New `target.test.mts`: fires on a piece in range while the hull centre is out of range, holds fire
+  when every piece is out, and asserts the core → support → closest order.
+
 ## 0. v2.10.0 — the cannon tree
 
 Per the cannon section of the sheet.

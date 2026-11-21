@@ -8,8 +8,8 @@ How to read it: enemy health is the sum of every part at that rarity tier. Enemy
 1. CORE FORMULAS
 ============================================================
 
-Player cannon: every cannon is a chassis (`CANNONS` in data.ts) with its **own** upgrade tracks — damage and rate are never shared between guns. The fitted Stinger Mk I fires a 20-damage round bolt on a 0.7s interval (640u/s, 820u reach) with a small charge on impact; damage = 20 x 1.2^dmg level, rate = 1/0.7 + 0.7 x rate level. Shots per trigger = 1 + Extra Barrels level (still a global upgrade), crit and everything else unchanged. The tree lives in the base under the CANNON tab, tier 0 at the bottom.
-Crafted weapon: damage per hit = st.dmg x wpn.dmg x eff (then x2.5 on a crit, x2.2 during Overdrive). Cooldown = wpn.cd / (0.7 + 0.3 x eff), so 100% efficiency is the listed cooldown and 30% efficiency is 1.27x slower (cd / 0.79).
+Player cannon: every cannon is a chassis (`CANNONS` in data.ts) with its **own** upgrade track. The fitted **Stinger** fires a 20-damage round bolt on a fixed 0.7s interval (640u/s, 820u reach) with a small charge on impact; its only upgrade is Damage, `20 x 1.2^level` (30 levels, `20 x 1.45^level` credits). One bolt per trigger, no critical hits, no extra barrels — the weapons shop category was removed with them. The tree lives in the base under the CANNON tab, tier 0 at the bottom.
+Crafted weapon: damage per hit = st.dmg x wpn.dmg x eff (then x2.2 during Overdrive; there are no critical hits). Cooldown = wpn.cd / (0.7 + 0.3 x eff), so 100% efficiency is the listed cooldown and 30% efficiency is 1.27x slower (cd / 0.79).
 Enemy damage: eDmg = 16 x DMG_MUL[tier] = 16 / 48 / 144 / 432 / 1,296 / 3,888. Every ability, gun, missile and contact hit is a multiplier of that eDmg.
 Enemy hull: every part HP is generated from HP_MUL[tier] = 1 / 4 / 18 / 80 / 360 / 1,600, with part size and shape adding their own multipliers. The tables below give the resulting totals.
 Player hull: 100 x 1.22^Hull level. Armour reduction is multiplicative with Reactive Lattice and Kinetic Barrier; shield absorbs before hull. Dodge is checked before any damage is applied.
@@ -763,13 +763,10 @@ Shockwave (ab_shockwave): 16s base cooldown. 520u blast: 5x st.dmg x eff, 900u/s
 9. BASE CANNON AND UPGRADES
 ============================================================
 
-Base cannon: kinetic, st.dmg = 10 x 1.2^level per shot; 4 + 0.7 x level shots/s; 1 + barrels shots per trigger in a 0.09 rad fan; 760u range; 900u/s projectile speed; no innate pierce, splash or core/plate bonus - only crafted weapon recipes add those, and Kinetic rounds are stopped dead by enemy energy shields, which take no damage. The cannon system is scheduled for a rework.
+Base cannon (Stinger): kinetic, st.dmg = 20 x 1.2^damage-track per shot; fixed 0.7s interval; one bolt per trigger; 820u range; 640u/s; a small charge (0.3x the bolt's damage in a 44u radius) pops on impact; Kinetic rounds are stopped dead by enemy energy shields, which take no damage.
 
 Upgrade | Max | Effect per level | Cost
-Bore Calibration (fitted cannon, dmg) | 30 | Damage per bolt, per cannon. 24 dmg at L1, 4.75K dmg at max | 20 x 1.45^level x chassis cost multiplier
-Autoloader (fitted cannon, rate) | 12 | Bolts per second, per cannon. 2.1/s at L1, 9.8/s at max | 40 x 1.5^level x chassis cost multiplier
-Extra Barrels (barrels) | 4 | Fire a fan of additional shots. 2 barrels at L1, 5 barrels at max | 150 x 2.6^level credits
-Targeting Matrix (crit) | 10 | Chance for 2.5x critical hits. 9% crit at L1, 45% crit at max | 60 x 1.55^level credits
+Damage (fitted cannon) | 30 | Damage per bolt, per cannon. 24 dmg at L1, 4.75K dmg at max | 20 x 1.45^level x chassis cost multiplier
 Hull Plating (hull) | 30 | Maximum hull integrity. 122 HP at L1, 39.0K HP at max | 25 x 1.5^level credits
 Nano Repair (regen) | 10 | Hull regenerates every second. 0.5%/s at L1, 5.0%/s at max | 70 x 1.6^level credits
 Reactive Armour (armor) | 14 | Flat percentage damage reduction. -3.5% dmg at L1, -49.0% dmg at max | 90 x 1.7^level credits

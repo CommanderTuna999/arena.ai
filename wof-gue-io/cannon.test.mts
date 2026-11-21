@@ -20,17 +20,17 @@ assert(bought === 5, "buys five levels on the damage track");
 const after = computeStats(g.save);
 assert(Math.abs(after.dmg - cannonDmg(sting, 5)) < 1e-9, `damage follows the track (${after.dmg.toFixed(1)})`);
 assert(after.rate === computeStats(newSave()).rate, "the rate track is untouched by damage levels");
-g.buyCannon("rate", 3);
-assert(Math.abs(computeStats(g.save).rate - cannonRate(sting, 3)) < 1e-9, "rate follows its own track");
+assert(CANNON_TRACKS.length === 1 && CANNON_TRACKS[0].id === "dmg", "the Stinger has a damage track and nothing else");
+assert(Math.abs(computeStats(g.save).rate - cannonRate(sting)) < 1e-9, "the fire interval stays fixed at 0.7s");
 
 /* --- a new chassis starts clean (nothing to swap to yet, so assert the shape) --- */
 assert(g.save.cannon.id === sting.id, "the Stinger is the fitted gun");
-assert(g.cannon().name === "Stinger Mk I", "engine reports the fitted chassis");
+assert(g.cannon().name === "Stinger", "engine reports the fitted chassis");
 
 /* --- legacy saves keep their work --- */
-const legacy = { ...newSave(), cannon: undefined, upgrades: { dmg: 7, rate: 2 } } as any;
+const legacy = { ...newSave(), cannon: undefined, upgrades: { dmg: 7, rate: 2, crit: 4 } } as any;
 const m = migrate(legacy);
-assert(m.cannon.lv.dmg === 7 && m.cannon.lv.rate === 2, "v2.9 Cannon Damage / Fire Rate levels migrate onto the gun");
+assert(m.cannon.lv.dmg === 7, "v2.9 Cannon Damage levels migrate onto the gun");
 assert(!("dmg" in m.upgrades), "the global copy is gone");
 
 /* --- the panel is a wall --- */

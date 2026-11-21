@@ -2728,6 +2728,58 @@ export class Game {
       }
     }
   }
+  /** True when any living piece of this body is inside `range`. Weapons fire on
+   *  the strength of the closest piece, not the hull centre, so a big body with
+   *  its nose in range is a valid target even when its core is far away. */
+  private anyPartInRange(e: Enemy, x: number, y: number, range: number): boolean {
+    for (const q of e.parts) {
+      if (!q.alive) continue;
+      const w = this.partWorld(e, q);
+      const d = Math.hypot(w[0] - x, w[1] - y) - Math.min(q.r, 90);
+      if (d <= range) return true;
+    }
+    return false;
+  }
+  /** Which piece to shoot on a given body: the core if it is still there, then
+   *  shield generators and weapons, then the closest living piece. */
+  private priorityPart(e: Enemy, x: number, y: number): Part | null {
+    const core = e.parts[e.coreId];
+    if (core && core.alive) return core;
+    let best: Part | null = null, bd = Infinity;
+    for (const id of [...e.shieldParts, ...e.weaponParts]) {
+      const q = e.parts[id];
+      if (!q.alive) continue;
+      const w = this.partWorld(e, q);
+      const d = Math.hypot(w[0] - x, w[1] - y);
+      if (d < bd) { bd = d; best = q; }
+    }
+    if (best) return best;
+    for (const q of e.parts) {
+      if (!q.alive) continue;
+      const w = this.partWorld(e, q);
+      const d = Math.hypot(w[0] - x, w[1] - y);
+      if (d < bd) { bd = d; best = q; }
+    }
+    return best;
+  }
+  /** World point a weapon should aim at for this body (its priority piece). */
+  private aimPoint(e: Enemy, x: number, y: number): [number, number] {
+    const q = this.priorityPart(e, x, y);
+    if (!q) return [e.x, e.y];
+    return this.partWorld(e, q);
+  }
+  /** The closest body that has a piece inside `range`. */
+  private combatTarget(x: number, y: number, range: number): Enemy | null {
+    let best: Enemy | null = null, bd = Infinity;
+    for (const e of this.enemies) {
+      if (e.dead) continue;
+      const d = Math.hypot(e.x - x, e.y - y) - Math.min(e.radius, 500) * 0.6;
+      if (d >= bd) continue;
+      if (!this.anyPartInRange(e, x, y, range)) continue;
+      bd = d; best = e;
+    }
+    return best;
+  }
   private nearestEnemy(x: number, y: number, range: number, minTier = 0): Enemy | null {
     let best: Enemy | null = null, bd = range;
     for (const e of this.enemies) {
@@ -2892,8 +2944,11 @@ export class Game {
             want = Math.atan2(wp[1] - p.y, wp[0] - p.x) - p.a;
           }
         } else {
-          const t = this.nearestEnemy(p.x, p.y, range);
-          if (t) want = Math.atan2(t.y - p.y, t.x - p.x) - p.a;
+          const t = this.combatTarget(p.x, p.y, range);
+          if (t) {
+            const w2 = this.aimPoint(t, p.x, p.y);
+            want = Math.atan2(w2[1] - p.y, w2[0] - p.x) - p.a;
+          }
         }
       }
       want = Math.atan2(Math.sin(want), Math.cos(want));
@@ -2928,18 +2983,20 @@ export class Game {
       const shot = (x: number, y: number, ang: number, sp: number, life: number, d: number, kind: Bullet["kind"], extra: Partial<Bullet> = {}) => {
         this.bullets.push({ x, y, vx: Math.cos(ang) * sp, vy: Math.sin(ang) * sp, life, dmg: d, pierce: 0, hit: [], kind, target: null, crit: false, elem, ...extra });
       };
-      const aim = (t: Enemy) => Math.atan2(t.y - oy, t.x - ox);
+      /* Aim at the piece the weapon should be shooting, not at the body centre:
+       * core first, then shield generators and guns, then whatever is closest. */
+      const aim = (t: Enemy) => { const w = this.aimPoint(t, p.x, p.y); return Math.atan2(w[1] - oy, w[0] - ox); };
       const elem = WEAPON_DMG[w.rid] ?? "kinetic";
       switch (w.rid) {
         case "pulse": {
-          const t = this.nearestEnemy(p.x, p.y, R("pulse"));
+          const t = this.combatTarget(p.x, p.y, R("pulse"));
           if (!t) return;
           p.wCd[i] = cd(0.45);
           shot(ox, oy, aim(t), 1100, 0.8, dmg * 0.6 * eff, 0);
           break;
         }
         case "scatter": {
-          const t = this.nearestEnemy(p.x, p.y, R("scatter"));
+          const t = this.combatTarget(p.x, p.y, R("scatter"));
           if (!t) return;
           p.wCd[i] = cd(0.75);
           const a0 = aim(t);
@@ -2947,14 +3004,14 @@ export class Game {
           break;
         }
         case "missile": {
-          const t = this.nearestEnemy(p.x, p.y, R("missile"));
+          const t = this.combatTarget(p.x, p.y, R("missile"));
           if (!t) return;
           p.wCd[i] = cd(1.5);
           for (let k = 0; k < 2; k++) shot(ox, oy, aim(t) + (k ? 0.4 : -0.4), 260, 3.2, dmg * 2.2 * eff, 1, { target: t });
           break;
         }
         case "lance": {
-          const t = this.nearestEnemy(p.x, p.y, R("lance"));
+          const t = this.combatTarget(p.x, p.y, R("lance"));
           if (!t) return;
           p.wCd[i] = cd(0.12);
           this.beam(p.x, p.y, aim(t), 320 + 80 * eff, dmg * 0.22 * eff, 2 + Math.floor(eff), false, "laser", "#7df9ff");
@@ -2970,35 +3027,35 @@ export class Game {
           break;
         }
         case "bypass": {
-          const t = this.nearestEnemy(p.x, p.y, R("bypass"));
+          const t = this.combatTarget(p.x, p.y, R("bypass"));
           if (!t) return;
           p.wCd[i] = cd(0.1);
           this.beam(p.x, p.y, aim(t), 420 + 90 * eff, dmg * 0.16 * eff, 3, true, "laser", "#b7ff7d");
           break;
         }
         case "hmg": {
-          const t = this.nearestEnemy(p.x, p.y, R("hmg"));
+          const t = this.combatTarget(p.x, p.y, R("hmg"));
           if (!t) return;
           p.wCd[i] = cd(0.075);
           shot(ox, oy, aim(t) + (Math.random() - 0.5) * 0.13, 1150, 0.55, dmg * 0.1 * eff, 0);
           break;
         }
         case "emp": {
-          const t = this.nearestEnemy(p.x, p.y, R("emp"));
+          const t = this.combatTarget(p.x, p.y, R("emp"));
           if (!t) return;
           p.wCd[i] = cd(2.6);
           this.empBlast(p.x, p.y, 620, 1.8, dmg * 1.4 * eff);
           break;
         }
         case "cutter": {
-          const t = this.nearestEnemy(p.x, p.y, R("cutter"));
+          const t = this.combatTarget(p.x, p.y, R("cutter"));
           if (!t) return;
           p.wCd[i] = cd(0.18);
           this.beam(p.x, p.y, aim(t), 175 + 20 * eff, dmg * 1.1 * eff, 1 + Math.floor(eff), false, "laser", "#ff8ad6");
           break;
         }
         case "acid": {
-          const t = this.nearestEnemy(p.x, p.y, R("acid"));
+          const t = this.combatTarget(p.x, p.y, R("acid"));
           if (!t) return;
           p.wCd[i] = cd(0.16);
           const a0 = aim(t);
@@ -3006,7 +3063,7 @@ export class Game {
           break;
         }
         case "chain": {
-          let cur = this.nearestEnemy(p.x, p.y, R("chain"));
+          let cur = this.combatTarget(p.x, p.y, R("chain"));
           if (!cur) return;
           p.wCd[i] = cd(0.8);
           const seen = new Set<number>();
@@ -3026,15 +3083,16 @@ export class Game {
           break;
         }
         case "flak": {
-          const t = this.nearestEnemy(p.x, p.y, R("flak"));
+          const t = this.combatTarget(p.x, p.y, R("flak"));
           if (!t) return;
           p.wCd[i] = cd(0.9);
-          const d0 = Math.hypot(t.x - ox, t.y - oy);
+          const ap = this.aimPoint(t, p.x, p.y);
+          const d0 = Math.hypot(ap[0] - ox, ap[1] - oy);
           shot(ox, oy, aim(t), 620, clamp(d0 / 620, 0.15, 1.4), dmg * 1.3 * eff, 3, { flak: true });
           break;
         }
         case "rail": {
-          const t = this.nearestEnemy(p.x, p.y, R("rail"));
+          const t = this.combatTarget(p.x, p.y, R("rail"));
           if (!t) return;
           p.wCd[i] = cd(1.82);
           this.beam(p.x, p.y, aim(t), 1500, dmg * 2.4 * eff, 12, false, "kinetic", "#ffe9a6");
@@ -3042,7 +3100,7 @@ export class Game {
           break;
         }
         case "gravity": {
-          const t = this.nearestEnemy(p.x, p.y, R("gravity"));
+          const t = this.combatTarget(p.x, p.y, R("gravity"));
           if (!t) return;
           p.wCd[i] = cd(3.2);
           const [gx, gy] = clampWorld(t.x, t.y);
@@ -3050,7 +3108,7 @@ export class Game {
           break;
         }
         case "mines": {
-          const t = this.nearestEnemy(p.x, p.y, R("mines"));
+          const t = this.combatTarget(p.x, p.y, R("mines"));
           if (!t) return;
           p.wCd[i] = cd(1.1);
           const ang = base + Math.PI;
@@ -3060,7 +3118,7 @@ export class Game {
         case "drones":
           break;
         case "venom": {
-          const t = this.nearestEnemy(p.x, p.y, R("venom"));
+          const t = this.combatTarget(p.x, p.y, R("venom"));
           if (!t) return;
           p.wCd[i] = cd(0.35);
           const a0 = aim(t);
@@ -3068,7 +3126,7 @@ export class Game {
           break;
         }
         case "sonic": {
-          const t = this.nearestEnemy(p.x, p.y, R("sonic"));
+          const t = this.combatTarget(p.x, p.y, R("sonic"));
           if (!t) return;
           p.wCd[i] = cd(1.6);
           for (const e of this.enemies) {
@@ -3086,7 +3144,7 @@ export class Game {
           break;
         }
         case "cluster": {
-          const t = this.nearestEnemy(p.x, p.y, R("cluster"));
+          const t = this.combatTarget(p.x, p.y, R("cluster"));
           if (!t) return;
           p.wCd[i] = cd(2.2);
           shot(ox, oy, aim(t), 280, 3.2, dmg * 1.7 * eff, 1, { target: t, split: 4 });
@@ -3156,10 +3214,11 @@ export class Game {
       d.cd -= dt;
       if (d.cd > 0 || this.inSafe() || p.dead) continue;
       const x = p.x + Math.cos(d.a) * d.r, y = p.y + Math.sin(d.a) * d.r;
-      const t = this.nearestEnemy(x, y, 720);
+      const t = this.combatTarget(x, y, 720);
       if (!t) { d.cd = 0.3; continue; }
       d.cd = 0.55;
-      const ang = Math.atan2(t.y - y, t.x - x);
+      const dp = this.aimPoint(t, x, y);
+      const ang = Math.atan2(dp[1] - y, dp[0] - x);
       this.bullets.push({ x, y, vx: Math.cos(ang) * 1050, vy: Math.sin(ang) * 1050, life: 0.8, dmg: this.stats.dmg * 0.4 * eff * this.dmgMul(), pierce: 0, hit: [], kind: 0, target: null, crit: false, elem: "kinetic" });
     }
   }

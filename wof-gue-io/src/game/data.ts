@@ -93,9 +93,6 @@ export interface UpgradeDef {
 }
 
 export const UPGRADES: UpgradeDef[] = [
-  { id: "barrels", name: "Extra Barrels", cat: "weapons", desc: "Fire a fan of additional shots.", max: 4, base: 150, growth: 2.6, fmt: (l) => `${1 + l} barrel${l ? "s" : ""}` },
-  { id: "crit", name: "Targeting Matrix", cat: "weapons", desc: "Chance for 2.5x critical hits.", max: 10, base: 60, growth: 1.55, fmt: (l) => `${5 + 4 * l}% crit` },
-
   { id: "hull", name: "Hull Plating", cat: "hull", desc: "Maximum hull integrity.", max: 30, base: 18, growth: 1.4, fmt: (l) => `${fmtNum(100 * Math.pow(1.19, l))} HP` },
   { id: "regen", name: "Nano Repair", cat: "hull", desc: "Hull regenerates every second.", max: 10, base: 55, growth: 1.5, fmt: (l) => `${(0.5 * l).toFixed(1)}%/s` },
   { id: "armor", name: "Reactive Armour", cat: "hull", desc: "Flat percentage damage reduction.", max: 14, base: 70, growth: 1.55, fmt: (l) => `-${(3.5 * l).toFixed(1)}% dmg` },
@@ -155,7 +152,7 @@ export interface CannonDef {
 
 export const CANNONS: CannonDef[] = [
   {
-    id: "sting", name: "Stinger Mk I", tier: 0,
+    id: "sting", name: "Stinger", tier: 0,
     desc: "The gun the yard gives every pilot: one fat round bolt at a time, slow enough to watch, with a small charge that pops on impact.",
     dmg: 20, interval: 0.7, speed: 640, range: 820, cost: 0, costMul: 1, requires: null,
   },
@@ -163,8 +160,7 @@ export const CANNONS: CannonDef[] = [
 export const CANNON_BY_ID: Record<string, CannonDef> = Object.fromEntries(CANNONS.map((c) => [c.id, c]));
 
 export const CANNON_TRACKS: CannonTrack[] = [
-  { id: "dmg", name: "Bore Calibration", desc: "Damage of every bolt this cannon fires.", max: 30, base: 20, growth: 1.45 },
-  { id: "rate", name: "Autoloader", desc: "How fast the cannon cycles between bolts.", max: 12, base: 40, growth: 1.5 },
+  { id: "dmg", name: "Damage", desc: "Damage of every bolt this cannon fires.", max: 30, base: 20, growth: 1.45 },
 ];
 export const CANNON_TRACK_BY_ID: Record<string, CannonTrack> = Object.fromEntries(CANNON_TRACKS.map((t) => [t.id, t]));
 
@@ -172,11 +168,10 @@ export const cannonTrackCost = (c: CannonDef, t: CannonTrack, level: number) =>
   Math.round(t.base * Math.pow(t.growth, level) * c.costMul);
 /** bolt damage at a given damage-track level */
 export const cannonDmg = (c: CannonDef, level: number) => c.dmg * Math.pow(1.2, level);
-/** bolts per second at a given rate-track level */
-export const cannonRate = (c: CannonDef, level: number) => 1 / c.interval + 0.7 * level;
+/** bolts per second: the interval is fixed by the chassis, per the sheet */
+export const cannonRate = (c: CannonDef) => 1 / c.interval;
 
 export const UP_CATS: { id: UpCat; name: string; color: string }[] = [
-  { id: "weapons", name: "Weapons", color: "#ff4d6d" },
   { id: "hull", name: "Hull", color: "#4dffb4" },
   { id: "mobility", name: "Mobility", color: "#ffe14d" },
   { id: "harpoon", name: "Harpoon", color: "#4dd2ff" },
@@ -663,9 +658,11 @@ export function computeStats(s: SaveData): Stats {
 
   return {
     dmg: baseDmg,
-    rate: cannonRate(cannon, CL("rate")),
-    barrels: 1 + L("barrels"),
-    crit: 0.05 + 0.04 * L("crit"),
+    rate: cannonRate(cannon),
+    /* weapon-side tuning lives on the cannon itself now: one bolt per trigger,
+     * no critical hits (the sheet's cannon has a damage track and nothing else) */
+    barrels: 1,
+    crit: 0,
     bulletSpeed: cannon.speed,
     bulletRange: cannon.range,
     hull,

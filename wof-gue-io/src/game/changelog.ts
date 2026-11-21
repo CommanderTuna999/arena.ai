@@ -8,7 +8,7 @@
  *   CHANGELOG and mirror the details in docs/CHANGELOG.md.
  */
 
-export const VERSION = "2.10.0";
+export const VERSION = "2.11.0";
 
 export interface ChangeEntry {
   version: string;
@@ -19,6 +19,17 @@ export interface ChangeEntry {
 }
 
 export const CHANGELOG: ChangeEntry[] = [
+  {
+    version: "2.11.0",
+    date: "21 Nov 2026",
+    title: "Aiming, and a leaner gun",
+    points: [
+      "Crafted weapons fire as long as any piece of a body is inside their range, not just its centre - a big insect with a leg in reach is a target.",
+      "They shoot the core first. With the core gone they go for shield generators and guns, and with nothing but plating left they take the closest piece.",
+      "The weapon upgrades are gone: no more Extra Barrels and no more Targeting Matrix. One bolt per trigger, no critical hits.",
+      "The starter cannon is simply the Stinger now, and its only upgrade is Damage - the 0.7s fire interval is fixed by the gun.",
+    ],
+  },
   {
     version: "2.10.0",
     date: "21 Nov 2026",

@@ -467,7 +467,8 @@ function Help({ onClose }: { onClose: () => void }) {
     ["T", "Recall beacon (craftable)"],
     ["E", "Open the base at your base"],
     ["ESC", "Settings: how the ship handles, the look, aim aids"],
-    ["CANNON tab", "Your gun is a chassis with its own damage and rate tracks — buy them in the tree at the base. The Stinger Mk I is free and fitted from the start"],
+    ["CANNON tab", "Your gun is a chassis with its own damage track — buy it in the tree at the base. The Stinger is free and fitted from the start"],
+    ["Weapon aiming", "Crafted weapons fire while any piece of a body is in range. They go for the core first, then shield generators and guns, then whatever piece is closest"],
     ["Base cannon", "Dormant until the base is hit, then online for 120s; only tracks rare+ targets and one-shots legendaries"],
     ["Base retaliation", "Any insect that damages the base is instantly destroyed — no swarming the hull"],
     ["Base targeting", "Insects hunt your ship, never the base — they will follow you straight through turret range, and stray fire can still scar the hull"],
@@ -600,7 +601,7 @@ function CannonTree({ game }: { game: Game }) {
                   </div>
                   <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] text-white/60">
                     <span><b className="text-white/85">{fmtNum(cannonDmg(c, lv.dmg ?? 0))}</b> dmg</span>
-                    <span><b className="text-white/85">{cannonRate(c, lv.rate ?? 0).toFixed(1)}</b>/s</span>
+                    <span><b className="text-white/85">{cannonRate(c).toFixed(1)}</b>/s</span>
                     <span>{c.range}u reach</span>
                   </div>
                 </button>
@@ -609,7 +610,7 @@ function CannonTree({ game }: { game: Game }) {
           })}
         </div>
         <p className="mt-3 text-[10px] leading-relaxed text-white/35">
-          Damage and rate are per cannon: a new chassis starts its own tracks at zero, it does not inherit the last gun&apos;s work.
+          Upgrades belong to the chassis: a new gun starts its own track at zero and does not inherit the last one&apos;s work. Fire interval is fixed by the gun.
         </p>
       </div>
 
@@ -626,8 +627,8 @@ function CannonTree({ game }: { game: Game }) {
             const maxed = l >= t.max;
             const price = free ? 0 : cannonTrackCost(fitted, t, l);
             const can = !maxed && (free || save.credits >= price);
-            const now = t.id === "dmg" ? `${fmtNum(cannonDmg(fitted, l))} dmg` : `${cannonRate(fitted, l).toFixed(1)}/s`;
-            const next = t.id === "dmg" ? `${fmtNum(cannonDmg(fitted, l + 1))} dmg` : `${cannonRate(fitted, l + 1).toFixed(1)}/s`;
+            const now = `${fmtNum(cannonDmg(fitted, l))} dmg`;
+            const next = `${fmtNum(cannonDmg(fitted, l + 1))} dmg`;
             return (
               <div key={t.id} className="rounded-sm border border-white/15 bg-white/[0.03] p-2.5">
                 <div className="flex items-center justify-between">
@@ -673,7 +674,7 @@ function CannonTree({ game }: { game: Game }) {
 }
 
 function Upgrades({ game }: { game: Game }) {
-  const [cat, setCat] = useState<UpCat>("weapons");
+  const [cat, setCat] = useState<UpCat>("hull");
   const [qty, setQty] = useState<1 | 5 | 10 | "max">(1);
   const save = game.save;
   const free = game.admin.on && game.admin.credits;
