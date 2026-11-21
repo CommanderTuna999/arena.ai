@@ -645,6 +645,9 @@ export class Game {
     if (!CANNON_BY_ID[id] || !cannonOwned(this.save, id)) return false;
     if (this.cannonSave().id === id) return false;
     this.cannonSave().id = id;
+    /* a different gun is a different bore: no inherited heat, no inherited jam */
+    this.player.heat = 0;
+    this.player.jam = 0;
     this.recompute();
     this.markDirty();
     return true;
