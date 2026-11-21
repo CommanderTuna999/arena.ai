@@ -32,11 +32,16 @@ import { GUN_SPECS, SPECIES_LIST, buildEnemy, type AbilityDef, type Group, type 
  *   Swat             : sitting inside a body (flying over its plating and shields)
  *                      is punished instantly: 2.2x its bite and a ~1,700 u/s shove,
  *                      once every 1.4s, and stunned bodies cannot do it.
- *   Energy shields   : blue hexes stop every damage type except energy, shock and
- *                      thermal, which cut straight through. Blocked hits do not
- *                      drain the bubble at all — it stays up until its generator
- *                      part is destroyed. Bypass beams ignore bubbles entirely,
- *                      and area effects skip the bubble check.
+ *   Energy shields   : every Shield Generator projects ONE wall, never a bubble:
+ *                      a curved arc for flyers and serpents, a straight bar for
+ *                      walkers, some species sweeping their panels. Panels sit at
+ *                      1.9x body size and cover only a slice of the ring, so the
+ *                      gaps between them are the weak points. Generators scale
+ *                      with rarity (epic 2, legendary 3, mythical 4). Panels stop
+ *                      every damage type except energy, shock and thermal, which
+ *                      cut straight through, and blocked hits never drain them —
+ *                      a panel falls only when its generator part is destroyed.
+ *                      Bypass beams ignore panels, and area effects skip the check.
  *   Spawning         : every walkable 1,500u chunk is seeded once when the run starts,
  *                      so the whole map is already inhabited (no pop-in on arrival).
  *                      Seed probability follows the rarity curve (outer 100%, epic
@@ -103,7 +108,18 @@ let lastBasePos: { x: number; y: number } | null = null;
 
 /* ---------------- entity types ---------------- */
 export interface Act { i: number; def: AbilityDef; t: number; ph: number; hit: boolean; dir: number; fired: boolean }
-export interface ShieldInfo { x: number; y: number; r: number; part: Part }
+export interface ShieldInfo {
+  part: Part;
+  /** body centre the panel is projected from */
+  cx: number; cy: number;
+  /** world facing of the panel (radians) */
+  ang: number;
+  r: number;
+  /** arc half-angle (radians) or bar half-length (world units) */
+  span: number;
+  bar: boolean;
+  thick: number;
+}
 export interface Enemy {
   id: number; sp: number; spd: SpeciesDef; tier: number;
   x: number; y: number; a: number; vx: number; vy: number;
@@ -116,6 +132,8 @@ export interface Enemy {
   legPlate: number;
   /** per leg animation group: true once every leg part in it is crippled */
   crippledLegs: boolean[];
+  /** furthest shield panel from the body centre (0 when unshielded) */
+  shieldReach: number;
   abil: AbilityDef[]; abilCd: number[]; gap: number; act: Act | null; stun: number;
   wander: { x: number; y: number; t: number }; roleGroups: Record<string, number[]>;
   walk: number; dead: boolean; eDmg: number; keep: number; strafe: number; strafeT: number;
@@ -1119,6 +1137,26 @@ export class Game {
     return false;
   }
 
+  /** Which shield panel, if any, covers this world point. Only a slice of the body
+   *  is covered, so flying at a gap is the whole point. */
+  private shieldAt(e: Enemy, x: number, y: number): Part | null {
+    const dx = x - e.x, dy = y - e.y;
+    for (const s of e.shields) {
+      if (!s.part.alive || s.part.shieldHp <= 0) continue;
+      const c = Math.cos(s.ang), sn = Math.sin(s.ang);
+      const along = dx * c + dy * sn;
+      const perp = -dx * sn + dy * c;
+      if (s.bar) {
+        if (Math.abs(perp) <= s.span && Math.abs(along - s.r) <= s.thick) return s.part;
+      } else {
+        const d = Math.hypot(dx, dy);
+        if (Math.abs(d - s.r) > s.thick) continue;
+        if (Math.abs(angDiff(Math.atan2(dy, dx), s.ang)) <= s.span) return s.part;
+      }
+    }
+    return null;
+  }
+
   /** plating takes the hit instead of the body. Returns true if it absorbed it. */
   private shellHit(e: Enemy, dmg: number, src: DmgSrc, fromBase = false, hx?: number, hy?: number) {
     const layer = e.shells[e.shells.length - 1];
@@ -1190,7 +1228,7 @@ export class Game {
     return {
       id: this.idc++, sp: spi, spd, tier, x, y, a: Math.random() * TAU, vx: 0, vy: 0, S: b.size, radius: b.radius,
       parts: b.parts, groups: b.groups, order: b.order, coreId: b.coreId, chunk: key, home: { x, y }, aggro: false, barT: 0,
-      speed: spd.speed * (1 + 0.04 * tier), turn: (spd.turn * TIER_TURN[clamp(tier, 0, 5)]) / (1 + b.radius / (b.size * 6)), mobility: 1, legCount: b.legCount, wingCount: b.wingCount, turnFrac: 1, legPlate: tier >= 4 ? tier - 3 : 0, crippledLegs: [],
+      speed: spd.speed * (1 + 0.04 * tier), turn: (spd.turn * TIER_TURN[clamp(tier, 0, 5)]) / (1 + b.radius / (b.size * 6)), mobility: 1, legCount: b.legCount, wingCount: b.wingCount, turnFrac: 1, legPlate: tier >= 4 ? tier - 3 : 0, crippledLegs: [], shieldReach: shieldParts.reduce((m, id) => Math.max(m, b.parts[id].shieldR), 0),
       abil, abilCd: abil.map(() => 1 + Math.random() * 3), gap: 1, act: null, stun: 0, wander: { x, y, t: 0 }, roleGroups,
       walk: Math.random() * 6, dead: false, eDmg: 16 * DMG_MUL[tier], keep: spd.keep + b.radius * 0.9, strafe: Math.random() < 0.5 ? 1 : -1, strafeT: 2,
       tags, shields: [], weaponParts, shieldParts, dist: 9999, bdist: 9999, contactCd: 0, swatCd: 0, hasChange: false, gen: 0,
@@ -2181,8 +2219,14 @@ export class Game {
       else {
         if (q.shieldHit > 0) q.shieldHit -= dt;
         else if (q.shieldHp < q.shieldMax) q.shieldHp = Math.min(q.shieldMax, q.shieldHp + q.shieldMax * 0.15 * dt);
-        const w = this.partWorld(e, q);
-        e.shields.push({ x: w[0], y: w[1], r: q.shieldR, part: q });
+        /* One panel per generator: an arc of the hull ring or a straight bar on it.
+         * It faces outward along the generator's own angle and can sweep. */
+        const ang = e.a + q.shieldAng + q.shieldSpin * this.t;
+        e.shields.push({
+          part: q, cx: e.x, cy: e.y, ang,
+          r: q.shieldR, span: q.shieldSpan, bar: q.shieldKind === 1,
+          thick: Math.max(9, q.shieldR * 0.07),
+        });
       }
     }
     // weapons
@@ -2361,7 +2405,7 @@ export class Game {
     for (const e of this.enemies) {
       if (e.dead) continue;
       const dx = b.x - e.x, dy = b.y - e.y;
-      const rr = Math.max(e.radius, e.shellR) + 12;
+      const rr = Math.max(e.radius, e.shellR, e.shieldReach) + 12;
       if (dx * dx + dy * dy > rr * rr) continue;
       /* The plates are thin compared with a fast round's per-frame travel, so
        * test the two intermediate points as well to avoid tunnelling. */
@@ -2373,25 +2417,23 @@ export class Game {
         this.shellHit(e, b.dmg, b.kind === 3 ? "explosive" : "kinetic", false, b.x, b.y);
         return true;
       }
-      for (const s of e.shields) {
-        if (s.part.alive && s.part.shieldHp > 0) {
-          const sx = b.x - s.x, sy = b.y - s.y;
-          if (sx * sx + sy * sy < s.r * s.r) {
-            const energy = b.elem === "energy" || b.elem === "shock" || b.elem === "thermal";
-            if (e.spd.reflectShell && energy) {
-              this.eprojs.push({ x: b.x, y: b.y, vx: -b.vx * 0.9, vy: -b.vy * 0.9, life: 1.5, dmg: b.dmg * 0.6, r: 6, hue: e.spd.hue, type: "bolt", homing: 0, slow: 0, slowT: 0, poison: 0, pierce: false, hp: 1, speed: 620, src: e, puddle: null });
-              this.ringFx(b.x, b.y, 46, "#7df9ff", 400);
-              return true;
-            }
-            s.part.shieldHit = 3;
-            e.aggro = true; e.barT = 3;
-            if (energy) break; // energy, shock and thermal cut straight through the bubble
-            /* every other damage type is stopped dead: the bubble takes no damage,
-             * so it stays up until its generator part is destroyed */
-            this.addParticle(b.x, b.y, (Math.random() - 0.5) * 200, (Math.random() - 0.5) * 200, "#7df9ff", 4, 0.35, 3, false);
-            this.ringFx(b.x, b.y, 40, "#7df9ff", 500);
-            return true;
-          }
+      /* the panels are thin, so sample the round's path like the plating does */
+      const panel = this.shieldAt(e, b.x, b.y) ?? this.shieldAt(e, b.x - b.vx / 90, b.y - b.vy / 90);
+      if (panel) {
+        const energy = b.elem === "energy" || b.elem === "shock" || b.elem === "thermal";
+        if (e.spd.reflectShell && energy) {
+          this.eprojs.push({ x: b.x, y: b.y, vx: -b.vx * 0.9, vy: -b.vy * 0.9, life: 1.5, dmg: b.dmg * 0.6, r: 6, hue: e.spd.hue, type: "bolt", homing: 0, slow: 0, slowT: 0, poison: 0, pierce: false, hp: 1, speed: 620, src: e, puddle: null });
+          this.ringFx(b.x, b.y, 46, "#7df9ff", 400);
+          return true;
+        }
+        panel.shieldHit = 3;
+        e.aggro = true; e.barT = 3;
+        if (!energy) {
+          /* every non-energy round is stopped dead: the panel takes no damage, so it
+           * stays up until its generator part is destroyed */
+          this.addParticle(b.x, b.y, (Math.random() - 0.5) * 200, (Math.random() - 0.5) * 200, "#7df9ff", 4, 0.35, 3, false);
+          this.ringFx(b.x, b.y, 40, "#7df9ff", 500);
+          return true;
         }
       }
       const ca = Math.cos(e.a), sa = Math.sin(e.a);
@@ -2479,25 +2521,28 @@ export class Game {
     const cos = Math.cos(ang), sin = Math.sin(ang);
     let endLen = len;
     let pierced = 0;
-    const cands = this.enemies.filter((e) => !e.dead && Math.hypot(e.x - x, e.y - y) < len + e.radius);
+    const cands = this.enemies.filter((e) => !e.dead && Math.hypot(e.x - x, e.y - y) < len + Math.max(e.radius, e.shieldReach));
     outer: for (let d = 10; d <= len; d += 8) {
       const bx = x + cos * d, by = y + sin * d;
       for (const e of cands) {
         const dx = bx - e.x, dy = by - e.y;
-        if (dx * dx + dy * dy > (e.radius + 6) * (e.radius + 6)) continue;
+        const reach = Math.max(e.radius, e.shieldReach);
+        if (dx * dx + dy * dy > (reach + 6) * (reach + 6)) continue;
         if (e.shells.length && (bx - e.x) * (bx - e.x) + (by - e.y) * (by - e.y) < e.shellR * e.shellR && this.plateAt(e, bx, by)) {
           this.shellHit(e, dmg, "laser", false, bx, by);
           endLen = d;
           break outer;
         }
-        if (!bypass) for (const s of e.shields) {
-          if (s.part.alive && s.part.shieldHp > 0 && (bx - s.x) ** 2 + (by - s.y) ** 2 < s.r * s.r) {
+        if (!bypass) {
+          const panel = this.shieldAt(e, bx, by);
+          if (panel) {
             const energy = src === "laser" || src === "shock";
-            if (energy) break; // energy, shock and thermal beams cut straight through
-            /* anything else stops at the bubble without draining it */
-            s.part.shieldHit = 3;
-            this.ringFx(bx, by, 42, "#7df9ff", 520);
-            endLen = d; break outer;
+            if (!energy) {
+              /* anything else stops at the panel without draining it */
+              panel.shieldHit = 3;
+              this.ringFx(bx, by, 42, "#7df9ff", 520);
+              endLen = d; break outer;
+            }
           }
         }
         const ca = Math.cos(e.a), sa = Math.sin(e.a);

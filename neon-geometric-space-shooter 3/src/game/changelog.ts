@@ -8,7 +8,7 @@
  *   CHANGELOG and mirror the details in docs/CHANGELOG.md.
  */
 
-export const VERSION = "2.1.3";
+export const VERSION = "2.2.0";
 
 export interface ChangeEntry {
   version: string;
@@ -19,6 +19,18 @@ export interface ChangeEntry {
 }
 
 export const CHANGELOG: ChangeEntry[] = [
+  {
+    version: "2.2.0",
+    date: "21 Nov 2026",
+    title: "Shield projectors throw walls, not bubbles",
+    points: [
+      "Shield Generators no longer wrap an enemy in a hexagon: each generator projects one energy panel at the hull line, so the gaps between panels are real weak points.",
+      "Flyers and serpents project curved arcs, walkers project straight bars, and some species sweep their panels back and forth (0.4-0.7 rad/s).",
+      "Rarity now buys more generators: 2 at epic, 3 at legendary, 4 at mythical, so the coverage grows from about a third of the ring to about two thirds without ever closing it.",
+      "The rules are unchanged - panels stop every damage type except energy, shock and thermal, take no damage themselves, and only fall when their generator part is destroyed.",
+      "Enemy hit-testing now reaches out to the panels, so a round that would pass the body is still caught by the shield wall in front of it.",
+    ],
+  },
   {
     version: "2.1.3",
     date: "21 Nov 2026",

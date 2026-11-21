@@ -1,5 +1,5 @@
 WOF GUE — STAT COMPENDIUM
-Build 2.1.2 · 21 November 2026
+Build 2.1.3 · 21 November 2026
 
 HOW TO READ THIS
 C / U / R / E / L / M = Common, Uncommon, Rare, Epic, Legendary, Mythic.
@@ -32,7 +32,7 @@ Radius 0–2,200u · health ×1600 · damage ×243 · contact 972 · density 0.0
 Chunk seed pass rate: Common 100% · Uncommon 84.6% · Rare 69.2% · Epic 12.3% · Legendary 6.2% · Mythic 2.9%. Each seeded chunk gets one enemy. Top-up target is 85% of the local cap within 2,700u. The visibility floor is four enemies in view through Rare and two in Legendary–Mythic, capped at Rare tier. The Snake boss pass is disabled in this build.
 
 DAMAGE TYPES
-• Kinetic — base cannon, scatter driver, heavy machine gun, rail sniper, swarm drones. Enemy energy shields stop it dead inside their hex; the bubble takes no damage. Hull shells still stop the rail.
+• Kinetic — base cannon, scatter driver, heavy machine gun, rail sniper, swarm drones. Enemy energy panels stop it dead where they are; the panel takes no damage, so aim at the gaps. Hull shells still stop the rail.
 • Energy — pulse turret, arc lance, shield-bypass laser. Passes straight through enemy energy-shield bubbles; the bypass laser also ignores the bubble entirely.
 • Explosive — seeker pod, homing missile launcher, flak cannon, mine layer, cluster rockets. Stopped dead by enemy energy-shield bubbles.
 • Shock — EMP cannon, chain lightning, gravity bomb, sonic disruptor. Passes through bubbles; direct area effects skip the bubble check anyway. EMP, chain and sonic skip hull shells.
@@ -68,7 +68,7 @@ BODY DAMAGE (contact hit)
 C 4 · U 12 · R 36 · E 108 · L 324 · M 972
 
 TOTAL BODY HEALTH
-C 310 · U 1,405 · R 9,792 · E 62,496 · L 328,608 · M 1,573,120
+C 310 · U 1,405 · R 9,792 · E 64,576 · L 337,968 · M 1,656,320
 
 CORE HEALTH
 C 30 · U 120 · R 540 · E 2,400 · L 10,800 · M 48,000
@@ -80,11 +80,11 @@ MOVE SPEED
 C 210 · U 218 · R 227 · E 235 · L 244 · M 252
 
 PARTS AT MYTHIC
-73 parts · 1,239u radius · C 30 · U 33 · R 44 · E 63 · L 69 · M 73 parts by tier
+75 parts · 1,239u radius · C 30 · U 33 · R 44 · E 64 · L 70 · M 75 parts by tier
 
 DEFENCES
-Shells: Rare 1 layer (5,875 HP each, 60% hull) · Epic 2 layers (37,498 HP each, 60% hull) · Legendary 3 layers (197,165 HP each, 60% hull) · Mythic 4 layers (943,872 HP each, 60% hull)
-Energy shields: Epic 1 bubble (239u) · Legendary 2 bubbles (394–434u) · Mythic 2 bubbles (651–716u) — permanent, energy/shock/thermal pass
+Shells: Rare 1 layer (5,875 HP each, 60% hull) · Epic 2 layers (38,746 HP each, 60% hull) · Legendary 3 layers (202,781 HP each, 60% hull) · Mythic 4 layers (993,792 HP each, 60% hull)
+Energy shields: Epic 2 panels (curved arcs, fixed, 32% of the ring, 239u out) · Legendary 3 panels (curved arcs, fixed, 48% of the ring, 394u out) · Mythic 4 panels (curved arcs, fixed, 64% of the ring, 651u out) — each generator projects one wall with gaps between them; blocked rounds deal nothing and the panel never depletes, energy/shock/thermal pass
 
 MOUNTS AT MYTHIC
 0 gun mounts · 0 missile pods · gun 0.4× enemy damage at 1.1–1.7s cadence; missiles 1.1× at 4.5–6s
@@ -112,7 +112,7 @@ BODY DAMAGE (contact hit)
 C 4 · U 12 · R 36 · E 108 · L 324 · M 972
 
 TOTAL BODY HEALTH
-C 486 · U 1,987 · R 12,262 · E 87,840 · L 498,960 · M 2,288,000
+C 486 · U 1,987 · R 12,262 · E 89,920 · L 498,960 · M 2,288,000
 
 CORE HEALTH
 C 30 · U 120 · R 540 · E 2,400 · L 10,800 · M 48,000
@@ -124,11 +124,11 @@ MOVE SPEED
 C 115 · U 120 · R 124 · E 129 · L 133 · M 138
 
 PARTS AT MYTHIC
-105 parts · 1,321u radius · C 41 · U 42 · R 56 · E 90 · L 103 · M 105 parts by tier
+105 parts · 1,321u radius · C 41 · U 42 · R 56 · E 91 · L 103 · M 105 parts by tier
 
 DEFENCES
-Shells: Rare 1 layer (7,357 HP each, 60% hull) · Epic 2 layers (52,704 HP each, 60% hull) · Legendary 3 layers (299,376 HP each, 60% hull) · Mythic 4 layers (1,372,800 HP each, 60% hull)
-Energy shields: Epic 1 bubble (239u) — permanent, energy/shock/thermal pass
+Shells: Rare 1 layer (7,357 HP each, 60% hull) · Epic 2 layers (53,952 HP each, 60% hull) · Legendary 3 layers (299,376 HP each, 60% hull) · Mythic 4 layers (1,372,800 HP each, 60% hull)
+Energy shields: Epic 2 panels (straight bars, some sweeping, 42% of the ring, 239u out) — each generator projects one wall with gaps between them; blocked rounds deal nothing and the panel never depletes, energy/shock/thermal pass
 
 MOUNTS AT MYTHIC
 0 gun mounts · 0 missile pods · gun 0.4× enemy damage at 1.1–1.7s cadence; missiles 1.1× at 4.5–6s
@@ -156,7 +156,7 @@ BODY DAMAGE (contact hit)
 C 4 · U 12 · R 36 · E 108 · L 324 · M 972
 
 TOTAL BODY HEALTH
-C 406 · U 1,644 · R 9,947 · E 80,528 · L 478,008 · M 2,194,880
+C 406 · U 1,644 · R 9,947 · E 82,608 · L 478,008 · M 2,194,880
 
 CORE HEALTH
 C 30 · U 120 · R 540 · E 2,400 · L 10,800 · M 48,000
@@ -168,11 +168,11 @@ MOVE SPEED
 C 140 · U 146 · R 151 · E 157 · L 162 · M 168
 
 PARTS AT MYTHIC
-109 parts · 1,350u radius · C 40 · U 41 · R 52 · E 93 · L 107 · M 109 parts by tier
+109 parts · 1,350u radius · C 40 · U 41 · R 52 · E 94 · L 107 · M 109 parts by tier
 
 DEFENCES
-Shells: Rare 1 layer (5,968 HP each, 60% hull) · Epic 2 layers (48,317 HP each, 60% hull) · Legendary 3 layers (286,805 HP each, 60% hull) · Mythic 4 layers (1,316,928 HP each, 60% hull)
-Energy shields: Epic 1 bubble (239u) — permanent, energy/shock/thermal pass
+Shells: Rare 1 layer (5,968 HP each, 60% hull) · Epic 2 layers (49,565 HP each, 60% hull) · Legendary 3 layers (286,805 HP each, 60% hull) · Mythic 4 layers (1,316,928 HP each, 60% hull)
+Energy shields: Epic 2 panels (straight bars, fixed, 42% of the ring, 239u out) — each generator projects one wall with gaps between them; blocked rounds deal nothing and the panel never depletes, energy/shock/thermal pass
 
 MOUNTS AT MYTHIC
 0 gun mounts · 2 missile pods · gun 0.4× enemy damage at 1.1–1.7s cadence; missiles 1.1× at 4.5–6s
@@ -200,7 +200,7 @@ BODY DAMAGE (contact hit)
 C 4 · U 12 · R 36 · E 108 · L 324 · M 972
 
 TOTAL BODY HEALTH
-C 350 · U 1,683 · R 8,957 · E 70,752 · L 337,248 · M 1,540,480
+C 350 · U 1,683 · R 8,957 · E 72,832 · L 346,608 · M 1,582,080
 
 CORE HEALTH
 C 30 · U 120 · R 540 · E 2,400 · L 10,800 · M 48,000
@@ -212,11 +212,11 @@ MOVE SPEED
 C 130 · U 135 · R 140 · E 146 · L 151 · M 156
 
 PARTS AT MYTHIC
-69 parts · 862u radius · C 34 · U 38 · R 45 · E 66 · L 68 · M 69 parts by tier
+70 parts · 862u radius · C 34 · U 38 · R 45 · E 67 · L 69 · M 70 parts by tier
 
 DEFENCES
-Shells: Rare 1 layer (5,374 HP each, 60% hull) · Epic 2 layers (42,451 HP each, 60% hull) · Legendary 3 layers (202,349 HP each, 60% hull) · Mythic 4 layers (924,288 HP each, 60% hull)
-Energy shields: Epic 1 bubble (239u) · Legendary 2 bubbles (394–434u) · Mythic 3 bubbles (651–781u) — permanent, energy/shock/thermal pass
+Shells: Rare 1 layer (5,374 HP each, 60% hull) · Epic 2 layers (43,699 HP each, 60% hull) · Legendary 3 layers (207,965 HP each, 60% hull) · Mythic 4 layers (949,248 HP each, 60% hull)
+Energy shields: Epic 2 panels (curved arcs, fixed, 32% of the ring, 239u out) · Legendary 3 panels (curved arcs, fixed, 48% of the ring, 394u out) · Mythic 4 panels (curved arcs, fixed, 64% of the ring, 651u out) — each generator projects one wall with gaps between them; blocked rounds deal nothing and the panel never depletes, energy/shock/thermal pass
 
 MOUNTS AT MYTHIC
 0 gun mounts · 0 missile pods · gun 0.4× enemy damage at 1.1–1.7s cadence; missiles 1.1× at 4.5–6s
@@ -244,7 +244,7 @@ BODY DAMAGE (contact hit)
 C 4 · U 12 · R 36 · E 108 · L 324 · M 972
 
 TOTAL BODY HEALTH
-C 428 · U 1,710 · R 9,022 · E 70,464 · L 350,640 · M 1,886,720
+C 428 · U 1,710 · R 9,022 · E 72,544 · L 360,000 · M 1,928,320
 
 CORE HEALTH
 C 30 · U 120 · R 540 · E 2,400 · L 10,800 · M 48,000
@@ -256,11 +256,11 @@ MOVE SPEED
 C 120 · U 125 · R 130 · E 134 · L 139 · M 144
 
 PARTS AT MYTHIC
-85 parts · 1,127u radius · C 36 · U 36 · R 43 · E 72 · L 76 · M 85 parts by tier
+86 parts · 1,127u radius · C 36 · U 36 · R 43 · E 73 · L 77 · M 86 parts by tier
 
 DEFENCES
-Shells: Rare 1 layer (5,413 HP each, 60% hull) · Epic 2 layers (42,278 HP each, 60% hull) · Legendary 3 layers (210,384 HP each, 60% hull) · Mythic 4 layers (1,132,032 HP each, 60% hull)
-Energy shields: Epic 1 bubble (239u) · Legendary 2 bubbles (394–434u) · Mythic 3 bubbles (651–781u) — permanent, energy/shock/thermal pass
+Shells: Rare 1 layer (5,413 HP each, 60% hull) · Epic 2 layers (43,526 HP each, 60% hull) · Legendary 3 layers (216,000 HP each, 60% hull) · Mythic 4 layers (1,156,992 HP each, 60% hull)
+Energy shields: Epic 2 panels (straight bars, fixed, 42% of the ring, 239u out) · Legendary 3 panels (straight bars, fixed, 63% of the ring, 394u out) · Mythic 4 panels (straight bars, fixed, 84% of the ring, 651u out) — each generator projects one wall with gaps between them; blocked rounds deal nothing and the panel never depletes, energy/shock/thermal pass
 
 MOUNTS AT MYTHIC
 0 gun mounts · 0 missile pods · gun 0.4× enemy damage at 1.1–1.7s cadence; missiles 1.1× at 4.5–6s
@@ -288,7 +288,7 @@ BODY DAMAGE (contact hit)
 C 4 · U 12 · R 36 · E 108 · L 324 · M 972
 
 TOTAL BODY HEALTH
-C 899 · U 4,411 · R 23,983 · E 224,288 · L 1,162,800 · M 5,793,920
+C 899 · U 4,411 · R 23,983 · E 228,448 · L 1,190,880 · M 5,793,920
 
 CORE HEALTH
 C 30 · U 120 · R 540 · E 2,400 · L 10,800 · M 48,000
@@ -300,10 +300,11 @@ MOVE SPEED
 C 170 · U 177 · R 184 · E 190 · L 197 · M 204
 
 PARTS AT MYTHIC
-352 parts · 2,618u radius · C 88 · U 109 · R 131 · E 273 · L 313 · M 352 parts by tier
+352 parts · 2,618u radius · C 88 · U 109 · R 131 · E 275 · L 316 · M 352 parts by tier
 
 DEFENCES
 Shells: none — the body takes hits directly.
+Energy shields: Epic 2 panels (curved arcs, fixed, 32% of the ring, 239u out) · Legendary 3 panels (curved arcs, fixed, 48% of the ring, 394u out) — each generator projects one wall with gaps between them; blocked rounds deal nothing and the panel never depletes, energy/shock/thermal pass
 
 MOUNTS AT MYTHIC
 0 gun mounts · 0 missile pods · gun 0.4× enemy damage at 1.1–1.7s cadence; missiles 1.1× at 4.5–6s
@@ -374,7 +375,7 @@ BODY DAMAGE (contact hit)
 C 4 · U 12 · R 36 · E 108 · L 324 · M 972
 
 TOTAL BODY HEALTH
-C 362 · U 1,448 · R 8,768 · E 71,448 · L 406,908 · M 2,307,680
+C 362 · U 1,448 · R 8,768 · E 73,528 · L 416,268 · M 2,390,880
 
 CORE HEALTH
 C 30 · U 120 · R 540 · E 2,400 · L 10,800 · M 48,000
@@ -386,11 +387,11 @@ MOVE SPEED
 C 110 · U 114 · R 119 · E 123 · L 128 · M 132
 
 PARTS AT MYTHIC
-106 parts · 1,032u radius · C 29 · U 29 · R 48 · E 70 · L 92 · M 106 parts by tier
+108 parts · 1,032u radius · C 29 · U 29 · R 48 · E 71 · L 93 · M 108 parts by tier
 
 DEFENCES
-Shells: Rare 1 layer (5,261 HP each, 60% hull) · Epic 2 layers (42,869 HP each, 60% hull) · Legendary 3 layers (244,145 HP each, 60% hull) · Mythic 4 layers (1,384,608 HP each, 60% hull)
-Energy shields: Epic 1 bubble (239u) · Legendary 2 bubbles (394–434u) · Mythic 2 bubbles (651–716u) — permanent, energy/shock/thermal pass
+Shells: Rare 1 layer (5,261 HP each, 60% hull) · Epic 2 layers (44,117 HP each, 60% hull) · Legendary 3 layers (249,761 HP each, 60% hull) · Mythic 4 layers (1,434,528 HP each, 60% hull)
+Energy shields: Epic 2 panels (straight bars, fixed, 42% of the ring, 239u out) · Legendary 3 panels (straight bars, fixed, 63% of the ring, 394u out) · Mythic 4 panels (straight bars, fixed, 84% of the ring, 651u out) — each generator projects one wall with gaps between them; blocked rounds deal nothing and the panel never depletes, energy/shock/thermal pass
 
 MOUNTS AT MYTHIC
 0 gun mounts · 4 missile pods · gun 0.4× enemy damage at 1.1–1.7s cadence; missiles 1.1× at 4.5–6s
@@ -458,7 +459,7 @@ BODY DAMAGE (contact hit)
 C 4 · U 12 · R 36 · E 108 · L 324 · M 972
 
 TOTAL BODY HEALTH
-C 352 · U 1,522 · R 7,308 · E 67,648 · L 342,288 · M 1,633,280
+C 352 · U 1,522 · R 7,308 · E 69,728 · L 351,648 · M 1,674,880
 
 CORE HEALTH
 C 30 · U 120 · R 540 · E 2,400 · L 10,800 · M 48,000
@@ -470,11 +471,11 @@ MOVE SPEED
 C 125 · U 130 · R 135 · E 140 · L 145 · M 150
 
 PARTS AT MYTHIC
-78 parts · 1,115u radius · C 33 · U 35 · R 36 · E 71 · L 75 · M 78 parts by tier
+79 parts · 1,115u radius · C 33 · U 35 · R 36 · E 72 · L 76 · M 79 parts by tier
 
 DEFENCES
-Shells: Rare 1 layer (4,385 HP each, 60% hull) · Epic 2 layers (40,589 HP each, 60% hull) · Legendary 3 layers (205,373 HP each, 60% hull) · Mythic 4 layers (979,968 HP each, 60% hull)
-Energy shields: Epic 1 bubble (239u) · Legendary 2 bubbles (394–434u) · Mythic 3 bubbles (651–781u) — permanent, energy/shock/thermal pass
+Shells: Rare 1 layer (4,385 HP each, 60% hull) · Epic 2 layers (41,837 HP each, 60% hull) · Legendary 3 layers (210,989 HP each, 60% hull) · Mythic 4 layers (1,004,928 HP each, 60% hull)
+Energy shields: Epic 2 panels (curved arcs, some sweeping, 32% of the ring, 239u out) · Legendary 3 panels (curved arcs, some sweeping, 48% of the ring, 394u out) · Mythic 4 panels (curved arcs, some sweeping, 64% of the ring, 651u out) — each generator projects one wall with gaps between them; blocked rounds deal nothing and the panel never depletes, energy/shock/thermal pass
 
 MOUNTS AT MYTHIC
 0 gun mounts · 0 missile pods · gun 0.4× enemy damage at 1.1–1.7s cadence; missiles 1.1× at 4.5–6s
@@ -542,7 +543,7 @@ BODY DAMAGE (contact hit)
 C 4 · U 12 · R 36 · E 108 · L 324 · M 972
 
 TOTAL BODY HEALTH
-C 451 · U 1,872 · R 10,787 · E 73,096 · L 363,780 · M 1,756,960
+C 451 · U 1,872 · R 10,787 · E 73,096 · L 363,780 · M 1,881,760
 
 CORE HEALTH
 C 30 · U 120 · R 540 · E 2,400 · L 10,800 · M 48,000
@@ -554,11 +555,11 @@ MOVE SPEED
 C 175 · U 182 · R 189 · E 196 · L 203 · M 210
 
 PARTS AT MYTHIC
-83 parts · 1,149u radius · C 39 · U 40 · R 58 · E 75 · L 79 · M 83 parts by tier
+86 parts · 1,149u radius · C 39 · U 40 · R 58 · E 75 · L 79 · M 86 parts by tier
 
 DEFENCES
-Shells: Rare 1 layer (6,472 HP each, 60% hull) · Epic 2 layers (43,858 HP each, 60% hull) · Legendary 3 layers (218,268 HP each, 60% hull) · Mythic 4 layers (1,054,176 HP each, 60% hull)
-Energy shields: Mythic 1 bubble (651u) — permanent, energy/shock/thermal pass
+Shells: Rare 1 layer (6,472 HP each, 60% hull) · Epic 2 layers (43,858 HP each, 60% hull) · Legendary 3 layers (218,268 HP each, 60% hull) · Mythic 4 layers (1,129,056 HP each, 60% hull)
+Energy shields: Mythic 4 panels (curved arcs, fixed, 64% of the ring, 651u out) — each generator projects one wall with gaps between them; blocked rounds deal nothing and the panel never depletes, energy/shock/thermal pass
 
 MOUNTS AT MYTHIC
 0 gun mounts · 0 missile pods · gun 0.4× enemy damage at 1.1–1.7s cadence; missiles 1.1× at 4.5–6s
@@ -623,7 +624,7 @@ BODY DAMAGE (contact hit)
 C 4 · U 12 · R 36 · E 108 · L 324 · M 972
 
 TOTAL BODY HEALTH
-C 497 · U 1,989 · R 11,066 · E 88,384 · L 477,360 · M 2,233,600
+C 497 · U 1,989 · R 11,066 · E 90,464 · L 486,720 · M 2,275,200
 
 CORE HEALTH
 C 30 · U 120 · R 540 · E 2,400 · L 10,800 · M 48,000
@@ -635,11 +636,11 @@ MOVE SPEED
 C 190 · U 198 · R 205 · E 213 · L 220 · M 228
 
 PARTS AT MYTHIC
-104 parts · 988u radius · C 40 · U 40 · R 58 · E 83 · L 101 · M 104 parts by tier
+105 parts · 988u radius · C 40 · U 40 · R 58 · E 84 · L 102 · M 105 parts by tier
 
 DEFENCES
-Shells: Rare 1 layer (6,640 HP each, 60% hull) · Epic 2 layers (53,030 HP each, 60% hull) · Legendary 3 layers (286,416 HP each, 60% hull) · Mythic 4 layers (1,340,160 HP each, 60% hull)
-Energy shields: Epic 1 bubble (239u) · Legendary 2 bubbles (394–434u) · Mythic 3 bubbles (651–781u) — permanent, energy/shock/thermal pass
+Shells: Rare 1 layer (6,640 HP each, 60% hull) · Epic 2 layers (54,278 HP each, 60% hull) · Legendary 3 layers (292,032 HP each, 60% hull) · Mythic 4 layers (1,365,120 HP each, 60% hull)
+Energy shields: Epic 2 panels (straight bars, fixed, 42% of the ring, 239u out) · Legendary 3 panels (straight bars, fixed, 63% of the ring, 394u out) · Mythic 4 panels (straight bars, fixed, 84% of the ring, 651u out) — each generator projects one wall with gaps between them; blocked rounds deal nothing and the panel never depletes, energy/shock/thermal pass
 
 MOUNTS AT MYTHIC
 6 gun mounts · 0 missile pods · gun 0.4× enemy damage at 1.1–1.7s cadence; missiles 1.1× at 4.5–6s
@@ -664,7 +665,7 @@ BODY DAMAGE (contact hit)
 C 4 · U 12 · R 36 · E 108 · L 324 · M 972
 
 TOTAL BODY HEALTH
-C 343 · U 1,374 · R 6,930 · E 39,376 · L 189,864 · M 1,096,640
+C 343 · U 1,374 · R 6,930 · E 39,376 · L 189,864 · M 1,221,440
 
 CORE HEALTH
 C 30 · U 120 · R 540 · E 2,400 · L 10,800 · M 48,000
@@ -676,11 +677,11 @@ MOVE SPEED
 C 220 · U 229 · R 238 · E 246 · L 255 · M 264
 
 PARTS AT MYTHIC
-60 parts · 838u radius · C 33 · U 33 · R 38 · E 52 · L 53 · M 60 parts by tier
+63 parts · 838u radius · C 33 · U 33 · R 38 · E 52 · L 53 · M 63 parts by tier
 
 DEFENCES
-Shells: Rare 1 layer (4,158 HP each, 60% hull) · Epic 2 layers (23,626 HP each, 60% hull) · Legendary 3 layers (113,918 HP each, 60% hull) · Mythic 4 layers (657,984 HP each, 60% hull)
-Energy shields: Mythic 1 bubble (651u) — permanent, energy/shock/thermal pass
+Shells: Rare 1 layer (4,158 HP each, 60% hull) · Epic 2 layers (23,626 HP each, 60% hull) · Legendary 3 layers (113,918 HP each, 60% hull) · Mythic 4 layers (732,864 HP each, 60% hull)
+Energy shields: Mythic 4 panels (curved arcs, fixed, 64% of the ring, 651u out) — each generator projects one wall with gaps between them; blocked rounds deal nothing and the panel never depletes, energy/shock/thermal pass
 
 MOUNTS AT MYTHIC
 0 gun mounts · 0 missile pods · gun 0.4× enemy damage at 1.1–1.7s cadence; missiles 1.1× at 4.5–6s
@@ -705,7 +706,7 @@ BODY DAMAGE (contact hit)
 C 4 · U 12 · R 36 · E 108 · L 324 · M 972
 
 TOTAL BODY HEALTH
-C 411 · U 1,645 · R 9,518 · E 72,704 · L 390,240 · M 1,875,200
+C 411 · U 1,645 · R 9,518 · E 72,704 · L 399,600 · M 1,958,400
 
 CORE HEALTH
 C 30 · U 120 · R 540 · E 2,400 · L 10,800 · M 48,000
@@ -717,11 +718,11 @@ MOVE SPEED
 C 120 · U 125 · R 130 · E 134 · L 139 · M 144
 
 PARTS AT MYTHIC
-87 parts · 984u radius · C 37 · U 37 · R 55 · E 76 · L 83 · M 87 parts by tier
+89 parts · 984u radius · C 37 · U 37 · R 55 · E 76 · L 84 · M 89 parts by tier
 
 DEFENCES
-Shells: Rare 1 layer (5,711 HP each, 60% hull) · Epic 2 layers (43,622 HP each, 60% hull) · Legendary 3 layers (234,144 HP each, 60% hull) · Mythic 4 layers (1,125,120 HP each, 60% hull)
-Energy shields: Legendary 2 bubbles (394–434u) · Mythic 2 bubbles (651–716u) — permanent, energy/shock/thermal pass
+Shells: Rare 1 layer (5,711 HP each, 60% hull) · Epic 2 layers (43,622 HP each, 60% hull) · Legendary 3 layers (239,760 HP each, 60% hull) · Mythic 4 layers (1,175,040 HP each, 60% hull)
+Energy shields: Legendary 3 panels (straight bars, fixed, 63% of the ring, 394u out) · Mythic 4 panels (straight bars, fixed, 84% of the ring, 651u out) — each generator projects one wall with gaps between them; blocked rounds deal nothing and the panel never depletes, energy/shock/thermal pass
 
 MOUNTS AT MYTHIC
 0 gun mounts · 4 missile pods · gun 0.4× enemy damage at 1.1–1.7s cadence; missiles 1.1× at 4.5–6s
@@ -746,7 +747,7 @@ BODY DAMAGE (contact hit)
 C 4 · U 12 · R 36 · E 108 · L 324 · M 972
 
 TOTAL BODY HEALTH
-C 418 · U 1,673 · R 11,372 · E 75,344 · L 483,480 · M 2,260,800
+C 418 · U 1,673 · R 11,372 · E 77,424 · L 492,840 · M 2,302,400
 
 CORE HEALTH
 C 30 · U 120 · R 540 · E 2,400 · L 10,800 · M 48,000
@@ -758,11 +759,11 @@ MOVE SPEED
 C 105 · U 109 · R 113 · E 118 · L 122 · M 126
 
 PARTS AT MYTHIC
-106 parts · 1,457u radius · C 37 · U 37 · R 60 · E 77 · L 103 · M 106 parts by tier
+107 parts · 1,457u radius · C 37 · U 37 · R 60 · E 78 · L 104 · M 107 parts by tier
 
 DEFENCES
-Shells: Rare 1 layer (6,823 HP each, 60% hull) · Epic 2 layers (45,206 HP each, 60% hull) · Legendary 3 layers (290,088 HP each, 60% hull) · Mythic 4 layers (1,356,480 HP each, 60% hull)
-Energy shields: Epic 1 bubble (239u) · Legendary 2 bubbles (394–434u) · Mythic 3 bubbles (651–781u) — permanent, energy/shock/thermal pass
+Shells: Rare 1 layer (6,823 HP each, 60% hull) · Epic 2 layers (46,454 HP each, 60% hull) · Legendary 3 layers (295,704 HP each, 60% hull) · Mythic 4 layers (1,381,440 HP each, 60% hull)
+Energy shields: Epic 2 panels (straight bars, fixed, 42% of the ring, 239u out) · Legendary 3 panels (straight bars, fixed, 63% of the ring, 394u out) · Mythic 4 panels (straight bars, fixed, 84% of the ring, 651u out) — each generator projects one wall with gaps between them; blocked rounds deal nothing and the panel never depletes, energy/shock/thermal pass
 
 MOUNTS AT MYTHIC
 0 gun mounts · 0 missile pods · gun 0.4× enemy damage at 1.1–1.7s cadence; missiles 1.1× at 4.5–6s
@@ -787,7 +788,7 @@ BODY DAMAGE (contact hit)
 C 4 · U 12 · R 36 · E 108 · L 324 · M 972
 
 TOTAL BODY HEALTH
-C 468 · U 1,943 · R 9,808 · E 74,504 · L 370,116 · M 1,785,120
+C 468 · U 1,943 · R 9,808 · E 74,504 · L 370,116 · M 1,909,920
 
 CORE HEALTH
 C 30 · U 120 · R 540 · E 2,400 · L 10,800 · M 48,000
@@ -799,11 +800,11 @@ MOVE SPEED
 C 200 · U 208 · R 216 · E 224 · L 232 · M 240
 
 PARTS AT MYTHIC
-84 parts · 1,288u radius · C 40 · U 41 · R 47 · E 76 · L 80 · M 84 parts by tier
+87 parts · 1,288u radius · C 40 · U 41 · R 47 · E 76 · L 80 · M 87 parts by tier
 
 DEFENCES
-Shells: Rare 1 layer (5,885 HP each, 60% hull) · Epic 2 layers (44,702 HP each, 60% hull) · Legendary 3 layers (222,070 HP each, 60% hull) · Mythic 4 layers (1,071,072 HP each, 60% hull)
-Energy shields: Mythic 1 bubble (651u) — permanent, energy/shock/thermal pass
+Shells: Rare 1 layer (5,885 HP each, 60% hull) · Epic 2 layers (44,702 HP each, 60% hull) · Legendary 3 layers (222,070 HP each, 60% hull) · Mythic 4 layers (1,145,952 HP each, 60% hull)
+Energy shields: Mythic 4 panels (curved arcs, some sweeping, 64% of the ring, 651u out) — each generator projects one wall with gaps between them; blocked rounds deal nothing and the panel never depletes, energy/shock/thermal pass
 
 MOUNTS AT MYTHIC
 0 gun mounts · 0 missile pods · gun 0.4× enemy damage at 1.1–1.7s cadence; missiles 1.1× at 4.5–6s
@@ -828,7 +829,7 @@ BODY DAMAGE (contact hit)
 C 4 · U 12 · R 36 · E 108 · L 324 · M 972
 
 TOTAL BODY HEALTH
-C 440 · U 1,758 · R 11,758 · E 73,536 · L 384,624 · M 1,821,440
+C 440 · U 1,758 · R 11,758 · E 75,616 · L 393,984 · M 1,863,040
 
 CORE HEALTH
 C 30 · U 120 · R 540 · E 2,400 · L 10,800 · M 48,000
@@ -840,11 +841,11 @@ MOVE SPEED
 C 135 · U 140 · R 146 · E 151 · L 157 · M 162
 
 PARTS AT MYTHIC
-84 parts · 988u radius · C 37 · U 37 · R 60 · E 75 · L 81 · M 84 parts by tier
+85 parts · 988u radius · C 37 · U 37 · R 60 · E 76 · L 82 · M 85 parts by tier
 
 DEFENCES
-Shells: Rare 1 layer (7,055 HP each, 60% hull) · Epic 2 layers (44,122 HP each, 60% hull) · Legendary 3 layers (230,774 HP each, 60% hull) · Mythic 4 layers (1,092,864 HP each, 60% hull)
-Energy shields: Epic 1 bubble (239u) · Legendary 2 bubbles (394–434u) · Mythic 3 bubbles (651–781u) — permanent, energy/shock/thermal pass
+Shells: Rare 1 layer (7,055 HP each, 60% hull) · Epic 2 layers (45,370 HP each, 60% hull) · Legendary 3 layers (236,390 HP each, 60% hull) · Mythic 4 layers (1,117,824 HP each, 60% hull)
+Energy shields: Epic 2 panels (curved arcs, fixed, 32% of the ring, 239u out) · Legendary 3 panels (curved arcs, fixed, 48% of the ring, 394u out) · Mythic 4 panels (curved arcs, fixed, 64% of the ring, 651u out) — each generator projects one wall with gaps between them; blocked rounds deal nothing and the panel never depletes, energy/shock/thermal pass
 
 MOUNTS AT MYTHIC
 0 gun mounts · 0 missile pods · gun 0.4× enemy damage at 1.1–1.7s cadence; missiles 1.1× at 4.5–6s
@@ -869,7 +870,7 @@ BODY DAMAGE (contact hit)
 C 4 · U 12 · R 36 · E 108 · L 324 · M 972
 
 TOTAL BODY HEALTH
-C 419 · U 1,675 · R 9,655 · E 75,392 · L 403,056 · M 1,903,360
+C 419 · U 1,675 · R 9,655 · E 77,472 · L 412,416 · M 1,944,960
 
 CORE HEALTH
 C 30 · U 120 · R 540 · E 2,400 · L 10,800 · M 48,000
@@ -881,11 +882,11 @@ MOVE SPEED
 C 120 · U 125 · R 130 · E 134 · L 139 · M 144
 
 PARTS AT MYTHIC
-95 parts · 1,379u radius · C 36 · U 36 · R 54 · E 76 · L 92 · M 95 parts by tier
+96 parts · 1,379u radius · C 36 · U 36 · R 54 · E 77 · L 93 · M 96 parts by tier
 
 DEFENCES
-Shells: Rare 1 layer (5,793 HP each, 60% hull) · Epic 2 layers (45,235 HP each, 60% hull) · Legendary 3 layers (241,834 HP each, 60% hull) · Mythic 4 layers (1,142,016 HP each, 60% hull)
-Energy shields: Epic 1 bubble (239u) · Legendary 2 bubbles (394–434u) · Mythic 3 bubbles (651–781u) — permanent, energy/shock/thermal pass
+Shells: Rare 1 layer (5,793 HP each, 60% hull) · Epic 2 layers (46,483 HP each, 60% hull) · Legendary 3 layers (247,450 HP each, 60% hull) · Mythic 4 layers (1,166,976 HP each, 60% hull)
+Energy shields: Epic 2 panels (straight bars, fixed, 42% of the ring, 239u out) · Legendary 3 panels (straight bars, fixed, 63% of the ring, 394u out) · Mythic 4 panels (straight bars, fixed, 84% of the ring, 651u out) — each generator projects one wall with gaps between them; blocked rounds deal nothing and the panel never depletes, energy/shock/thermal pass
 
 MOUNTS AT MYTHIC
 6 gun mounts · 0 missile pods · gun 0.4× enemy damage at 1.1–1.7s cadence; missiles 1.1× at 4.5–6s
@@ -910,7 +911,7 @@ BODY DAMAGE (contact hit)
 C 4 · U 12 · R 36 · E 108 · L 324 · M 972
 
 TOTAL BODY HEALTH
-C 490 · U 1,958 · R 9,634 · E 73,376 · L 448,704 · M 2,023,040
+C 490 · U 1,958 · R 9,634 · E 75,456 · L 458,064 · M 2,147,840
 
 CORE HEALTH
 C 30 · U 120 · R 540 · E 2,400 · L 10,800 · M 48,000
@@ -922,11 +923,11 @@ MOVE SPEED
 C 135 · U 140 · R 146 · E 151 · L 157 · M 162
 
 PARTS AT MYTHIC
-89 parts · 1,212u radius · C 39 · U 39 · R 45 · E 74 · L 88 · M 89 parts by tier
+92 parts · 1,212u radius · C 39 · U 39 · R 45 · E 75 · L 89 · M 92 parts by tier
 
 DEFENCES
-Shells: Rare 1 layer (5,780 HP each, 60% hull) · Epic 2 layers (44,026 HP each, 60% hull) · Legendary 3 layers (269,222 HP each, 60% hull) · Mythic 4 layers (1,213,824 HP each, 60% hull)
-Energy shields: Epic 1 bubble (239u) · Legendary 2 bubbles (394–434u) · Mythic 1 bubble (651u) — permanent, energy/shock/thermal pass
+Shells: Rare 1 layer (5,780 HP each, 60% hull) · Epic 2 layers (45,274 HP each, 60% hull) · Legendary 3 layers (274,838 HP each, 60% hull) · Mythic 4 layers (1,288,704 HP each, 60% hull)
+Energy shields: Epic 2 panels (straight bars, some sweeping, 42% of the ring, 239u out) · Legendary 3 panels (straight bars, some sweeping, 63% of the ring, 394u out) · Mythic 4 panels (straight bars, some sweeping, 84% of the ring, 651u out) — each generator projects one wall with gaps between them; blocked rounds deal nothing and the panel never depletes, energy/shock/thermal pass
 
 MOUNTS AT MYTHIC
 6 gun mounts · 0 missile pods · gun 0.4× enemy damage at 1.1–1.7s cadence; missiles 1.1× at 4.5–6s
@@ -951,7 +952,7 @@ BODY DAMAGE (contact hit)
 C 4 · U 12 · R 36 · E 108 · L 324 · M 972
 
 TOTAL BODY HEALTH
-C 338 · U 1,354 · R 8,222 · E 63,584 · L 308,160 · M 1,411,200
+C 338 · U 1,354 · R 8,222 · E 65,664 · L 317,520 · M 1,452,800
 
 CORE HEALTH
 C 30 · U 120 · R 540 · E 2,400 · L 10,800 · M 48,000
@@ -963,11 +964,11 @@ MOVE SPEED
 C 140 · U 146 · R 151 · E 157 · L 162 · M 168
 
 PARTS AT MYTHIC
-71 parts · 1,145u radius · C 32 · U 32 · R 41 · E 68 · L 70 · M 71 parts by tier
+72 parts · 1,145u radius · C 32 · U 32 · R 41 · E 69 · L 71 · M 72 parts by tier
 
 DEFENCES
-Shells: Rare 1 layer (4,933 HP each, 60% hull) · Epic 2 layers (38,150 HP each, 60% hull) · Legendary 3 layers (184,896 HP each, 60% hull) · Mythic 4 layers (846,720 HP each, 60% hull)
-Energy shields: Epic 1 bubble (239u) · Legendary 2 bubbles (394–434u) · Mythic 3 bubbles (651–781u) — permanent, energy/shock/thermal pass
+Shells: Rare 1 layer (4,933 HP each, 60% hull) · Epic 2 layers (39,398 HP each, 60% hull) · Legendary 3 layers (190,512 HP each, 60% hull) · Mythic 4 layers (871,680 HP each, 60% hull)
+Energy shields: Epic 2 panels (curved arcs, some sweeping, 32% of the ring, 239u out) · Legendary 3 panels (curved arcs, some sweeping, 48% of the ring, 394u out) · Mythic 4 panels (curved arcs, some sweeping, 64% of the ring, 651u out) — each generator projects one wall with gaps between them; blocked rounds deal nothing and the panel never depletes, energy/shock/thermal pass
 
 MOUNTS AT MYTHIC
 0 gun mounts · 0 missile pods · gun 0.4× enemy damage at 1.1–1.7s cadence; missiles 1.1× at 4.5–6s
@@ -992,7 +993,7 @@ BODY DAMAGE (contact hit)
 C 4 · U 12 · R 36 · E 108 · L 324 · M 972
 
 TOTAL BODY HEALTH
-C 417 · U 1,667 · R 9,619 · E 73,152 · L 344,736 · M 1,573,760
+C 417 · U 1,667 · R 9,619 · E 73,152 · L 354,096 · M 1,615,360
 
 CORE HEALTH
 C 30 · U 120 · R 540 · E 2,400 · L 10,800 · M 48,000
@@ -1004,11 +1005,11 @@ MOVE SPEED
 C 185 · U 192 · R 200 · E 207 · L 215 · M 222
 
 PARTS AT MYTHIC
-77 parts · 969u radius · C 36 · U 36 · R 54 · E 75 · L 76 · M 77 parts by tier
+78 parts · 969u radius · C 36 · U 36 · R 54 · E 75 · L 77 · M 78 parts by tier
 
 DEFENCES
-Shells: Rare 1 layer (5,772 HP each, 60% hull) · Epic 2 layers (43,891 HP each, 60% hull) · Legendary 3 layers (206,842 HP each, 60% hull) · Mythic 4 layers (944,256 HP each, 60% hull)
-Energy shields: Legendary 2 bubbles (394–434u) · Mythic 3 bubbles (651–781u) — permanent, energy/shock/thermal pass
+Shells: Rare 1 layer (5,772 HP each, 60% hull) · Epic 2 layers (43,891 HP each, 60% hull) · Legendary 3 layers (212,458 HP each, 60% hull) · Mythic 4 layers (969,216 HP each, 60% hull)
+Energy shields: Legendary 3 panels (straight bars, fixed, 63% of the ring, 394u out) · Mythic 4 panels (straight bars, fixed, 84% of the ring, 651u out) — each generator projects one wall with gaps between them; blocked rounds deal nothing and the panel never depletes, energy/shock/thermal pass
 
 MOUNTS AT MYTHIC
 0 gun mounts · 0 missile pods · gun 0.4× enemy damage at 1.1–1.7s cadence; missiles 1.1× at 4.5–6s
@@ -1033,7 +1034,7 @@ BODY DAMAGE (contact hit)
 C 4 · U 12 · R 36 · E 108 · L 324 · M 972
 
 TOTAL BODY HEALTH
-C 401 · U 1,605 · R 8,978 · E 70,464 · L 380,880 · M 1,804,800
+C 401 · U 1,605 · R 8,978 · E 72,544 · L 390,240 · M 1,846,400
 
 CORE HEALTH
 C 30 · U 120 · R 540 · E 2,400 · L 10,800 · M 48,000
@@ -1045,11 +1046,11 @@ MOVE SPEED
 C 230 · U 239 · R 248 · E 258 · L 267 · M 276
 
 PARTS AT MYTHIC
-92 parts · 1,004u radius · C 35 · U 35 · R 48 · E 73 · L 89 · M 92 parts by tier
+93 parts · 1,004u radius · C 35 · U 35 · R 48 · E 74 · L 90 · M 93 parts by tier
 
 DEFENCES
-Shells: Rare 1 layer (5,387 HP each, 60% hull) · Epic 2 layers (42,278 HP each, 60% hull) · Legendary 3 layers (228,528 HP each, 60% hull) · Mythic 4 layers (1,082,880 HP each, 60% hull)
-Energy shields: Epic 1 bubble (239u) · Legendary 2 bubbles (394–434u) · Mythic 3 bubbles (651–781u) — permanent, energy/shock/thermal pass
+Shells: Rare 1 layer (5,387 HP each, 60% hull) · Epic 2 layers (43,526 HP each, 60% hull) · Legendary 3 layers (234,144 HP each, 60% hull) · Mythic 4 layers (1,107,840 HP each, 60% hull)
+Energy shields: Epic 2 panels (straight bars, fixed, 42% of the ring, 239u out) · Legendary 3 panels (straight bars, fixed, 63% of the ring, 394u out) · Mythic 4 panels (straight bars, fixed, 84% of the ring, 651u out) — each generator projects one wall with gaps between them; blocked rounds deal nothing and the panel never depletes, energy/shock/thermal pass
 
 MOUNTS AT MYTHIC
 0 gun mounts · 4 missile pods · gun 0.4× enemy damage at 1.1–1.7s cadence; missiles 1.1× at 4.5–6s
@@ -1074,7 +1075,7 @@ BODY DAMAGE (contact hit)
 C 4 · U 12 · R 36 · E 108 · L 324 · M 972
 
 TOTAL BODY HEALTH
-C 383 · U 1,533 · R 8,942 · E 58,208 · L 283,968 · M 1,303,680
+C 383 · U 1,533 · R 8,942 · E 60,288 · L 293,328 · M 1,345,280
 
 CORE HEALTH
 C 30 · U 120 · R 540 · E 2,400 · L 10,800 · M 48,000
@@ -1086,11 +1087,11 @@ MOVE SPEED
 C 130 · U 135 · R 140 · E 146 · L 151 · M 156
 
 PARTS AT MYTHIC
-63 parts · 1,494u radius · C 30 · U 30 · R 47 · E 60 · L 62 · M 63 parts by tier
+64 parts · 1,494u radius · C 30 · U 30 · R 47 · E 61 · L 63 · M 64 parts by tier
 
 DEFENCES
-Shells: Rare 1 layer (5,365 HP each, 60% hull) · Epic 2 layers (34,925 HP each, 60% hull) · Legendary 3 layers (170,381 HP each, 60% hull) · Mythic 4 layers (782,208 HP each, 60% hull)
-Energy shields: Epic 1 bubble (239u) · Legendary 2 bubbles (394–434u) · Mythic 3 bubbles (651–781u) — permanent, energy/shock/thermal pass
+Shells: Rare 1 layer (5,365 HP each, 60% hull) · Epic 2 layers (36,173 HP each, 60% hull) · Legendary 3 layers (175,997 HP each, 60% hull) · Mythic 4 layers (807,168 HP each, 60% hull)
+Energy shields: Epic 2 panels (straight bars, fixed, 42% of the ring, 239u out) · Legendary 3 panels (straight bars, fixed, 63% of the ring, 394u out) · Mythic 4 panels (straight bars, fixed, 84% of the ring, 651u out) — each generator projects one wall with gaps between them; blocked rounds deal nothing and the panel never depletes, energy/shock/thermal pass
 
 MOUNTS AT MYTHIC
 0 gun mounts · 0 missile pods · gun 0.4× enemy damage at 1.1–1.7s cadence; missiles 1.1× at 4.5–6s
@@ -1155,7 +1156,7 @@ BODY DAMAGE (contact hit)
 C 4 · U 12 · R 36 · E 108 · L 324 · M 972
 
 TOTAL BODY HEALTH
-C 505 · U 2,021 · R 11,210 · E 80,384 · L 480,240 · M 2,246,400
+C 505 · U 2,021 · R 11,210 · E 82,464 · L 489,600 · M 2,288,000
 
 CORE HEALTH
 C 30 · U 120 · R 540 · E 2,400 · L 10,800 · M 48,000
@@ -1167,11 +1168,11 @@ MOVE SPEED
 C 92 · U 96 · R 99 · E 103 · L 107 · M 110
 
 PARTS AT MYTHIC
-105 parts · 1,144u radius · C 41 · U 41 · R 59 · E 88 · L 102 · M 105 parts by tier
+106 parts · 1,144u radius · C 41 · U 41 · R 59 · E 89 · L 103 · M 106 parts by tier
 
 DEFENCES
-Shells: Rare 1 layer (6,726 HP each, 60% hull) · Epic 2 layers (48,230 HP each, 60% hull) · Legendary 3 layers (288,144 HP each, 60% hull) · Mythic 4 layers (1,347,840 HP each, 60% hull)
-Energy shields: Epic 1 bubble (239u) · Legendary 2 bubbles (394–434u) · Mythic 3 bubbles (651–781u) — permanent, energy/shock/thermal pass
+Shells: Rare 1 layer (6,726 HP each, 60% hull) · Epic 2 layers (49,478 HP each, 60% hull) · Legendary 3 layers (293,760 HP each, 60% hull) · Mythic 4 layers (1,372,800 HP each, 60% hull)
+Energy shields: Epic 2 panels (straight bars, fixed, 42% of the ring, 239u out) · Legendary 3 panels (straight bars, fixed, 63% of the ring, 394u out) · Mythic 4 panels (straight bars, fixed, 84% of the ring, 651u out) — each generator projects one wall with gaps between them; blocked rounds deal nothing and the panel never depletes, energy/shock/thermal pass
 
 MOUNTS AT MYTHIC
 0 gun mounts · 0 missile pods · gun 0.4× enemy damage at 1.1–1.7s cadence; missiles 1.1× at 4.5–6s
@@ -1196,7 +1197,7 @@ BODY DAMAGE (contact hit)
 C 4 · U 12 · R 36 · E 108 · L 324 · M 972
 
 TOTAL BODY HEALTH
-C 350 · U 1,542 · R 7,690 · E 53,792 · L 295,776 · M 1,343,360
+C 350 · U 1,542 · R 7,690 · E 55,872 · L 305,136 · M 1,468,160
 
 CORE HEALTH
 C 30 · U 120 · R 540 · E 2,400 · L 10,800 · M 48,000
@@ -1208,11 +1209,11 @@ MOVE SPEED
 C 115 · U 120 · R 124 · E 129 · L 133 · M 138
 
 PARTS AT MYTHIC
-69 parts · 1,677u radius · C 34 · U 36 · R 41 · E 62 · L 68 · M 69 parts by tier
+72 parts · 1,677u radius · C 34 · U 36 · R 41 · E 63 · L 69 · M 72 parts by tier
 
 DEFENCES
-Shells: Rare 1 layer (4,614 HP each, 60% hull) · Epic 2 layers (32,275 HP each, 60% hull) · Legendary 3 layers (177,466 HP each, 60% hull) · Mythic 4 layers (806,016 HP each, 60% hull)
-Energy shields: Epic 1 bubble (239u) · Legendary 2 bubbles (394–434u) · Mythic 1 bubble (651u) — permanent, energy/shock/thermal pass
+Shells: Rare 1 layer (4,614 HP each, 60% hull) · Epic 2 layers (33,523 HP each, 60% hull) · Legendary 3 layers (183,082 HP each, 60% hull) · Mythic 4 layers (880,896 HP each, 60% hull)
+Energy shields: Epic 2 panels (curved arcs, fixed, 32% of the ring, 239u out) · Legendary 3 panels (curved arcs, fixed, 48% of the ring, 394u out) · Mythic 4 panels (curved arcs, fixed, 64% of the ring, 651u out) — each generator projects one wall with gaps between them; blocked rounds deal nothing and the panel never depletes, energy/shock/thermal pass
 
 MOUNTS AT MYTHIC
 6 gun mounts · 0 missile pods · gun 0.4× enemy damage at 1.1–1.7s cadence; missiles 1.1× at 4.5–6s
@@ -1237,7 +1238,7 @@ BODY DAMAGE (contact hit)
 C 4 · U 12 · R 36 · E 108 · L 324 · M 972
 
 TOTAL BODY HEALTH
-C 390 · U 1,558 · R 7,834 · E 73,056 · L 366,624 · M 1,741,440
+C 390 · U 1,558 · R 7,834 · E 75,136 · L 375,984 · M 1,783,040
 
 CORE HEALTH
 C 30 · U 120 · R 540 · E 2,400 · L 10,800 · M 48,000
@@ -1249,11 +1250,11 @@ MOVE SPEED
 C 110 · U 114 · R 119 · E 123 · L 128 · M 132
 
 PARTS AT MYTHIC
-82 parts · 1,182u radius · C 35 · U 35 · R 41 · E 75 · L 79 · M 82 parts by tier
+83 parts · 1,182u radius · C 35 · U 35 · R 41 · E 76 · L 80 · M 83 parts by tier
 
 DEFENCES
-Shells: Rare 1 layer (4,700 HP each, 60% hull) · Epic 2 layers (43,834 HP each, 60% hull) · Legendary 3 layers (219,974 HP each, 60% hull) · Mythic 4 layers (1,044,864 HP each, 60% hull)
-Energy shields: Epic 1 bubble (239u) · Legendary 2 bubbles (394–434u) · Mythic 3 bubbles (651–781u) — permanent, energy/shock/thermal pass
+Shells: Rare 1 layer (4,700 HP each, 60% hull) · Epic 2 layers (45,082 HP each, 60% hull) · Legendary 3 layers (225,590 HP each, 60% hull) · Mythic 4 layers (1,069,824 HP each, 60% hull)
+Energy shields: Epic 2 panels (straight bars, fixed, 42% of the ring, 239u out) · Legendary 3 panels (straight bars, fixed, 63% of the ring, 394u out) · Mythic 4 panels (straight bars, fixed, 84% of the ring, 651u out) — each generator projects one wall with gaps between them; blocked rounds deal nothing and the panel never depletes, energy/shock/thermal pass
 
 MOUNTS AT MYTHIC
 0 gun mounts · 0 missile pods · gun 0.4× enemy damage at 1.1–1.7s cadence; missiles 1.1× at 4.5–6s
@@ -1318,7 +1319,7 @@ BODY DAMAGE (contact hit)
 C 4 · U 12 · R 36 · E 108 · L 324 · M 972
 
 TOTAL BODY HEALTH
-C 553 · U 2,210 · R 12,064 · E 78,416 · L 487,224 · M 2,306,240
+C 553 · U 2,210 · R 12,064 · E 80,496 · L 496,584 · M 2,389,440
 
 CORE HEALTH
 C 30 · U 120 · R 540 · E 2,400 · L 10,800 · M 48,000
@@ -1330,11 +1331,11 @@ MOVE SPEED
 C 170 · U 177 · R 184 · E 190 · L 197 · M 204
 
 PARTS AT MYTHIC
-99 parts · 1,008u radius · C 44 · U 44 · R 62 · E 79 · L 95 · M 99 parts by tier
+101 parts · 1,008u radius · C 44 · U 44 · R 62 · E 80 · L 96 · M 101 parts by tier
 
 DEFENCES
-Shells: Rare 1 layer (7,238 HP each, 60% hull) · Epic 2 layers (47,050 HP each, 60% hull) · Legendary 3 layers (292,334 HP each, 60% hull) · Mythic 4 layers (1,383,744 HP each, 60% hull)
-Energy shields: Epic 1 bubble (239u) · Legendary 2 bubbles (394–434u) · Mythic 2 bubbles (651–716u) — permanent, energy/shock/thermal pass
+Shells: Rare 1 layer (7,238 HP each, 60% hull) · Epic 2 layers (48,298 HP each, 60% hull) · Legendary 3 layers (297,950 HP each, 60% hull) · Mythic 4 layers (1,433,664 HP each, 60% hull)
+Energy shields: Epic 2 panels (curved arcs, some sweeping, 32% of the ring, 239u out) · Legendary 3 panels (curved arcs, some sweeping, 48% of the ring, 394u out) · Mythic 4 panels (curved arcs, some sweeping, 64% of the ring, 651u out) — each generator projects one wall with gaps between them; blocked rounds deal nothing and the panel never depletes, energy/shock/thermal pass
 
 MOUNTS AT MYTHIC
 0 gun mounts · 4 missile pods · gun 0.4× enemy damage at 1.1–1.7s cadence; missiles 1.1× at 4.5–6s
@@ -1359,7 +1360,7 @@ BODY DAMAGE (contact hit)
 C 4 · U 12 · R 36 · E 108 · L 324 · M 972
 
 TOTAL BODY HEALTH
-C 2,607 · U 11,669 · R 58,984 · E 459,016 · L 2,274,804 · M 10,913,440
+C 2,607 · U 11,669 · R 58,984 · E 461,096 · L 2,293,524 · M 11,038,240
 
 CORE HEALTH
 C 30 · U 120 · R 540 · E 2,400 · L 10,800 · M 48,000
@@ -1371,11 +1372,11 @@ MOVE SPEED
 C 430 · U 447 · R 464 · E 482 · L 499 · M 516
 
 PARTS AT MYTHIC
-491 parts · 4,827u radius · C 217 · U 244 · R 278 · E 414 · L 454 · M 491 parts by tier
+494 parts · 4,827u radius · C 217 · U 244 · R 278 · E 415 · L 456 · M 494 parts by tier
 
 DEFENCES
 Shells: none — the body takes hits directly.
-Energy shields: Epic 1 bubble (239u) · Legendary 1 bubble (394u) · Mythic 1 bubble (651u) — permanent, energy/shock/thermal pass
+Energy shields: Epic 2 panels (curved arcs, some sweeping, 32% of the ring, 239u out) · Legendary 3 panels (curved arcs, some sweeping, 48% of the ring, 394u out) · Mythic 4 panels (curved arcs, some sweeping, 64% of the ring, 651u out) — each generator projects one wall with gaps between them; blocked rounds deal nothing and the panel never depletes, energy/shock/thermal pass
 
 MOUNTS AT MYTHIC
 0 gun mounts · 0 missile pods · gun 0.4× enemy damage at 1.1–1.7s cadence; missiles 1.1× at 4.5–6s

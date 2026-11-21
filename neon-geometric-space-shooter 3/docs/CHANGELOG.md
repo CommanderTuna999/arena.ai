@@ -3,6 +3,23 @@
 Everything below is implemented in the current build. Numbers are the actual constants used by
 the simulation, not design targets.
 
+## 0. v2.2.0 — shield projectors throw walls, not bubbles
+
+### One panel per generator
+- `Part` gained `shieldKind` (0 arc / 1 bar), `shieldSpan`, `shieldAng` and `shieldSpin`, and `shieldStyle(sp, S)` picks the panel for a generator: flyers and serpents (`flying || bodyWave`) get a curved arc with a **0.5 rad** half-angle (~57°, about 29% of the ring), walkers get a straight bar with a **1.25 × body size** half-length. Panel radius is `1.9 × body size`, thickness `max(9, 0.07 × r)`.
+- The old closed hexagon bubble is gone from `enemies.ts`, `engine.ts` (shield resolution and hit test) and `render.ts`. Each panel is drawn as a thick translucent `rgba(70,210,255)` band with a bright core stroke, round caps, and a faint energy link back to the generator that projects it.
+
+### Rarity buys coverage, never closure
+- Generator count is `tier - 1` (was `tier - 2`): **2 panels at epic, 3 at legendary, 4 at mythical**, laid evenly around the body on a 0.95 ring of tiny hex generators. Arc coverage is roughly 32% / 48% / 64% of the ring, so there is always a gap to shoot through.
+
+### Shape and motion vary by species
+- Spin comes from a stable per-part hash: bosses sweep at `0.5 rad/s`, otherwise `idHash % 3` gives `0.7 rad/s` (flyers) or `-0.4 rad/s` (walkers), `-0.55 rad/s` for the second flyer band, and the third band is static. Panel world angle is `enemy angle + shieldAng + spin × t`.
+- `engine.shieldAt(e, x, y)` replaces the old radius test: an arc is hit when `|dist - r| <= thickness` **and** the angle is within the span; a bar is hit when the perpendicular offset is within the half-length and the along-axis offset is within the thickness. Bullets test the sample point and one step back along their velocity, so fast rounds cannot tunnel through a wall.
+
+### Rules preserved
+- Energy, shock and thermal rounds still pass through a panel; everything else is stopped dead, deals nothing, and never drains the panel. A panel disappears only when its generator part dies (`shieldDown`), and `reflectShell` still reflects energy.
+- `Enemy.shieldReach` extends the broad-phase radius for bullets and beams to the furthest panel, so a wall standing outside the body silhouette still catches incoming fire.
+
 ## 0. v2.1.3 — energy vs plating, and the overfly swat
 
 ### Energy only loses 20% to plating

@@ -1385,22 +1385,42 @@ function drawEnemy(g: Game, ctx: CanvasRenderingContext2D, e: Enemy, z: number, 
     }
   }
 
-  // shields
+  // shields: each generator projects one panel, an arc of the hull ring or a bar on it
   for (const s of e.shields) {
     if (s.r * z < 7) continue;
     const p = s.part;
-    const f = p.shieldHp / p.shieldMax;
+    const f = clamp(p.shieldHp / Math.max(1, p.shieldMax), 0, 1);
     const hit = p.shieldHit > 2.8 ? 1 : 0;
-    const blurry = s.r * z > 12 && s.r * z < 60; // canvas shadows on large hexes are extremely slow
-    hexPath(ctx, s.x, s.y, s.r, t * 0.3);
-    ctx.fillStyle = `rgba(70,210,255,${0.05 + 0.08 * f + hit * 0.12})`; ctx.fill();
-    ctx.strokeStyle = `rgba(125,240,255,${0.35 + 0.5 * f})`; ctx.lineWidth = (2 + hit * 3) / z;
-    if (blurry) { ctx.shadowColor = "#7df9ff"; ctx.shadowBlur = 12; }
-    ctx.stroke(); ctx.shadowBlur = 0;
-    if (blurry) {
-      hexPath(ctx, s.x, s.y, s.r * 0.92, -t * 0.3);
-      ctx.strokeStyle = "rgba(125,240,255,0.18)"; ctx.lineWidth = 1 / z; ctx.stroke();
+    const blurry = s.r * z > 12 && s.r * z < 60; // shadows on big shapes are expensive
+    const c = Math.cos(s.ang), sn = Math.sin(s.ang);
+    /* the generator itself, and the beam of energy it throws out to the panel */
+    const link = s.r * 0.55;
+    ctx.strokeStyle = `rgba(125,240,255,${0.1 + 0.12 * f})`;
+    ctx.lineWidth = 1.2 / z;
+    ctx.beginPath();
+    ctx.moveTo(e.x + c * link, e.y + sn * link);
+    ctx.lineTo(e.x + c * s.r, e.y + sn * s.r);
+    ctx.stroke();
+
+    ctx.beginPath();
+    if (s.bar) {
+      const px = -sn, py = c;
+      const bx = e.x + c * s.r, by = e.y + sn * s.r;
+      ctx.moveTo(bx - px * s.span, by - py * s.span);
+      ctx.lineTo(bx + px * s.span, by + py * s.span);
+    } else {
+      ctx.arc(e.x, e.y, s.r, s.ang - s.span, s.ang + s.span);
     }
+    ctx.strokeStyle = `rgba(70,210,255,${0.1 + 0.14 * f + hit * 0.2})`;
+    ctx.lineWidth = (s.thick * 1.6 + hit * 4) / 1;
+    ctx.lineCap = "round";
+    ctx.stroke();
+    ctx.strokeStyle = `rgba(150,245,255,${0.4 + 0.5 * f})`;
+    ctx.lineWidth = (2 + hit * 3) / z;
+    if (blurry) { ctx.shadowColor = "#7df9ff"; ctx.shadowBlur = 12; }
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+    ctx.lineCap = "butt";
   }
 }
 

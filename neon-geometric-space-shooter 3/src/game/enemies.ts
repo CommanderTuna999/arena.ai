@@ -44,6 +44,14 @@ export interface Part {
   wpn: "" | GunKind | "missile";
   muzzle: number;
   shieldR: number;
+  /** 0 = curved arc panel, 1 = straight bar */
+  shieldKind: 0 | 1;
+  /** arc half-angle in radians, or bar half-length in world units */
+  shieldSpan: number;
+  /** base facing of the projected shield, in body-local space */
+  shieldAng: number;
+  /** radians per second the projection sweeps around the body */
+  shieldSpin: number;
   shieldHp: number;
   shieldMax: number;
   shieldDown: number;
@@ -271,7 +279,7 @@ export class Builder {
       id, kind, name, poly: p, cx, cy, r, area: polyArea(p), hp, maxHp: hp,
       layer: o.layer ?? 1, links: [], g: o.g ?? -1, seg: o.seg ?? -1, alive: true, hurt: 0, barT: 0, style,
       stroke: col.stroke, fill: col.fill, glow: col.glow || (kind === "segment" && style >= 3),
-      wpn: "", muzzle: 0, shieldR: 0, shieldHp: 0, shieldMax: 0, shieldDown: 0, shieldHit: 0, cd: 1 + this.rng() * 2,
+      wpn: "", muzzle: 0, shieldR: 0, shieldKind: 0, shieldSpan: 0, shieldAng: 0, shieldSpin: 0, shieldHp: 0, shieldMax: 0, shieldDown: 0, shieldHit: 0, cd: 1 + this.rng() * 2,
     });
     if (o.links) for (const l of o.links) this.link(id, l);
     return id;
@@ -374,6 +382,22 @@ function wingSub(b: Builder, wingId: number, host: number, ax: number, ay: numbe
 }
 
 /* ---------------- loadout: guns / missiles / shield generators ---------------- */
+/** stable per-species number, used to give each species its own shield layout */
+const idHash = (id: string) => { let h = 0; for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0; return h; };
+
+/** Which shape this species projects: flyers and serpents get curved panels that
+ *  can sweep, walkers get straight bars. Every panel covers only a slice of the
+ *  body so there is always a way in. */
+function shieldStyle(sp: SpeciesDef, S: number) {
+  const arc = sp.flying || !!sp.bodyWave;
+  const h = idHash(sp.id) % 3;
+  let spin = 0;
+  if (sp.boss) spin = 0.5;
+  else if (h === 0) spin = sp.flying ? 0.7 : -0.4;
+  else if (h === 1 && sp.flying) spin = -0.55;
+  return { bar: !arc, span: arc ? 0.5 : 1.25 * S, r: 1.9 * S, spin };
+}
+
 const GUN_ROLL: { kind: GunKind; w: number[] }[] = [
   { kind: "gun", w: [0.45, 0.3, 0.2] },
   { kind: "minigun", w: [0.2, 0.2, 0.2] },
@@ -401,7 +425,7 @@ function loadout(b: Builder, mounts: Mount[], sp: SpeciesDef) {
   const chanceShield = t >= 3 && !armed.shield && b.rng() < 0.1 + 0.05 * t;
   const nGun = (armed.gun || chanceGun) && t >= 3 ? t - 2 : 0;
   const nMis = armed.missile && t >= 4 ? t - 3 : 0;
-  const nSh = (armed.shield || chanceShield) && t >= 3 ? t - 2 : 0;
+  const nSh = (armed.shield || chanceShield) && t >= 3 ? t - 1 : 0;
   if (!nGun && !nMis && !nSh) return;
   const kind: GunKind = sp.gunType ?? (chanceGun ? randomGunKind(b.rng(), t) : "gun");
 
@@ -438,13 +462,25 @@ function loadout(b: Builder, mounts: Mount[], sp: SpeciesDef) {
   };
   for (let i = 0; i < nGun && pi < pairs.length; i++, pi++) { turret(pairs[pi], 1, false); turret(pairs[pi], -1, false); }
   for (let i = 0; i < nMis && pi < pairs.length; i++, pi++) { turret(pairs[pi], 1, true); turret(pairs[pi], -1, true); }
-  for (let i = 0; i < nSh; i++) {
-    const c = centers[i] ?? pairs[pi++];
-    if (!c) break;
-    const id = b.add("shield", "Shield Generator", ell(c.x, c.y, c.r * 1.1, c.r * 1.1, 6), { layer: 8, links: [c.host], style: 2 });
-    const p = b.parts[id];
-    p.shieldR = 1.9 * b.S * (1 + 0.1 * i);
-    p.shieldMax = p.shieldHp = p.maxHp * 3;
+  if (nSh > 0) {
+    /* generators are spread evenly around the body, and each one projects a single
+     * panel - arc or bar - out at the hull line. Gaps between panels are the weak
+     * points; more generators means smaller gaps, not a closed bubble. */
+    const style = shieldStyle(sp, b.S);
+    const phase = b.rng() * TAU;
+    const ring = 0.95;
+    for (let i = 0; i < nSh; i++) {
+      const a = phase + (i / nSh) * TAU;
+      const px = Math.cos(a) * ring, py = Math.sin(a) * ring;
+      const id = b.add("shield", "Shield Generator", ell(px, py, 0.26, 0.2, 6, a), { layer: 8, links: [b.coreId], style: 2 });
+      const p = b.parts[id];
+      p.shieldKind = style.bar ? 1 : 0;
+      p.shieldSpan = style.span;
+      p.shieldAng = a;
+      p.shieldSpin = style.spin;
+      p.shieldR = style.r;
+      p.shieldMax = p.shieldHp = p.maxHp * 3;
+    }
   }
 }
 
