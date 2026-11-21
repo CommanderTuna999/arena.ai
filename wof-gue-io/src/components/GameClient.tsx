@@ -439,7 +439,7 @@ function Help({ onClose }: { onClose: () => void }) {
           <li>Heavy pieces need the tether: tow them into the <b className="text-yellow-300">yellow hex</b> at the nest.</li>
           <li>Too heavy? Stronger cables, more harpoons on one part, or a better winch help. Overloaded cables snap.</li>
           <li>Sell components for credits or store them to craft weapons, shields, armour, optics, utilities and active abilities.</li>
-          <li>Rare and above enemies wear grey armour layers around their parts; the deeper the zone, the more layers. Energy shields (blue hexes) swallow lasers and shock completely, but solid rounds pass through them.</li>
+          <li>Rare and above enemies wear grey armour layers around their parts; the deeper the zone, the more layers. Energy shield panels stop solid rounds dead but let energy, shock and thermal straight through — shoot the gaps between the panels.</li>
           <li>The nest only repairs after <b className="text-cyan-200">120s</b> without damage. Enemies finished mostly by the nest or its hex turrets drop no components.</li>
           <li>Hover a loose component to read its name, rarity, value and mass. Turn that off in ⚙ SETTINGS.</li>
           <li>Danger rises toward the centre of the map: bigger, deadlier, more layered enemies. Your progress autosaves.</li>
