@@ -502,7 +502,38 @@ export function render(g: Game, ctx: CanvasRenderingContext2D) {
   drawCreditFlights(g, ctx);
   drawMinimap(g, ctx);
   drawBaseArrow(g, ctx);
+  /* heat vignette: a hot gun bleeds a warm glow in from the edges of the
+   * screen, climbing from a faint amber at the mid-ramp to a hard red-orange
+   * ring at the top, and a slow pulse when it is jammed and cooling */
+  drawHeatVignette(g, ctx);
   if (hoveredComp) drawCompTooltip(g, ctx, hoveredComp);
+}
+
+/** The cannon's heat, drawn as a screen-edge glow so the player feels the gun
+ *  cooking before it jams. Nothing when cold; a warm ring that climbs with the
+ *  ramp; a pulsing red-orange when it is jammed and cooling. */
+function drawHeatVignette(g: Game, ctx: CanvasRenderingContext2D) {
+  const heat = g.player.heat;
+  const jam = g.player.jam;
+  const overheat = g.stats.overheat;
+  const max = Math.max(0.001, overheat || 1);
+  if (heat <= 0.02 && jam <= 0) return;
+  const { w, h } = g;
+  const edge = Math.max(w, h) * 0.5;
+  const cx = w / 2, cy = h / 2;
+  const ramp = clamp(heat, 0, 1);
+  /* a jammed gun runs hotter than the ramp while it cools, so the vignette
+   * stays lit through the whole cool-down */
+  const lvl = Math.max(ramp, jam > 0 ? clamp(jam / max, 0, 1) : 0);
+  const pulse = jam > 0 ? 0.75 + 0.25 * Math.sin(g.t * 12) : 1;
+  const a = (0.12 + 0.55 * lvl) * pulse;
+  const grad = ctx.createRadialGradient(cx, cy, Math.min(w, h) * 0.32, cx, cy, edge);
+  const r = Math.round(255), gg = Math.round(150 - 90 * lvl), bb = Math.round(60 - 40 * lvl);
+  grad.addColorStop(0, `rgba(${r},${gg},${bb},0)`);
+  grad.addColorStop(0.72, `rgba(${r},${gg},${bb},${a * 0.45})`);
+  grad.addColorStop(1, `rgba(${r},${Math.round(90 - 40 * lvl)},${Math.round(30 - 20 * lvl)},${a})`);
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, w, h);
 }
 
 /* Credit coins: each one is thrown from the broken part in world space and then
@@ -960,16 +991,58 @@ function drawCannon(g: Game, ctx: CanvasRenderingContext2D, z: number, t: number
   }
   ctx.globalAlpha = 1;
 
-  /* heat: the bore glows and the shroud vents steam once it is properly hot */
-  if (heat > 0.18) {
-    const glowA = (heat - 0.18) * 0.85;
+  /* heat: as the bore climbs the barrel runs through a real heat ramp — a dull
+   * red glow, then orange, then a hard white-hot core — with heat distortion
+   * rising off it and heat bloom at the muzzle. Near the top the whole mount
+   * shudders and the barrel starts to glow through the shroud. */
+  if (heat > 0.06) {
+    /* the barrel's own heat colour, stepped through the ramp */
+    const hr = clamp((heat - 0.06) / 0.94, 0, 1);
+    const hcol = `rgb(255,${Math.round(120 - 80 * hr)},${Math.round(40 - 35 * hr)})`;
+    /* 1. heat bloom at the muzzle, growing with the ramp */
     const tip = look.len - back;
-    const gr = 5 + 9 * heat;
+    const gr = 4 + 14 * hr;
     const grad = ctx.createRadialGradient(tip, 0, 0.5, tip, 0, gr);
-    grad.addColorStop(0, `rgba(255,${180 - 120 * heat},90,${glowA})`);
+    grad.addColorStop(0, `rgba(255,${Math.round(200 - 90 * hr)},${Math.round(120 - 80 * hr)},${0.25 + 0.65 * hr})`);
+    grad.addColorStop(0.55, `rgba(255,${Math.round(150 - 60 * hr)},80,${0.15 + 0.45 * hr})`);
     grad.addColorStop(1, "rgba(255,120,40,0)");
     ctx.fillStyle = grad;
     ctx.beginPath(); ctx.arc(tip, 0, gr, 0, TAU); ctx.fill();
+
+    /* 2. the barrel glows along its whole length: a warm inner line that climbs
+     * to white-hot and bleeds a soft halo around the bore */
+    const haloR = bore + 3 + 6 * hr;
+    const halo = ctx.createRadialGradient(tip * 0.55, 0, 0.5, tip * 0.55, 0, haloR);
+    halo.addColorStop(0, `rgba(255,${Math.round(160 - 90 * hr)},${Math.round(90 - 60 * hr)},${0.2 + 0.45 * hr})`);
+    halo.addColorStop(1, "rgba(255,120,40,0)");
+    ctx.fillStyle = halo;
+    ctx.beginPath(); ctx.ellipse(tip * 0.55, 0, tip * 0.5, haloR, 0, 0, TAU); ctx.fill();
+
+    /* 3. heat shimmer: rising distortion wisps off the hot barrel. They scale
+     * with the ramp and tick with time so the hot gun visibly sweats heat */
+    const wisps = Math.round(2 + 5 * hr);
+    for (let k = 0; k < wisps; k++) {
+      const ph = ((t * (0.5 + 0.6 * hr) + k / wisps) % 1);
+      const sx = (10 + (tip - 10) * (0.2 + 0.7 * ph)) - back;
+      const sy = -(bore + 3) - 10 * ph - 4 * Math.sin(t * 6 + k);
+      const sr = 1.5 + 4.5 * hr * (1 - ph * 0.5);
+      ctx.globalAlpha = (1 - ph) * (0.18 + 0.35 * hr);
+      ctx.fillStyle = `rgba(255,${Math.round(180 - 80 * hr)},${Math.round(120 - 70 * hr)},1)`;
+      ctx.beginPath(); ctx.arc(sx, sy, sr, 0, TAU); ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+
+    /* 4. near the top the mount shudders: the barrel shakes on its spring and
+     * the whole bore pulses hard white, the last warning before the jam */
+    if (hr > 0.8) {
+      const shud = Math.sin(t * 30) * (hr - 0.8) * 6;
+      const sg = ctx.createRadialGradient(tip * 0.6, 0, 0.5, tip * 0.6, 0, bore + 8);
+      sg.addColorStop(0, `rgba(255,255,255,${0.4 + 0.5 * (hr - 0.8) * 5})`);
+      sg.addColorStop(1, "rgba(255,200,140,0)");
+      ctx.fillStyle = sg;
+      ctx.beginPath(); ctx.ellipse(tip * 0.6 + shud, 0, tip * 0.45, bore + 8, 0, 0, TAU); ctx.fill();
+    }
+    void hcol;
   }
 
   /* a jammed gun is a kettle: red-hot shroud, hissing steam out of the vents,

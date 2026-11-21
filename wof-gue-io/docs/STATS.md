@@ -1,6 +1,6 @@
 # wof gue — complete stat compendium
 
-Build 2.4.0 · generated 21 Nov 2026 · every figure is a live simulation constant, not a design target.
+Build 2.14.1 · generated 20 Nov 2026 · every figure is a live simulation constant, not a design target.
 
 How to read it: enemy health is the sum of every part at that rarity tier. Enemy damage is listed as a multiplier of the tier damage (eDmg), because every bite, bolt, blast and contact hit scales from that one number. Weapon damage is a multiplier of the player cannon damage (st.dmg = 10 x 1.2^Cannon Damage level). Efficiency (eff) is the crafted item quality: 0.30 minimum, 1.00 typical; the raw formula can reach 2.25 on an unrestricted tier-5 core build and 1.80 on a 7-part difficulty-5 recipe.
 
@@ -11,6 +11,7 @@ How to read it: enemy health is the sum of every part at that rarity tier. Enemy
 Player cannon: every cannon is a chassis (`CANNONS` in data.ts) with its **own** upgrade tracks and its own levels. The tree lives in the base under the CANNON tab and is drawn as a tree: the free **Stinger** (20 damage, 0.7s interval, 640u/s, 820u reach, small charge on impact, Damage track only) is the root at the bottom and the three tier 1 guns — **Skewer MK1** (300 damage hitscan, 1.2s), **Peashooter MK1** (35 damage, 0.1s spray) and **Workhorse MK1** (55 damage, 0.55s, up to 300 when overheated) — hang off it, for 300-500 credits plus a bill of common parts. Crit is a Skewer track, the Workhorse's barrels stop at two (9,600 credits for the single level), one gun is bought per tier outside admin mode, and everything is per chassis: a new gun starts at zero and does not inherit the last one's work.
 Crafted weapon: damage per hit = st.dmg x wpn.dmg x eff (then x2.2 during Overdrive; there are no critical hits). Cooldown = wpn.cd / (0.7 + 0.3 x eff), so 100% efficiency is the listed cooldown and 30% efficiency is 1.27x slower (cd / 0.79).
 Enemy damage: eDmg = 16 x DMG_MUL[tier] = 16 / 48 / 144 / 432 / 1,296 / 3,888. Every ability, gun, missile and contact hit is a multiplier of that eDmg.
+Enemy attachment damage: every weapon mount's damage is a **per-projectile** multiple of the body's own eDmg, per the sheet. Basic cannon (Gun Turret) **0.5x** — a very large, very slow round (r 14, 300 u/s). Scatter shotgun (Scatter Cannon) **1.2x** — seven large pellets at 420 u/s. Rotary gun (Minigun) **0.2x** — fast, small rounds (720 u/s) that cool down for 10s after a 10s burst. Laser (Laser Emitter) **1.0x** — a held tracking beam dealing damage per tick, ramping from 0.35x to 1.0x over 3s of unbroken contact. Heavy rail (Heavy Rail Cannon) **17x** — hitscan, with a reach equal to the body's own aggro range rather than a fixed number. The energy-shield shock stays at **25x** an unshielded contact.
 Enemy hull: every part HP is generated from HP_MUL[tier] = 1 / 4 / 18 / 80 / 360 / 1,600, with part size and shape adding their own multipliers. Armour is re-priced once the body is built: each plate is `ARMOUR_HP_MUL[tier]` x the average HP of the body's other pieces — 2.5x common, 3.25x uncommon, then the sheet's 4x rare, 5.5x epic, 7x legendary, 9x mythical. Eyes sit at 0.9x a plate and Core Guard layers at 1.6x/2.2x. The tables below give the resulting totals.
 Player hull: 100 x 1.22^Hull level. Armour reduction is multiplicative with Reactive Lattice and Kinetic Barrier; shield absorbs before hull. Dodge is checked before any damage is applied.
 
@@ -65,7 +66,7 @@ Hull by tier:
   T4: 337,968 HP total; core 10,800; largest part 12,672; 70 parts; radius 751u; 3 panels (curved arcs, 48% of the ring, 301u out); energy/shock/thermal pass; 3 hull shells (608,343 HP).
   T5: 1,656,320 HP total; core 48,000; largest part 56,320; 75 parts; radius 1,239u; 4 panels (curved arcs, 64% of the ring, 497u out); energy/shock/thermal pass; 4 hull shells (3,975,168 HP).
 Defence: energy shield panels appear at tier 3+ (2 generators at epic, 3 at legendary, 4 at mythical, each covering only a slice of the ring); hull shells at tier 2+ (60% hull per layer, ~4x that in kinetic fire).
-Damage: eDmg 16 / 48 / 144 / 432 / 1,296 / 3,888 by tier. Contact = 0.25x eDmg every 0.7s. Weapon mounts: 0 gun(s) (0.4x eDmg, 1.1-1.7s cadence) and 0 missile pod(s) (1.1x eDmg, 4.5-6s cadence) at T5; no gun or missile mounts at T3. Destroying a weapon part explodes for 1.8x eDmg to the player; other parts explode for 1.3x.
+Damage: eDmg 16 / 48 / 144 / 432 / 1,296 / 3,888 by tier. Contact = 0.25x eDmg every 0.7s. Weapon mounts: 0 gun(s) (0.5x eDmg, 1.1-1.7s cadence) and 0 missile pod(s) (1.1x eDmg, 4.5-6s cadence) at T5; no gun or missile mounts at T3. Destroying a weapon part explodes for 1.8x eDmg to the player; other parts explode for 1.3x.
 Abilities (4):
   - Ion Bolt [shoot], from T1, 1.8s cooldown: 0.7x eDmg damage (2,722 at T5); 0.3s wind-up; 2 projectiles at T5 (1 + 0.3/tier); 0.15 rad spread; 700 u/s; 1.4s life; size 6; slow to 0.75x for 1.2s; range 0-950u; bolt projectile.
   - Strafe Run [charge], from T2, 7s cooldown: 1.5x eDmg damage (5,832 at T5); 0.5s wind-up; 880 u/s; 0.5s duration; range 220-750u.
@@ -83,7 +84,7 @@ Hull by tier:
   T4: 498,960 HP total; core 10,800; largest part 12,672; 103 parts; radius 800u; no energy shield; 3 hull shells (898,128 HP).
   T5: 2,288,000 HP total; core 48,000; largest part 56,320; 105 parts; radius 1,321u; no energy shield; 4 hull shells (5,491,200 HP).
 Defence: energy shield panels appear at tier 3+ (2 generators at epic, 3 at legendary, 4 at mythical, each covering only a slice of the ring); hull shells at tier 2+ (60% hull per layer, ~4x that in kinetic fire).
-Damage: eDmg 16 / 48 / 144 / 432 / 1,296 / 3,888 by tier. Contact = 0.25x eDmg every 0.7s. Weapon mounts: 0 gun(s) (0.4x eDmg, 1.1-1.7s cadence) and 0 missile pod(s) (1.1x eDmg, 4.5-6s cadence) at T5; no gun or missile mounts at T3. Destroying a weapon part explodes for 1.8x eDmg to the player; other parts explode for 1.3x.
+Damage: eDmg 16 / 48 / 144 / 432 / 1,296 / 3,888 by tier. Contact = 0.25x eDmg every 0.7s. Weapon mounts: 0 gun(s) (0.5x eDmg, 1.1-1.7s cadence) and 0 missile pod(s) (1.1x eDmg, 4.5-6s cadence) at T5; no gun or missile mounts at T3. Destroying a weapon part explodes for 1.8x eDmg to the player; other parts explode for 1.3x.
 Abilities (4):
   - Pincer Clamp [swing], from T1, 2.6s cooldown: 2x eDmg damage (7,776 at T5); 0.5s wind-up; range 0-3.5 body-size units; arm swing; requires intact Pincer.
   - Tail Lash [swing], from T2, 4.2s cooldown: 2.6x eDmg damage (10,109 at T5); 0.6s wind-up; poison 0.3x eDmg; range 0-3.9 body-size units; tail swing; requires intact Stinger.
@@ -101,7 +102,7 @@ Hull by tier:
   T4: 478,008 HP total; core 10,800; largest part 12,672; 107 parts; radius 818u; no energy shield; 3 hull shells (860,415 HP).
   T5: 2,194,880 HP total; core 48,000; largest part 56,320; 109 parts; radius 1,350u; no energy shield; 4 hull shells (5,267,712 HP).
 Defence: energy shield panels appear at tier 3+ (2 generators at epic, 3 at legendary, 4 at mythical, each covering only a slice of the ring); hull shells at tier 2+ (60% hull per layer, ~4x that in kinetic fire).
-Damage: eDmg 16 / 48 / 144 / 432 / 1,296 / 3,888 by tier. Contact = 0.25x eDmg every 0.7s. Weapon mounts: 0 gun(s) (0.4x eDmg, 1.1-1.7s cadence) and 2 missile pod(s) (1.1x eDmg, 4.5-6s cadence) at T5; no gun or missile mounts at T3. Destroying a weapon part explodes for 1.8x eDmg to the player; other parts explode for 1.3x.
+Damage: eDmg 16 / 48 / 144 / 432 / 1,296 / 3,888 by tier. Contact = 0.25x eDmg every 0.7s. Weapon mounts: 0 gun(s) (0.5x eDmg, 1.1-1.7s cadence) and 2 missile pod(s) (1.1x eDmg, 4.5-6s cadence) at T5; no gun or missile mounts at T3. Destroying a weapon part explodes for 1.8x eDmg to the player; other parts explode for 1.3x.
 Abilities (4):
   - Web Shot [shoot], from T1, 6s cooldown: 0.4x eDmg damage (1,555 at T5); 0.5s wind-up; 1 projectile at T5 (1); 460 u/s; 1.8s life; size 12; slow to 0.5x for 2.5s; range 120-800u; web projectile.
   - Fang Strike [swing], from T2, 2s cooldown: 1.7x eDmg damage (6,610 at T5); 0.4s wind-up; range 0-2.3 body-size units; mandible swing; requires intact Fang.
@@ -119,7 +120,7 @@ Hull by tier:
   T4: 346,608 HP total; core 10,800; largest part 12,672; 69 parts; radius 523u; 3 panels (curved arcs, 48% of the ring, 301u out); energy/shock/thermal pass; 3 hull shells (623,895 HP).
   T5: 1,582,080 HP total; core 48,000; largest part 56,320; 70 parts; radius 862u; 4 panels (curved arcs, 64% of the ring, 497u out); energy/shock/thermal pass; 4 hull shells (3,796,992 HP).
 Defence: energy shield panels appear at tier 3+ (2 generators at epic, 3 at legendary, 4 at mythical, each covering only a slice of the ring); hull shells at tier 2+ (60% hull per layer, ~4x that in kinetic fire).
-Damage: eDmg 16 / 48 / 144 / 432 / 1,296 / 3,888 by tier. Contact = 0.25x eDmg every 0.7s. Weapon mounts: 0 gun(s) (0.4x eDmg, 1.1-1.7s cadence) and 0 missile pod(s) (1.1x eDmg, 4.5-6s cadence) at T5; no gun or missile mounts at T3. Destroying a weapon part explodes for 1.8x eDmg to the player; other parts explode for 1.3x.
+Damage: eDmg 16 / 48 / 144 / 432 / 1,296 / 3,888 by tier. Contact = 0.25x eDmg every 0.7s. Weapon mounts: 0 gun(s) (0.5x eDmg, 1.1-1.7s cadence) and 0 missile pod(s) (1.1x eDmg, 4.5-6s cadence) at T5; no gun or missile mounts at T3. Destroying a weapon part explodes for 1.8x eDmg to the player; other parts explode for 1.3x.
 Abilities (4):
   - Scale Dust [cloud], from T1, 8s cooldown: 0.4x eDmg damage (1,555 at T5); 0.6s wind-up; size 2.8; slow to 0.55x for 1.5s; range 0-700u; spawns on the player.
   - Spore Orbs [shoot], from T2, 5s cooldown: 0.8x eDmg damage (3,110 at T5); 0.5s wind-up; 4 projectiles at T5 (2 + 0.5/tier); 0.7 rad spread; 260 u/s; 4s life; size 9; slow to 0.8x for 1s; homing 1.6 rad/s; range 0-800u; orb projectile.
@@ -137,7 +138,7 @@ Hull by tier:
   T4: 360,000 HP total; core 10,800; largest part 12,672; 77 parts; radius 683u; 3 panels (straight bars, 82% of the ring, 301u out); energy/shock/thermal pass; 3 hull shells (648,000 HP).
   T5: 1,928,320 HP total; core 48,000; largest part 56,320; 86 parts; radius 1,127u; 4 panels (straight bars, 110% of the ring, 497u out); energy/shock/thermal pass; 4 hull shells (4,627,968 HP).
 Defence: energy shield panels appear at tier 3+ (2 generators at epic, 3 at legendary, 4 at mythical, each covering only a slice of the ring); hull shells at tier 2+ (60% hull per layer, ~4x that in kinetic fire).
-Damage: eDmg 16 / 48 / 144 / 432 / 1,296 / 3,888 by tier. Contact = 0.25x eDmg every 0.7s. Weapon mounts: 0 gun(s) (0.4x eDmg, 1.1-1.7s cadence) and 0 missile pod(s) (1.1x eDmg, 4.5-6s cadence) at T5; no gun or missile mounts at T3. Destroying a weapon part explodes for 1.8x eDmg to the player; other parts explode for 1.3x.
+Damage: eDmg 16 / 48 / 144 / 432 / 1,296 / 3,888 by tier. Contact = 0.25x eDmg every 0.7s. Weapon mounts: 0 gun(s) (0.5x eDmg, 1.1-1.7s cadence) and 0 missile pod(s) (1.1x eDmg, 4.5-6s cadence) at T5; no gun or missile mounts at T3. Destroying a weapon part explodes for 1.8x eDmg to the player; other parts explode for 1.3x.
 Abilities (4):
   - Scythe Strike [swing], from T1, 2.2s cooldown: 2.4x eDmg damage (9,331 at T5); 0.5s wind-up; range 0-3.2 body-size units; arm swing; requires intact Raptor Blade.
   - Lunge [charge], from T2, 6s cooldown: 2x eDmg damage (7,776 at T5); 0.5s wind-up; 820 u/s; 0.35s duration; range 150-600u.
@@ -155,7 +156,7 @@ Hull by tier:
   T4: 1,190,880 HP total; core 10,800; largest part 12,672; 316 parts; radius 1,505u; 3 panels (curved arcs, 48% of the ring, 301u out); energy/shock/thermal pass.
   T5: 5,793,920 HP total; core 48,000; largest part 56,320; 352 parts; radius 2,618u; no energy shield.
 Defence: serpentine body (no hull shells); energy shield panels appear at tier 3+ (2 generators at epic, 3 at legendary, 4 at mythical, each covering only a slice of the ring); hull shells at tier 2+ (60% hull per layer, ~4x that in kinetic fire).
-Damage: eDmg 16 / 48 / 144 / 432 / 1,296 / 3,888 by tier. Contact = 0.25x eDmg every 0.7s. Weapon mounts: 0 gun(s) (0.4x eDmg, 1.1-1.7s cadence) and 0 missile pod(s) (1.1x eDmg, 4.5-6s cadence) at T5; no gun or missile mounts at T3. Destroying a weapon part explodes for 1.8x eDmg to the player; other parts explode for 1.3x.
+Damage: eDmg 16 / 48 / 144 / 432 / 1,296 / 3,888 by tier. Contact = 0.25x eDmg every 0.7s. Weapon mounts: 0 gun(s) (0.5x eDmg, 1.1-1.7s cadence) and 0 missile pod(s) (1.1x eDmg, 4.5-6s cadence) at T5; no gun or missile mounts at T3. Destroying a weapon part explodes for 1.8x eDmg to the player; other parts explode for 1.3x.
 Abilities (4):
   - Forcipule Bite [swing], from T1, 2s cooldown: 1.8x eDmg damage (6,998 at T5); 0.4s wind-up; range 0-3.6 body-size units; mandible swing; requires intact Forcipule.
   - Rush [charge], from T2, 5s cooldown: 1.5x eDmg damage (5,832 at T5); 0.4s wind-up; 540 u/s; 0.9s duration; range 220-900u.
@@ -173,7 +174,7 @@ Hull by tier:
   T4: 307,152 HP total; core 10,800; largest part 12,672; 72 parts; radius 737u; no energy shield; 3 hull shells (552,873 HP).
   T5: 1,393,280 HP total; core 48,000; largest part 56,320; 73 parts; radius 1,216u; no energy shield; 4 hull shells (3,343,872 HP).
 Defence: no energy shields at any tier; hull shells at tier 2+ (60% hull per layer, ~4x that in kinetic fire).
-Damage: eDmg 16 / 48 / 144 / 432 / 1,296 / 3,888 by tier. Contact = 0.25x eDmg every 0.7s. Weapon mounts: 0 gun(s) (0.4x eDmg, 1.1-1.7s cadence) and 0 missile pod(s) (1.1x eDmg, 4.5-6s cadence) at T5; no gun or missile mounts at T3. Destroying a weapon part explodes for 1.8x eDmg to the player; other parts explode for 1.3x.
+Damage: eDmg 16 / 48 / 144 / 432 / 1,296 / 3,888 by tier. Contact = 0.25x eDmg every 0.7s. Weapon mounts: 0 gun(s) (0.5x eDmg, 1.1-1.7s cadence) and 0 missile pod(s) (1.1x eDmg, 4.5-6s cadence) at T5; no gun or missile mounts at T3. Destroying a weapon part explodes for 1.8x eDmg to the player; other parts explode for 1.3x.
 Abilities (4):
   - Mandible Snap [swing], from T1, 2s cooldown: 1.2x eDmg damage (4,666 at T5); 0.35s wind-up; range 0-2.2 body-size units; mandible swing; requires intact Mandible.
   - Hornet Dive [charge], from T2, 5s cooldown: 1.6x eDmg damage (6,221 at T5); 0.5s wind-up; 900 u/s; poison 0.25x eDmg; 0.45s duration; range 150-800u.
@@ -191,7 +192,7 @@ Hull by tier:
   T4: 416,268 HP total; core 10,800; largest part 12,672; 93 parts; radius 626u; 3 panels (straight bars, 82% of the ring, 301u out); energy/shock/thermal pass; 3 hull shells (749,283 HP).
   T5: 2,390,880 HP total; core 48,000; largest part 56,320; 108 parts; radius 1,032u; 4 panels (straight bars, 110% of the ring, 497u out); energy/shock/thermal pass; 4 hull shells (5,738,112 HP).
 Defence: energy shield panels appear at tier 3+ (2 generators at epic, 3 at legendary, 4 at mythical, each covering only a slice of the ring); hull shells at tier 2+ (60% hull per layer, ~4x that in kinetic fire).
-Damage: eDmg 16 / 48 / 144 / 432 / 1,296 / 3,888 by tier. Contact = 0.25x eDmg every 0.7s. Weapon mounts: 0 gun(s) (0.4x eDmg, 1.1-1.7s cadence) and 4 missile pod(s) (1.1x eDmg, 4.5-6s cadence) at T5; no gun or missile mounts at T3. Destroying a weapon part explodes for 1.8x eDmg to the player; other parts explode for 1.3x.
+Damage: eDmg 16 / 48 / 144 / 432 / 1,296 / 3,888 by tier. Contact = 0.25x eDmg every 0.7s. Weapon mounts: 0 gun(s) (0.5x eDmg, 1.1-1.7s cadence) and 4 missile pod(s) (1.1x eDmg, 4.5-6s cadence) at T5; no gun or missile mounts at T3. Destroying a weapon part explodes for 1.8x eDmg to the player; other parts explode for 1.3x.
 Abilities (3):
   - Mandible Crush [swing], from T1, 2.4s cooldown: 1.8x eDmg damage (6,998 at T5); 0.45s wind-up; range 0-2.7 body-size units; mandible swing; requires intact Mandible.
   - Ram [charge], from T2, 7s cooldown: 2.6x eDmg damage (10,109 at T5); 0.8s wind-up; 560 u/s; 0.6s duration; range 200-750u.
@@ -208,7 +209,7 @@ Hull by tier:
   T4: 374,112 HP total; core 10,800; largest part 12,672; 88 parts; radius 689u; no energy shield; 3 hull shells (673,401 HP).
   T5: 1,733,120 HP total; core 48,000; largest part 56,320; 90 parts; radius 1,137u; no energy shield; 4 hull shells (4,159,488 HP).
 Defence: no energy shields at any tier; hull shells at tier 2+ (60% hull per layer, ~4x that in kinetic fire).
-Damage: eDmg 16 / 48 / 144 / 432 / 1,296 / 3,888 by tier. Contact = 0.25x eDmg every 0.7s. Weapon mounts: 0 gun(s) (0.4x eDmg, 1.1-1.7s cadence) and 0 missile pod(s) (1.1x eDmg, 4.5-6s cadence) at T5; no gun or missile mounts at T3. Destroying a weapon part explodes for 1.8x eDmg to the player; other parts explode for 1.3x.
+Damage: eDmg 16 / 48 / 144 / 432 / 1,296 / 3,888 by tier. Contact = 0.25x eDmg every 0.7s. Weapon mounts: 0 gun(s) (0.5x eDmg, 1.1-1.7s cadence) and 0 missile pod(s) (1.1x eDmg, 4.5-6s cadence) at T5; no gun or missile mounts at T3. Destroying a weapon part explodes for 1.8x eDmg to the player; other parts explode for 1.3x.
 Abilities (4):
   - Mandible Crush [swing], from T1, 2s cooldown: 1.6x eDmg damage (6,221 at T5); 0.4s wind-up; range 0-3.1 body-size units; mandible swing; requires intact Mandible.
   - Formic Acid [spit], from T2, 5s cooldown: 0.7x eDmg damage (2,722 at T5); 0.45s wind-up; 500 u/s; size 1.3; range 150-750u.
@@ -226,7 +227,7 @@ Hull by tier:
   T4: 351,648 HP total; core 10,800; largest part 12,672; 76 parts; radius 676u; 3 panels (curved arcs, some sweeping, 48% of the ring, 301u out); energy/shock/thermal pass; 3 hull shells (632,967 HP).
   T5: 1,674,880 HP total; core 48,000; largest part 56,320; 79 parts; radius 1,115u; 4 panels (curved arcs, some sweeping, 64% of the ring, 497u out); energy/shock/thermal pass; 4 hull shells (4,019,712 HP).
 Defence: energy shield panels appear at tier 3+ (2 generators at epic, 3 at legendary, 4 at mythical, each covering only a slice of the ring); hull shells at tier 2+ (60% hull per layer, ~4x that in kinetic fire).
-Damage: eDmg 16 / 48 / 144 / 432 / 1,296 / 3,888 by tier. Contact = 0.25x eDmg every 0.7s. Weapon mounts: 0 gun(s) (0.4x eDmg, 1.1-1.7s cadence) and 0 missile pod(s) (1.1x eDmg, 4.5-6s cadence) at T5; no gun or missile mounts at T3. Destroying a weapon part explodes for 1.8x eDmg to the player; other parts explode for 1.3x.
+Damage: eDmg 16 / 48 / 144 / 432 / 1,296 / 3,888 by tier. Contact = 0.25x eDmg every 0.7s. Weapon mounts: 0 gun(s) (0.5x eDmg, 1.1-1.7s cadence) and 0 missile pod(s) (1.1x eDmg, 4.5-6s cadence) at T5; no gun or missile mounts at T3. Destroying a weapon part explodes for 1.8x eDmg to the player; other parts explode for 1.3x.
 Abilities (4):
   - Glow Orb [shoot], from T1, 3s cooldown: 0.8x eDmg damage (3,110 at T5); 0.4s wind-up; 3 projectiles at T5 (1 + 0.4/tier); 0.5 rad spread; 300 u/s; 4.5s life; size 9; slow to 0.8x for 1s; homing 1.2 rad/s; range 0-850u; orb projectile.
   - Flash Pulse [ring], from T2, 8s cooldown: 1.4x eDmg damage (5,443 at T5); 0.8s wind-up; 480 u/s; size 5; range 0-4 body-size units.
@@ -244,7 +245,7 @@ Hull by tier:
   T4: 343,584 HP total; core 10,800; largest part 12,672; 84 parts; radius 712u; no energy shield; 3 hull shells (618,450 HP).
   T5: 1,527,040 HP total; core 48,000; largest part 56,320; 84 parts; radius 1,175u; no energy shield; 4 hull shells (3,664,896 HP).
 Defence: no energy shields at any tier; hull shells at tier 2+ (60% hull per layer, ~4x that in kinetic fire).
-Damage: eDmg 16 / 48 / 144 / 432 / 1,296 / 3,888 by tier. Contact = 0.25x eDmg every 0.7s. Weapon mounts: 0 gun(s) (0.4x eDmg, 1.1-1.7s cadence) and 0 missile pod(s) (1.1x eDmg, 4.5-6s cadence) at T5; no gun or missile mounts at T3. Destroying a weapon part explodes for 1.8x eDmg to the player; other parts explode for 1.3x.
+Damage: eDmg 16 / 48 / 144 / 432 / 1,296 / 3,888 by tier. Contact = 0.25x eDmg every 0.7s. Weapon mounts: 0 gun(s) (0.5x eDmg, 1.1-1.7s cadence) and 0 missile pod(s) (1.1x eDmg, 4.5-6s cadence) at T5; no gun or missile mounts at T3. Destroying a weapon part explodes for 1.8x eDmg to the player; other parts explode for 1.3x.
 Abilities (3):
   - Mandible Crush [swing], from T1, 2.1s cooldown: 1.4x eDmg damage (5,443 at T5); 0.4s wind-up; range 0-2.9 body-size units; mandible swing; requires intact Mandible.
   - Call Swarm [summon], from T2, 15s cooldown: no direct damage; 0.7s wind-up; 2 projectiles at T5 (2); range 0-2 body-size units.
@@ -261,7 +262,7 @@ Hull by tier:
   T4: 363,780 HP total; core 10,800; largest part 12,672; 79 parts; radius 696u; no energy shield; 3 hull shells (654,804 HP).
   T5: 1,881,760 HP total; core 48,000; largest part 56,320; 86 parts; radius 1,149u; 4 panels (curved arcs, 64% of the ring, 497u out); energy/shock/thermal pass; 4 hull shells (4,516,224 HP).
 Defence: energy shield panels appear at tier 3+ (2 generators at epic, 3 at legendary, 4 at mythical, each covering only a slice of the ring); hull shells at tier 2+ (60% hull per layer, ~4x that in kinetic fire).
-Damage: eDmg 16 / 48 / 144 / 432 / 1,296 / 3,888 by tier. Contact = 0.25x eDmg every 0.7s. Weapon mounts: 0 gun(s) (0.4x eDmg, 1.1-1.7s cadence) and 0 missile pod(s) (1.1x eDmg, 4.5-6s cadence) at T5; T3 has 2 gun(s) / 0 pod(s). Destroying a weapon part explodes for 1.8x eDmg to the player; other parts explode for 1.3x.
+Damage: eDmg 16 / 48 / 144 / 432 / 1,296 / 3,888 by tier. Contact = 0.25x eDmg every 0.7s. Weapon mounts: 0 gun(s) (0.5x eDmg, 1.1-1.7s cadence) and 0 missile pod(s) (1.1x eDmg, 4.5-6s cadence) at T5; T3 has 2 gun(s) / 0 pod(s). Destroying a weapon part explodes for 1.8x eDmg to the player; other parts explode for 1.3x.
 Abilities (3):
   - Venom Sting [spit], from T1, 4.5s cooldown: 0.8x eDmg damage (3,110 at T5); 0.4s wind-up; 520 u/s; size 1.2; poison 0.3x eDmg; range 0-520u.
   - Sting Dive [charge], from T2, 6s cooldown: 1.5x eDmg damage (5,832 at T5); 0.5s wind-up; 850 u/s; poison 0.25x eDmg; 0.4s duration; range 150-750u.
@@ -278,7 +279,7 @@ Hull by tier:
   T4: 217,152 HP total; core 10,800; largest part 12,672; 56 parts; radius 876u; no energy shield; 3 hull shells (390,873 HP).
   T5: 965,120 HP total; core 48,000; largest part 56,320; 56 parts; radius 1,445u; no energy shield; 4 hull shells (2,316,288 HP).
 Defence: no energy shields at any tier; hull shells at tier 2+ (60% hull per layer, ~4x that in kinetic fire).
-Damage: eDmg 16 / 48 / 144 / 432 / 1,296 / 3,888 by tier. Contact = 0.25x eDmg every 0.7s. Weapon mounts: 0 gun(s) (0.4x eDmg, 1.1-1.7s cadence) and 0 missile pod(s) (1.1x eDmg, 4.5-6s cadence) at T5; no gun or missile mounts at T3. Destroying a weapon part explodes for 1.8x eDmg to the player; other parts explode for 1.3x.
+Damage: eDmg 16 / 48 / 144 / 432 / 1,296 / 3,888 by tier. Contact = 0.25x eDmg every 0.7s. Weapon mounts: 0 gun(s) (0.5x eDmg, 1.1-1.7s cadence) and 0 missile pod(s) (1.1x eDmg, 4.5-6s cadence) at T5; no gun or missile mounts at T3. Destroying a weapon part explodes for 1.8x eDmg to the player; other parts explode for 1.3x.
 Abilities (3):
   - Leaping Charge [charge], from T1, 5.5s cooldown: 1.8x eDmg damage (6,998 at T5); 0.6s wind-up; 980 u/s; 0.45s duration; range 180-900u.
   - Kick [swing], from T2, 3.4s cooldown: 1.5x eDmg damage (5,832 at T5); 0.35s wind-up; range 0-3.1 body-size units; leg swing; requires intact Hind Leg.
@@ -295,7 +296,7 @@ Hull by tier:
   T4: 486,720 HP total; core 10,800; largest part 12,672; 102 parts; radius 599u; 3 panels (straight bars, 82% of the ring, 301u out); energy/shock/thermal pass; 3 hull shells (876,096 HP).
   T5: 2,275,200 HP total; core 48,000; largest part 56,320; 105 parts; radius 988u; 4 panels (straight bars, 110% of the ring, 497u out); energy/shock/thermal pass; 4 hull shells (5,460,480 HP).
 Defence: energy shield panels appear at tier 3+ (2 generators at epic, 3 at legendary, 4 at mythical, each covering only a slice of the ring); hull shells at tier 2+ (60% hull per layer, ~4x that in kinetic fire).
-Damage: eDmg 16 / 48 / 144 / 432 / 1,296 / 3,888 by tier. Contact = 0.25x eDmg every 0.7s. Weapon mounts: 6 gun(s) (0.4x eDmg, 1.1-1.7s cadence) and 0 missile pod(s) (1.1x eDmg, 4.5-6s cadence) at T5; no gun or missile mounts at T3. Destroying a weapon part explodes for 1.8x eDmg to the player; other parts explode for 1.3x.
+Damage: eDmg 16 / 48 / 144 / 432 / 1,296 / 3,888 by tier. Contact = 0.25x eDmg every 0.7s. Weapon mounts: 6 gun(s) (0.5x eDmg, 1.1-1.7s cadence) and 0 missile pod(s) (1.1x eDmg, 4.5-6s cadence) at T5; no gun or missile mounts at T3. Destroying a weapon part explodes for 1.8x eDmg to the player; other parts explode for 1.3x.
 Abilities (3):
   - Shell Bash [charge], from T1, 4.5s cooldown: 1.6x eDmg damage (6,221 at T5); 0.5s wind-up; 760 u/s; 0.5s duration; range 160-700u.
   - Wing Flare [ring], from T2, 9s cooldown: 1x eDmg damage (3,888 at T5); 0.7s wind-up; 460 u/s; size 4.5; range 0-3.4 body-size units.
@@ -312,7 +313,7 @@ Hull by tier:
   T4: 189,864 HP total; core 10,800; largest part 12,672; 53 parts; radius 508u; no energy shield; 3 hull shells (341,754 HP).
   T5: 1,221,440 HP total; core 48,000; largest part 56,320; 63 parts; radius 838u; 4 panels (curved arcs, 64% of the ring, 497u out); energy/shock/thermal pass; 4 hull shells (2,931,456 HP).
 Defence: energy shield panels appear at tier 3+ (2 generators at epic, 3 at legendary, 4 at mythical, each covering only a slice of the ring); hull shells at tier 2+ (60% hull per layer, ~4x that in kinetic fire).
-Damage: eDmg 16 / 48 / 144 / 432 / 1,296 / 3,888 by tier. Contact = 0.25x eDmg every 0.7s. Weapon mounts: 0 gun(s) (0.4x eDmg, 1.1-1.7s cadence) and 0 missile pod(s) (1.1x eDmg, 4.5-6s cadence) at T5; no gun or missile mounts at T3. Destroying a weapon part explodes for 1.8x eDmg to the player; other parts explode for 1.3x.
+Damage: eDmg 16 / 48 / 144 / 432 / 1,296 / 3,888 by tier. Contact = 0.25x eDmg every 0.7s. Weapon mounts: 0 gun(s) (0.5x eDmg, 1.1-1.7s cadence) and 0 missile pod(s) (1.1x eDmg, 4.5-6s cadence) at T5; no gun or missile mounts at T3. Destroying a weapon part explodes for 1.8x eDmg to the player; other parts explode for 1.3x.
 Abilities (3):
   - Blood Drain [drain], from T1, 5s cooldown: 0.55x eDmg damage (2,138 at T5); 0.5s wind-up; 1.6s duration; range 0-380u; range 0-2.4 body-size units.
   - Dive [charge], from T2, 6s cooldown: 1.2x eDmg damage (4,666 at T5); 0.4s wind-up; 880 u/s; poison 0.3x eDmg; 0.35s duration; range 150-700u.
@@ -329,7 +330,7 @@ Hull by tier:
   T4: 399,600 HP total; core 10,800; largest part 12,672; 84 parts; radius 596u; 3 panels (straight bars, 82% of the ring, 301u out); energy/shock/thermal pass; 3 hull shells (719,280 HP).
   T5: 1,958,400 HP total; core 48,000; largest part 56,320; 89 parts; radius 984u; 4 panels (straight bars, 110% of the ring, 497u out); energy/shock/thermal pass; 4 hull shells (4,700,160 HP).
 Defence: energy shield panels appear at tier 3+ (2 generators at epic, 3 at legendary, 4 at mythical, each covering only a slice of the ring); hull shells at tier 2+ (60% hull per layer, ~4x that in kinetic fire).
-Damage: eDmg 16 / 48 / 144 / 432 / 1,296 / 3,888 by tier. Contact = 0.25x eDmg every 0.7s. Weapon mounts: 0 gun(s) (0.4x eDmg, 1.1-1.7s cadence) and 4 missile pod(s) (1.1x eDmg, 4.5-6s cadence) at T5; no gun or missile mounts at T3. Destroying a weapon part explodes for 1.8x eDmg to the player; other parts explode for 1.3x.
+Damage: eDmg 16 / 48 / 144 / 432 / 1,296 / 3,888 by tier. Contact = 0.25x eDmg every 0.7s. Weapon mounts: 0 gun(s) (0.5x eDmg, 1.1-1.7s cadence) and 4 missile pod(s) (1.1x eDmg, 4.5-6s cadence) at T5; no gun or missile mounts at T3. Destroying a weapon part explodes for 1.8x eDmg to the player; other parts explode for 1.3x.
 Abilities (3):
   - Chemical Spray [spit], from T1, 5s cooldown: 0.7x eDmg damage (2,722 at T5); 0.45s wind-up; 520 u/s; size 1.7; range 0-640u.
   - Acid Puddle [cloud], from T2, 9s cooldown: 0.55x eDmg damage (2,138 at T5); 0.5s wind-up; size 3; slow to 0.7x for 1.5s; range 0-720u; spawns on the player.
@@ -346,7 +347,7 @@ Hull by tier:
   T4: 492,840 HP total; core 10,800; largest part 12,672; 104 parts; radius 842u; 3 panels (straight bars, 82% of the ring, 301u out); energy/shock/thermal pass; 3 hull shells (887,112 HP).
   T5: 2,302,400 HP total; core 48,000; largest part 56,320; 107 parts; radius 1,457u; 4 panels (straight bars, 110% of the ring, 497u out); energy/shock/thermal pass; 4 hull shells (5,525,760 HP).
 Defence: energy shield panels appear at tier 3+ (2 generators at epic, 3 at legendary, 4 at mythical, each covering only a slice of the ring); hull shells at tier 2+ (60% hull per layer, ~4x that in kinetic fire).
-Damage: eDmg 16 / 48 / 144 / 432 / 1,296 / 3,888 by tier. Contact = 0.25x eDmg every 0.7s. Weapon mounts: 0 gun(s) (0.4x eDmg, 1.1-1.7s cadence) and 0 missile pod(s) (1.1x eDmg, 4.5-6s cadence) at T5; no gun or missile mounts at T3. Destroying a weapon part explodes for 1.8x eDmg to the player; other parts explode for 1.3x.
+Damage: eDmg 16 / 48 / 144 / 432 / 1,296 / 3,888 by tier. Contact = 0.25x eDmg every 0.7s. Weapon mounts: 0 gun(s) (0.5x eDmg, 1.1-1.7s cadence) and 0 missile pod(s) (1.1x eDmg, 4.5-6s cadence) at T5; no gun or missile mounts at T3. Destroying a weapon part explodes for 1.8x eDmg to the player; other parts explode for 1.3x.
 Abilities (3):
   - Horn Charge [charge], from T1, 7s cooldown: 3.2x eDmg damage (12,442 at T5); 0.9s wind-up; 620 u/s; 0.6s duration; range 200-800u.
   - Horn Toss [swing], from T2, 3s cooldown: 2.2x eDmg damage (8,554 at T5); 0.5s wind-up; range 0-3.4 body-size units; mandible swing; requires intact Mandible.
@@ -363,7 +364,7 @@ Hull by tier:
   T4: 370,116 HP total; core 10,800; largest part 12,672; 80 parts; radius 780u; no energy shield; 3 hull shells (666,210 HP).
   T5: 1,909,920 HP total; core 48,000; largest part 56,320; 87 parts; radius 1,288u; 4 panels (curved arcs, some sweeping, 64% of the ring, 497u out); energy/shock/thermal pass; 4 hull shells (4,583,808 HP).
 Defence: energy shield panels appear at tier 3+ (2 generators at epic, 3 at legendary, 4 at mythical, each covering only a slice of the ring); hull shells at tier 2+ (60% hull per layer, ~4x that in kinetic fire).
-Damage: eDmg 16 / 48 / 144 / 432 / 1,296 / 3,888 by tier. Contact = 0.25x eDmg every 0.7s. Weapon mounts: 0 gun(s) (0.4x eDmg, 1.1-1.7s cadence) and 0 missile pod(s) (1.1x eDmg, 4.5-6s cadence) at T5; no gun or missile mounts at T3. Destroying a weapon part explodes for 1.8x eDmg to the player; other parts explode for 1.3x.
+Damage: eDmg 16 / 48 / 144 / 432 / 1,296 / 3,888 by tier. Contact = 0.25x eDmg every 0.7s. Weapon mounts: 0 gun(s) (0.5x eDmg, 1.1-1.7s cadence) and 0 missile pod(s) (1.1x eDmg, 4.5-6s cadence) at T5; no gun or missile mounts at T3. Destroying a weapon part explodes for 1.8x eDmg to the player; other parts explode for 1.3x.
 Abilities (3):
   - Venom Darts [shoot], from T1, 4s cooldown: 0.65x eDmg damage (2,527 at T5); 0.4s wind-up; 5 projectiles at T5 (3 + 0.5/tier); 0.35 rad spread; 600 u/s; 1.4s life; size 5; slow to 0.7x for 1.2s; poison 0.2x eDmg; range 180-800u; bolt projectile.
   - Stinger Thrust [swing], from T2, 2.6s cooldown: 1.8x eDmg damage (6,998 at T5); 0.35s wind-up; range 0-2.6 body-size units; tail swing; requires intact Stinger.
@@ -380,7 +381,7 @@ Hull by tier:
   T4: 393,984 HP total; core 10,800; largest part 12,672; 82 parts; radius 599u; 3 panels (curved arcs, 48% of the ring, 301u out); energy/shock/thermal pass; 3 hull shells (709,170 HP).
   T5: 1,863,040 HP total; core 48,000; largest part 56,320; 85 parts; radius 988u; 4 panels (curved arcs, 64% of the ring, 497u out); energy/shock/thermal pass; 4 hull shells (4,471,296 HP).
 Defence: energy shield panels appear at tier 3+ (2 generators at epic, 3 at legendary, 4 at mythical, each covering only a slice of the ring); hull shells at tier 2+ (60% hull per layer, ~4x that in kinetic fire).
-Damage: eDmg 16 / 48 / 144 / 432 / 1,296 / 3,888 by tier. Contact = 0.25x eDmg every 0.7s. Weapon mounts: 0 gun(s) (0.4x eDmg, 1.1-1.7s cadence) and 0 missile pod(s) (1.1x eDmg, 4.5-6s cadence) at T5; no gun or missile mounts at T3. Destroying a weapon part explodes for 1.8x eDmg to the player; other parts explode for 1.3x.
+Damage: eDmg 16 / 48 / 144 / 432 / 1,296 / 3,888 by tier. Contact = 0.25x eDmg every 0.7s. Weapon mounts: 0 gun(s) (0.5x eDmg, 1.1-1.7s cadence) and 0 missile pod(s) (1.1x eDmg, 4.5-6s cadence) at T5; no gun or missile mounts at T3. Destroying a weapon part explodes for 1.8x eDmg to the player; other parts explode for 1.3x.
 Abilities (3):
   - Spore Cloud [cloud], from T1, 8s cooldown: 0.45x eDmg damage (1,750 at T5); 0.6s wind-up; size 2.9; slow to 0.6x for 1.5s; range 0-3.2 body-size units.
   - Repel Pulse [ring], from T2, 8s cooldown: 1.1x eDmg damage (4,277 at T5); 0.7s wind-up; 440 u/s; size 5; range 0-3.6 body-size units.
@@ -397,7 +398,7 @@ Hull by tier:
   T4: 412,416 HP total; core 10,800; largest part 12,672; 93 parts; radius 805u; 3 panels (straight bars, 82% of the ring, 301u out); energy/shock/thermal pass; 3 hull shells (742,350 HP).
   T5: 1,944,960 HP total; core 48,000; largest part 56,320; 96 parts; radius 1,379u; 4 panels (straight bars, 110% of the ring, 497u out); energy/shock/thermal pass; 4 hull shells (4,667,904 HP).
 Defence: energy shield panels appear at tier 3+ (2 generators at epic, 3 at legendary, 4 at mythical, each covering only a slice of the ring); hull shells at tier 2+ (60% hull per layer, ~4x that in kinetic fire).
-Damage: eDmg 16 / 48 / 144 / 432 / 1,296 / 3,888 by tier. Contact = 0.25x eDmg every 0.7s. Weapon mounts: 6 gun(s) (0.4x eDmg, 1.1-1.7s cadence) and 0 missile pod(s) (1.1x eDmg, 4.5-6s cadence) at T5; no gun or missile mounts at T3. Destroying a weapon part explodes for 1.8x eDmg to the player; other parts explode for 1.3x.
+Damage: eDmg 16 / 48 / 144 / 432 / 1,296 / 3,888 by tier. Contact = 0.25x eDmg every 0.7s. Weapon mounts: 6 gun(s) (0.5x eDmg, 1.1-1.7s cadence) and 0 missile pod(s) (1.1x eDmg, 4.5-6s cadence) at T5; no gun or missile mounts at T3. Destroying a weapon part explodes for 1.8x eDmg to the player; other parts explode for 1.3x.
 Abilities (3):
   - Pincer Grab [swing], from T1, 2.8s cooldown: 2.4x eDmg damage (9,331 at T5); 0.5s wind-up; range 0-3.2 body-size units; mandible swing; requires intact Pincer.
   - Toss [pull], from T2, 10s cooldown: 0.7x eDmg damage (2,722 at T5); 0.6s wind-up; 780 u/s; range 220-800u.
@@ -414,7 +415,7 @@ Hull by tier:
   T4: 458,064 HP total; core 10,800; largest part 12,672; 89 parts; radius 735u; 3 panels (straight bars, some sweeping, 82% of the ring, 301u out); energy/shock/thermal pass; 3 hull shells (824,514 HP).
   T5: 2,147,840 HP total; core 48,000; largest part 56,320; 92 parts; radius 1,212u; 4 panels (straight bars, some sweeping, 110% of the ring, 497u out); energy/shock/thermal pass; 4 hull shells (5,154,816 HP).
 Defence: energy shield panels appear at tier 3+ (2 generators at epic, 3 at legendary, 4 at mythical, each covering only a slice of the ring); hull shells at tier 2+ (60% hull per layer, ~4x that in kinetic fire).
-Damage: eDmg 16 / 48 / 144 / 432 / 1,296 / 3,888 by tier. Contact = 0.25x eDmg every 0.7s. Weapon mounts: 6 gun(s) (0.4x eDmg, 1.1-1.7s cadence) and 0 missile pod(s) (1.1x eDmg, 4.5-6s cadence) at T5; T3 has 2 gun(s) / 0 pod(s). Destroying a weapon part explodes for 1.8x eDmg to the player; other parts explode for 1.3x.
+Damage: eDmg 16 / 48 / 144 / 432 / 1,296 / 3,888 by tier. Contact = 0.25x eDmg every 0.7s. Weapon mounts: 6 gun(s) (0.5x eDmg, 1.1-1.7s cadence) and 0 missile pod(s) (1.1x eDmg, 4.5-6s cadence) at T5; T3 has 2 gun(s) / 0 pod(s). Destroying a weapon part explodes for 1.8x eDmg to the player; other parts explode for 1.3x.
 Abilities (3):
   - Crushing Bite [swing], from T1, 2.2s cooldown: 2.2x eDmg damage (8,554 at T5); 0.45s wind-up; range 0-3 body-size units; mandible swing; requires intact Mandible.
   - Quake Stomp [ring], from T2, 9s cooldown: 1.6x eDmg damage (6,221 at T5); 0.8s wind-up; 440 u/s; size 5; range 0-3.6 body-size units.
@@ -431,7 +432,7 @@ Hull by tier:
   T4: 317,520 HP total; core 10,800; largest part 12,672; 71 parts; radius 694u; 3 panels (curved arcs, some sweeping, 48% of the ring, 301u out); energy/shock/thermal pass; 3 hull shells (571,536 HP).
   T5: 1,452,800 HP total; core 48,000; largest part 56,320; 72 parts; radius 1,145u; 4 panels (curved arcs, some sweeping, 64% of the ring, 497u out); energy/shock/thermal pass; 4 hull shells (3,486,720 HP).
 Defence: energy shield panels appear at tier 3+ (2 generators at epic, 3 at legendary, 4 at mythical, each covering only a slice of the ring); hull shells at tier 2+ (60% hull per layer, ~4x that in kinetic fire).
-Damage: eDmg 16 / 48 / 144 / 432 / 1,296 / 3,888 by tier. Contact = 0.25x eDmg every 0.7s. Weapon mounts: 0 gun(s) (0.4x eDmg, 1.1-1.7s cadence) and 0 missile pod(s) (1.1x eDmg, 4.5-6s cadence) at T5; no gun or missile mounts at T3. Destroying a weapon part explodes for 1.8x eDmg to the player; other parts explode for 1.3x.
+Damage: eDmg 16 / 48 / 144 / 432 / 1,296 / 3,888 by tier. Contact = 0.25x eDmg every 0.7s. Weapon mounts: 0 gun(s) (0.5x eDmg, 1.1-1.7s cadence) and 0 missile pod(s) (1.1x eDmg, 4.5-6s cadence) at T5; no gun or missile mounts at T3. Destroying a weapon part explodes for 1.8x eDmg to the player; other parts explode for 1.3x.
 Abilities (3):
   - Sonic Screech [ring], from T1, 8s cooldown: 1.4x eDmg damage (5,443 at T5); 0.75s wind-up; 520 u/s; size 6; range 0-4.2 body-size units.
   - Resonance [nova], from T2, 10s cooldown: 0.6x eDmg damage (2,333 at T5); 0.8s wind-up; 22 projectiles at T5 (14 + 1.6/tier); 380 u/s; 1.5s life; size 7; range 0-600u; wave projectile.
@@ -448,7 +449,7 @@ Hull by tier:
   T4: 354,096 HP total; core 10,800; largest part 12,672; 77 parts; radius 588u; 3 panels (straight bars, 82% of the ring, 301u out); energy/shock/thermal pass; 3 hull shells (637,374 HP).
   T5: 1,615,360 HP total; core 48,000; largest part 56,320; 78 parts; radius 969u; 4 panels (straight bars, 110% of the ring, 497u out); energy/shock/thermal pass; 4 hull shells (3,876,864 HP).
 Defence: energy shield panels appear at tier 3+ (2 generators at epic, 3 at legendary, 4 at mythical, each covering only a slice of the ring); hull shells at tier 2+ (60% hull per layer, ~4x that in kinetic fire).
-Damage: eDmg 16 / 48 / 144 / 432 / 1,296 / 3,888 by tier. Contact = 0.25x eDmg every 0.7s. Weapon mounts: 0 gun(s) (0.4x eDmg, 1.1-1.7s cadence) and 0 missile pod(s) (1.1x eDmg, 4.5-6s cadence) at T5; T3 has 2 gun(s) / 0 pod(s). Destroying a weapon part explodes for 1.8x eDmg to the player; other parts explode for 1.3x.
+Damage: eDmg 16 / 48 / 144 / 432 / 1,296 / 3,888 by tier. Contact = 0.25x eDmg every 0.7s. Weapon mounts: 0 gun(s) (0.5x eDmg, 1.1-1.7s cadence) and 0 missile pod(s) (1.1x eDmg, 4.5-6s cadence) at T5; T3 has 2 gun(s) / 0 pod(s). Destroying a weapon part explodes for 1.8x eDmg to the player; other parts explode for 1.3x.
 Abilities (3):
   - Piercing Proboscis [drain], from T1, 5s cooldown: 0.7x eDmg damage (2,722 at T5); 0.45s wind-up; 1.8s duration; range 0-460u; range 0-2.6 body-size units.
   - Fang Slash [swing], from T2, 2.4s cooldown: 2x eDmg damage (7,776 at T5); 0.4s wind-up; range 0-2.8 body-size units; mandible swing; requires intact Proboscis.
@@ -465,7 +466,7 @@ Hull by tier:
   T4: 390,240 HP total; core 10,800; largest part 12,672; 90 parts; radius 609u; 3 panels (straight bars, 82% of the ring, 301u out); energy/shock/thermal pass; 3 hull shells (702,432 HP).
   T5: 1,846,400 HP total; core 48,000; largest part 56,320; 93 parts; radius 1,004u; 4 panels (straight bars, 110% of the ring, 497u out); energy/shock/thermal pass; 4 hull shells (4,431,360 HP).
 Defence: energy shield panels appear at tier 3+ (2 generators at epic, 3 at legendary, 4 at mythical, each covering only a slice of the ring); hull shells at tier 2+ (60% hull per layer, ~4x that in kinetic fire).
-Damage: eDmg 16 / 48 / 144 / 432 / 1,296 / 3,888 by tier. Contact = 0.25x eDmg every 0.7s. Weapon mounts: 0 gun(s) (0.4x eDmg, 1.1-1.7s cadence) and 4 missile pod(s) (1.1x eDmg, 4.5-6s cadence) at T5; no gun or missile mounts at T3. Destroying a weapon part explodes for 1.8x eDmg to the player; other parts explode for 1.3x.
+Damage: eDmg 16 / 48 / 144 / 432 / 1,296 / 3,888 by tier. Contact = 0.25x eDmg every 0.7s. Weapon mounts: 0 gun(s) (0.5x eDmg, 1.1-1.7s cadence) and 4 missile pod(s) (1.1x eDmg, 4.5-6s cadence) at T5; no gun or missile mounts at T3. Destroying a weapon part explodes for 1.8x eDmg to the player; other parts explode for 1.3x.
 Abilities (3):
   - Dash [charge], from T1, 3.5s cooldown: 1.4x eDmg damage (5,443 at T5); 0.3s wind-up; 1,000 u/s; 0.32s duration; range 200-900u.
   - Second Dash [charge], from T2, 4s cooldown: 1.5x eDmg damage (5,832 at T5); 0.3s wind-up; 1,000 u/s; 0.32s duration; range 200-900u.
@@ -482,7 +483,7 @@ Hull by tier:
   T4: 293,328 HP total; core 10,800; largest part 12,672; 63 parts; radius 905u; 3 panels (straight bars, 82% of the ring, 301u out); energy/shock/thermal pass; 3 hull shells (527,991 HP).
   T5: 1,345,280 HP total; core 48,000; largest part 56,320; 64 parts; radius 1,494u; 4 panels (straight bars, 110% of the ring, 497u out); energy/shock/thermal pass; 4 hull shells (3,228,672 HP).
 Defence: energy shield panels appear at tier 3+ (2 generators at epic, 3 at legendary, 4 at mythical, each covering only a slice of the ring); hull shells at tier 2+ (60% hull per layer, ~4x that in kinetic fire).
-Damage: eDmg 16 / 48 / 144 / 432 / 1,296 / 3,888 by tier. Contact = 0.25x eDmg every 0.7s. Weapon mounts: 0 gun(s) (0.4x eDmg, 1.1-1.7s cadence) and 0 missile pod(s) (1.1x eDmg, 4.5-6s cadence) at T5; no gun or missile mounts at T3. Destroying a weapon part explodes for 1.8x eDmg to the player; other parts explode for 1.3x.
+Damage: eDmg 16 / 48 / 144 / 432 / 1,296 / 3,888 by tier. Contact = 0.25x eDmg every 0.7s. Weapon mounts: 0 gun(s) (0.5x eDmg, 1.1-1.7s cadence) and 0 missile pod(s) (1.1x eDmg, 4.5-6s cadence) at T5; no gun or missile mounts at T3. Destroying a weapon part explodes for 1.8x eDmg to the player; other parts explode for 1.3x.
 Abilities (3):
   - Burrow Ambush [blink], from T1, 8s cooldown: 1.2x eDmg damage (4,666 at T5); 0.6s wind-up; range 0-700u.
   - Digger Claws [swing], from T2, 2.6s cooldown: 2x eDmg damage (7,776 at T5); 0.45s wind-up; range 0-3 body-size units; leg swing; requires intact Hind Leg.
@@ -499,7 +500,7 @@ Hull by tier:
   T4: 205,056 HP total; core 10,800; largest part 12,672; 56 parts; radius 826u; no energy shield; 3 hull shells (369,102 HP).
   T5: 911,360 HP total; core 48,000; largest part 56,320; 56 parts; radius 1,364u; no energy shield; 4 hull shells (2,187,264 HP).
 Defence: no energy shields at any tier; hull shells at tier 2+ (60% hull per layer, ~4x that in kinetic fire).
-Damage: eDmg 16 / 48 / 144 / 432 / 1,296 / 3,888 by tier. Contact = 0.25x eDmg every 0.7s. Weapon mounts: 0 gun(s) (0.4x eDmg, 1.1-1.7s cadence) and 0 missile pod(s) (1.1x eDmg, 4.5-6s cadence) at T5; no gun or missile mounts at T3. Destroying a weapon part explodes for 1.8x eDmg to the player; other parts explode for 1.3x.
+Damage: eDmg 16 / 48 / 144 / 432 / 1,296 / 3,888 by tier. Contact = 0.25x eDmg every 0.7s. Weapon mounts: 0 gun(s) (0.5x eDmg, 1.1-1.7s cadence) and 0 missile pod(s) (1.1x eDmg, 4.5-6s cadence) at T5; no gun or missile mounts at T3. Destroying a weapon part explodes for 1.8x eDmg to the player; other parts explode for 1.3x.
 Abilities (3):
   - Leaf Shards [shoot], from T1, 4.5s cooldown: 0.7x eDmg damage (2,722 at T5); 0.4s wind-up; 5 projectiles at T5 (3 + 0.5/tier); 0.4 rad spread; 540 u/s; 1.5s life; size 7; pierces; range 180-800u; wave projectile.
   - Camo Shift [blink], from T2, 9s cooldown: 0.6x eDmg damage (2,333 at T5); 0.4s wind-up; range 0-600u.
@@ -516,7 +517,7 @@ Hull by tier:
   T4: 489,600 HP total; core 10,800; largest part 12,672; 103 parts; radius 693u; 3 panels (straight bars, 82% of the ring, 301u out); energy/shock/thermal pass; 3 hull shells (881,280 HP).
   T5: 2,288,000 HP total; core 48,000; largest part 56,320; 106 parts; radius 1,144u; 4 panels (straight bars, 110% of the ring, 497u out); energy/shock/thermal pass; 4 hull shells (5,491,200 HP).
 Defence: energy shield panels appear at tier 3+ (2 generators at epic, 3 at legendary, 4 at mythical, each covering only a slice of the ring); hull shells at tier 2+ (60% hull per layer, ~4x that in kinetic fire).
-Damage: eDmg 16 / 48 / 144 / 432 / 1,296 / 3,888 by tier. Contact = 0.25x eDmg every 0.7s. Weapon mounts: 0 gun(s) (0.4x eDmg, 1.1-1.7s cadence) and 0 missile pod(s) (1.1x eDmg, 4.5-6s cadence) at T5; no gun or missile mounts at T3. Destroying a weapon part explodes for 1.8x eDmg to the player; other parts explode for 1.3x.
+Damage: eDmg 16 / 48 / 144 / 432 / 1,296 / 3,888 by tier. Contact = 0.25x eDmg every 0.7s. Weapon mounts: 0 gun(s) (0.5x eDmg, 1.1-1.7s cadence) and 0 missile pod(s) (1.1x eDmg, 4.5-6s cadence) at T5; no gun or missile mounts at T3. Destroying a weapon part explodes for 1.8x eDmg to the player; other parts explode for 1.3x.
 Abilities (3):
   - Rolling Slam [charge], from T1, 8s cooldown: 3.4x eDmg damage (13,219 at T5); 1s wind-up; 560 u/s; 0.7s duration; range 220-900u.
   - Boulder Toss [spit], from T2, 6s cooldown: 0.9x eDmg damage (3,499 at T5); 0.6s wind-up; 420 u/s; size 2.4; range 0-800u.
@@ -533,7 +534,7 @@ Hull by tier:
   T4: 305,136 HP total; core 10,800; largest part 12,672; 69 parts; radius 1,016u; 3 panels (curved arcs, 48% of the ring, 301u out); energy/shock/thermal pass; 3 hull shells (549,246 HP).
   T5: 1,468,160 HP total; core 48,000; largest part 56,320; 72 parts; radius 1,677u; 4 panels (curved arcs, 64% of the ring, 497u out); energy/shock/thermal pass; 4 hull shells (3,523,584 HP).
 Defence: energy shield panels appear at tier 3+ (2 generators at epic, 3 at legendary, 4 at mythical, each covering only a slice of the ring); hull shells at tier 2+ (60% hull per layer, ~4x that in kinetic fire).
-Damage: eDmg 16 / 48 / 144 / 432 / 1,296 / 3,888 by tier. Contact = 0.25x eDmg every 0.7s. Weapon mounts: 6 gun(s) (0.4x eDmg, 1.1-1.7s cadence) and 0 missile pod(s) (1.1x eDmg, 4.5-6s cadence) at T5; no gun or missile mounts at T3. Destroying a weapon part explodes for 1.8x eDmg to the player; other parts explode for 1.3x.
+Damage: eDmg 16 / 48 / 144 / 432 / 1,296 / 3,888 by tier. Contact = 0.25x eDmg every 0.7s. Weapon mounts: 6 gun(s) (0.5x eDmg, 1.1-1.7s cadence) and 0 missile pod(s) (1.1x eDmg, 4.5-6s cadence) at T5; no gun or missile mounts at T3. Destroying a weapon part explodes for 1.8x eDmg to the player; other parts explode for 1.3x.
 Abilities (3):
   - Wind Gust [ring], from T1, 8s cooldown: 1.3x eDmg damage (5,054 at T5); 0.8s wind-up; 480 u/s; size 7; range 0-4.6 body-size units.
   - Slow Powder [cloud], from T2, 10s cooldown: 0.5x eDmg damage (1,944 at T5); 0.7s wind-up; size 4; slow to 0.8x for 1.5s; range 0-900u; spawns on the player.
@@ -550,7 +551,7 @@ Hull by tier:
   T4: 375,984 HP total; core 10,800; largest part 12,672; 80 parts; radius 716u; 3 panels (straight bars, 82% of the ring, 301u out); energy/shock/thermal pass; 3 hull shells (676,770 HP).
   T5: 1,783,040 HP total; core 48,000; largest part 56,320; 83 parts; radius 1,182u; 4 panels (straight bars, 110% of the ring, 497u out); energy/shock/thermal pass; 4 hull shells (4,279,296 HP).
 Defence: energy shield panels appear at tier 3+ (2 generators at epic, 3 at legendary, 4 at mythical, each covering only a slice of the ring); hull shells at tier 2+ (60% hull per layer, ~4x that in kinetic fire).
-Damage: eDmg 16 / 48 / 144 / 432 / 1,296 / 3,888 by tier. Contact = 0.25x eDmg every 0.7s. Weapon mounts: 0 gun(s) (0.4x eDmg, 1.1-1.7s cadence) and 0 missile pod(s) (1.1x eDmg, 4.5-6s cadence) at T5; no gun or missile mounts at T3. Destroying a weapon part explodes for 1.8x eDmg to the player; other parts explode for 1.3x.
+Damage: eDmg 16 / 48 / 144 / 432 / 1,296 / 3,888 by tier. Contact = 0.25x eDmg every 0.7s. Weapon mounts: 0 gun(s) (0.5x eDmg, 1.1-1.7s cadence) and 0 missile pod(s) (1.1x eDmg, 4.5-6s cadence) at T5; no gun or missile mounts at T3. Destroying a weapon part explodes for 1.8x eDmg to the player; other parts explode for 1.3x.
 Abilities (3):
   - Drill Strike [swing], from T1, 3s cooldown: 2.6x eDmg damage (10,109 at T5); 0.55s wind-up; range 0-3.4 body-size units; mandible swing; requires intact Snout.
   - Boring Charge [charge], from T2, 8s cooldown: 2.8x eDmg damage (10,886 at T5); 0.8s wind-up; 640 u/s; 0.6s duration; range 200-800u.
@@ -567,7 +568,7 @@ Hull by tier:
   T4: 284,256 HP total; core 10,800; largest part 12,672; 67 parts; radius 849u; no energy shield; 3 hull shells (511,662 HP).
   T5: 1,263,360 HP total; core 48,000; largest part 56,320; 67 parts; radius 1,400u; no energy shield; 4 hull shells (3,032,064 HP).
 Defence: no energy shields at any tier; hull shells at tier 2+ (60% hull per layer, ~4x that in kinetic fire).
-Damage: eDmg 16 / 48 / 144 / 432 / 1,296 / 3,888 by tier. Contact = 0.25x eDmg every 0.7s. Weapon mounts: 0 gun(s) (0.4x eDmg, 1.1-1.7s cadence) and 0 missile pod(s) (1.1x eDmg, 4.5-6s cadence) at T5; no gun or missile mounts at T3. Destroying a weapon part explodes for 1.8x eDmg to the player; other parts explode for 1.3x.
+Damage: eDmg 16 / 48 / 144 / 432 / 1,296 / 3,888 by tier. Contact = 0.25x eDmg every 0.7s. Weapon mounts: 0 gun(s) (0.5x eDmg, 1.1-1.7s cadence) and 0 missile pod(s) (1.1x eDmg, 4.5-6s cadence) at T5; no gun or missile mounts at T3. Destroying a weapon part explodes for 1.8x eDmg to the player; other parts explode for 1.3x.
 Abilities (3):
   - Swarm Rush [charge], from T1, 5s cooldown: 1.5x eDmg damage (5,832 at T5); 0.4s wind-up; 950 u/s; 0.4s duration; range 180-850u.
   - Summon Swarm [summon], from T2, 14s cooldown: no direct damage; 0.6s wind-up; 3 projectiles at T5 (3); range 0-2.5 body-size units.
@@ -584,7 +585,7 @@ Hull by tier:
   T4: 496,584 HP total; core 10,800; largest part 12,672; 96 parts; radius 611u; 3 panels (curved arcs, some sweeping, 48% of the ring, 301u out); energy/shock/thermal pass; 3 hull shells (893,850 HP).
   T5: 2,389,440 HP total; core 48,000; largest part 56,320; 101 parts; radius 1,008u; 4 panels (curved arcs, some sweeping, 64% of the ring, 497u out); energy/shock/thermal pass; 4 hull shells (5,734,656 HP).
 Defence: energy shield panels appear at tier 3+ (2 generators at epic, 3 at legendary, 4 at mythical, each covering only a slice of the ring); hull shells at tier 2+ (60% hull per layer, ~4x that in kinetic fire).
-Damage: eDmg 16 / 48 / 144 / 432 / 1,296 / 3,888 by tier. Contact = 0.25x eDmg every 0.7s. Weapon mounts: 0 gun(s) (0.4x eDmg, 1.1-1.7s cadence) and 4 missile pod(s) (1.1x eDmg, 4.5-6s cadence) at T5; no gun or missile mounts at T3. Destroying a weapon part explodes for 1.8x eDmg to the player; other parts explode for 1.3x.
+Damage: eDmg 16 / 48 / 144 / 432 / 1,296 / 3,888 by tier. Contact = 0.25x eDmg every 0.7s. Weapon mounts: 0 gun(s) (0.5x eDmg, 1.1-1.7s cadence) and 4 missile pod(s) (1.1x eDmg, 4.5-6s cadence) at T5; no gun or missile mounts at T3. Destroying a weapon part explodes for 1.8x eDmg to the player; other parts explode for 1.3x.
 Abilities (3):
   - Prismatic Beam [shoot], from T1, 5s cooldown: 1.1x eDmg damage (4,277 at T5); 0.5s wind-up; 2 projectiles at T5 (1 + 0.3/tier); 0.1 rad spread; 760 u/s; 1.5s life; size 8; pierces; range 200-950u; wave projectile.
   - Refraction [nova], from T2, 9s cooldown: 0.7x eDmg damage (2,722 at T5); 0.7s wind-up; 24 projectiles at T5 (16 + 1.8/tier); 420 u/s; 1.7s life; size 7; range 0-700u; wave projectile.
@@ -601,7 +602,7 @@ Hull by tier:
   T4: 2,293,524 HP total; core 10,800; largest part 12,672; 456 parts; radius 2,773u; 3 panels (curved arcs, some sweeping, 48% of the ring, 301u out); energy/shock/thermal pass.
   T5: 11,038,240 HP total; core 48,000; largest part 56,320; 494 parts; radius 4,827u; 4 panels (curved arcs, some sweeping, 64% of the ring, 497u out); energy/shock/thermal pass.
 Defence: serpentine body (no hull shells); energy shield panels appear at tier 3+ (2 generators at epic, 3 at legendary, 4 at mythical, each covering only a slice of the ring); hull shells at tier 2+ (60% hull per layer, ~4x that in kinetic fire).
-Damage: eDmg 16 / 48 / 144 / 432 / 1,296 / 3,888 by tier. Contact = 0.25x eDmg every 0.7s. Weapon mounts: 0 gun(s) (0.4x eDmg, 1.1-1.7s cadence) and 0 missile pod(s) (1.1x eDmg, 4.5-6s cadence) at T5; no gun or missile mounts at T3. Destroying a weapon part explodes for 1.8x eDmg to the player; other parts explode for 1.3x.
+Damage: eDmg 16 / 48 / 144 / 432 / 1,296 / 3,888 by tier. Contact = 0.25x eDmg every 0.7s. Weapon mounts: 0 gun(s) (0.5x eDmg, 1.1-1.7s cadence) and 0 missile pod(s) (1.1x eDmg, 4.5-6s cadence) at T5; no gun or missile mounts at T3. Destroying a weapon part explodes for 1.8x eDmg to the player; other parts explode for 1.3x.
 Abilities (4):
   - Tail Sweep [swing], from T1, 4s cooldown: 4.5x eDmg damage (17,496 at T5); 0.8s wind-up; range 0-5 body-size units; tail swing; requires intact Tail Barb.
   - Venom Ring [nova], from T2, 9s cooldown: 0.9x eDmg damage (3,499 at T5); 0.9s wind-up; 24 projectiles at T5 (20 + 2/tier); 460 u/s; 1.8s life; size 9; poison 0.3x eDmg; range 0-900u; bolt projectile.

@@ -8,7 +8,7 @@
  *   CHANGELOG and mirror the details in docs/CHANGELOG.md.
  */
 
-export const VERSION = "2.14.0";
+export const VERSION = "2.14.1";
 
 export interface ChangeEntry {
   version: string;
@@ -19,6 +19,16 @@ export interface ChangeEntry {
 }
 
 export const CHANGELOG: ChangeEntry[] = [
+  {
+    version: "2.14.1",
+    date: "20 Nov 2026",
+    title: "Enemy attachment damage and cannon overheat",
+    points: [
+      "Enemy weapon attachments now match the sheet's per-projectile damage: basic cannon 0.5x, scatter 1.2x, rotary 0.2x, laser 1.0x, heavy rail 17x.",
+      "The heavy rail's reach is now the body's own aggro range instead of a fixed number, and the laser holds a tracking beam whose damage climbs to its full 1.0x over three seconds.",
+      "The cannon's overheat now reads on screen: the barrel runs a real red-to-white-hot ramp, heat shimmer rises off it, and a warm glow bleeds in from the edges of the screen as it cooks.",
+    ],
+  },
   {
     version: "2.14.0",
     date: "20 Nov 2026",

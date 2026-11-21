@@ -57,6 +57,8 @@ export interface Part {
   shieldDown: number;
   shieldHit: number;
   cd: number;
+  /** seconds a laser mount has held its beam on the player (0 = off, ramps damage) */
+  beam: number;
 }
 
 export type GroupRole = "leg" | "wing" | "arm" | "mandible" | "tail" | "turret" | "sway";
@@ -101,16 +103,31 @@ export interface GunSpec {
   burst?: number;
   /** seconds spent cooling once the burst runs dry */
   cool?: number;
+  /** a held beam instead of a projectile: damage is dealt every tick while it
+   *  tracks the player, and the ramp climbs while it stays on (laser) */
+  track?: boolean;
+  /** range is the mount's own aggro radius rather than a fixed number (rail) */
+  aggroRange?: boolean;
 }
 
 export const GUN_SPECS: Record<GunKind, GunSpec> = {
-  /* damage multiples of the species' base hit, per the balance sheet */
-  gun:     { name: "Gun Turret",     range: 900,  cd: 1.35, dmg: 0.5,  speed: 560,  r: 5,  life: 1.9,  hue: 8,   type: "bolt" },
-  minigun: { name: "Rotary Gun",     range: 700,  cd: 0.16, dmg: 0.2,  speed: 720,  r: 3,  life: 0.9,  hue: 48,  spread: 0.16, type: "bolt", burst: 10, cool: 5 },
+  /* Damage is a multiple of the species' own hit, per attachment, and every one
+   * of these is per projectile (the laser's per tick, the rail's per slug). The
+   * sheet's shape notes are part of the spec: the basic cannon throws a very,
+   * very large and very slow round, the scatter a large slow spread, the rotary
+   * a fast small one that has to cool for ten seconds, the rail a hitscan slug
+   * out to the body's own aggro range, and the laser a held tracking beam. */
+  gun:     { name: "Gun Turret",     range: 900,  cd: 1.35, dmg: 0.5,  speed: 300,  r: 14, life: 3.2,  hue: 8,   type: "bolt" },
+  minigun: { name: "Rotary Gun",     range: 700,  cd: 0.16, dmg: 0.2,  speed: 720,  r: 3,  life: 0.9,  hue: 48,  spread: 0.16, type: "bolt", burst: 10, cool: 10 },
   scatter: { name: "Scatter Cannon", range: 700,  cd: 2.6,  dmg: 1.2,  speed: 420,  r: 9,  life: 1.4,  hue: 32,  pellets: 7, spread: 0.5, type: "pellet" },
-  heavy:   { name: "Heavy Rail Cannon", range: 1200, cd: 5.0, dmg: 17, speed: 950, r: 12, life: 1.7,  hue: 356, type: "slug", recoil: 260, hitscan: true },
-  laser:   { name: "Laser Emitter",  range: 1000, cd: 2.4,  dmg: 1.0,  speed: 1500, r: 6,  life: 0.45, hue: 188, energy: true, type: "laser" },
+  heavy:   { name: "Heavy Rail Cannon", range: 1200, cd: 5.0, dmg: 17, speed: 950, r: 12, life: 1.7,  hue: 356, type: "slug", recoil: 260, hitscan: true, aggroRange: true },
+  laser:   { name: "Laser Emitter",  range: 1000, cd: 2.4,  dmg: 1.0,  speed: 1500, r: 6,  life: 0.45, hue: 188, energy: true, type: "laser", track: true },
 };
+
+/** how long a laser mount has to hold the beam before it reaches full damage */
+export const LASER_RAMP = 3;
+/** the beam's damage multiplier when it first touches down, and at full ramp */
+export const LASER_RAMP_MIN = 0.35;
 
 export type AbilityType = "swing" | "charge" | "shoot" | "nova" | "ring" | "pull" | "spit" | "cloud" | "summon" | "blink" | "drain";
 export type ProjType = "bolt" | "missile" | "web" | "orb" | "wave" | "hook" | "glob" | "pellet" | "slug" | "laser";
@@ -297,7 +314,7 @@ export class Builder {
       id, kind, name, poly: p, cx, cy, r, area: polyArea(p), hp, maxHp: hp,
       layer: o.layer ?? 1, links: [], g: o.g ?? -1, seg: o.seg ?? -1, alive: true, hurt: 0, barT: 0, style,
       stroke: col.stroke, fill: col.fill, glow: col.glow || (kind === "segment" && style >= 3),
-      wpn: "", muzzle: 0, shieldR: 0, shieldKind: 0, shieldSpan: 0, shieldAng: 0, shieldSpin: 0, shieldHp: 0, shieldMax: 0, shieldDown: 0, shieldHit: 0, cd: 1 + this.rng() * 2,
+      wpn: "", muzzle: 0, shieldR: 0, shieldKind: 0, shieldSpan: 0, shieldAng: 0, shieldSpin: 0, shieldHp: 0, shieldMax: 0, shieldDown: 0, shieldHit: 0, cd: 1 + this.rng() * 2, beam: 0,
     });
     if (o.links) for (const l of o.links) this.link(id, l);
     return id;

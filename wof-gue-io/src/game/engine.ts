@@ -6,7 +6,7 @@ import {
   compMass, compValue, computeStats, craftEfficiency,
   recipeProblem, upgradeCost, zoneTier, WEAPON_DMG, WEAPON_RANGE, type Comp, type DmgKind, type PartKind, type SaveData, type Slot, type Stats,
 } from "./data";
-import { GUN_SPECS, SPECIES_LIST, buildEnemy, type AbilityDef, type Group, type GunKind, type Part, type ProjType, type SpeciesDef } from "./enemies";
+import { GUN_SPECS, LASER_RAMP, LASER_RAMP_MIN, SPECIES_LIST, buildEnemy, type AbilityDef, type Group, type GunKind, type Part, type ProjType, type SpeciesDef } from "./enemies";
 
 /* ---------------------------------------------------------------------------
  * COMBAT & WORLD REFERENCE (live constants)
@@ -2413,6 +2413,19 @@ export class Game {
     return false;
   }
 
+  /** how far this body notices the ship: rarity range, body size, and the extra
+   *  a provoked common grants itself. The rail cannon's reach is the same number,
+   *  so a mount can rail anything it can see and nothing it cannot. */
+  private aggroRange(e: Enemy) {
+    const boss = e.chunk === "boss";
+    const angry = e.provoked > 0;
+    /* a provoked body is wide awake and will follow you further than it would
+     * ever have noticed you on its own */
+    const rage = angry && e.tier <= NEUTRAL_TIER ? 2.1 : 1;
+    const tier = clamp(e.tier, 0, 5) | 0;
+    return (AGGRO_RANGE[tier] * AGGRO_TIER_MUL[tier] + Math.min(e.radius, 700) * AGGRO_SIZE) * (boss ? BOSS_AGGRO_MUL : 1) * rage;
+  }
+
   private updateEnemy(e: Enemy, dt: number, dx: number, dy: number, dist: number) {
     const p = this.player;
     for (const q of e.parts) { if (q.hurt > 0) q.hurt -= dt; if (q.barT > 0) q.barT -= dt; }
@@ -2437,11 +2450,7 @@ export class Game {
     const boss = e.chunk === "boss";
     const angry = e.provoked > 0;
     const neutral = e.tier <= NEUTRAL_TIER && !angry;
-    /* a provoked body is wide awake and will follow you further than it would
-     * ever have noticed you on its own */
-    const rage = angry && e.tier <= NEUTRAL_TIER ? 2.1 : 1;
-    const tier = clamp(e.tier, 0, 5) | 0;
-    const noticeR = (AGGRO_RANGE[tier] * AGGRO_TIER_MUL[tier] + Math.min(e.radius, 700) * AGGRO_SIZE) * (boss ? BOSS_AGGRO_MUL : 1) * rage;
+    const noticeR = this.aggroRange(e);
     const leashR = noticeR * (boss ? BOSS_LEASH : AGGRO_LEASH);
     if (!e.aggro) {
       if (!safe && !neutral && dist < noticeR) e.aggro = true;
@@ -2518,7 +2527,9 @@ export class Game {
         q.cd -= dt;
         const dd = Math.hypot(aimX - wx, aimY - wy);
         const spec = q.wpn === "missile" ? null : GUN_SPECS[q.wpn as GunKind];
-        const range = q.wpn === "missile" ? 1150 : spec!.range;
+        /* the rail's reach is the body's own aggro: it can shoot whatever it can
+         * see, and the aggro ring is exactly what it can see */
+        const range = q.wpn === "missile" ? 1150 : spec!.aggroRange ? this.aggroRange(e) : spec!.range;
         /* a rotary gun holds the trigger for its burst, then has to cool */
         const hot = spec?.burst ? e.mgCool > 0 : false;
         if (hot) e.mgCool -= dt;
@@ -2526,6 +2537,29 @@ export class Game {
           e.mgHeat += dt;
           if (e.mgHeat >= spec.burst) { e.mgHeat = 0; e.mgCool = spec.cool ?? 5; }
           else if (dd >= range || Math.abs(angDiff(g.ang, rel)) >= 0.22) e.mgHeat = Math.max(0, e.mgHeat - dt * 1.5);
+        }
+        /* The laser is not a slug: it holds a beam on the ship and deals damage on
+         * every tick. It starts weak and climbs to the sheet's full 1.0x a hit
+         * over three seconds of unbroken contact, so breaking the beam is the
+         * counter-play. */
+        if (spec?.track && q.alive) {
+          const dir = e.a + g.ang;
+          const mx = wx + Math.cos(dir) * q.muzzle, my = wy + Math.sin(dir) * q.muzzle;
+          const held = e.aggro && !p.dead && !this.inSafe() && dd < range
+            && Math.abs(angDiff(g.ang, rel)) < 0.22 && e.stun <= 0;
+          if (held) {
+            q.beam = Math.min(LASER_RAMP, q.beam + dt);
+            const ramp = LASER_RAMP_MIN + (1 - LASER_RAMP_MIN) * (q.beam / LASER_RAMP);
+            this.hurtPlayer(e.eDmg * spec.dmg * ramp * dt, { energy: true, dot: true });
+            this.beams.push({ x1: mx, y1: my, x2: p.x, y2: p.y, life: 0.08, color: `hsl(${spec.hue} 100% 68%)` });
+            if (Math.random() < dt * 22) this.burst(p.x, p.y, `hsl(${spec.hue} 100% 76%)`, 2, 2.4, 180);
+            if (Math.random() < dt * 8) this.burst(mx, my, `hsl(${spec.hue} 100% 76%)`, 1, 2, 120);
+            q.cd = 0.08;
+          } else {
+            q.beam = Math.max(0, q.beam - dt * 3);
+            q.cd = Math.max(q.cd, 0.25);
+          }
+          continue;
         }
         if (!hot && q.cd <= 0 && dd < range && Math.abs(angDiff(g.ang, rel)) < 0.22 && e.stun <= 0) {
           const dir = e.a + g.ang;
