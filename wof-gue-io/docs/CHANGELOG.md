@@ -3,7 +3,32 @@
 Everything below is implemented in the current build. Numbers are the actual constants used by
 the simulation, not design targets.
 
-## 0. v2.11.0 — part-aware weapon targeting, weapons shop removed
+## 0. v2.12.0 — the cannon tree, chassis bills and solid shields
+
+- **Three tier 1 cannons** (`data.ts`): `CANNONS` now holds the free tier-0 **Stinger** plus
+  **Skewer** (200 dmg, 1.5s, hitscan line drawn by `beam()`), **Peashooter** (15 dmg, 0.1s, 0.22 rad
+  spread, 430 u/s) and **Workhorse** (45 dmg, 0.55s, 0.03 rad spread, 720 u/s). All three
+  `requires: "sting"` and cost 300 credits plus a component bill.
+- **Chassis bills** (`PartBill`): a kind + rarity + count, never a species. Skewer: 2 armour + 2 arm
+  commons and 1 uncommon core. Peashooter: armour + arm + wing commons and 1 uncommon core.
+  Workhorse: 2 armour + arm + segment commons and 1 uncommon core. `cannonBillProblem()` gates the
+  build and `cannonBillPicks()` swallows the cheapest matching parts; `Game.buyCannonChassis()`
+  charges the credits, consumes them and fits the gun.
+- **Per-chassis tracks** (`CannonTrackId`): `dmg`, `rate`, `crit`, `critDmg`, `pen`, `acc`, `speed`,
+  `barrels`, with each `CannonDef.tracks` choosing the ones it has. `SaveData.cannon` became
+  `{ id, owned, lv: { [cannonId]: { [track]: level } } }`; `migrate()` folds the old flat map (and
+  the pre-v2.10 global `dmg`/`rate` upgrades) into it and prunes tracks a chassis no longer carries.
+- **Barrels cap at two**: one level, 6,000 x 1.6 = 9,600 credits on the Workhorse.
+- **Crit is per gun**: `cannonCrit()` 5%/level (Skewer only), `cannonCritMul()` x2 + 0.25/level.
+  `firePlayer()` rolls it once per trigger and applies it to rounds or the hitscan line.
+- **Solid energy shields** (`engine.ts`): `shieldContact()` now lifts the hull back onto the outside
+  face on *every* frame and cancels the inward velocity; only the discharge is gated by
+  `p.hitT > 0.45`. The call site no longer skips the wall while the shock is cooling down, so a
+  panel can no longer be tunnelled through.
+- `cannon.test.mts` rewritten: tree order, bills, consumption, per-chassis levels, the barrel cap,
+  crit/accuracy maths, both migration paths, and the wall holding with `hitT = 0`.
+
+## 1. v2.11.0 — part-aware weapon targeting, weapons shop removed
 
 - **Targeting** (`engine.ts`): new `anyPartInRange()`, `priorityPart()`, `aimPoint()` and
   `combatTarget()`. A crafted weapon engages when *any* living piece is inside its range

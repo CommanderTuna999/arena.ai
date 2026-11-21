@@ -1,7 +1,8 @@
 import { TAU, angDiff, clamp, distToPoly, hash2, lerp, mulberry32, pointInPoly } from "./math";
 import {
   ABILITY_BY_ID, BASE, BASE_MAX_HP, BASE_RING, BASE_TAKE, CANNONS, CANNON_BY_ID, CANNON_TRACKS, CANNON_TRACK_BY_ID,
-  DMG_MUL, KIND_CAT, RARITIES, RECIPE_BY_ID, SHIP_R, UPGRADES, WORLD_R, W_SLOTS, cannonDmg, cannonRate, cannonTrackCost,
+  DMG_MUL, KIND_CAT, RARITIES, RECIPE_BY_ID, SHIP_R, UPGRADES, WORLD_R, W_SLOTS, cannonBillPicks, cannonBillProblem,
+  cannonDmg, cannonOwned, cannonRate, cannonTrackCost,
   compMass, compValue, computeStats, craftEfficiency,
   recipeProblem, upgradeCost, zoneTier, WEAPON_DMG, WEAPON_RANGE, type Comp, type DmgKind, type PartKind, type SaveData, type Slot, type Stats,
 } from "./data";
@@ -9,7 +10,7 @@ import { GUN_SPECS, SPECIES_LIST, buildEnemy, type AbilityDef, type Group, type 
 
 /* ---------------------------------------------------------------------------
  * COMBAT & WORLD REFERENCE (live constants)
- *   Base cannon      : st.dmg per shot, rate 4 + 0.7/level, 1 + barrels shots.
+ *   Base cannon      : st.dmg per round, st.rate rounds/s, 1-2 rounds per trigger.
  *   Base defences    : the siege cannon powers up whenever any enemy enters the
  *                      base's 1,760u alert band and stays online 120s after the last
  *                      intruder leaves; it one-shots up to legendary; six hex
@@ -586,13 +587,13 @@ export class Game {
   /* ---------------- UI facing actions ---------------- */
   /** Buy up to `count` levels; MAX callers pass the upgrade's remaining room.
    *  Purchases stop when credits run out, so a bulk buy never overdraws. */
-  /** buy levels on the fitted cannon's own track (damage or rate) */
+  /** buy levels on the fitted cannon's own track */
   buyCannon(track: string, count = 1) {
     const t = CANNON_TRACK_BY_ID[track];
     if (!t) return 0;
     const c = this.cannon();
-    if (!this.save.cannon) this.save.cannon = { id: c.id, lv: {} };
-    const lv = this.save.cannon.lv ?? (this.save.cannon.lv = {});
+    if (!c.tracks.includes(t.id)) return 0;
+    const lv = this.cannonLevels(c.id);
     let l = lv[track] ?? 0, bought = 0;
     while (bought < count && l < t.max) {
       const price = this.admin.on && this.admin.credits ? 0 : cannonTrackCost(c, t, l);
@@ -606,20 +607,63 @@ export class Game {
     this.markDirty();
     return bought;
   }
+  /** the tree's level map for one chassis, created on demand */
+  cannonLevels(id: string): Record<string, number> {
+    const cs = this.cannonSave();
+    return (cs.lv[id] ??= {});
+  }
+  private cannonSave() {
+    const d = this.save.cannon;
+    if (!d || typeof d !== "object") {
+      this.save.cannon = { id: CANNONS[0].id, owned: [CANNONS[0].id], lv: {} };
+    } else {
+      if (!Array.isArray(d.owned)) d.owned = [CANNONS[0].id];
+      if (!d.lv || typeof d.lv !== "object") d.lv = {};
+      if (!d.owned.includes(CANNONS[0].id)) d.owned.unshift(CANNONS[0].id);
+    }
+    return this.save.cannon;
+  }
   /** the cannon currently bolted to the hull */
   cannon() {
-    if (!this.save.cannon) this.save.cannon = { id: CANNONS[0].id, lv: {} };
-    const c = CANNON_BY_ID[this.save.cannon.id];
-    if (!c) { this.save.cannon.id = CANNONS[0].id; return CANNONS[0]; }
+    const cs = this.cannonSave();
+    const c = CANNON_BY_ID[cs.id];
+    if (!c) { cs.id = CANNONS[0].id; return CANNONS[0]; }
     return c;
   }
   /** fit a different gun; free, the tree charges for the chassis, not for swapping */
   selectCannon(id: string) {
-    if (!CANNON_BY_ID[id] || !this.save.cannon) return;
-    if (this.save.cannon.id === id) return;
-    this.save.cannon.id = id;
+    if (!CANNON_BY_ID[id] || !cannonOwned(this.save, id)) return false;
+    if (this.cannonSave().id === id) return false;
+    this.cannonSave().id = id;
     this.recompute();
     this.markDirty();
+    return true;
+  }
+  /** Build a chassis from the tree: credits plus the component bill, then fit it.
+   *  Returns an error for the UI, or null on success. */
+  buyCannonChassis(id: string) {
+    const c = CANNON_BY_ID[id];
+    if (!c) return "Unknown cannon";
+    if (cannonOwned(this.save, id)) { this.selectCannon(id); return null; }
+    const free = this.admin.on && this.admin.components;
+    if (!free) {
+      const prob = cannonBillProblem(this.save, c);
+      if (prob) return prob;
+    }
+    const picks = free ? [] : cannonBillPicks(this.save, c);
+    if (!free && picks.length !== c.parts.reduce((n, b) => n + b.count, 0)) return "Missing components";
+    if (!(this.admin.on && this.admin.credits)) this.save.credits -= c.credits;
+    if (picks.length) {
+      const gone = new Set(picks);
+      this.save.inventory = this.save.inventory.filter((x) => !gone.has(x.id));
+    }
+    const cs = this.cannonSave();
+    if (!cs.owned.includes(id)) cs.owned.push(id);
+    cs.id = id;
+    this.recompute();
+    this.markDirty();
+    this.toast(`Built the ${c.name}`, "#ffd24d");
+    return null;
   }
   buy(id: string, count = 1) {
     const u = UPGRADES.find((x) => x.id === id);
@@ -1842,8 +1886,10 @@ export class Game {
     }
   }
 
-  /** Touch an enemy's energy panel and it zaps: energy damage (no kinetic
-   *  reduction), a hard shove away from the body, sparks and a screen shake. */
+  /** Energy panels are solid walls. The hull is lifted back onto the outside face
+   *  every frame, so nothing can tunnel through a panel even at boost speed; the
+   *  shock itself (energy damage, shove, sparks, shake) is on a cooldown so a wall
+   *  you are leaning on does not delete you in a frame. */
   private shieldContact(p: Player) {
     for (const e of this.enemies) {
       if (e.dead || e.shields.length === 0) continue;
@@ -1872,6 +1918,12 @@ export class Game {
         py = e.y + Math.sin(a) * want;
       }
       p.x = px; p.y = py;
+      /* kill the part of the velocity that is still pushing into the wall */
+      const nx = dd > 1 ? dx / dd : Math.cos(e.a), ny = dd > 1 ? dy / dd : Math.sin(e.a);
+      const vn = p.vx * nx + p.vy * ny;
+      if (vn < 0) { p.vx -= nx * vn; p.vy -= ny * vn; }
+      /* solid always, shocking only when the cooldown allows it */
+      if (p.hitT <= 0.45) break;
       const zx = p.x, zy = p.y;
       sp.shieldHit = 0.3;
       /* The sheet prices an unshielded contact at 25x a base hit: a panel is a
@@ -2878,6 +2930,10 @@ export class Game {
     }
   }
 
+  /** The fitted chassis fires. Every gun reads the same three stats, so a new
+   *  cannon is only data: dmg, rate and barrels for rounds, crit for seams,
+   *  pierce for how deep a round cuts, spread for the spray, and a hitscan flag
+   *  for guns that draw a line instead of throwing a slug. */
   private firePlayer(dt: number) {
     const p = this.player, st = this.stats;
     if (p.dead) return;
@@ -2886,13 +2942,28 @@ export class Game {
     const base = p.a;
     if (want && p.fireCd <= 0 && !this.inSafe()) {
       p.fireCd = 1 / (st.rate * (p.overT > 0 ? 1.8 : 1));
-      const n = st.barrels;
-      for (let i = 0; i < n; i++) {
-        const ang = base + (i - (n - 1) / 2) * 0.09;
-        const crit = Math.random() < st.crit;
-        this.bullets.push({ x: p.x + Math.cos(ang) * 14, y: p.y + Math.sin(ang) * 14, vx: Math.cos(ang) * st.bulletSpeed + p.vx * 0.3, vy: Math.sin(ang) * st.bulletSpeed + p.vy * 0.3, life: st.bulletRange / st.bulletSpeed, dmg: st.dmg * (crit ? 2.5 : 1) * (p.overT > 0 ? 2.2 : 1) * this.dmgMul(), pierce: 0, hit: [], kind: 0, target: null, crit, elem: "kinetic", boom: 1 });
+      const over = p.overT > 0 ? 2.2 : 1;
+      const crit = st.crit > 0 && Math.random() < st.crit;
+      const dmg = st.dmg * (crit ? st.critMul : 1) * over * this.dmgMul();
+      const mx = p.x + Math.cos(base) * 14, my = p.y + Math.sin(base) * 14;
+      if (st.hitscan) {
+        /* the Skewer: a hard line, drawn from the muzzle to whatever it stops in */
+        const col = crit ? "#fff3b0" : "#e6fbff";
+        this.beam(mx, my, base, st.bulletRange, dmg, st.pierce, false, "kinetic", col);
+        this.burst(mx, my, col, crit ? 12 : 7, 5.5, 340);
+        this.ringFx(mx, my, crit ? 60 : 40, col, 420);
+        p.vx -= Math.cos(base) * 30; p.vy -= Math.sin(base) * 30;
+        this.shake = Math.max(this.shake, crit ? 6 : 3.5);
+      } else {
+        const n = st.barrels;
+        for (let i = 0; i < n; i++) {
+          /* spread is per round and grows a little with every extra barrel */
+          const spread = st.spread > 0 ? (Math.random() - 0.5) * st.spread * 2 * (1 + 0.5 * (i > 0 ? 1 : 0)) : 0;
+          const ang = base + (i - (n - 1) / 2) * 0.09 + spread;
+          this.bullets.push({ x: mx, y: my, vx: Math.cos(ang) * st.bulletSpeed + p.vx * 0.3, vy: Math.sin(ang) * st.bulletSpeed + p.vy * 0.3, life: st.bulletRange / st.bulletSpeed, dmg, pierce: st.pierce, hit: [], kind: 0, target: null, crit, elem: "kinetic", boom: st.boom || undefined });
+        }
+        p.vx -= Math.cos(base) * 6; p.vy -= Math.sin(base) * 6;
       }
-      p.vx -= Math.cos(base) * 6; p.vy -= Math.sin(base) * 6;
     }
     this.fireWeapons(dt, base);
   }
@@ -3577,9 +3648,9 @@ export class Game {
         const vn = p.vx * nx + p.vy * ny;
         if (vn > 0) { p.vx -= nx * vn; p.vy -= ny * vn; }
       }
-      /* energy panels are walls with teeth: fly into one and it discharges into
-       * the hull and throws the ship off it */
-      if (!this.inSafe() && p.hitT > 0.45) this.shieldContact(p);
+      /* energy panels are walls with teeth: the wall stops the hull every frame,
+       * and contact discharges into it when the shock is off cooldown */
+      if (!this.inSafe()) this.shieldContact(p);
       const [mx, my] = this.mouseWorld();
       const want = Math.atan2(my - p.y, mx - p.x);
       p.a += clamp(angDiff(p.a, want), -14 * dt, 14 * dt);

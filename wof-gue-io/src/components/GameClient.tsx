@@ -5,8 +5,9 @@ import { useRouter } from "next/navigation";
 import { Game, type Hud } from "@/game/engine";
 import { render } from "@/game/render";
 import {
-  ABILITY_LIST, CANNONS, CANNON_BY_ID, CANNON_TRACKS, CAT_NAME, DMG_INFO, KIND_CAT, RARITIES, RECIPES, RECIPE_BY_ID, SLOT_NAME, UPGRADES, UP_CATS,
-  cannonDmg, cannonRate, cannonTrackCost, craftEfficiency, damageProfile, migrate, newSave, recipeProblem, upgradeCost,
+  ABILITY_LIST, CANNONS, CANNON_BY_ID, CAT_NAME, DMG_INFO, KIND_CAT, RARITIES, RECIPES, RECIPE_BY_ID, SLOT_NAME, UPGRADES, UP_CATS,
+  cannonBillProblem, cannonDmg, cannonOwned, cannonRate, cannonTracks, cannonTrackCost, cannonTrackValue, craftEfficiency, damageProfile,
+  migrate, newSave, partBillText, recipeProblem, upgradeCost,
   type CannonDef, type Comp, type Recipe, type SaveData, type Slot, type UpCat,
 } from "@/game/data";
 import { clamp, fmtNum } from "@/game/math";
@@ -467,13 +468,13 @@ function Help({ onClose }: { onClose: () => void }) {
     ["T", "Recall beacon (craftable)"],
     ["E", "Open the base at your base"],
     ["ESC", "Settings: how the ship handles, the look, aim aids"],
-    ["CANNON tab", "Your gun is a chassis with its own damage track — buy it in the tree at the base. The Stinger is free and fitted from the start"],
+    ["CANNON tab", "The tree reads bottom-up: the free Stinger sits at the bottom, then three tier 1 guns above it. A chassis costs credits plus a bill of named common parts and an uncommon core. Each gun keeps its own upgrades — only one is fitted"],
     ["Weapon aiming", "Crafted weapons fire while any piece of a body is in range. They go for the core first, then shield generators and guns, then whatever piece is closest"],
     ["Base cannon", "Dormant until the base is hit, then online for 120s; only tracks rare+ targets and one-shots legendaries"],
     ["Base retaliation", "Any insect that damages the base is instantly destroyed — no swarming the hull"],
     ["Base targeting", "Insects hunt your ship, never the base — they will follow you straight through turret range, and stray fire can still scar the hull"],
     ["Credits", "Broken enemy parts throw credit coins straight into your counter — nothing to pick up. Coins land as one collection, so a fat break reads as +1.2k"],
-    ["Energy shields", "A panel wall, packed across the front of most rare+ bodies. Fly around it: the tail is the way in. Touching one shocks the hull and throws you off it"],
+    ["Energy shields", "A solid panel wall across the front of most rare+ bodies: you cannot fly through it, only around it — the tail is the way in. Touching one shocks the hull and throws you off it"],
     ["Hex turrets", "Six fast, weak point-defence turrets; one dies for every 1/6 of base integrity lost"],
     ["Mouse wheel", "Zoom out (craftable optics)"],
     ["Z X C V F", "Fire equipped active abilities"],
@@ -555,80 +556,121 @@ function Hangar({ game, hud, onClose }: { game: Game; hud: Hud; onClose: () => v
   );
 }
 
-/* Cannon tree. The starter gun sits at the bottom of the tree, exactly like the
- * sheet asks: cannons are bought and upgraded down here, not in the global shop.
- * Only tier 0 exists so far, so the row above it is a locked placeholder. */
+/* Cannon tree, drawn bottom-up exactly like the sheet: the free Stinger at the
+ * bottom, the tier 1 chassis above it. Every gun owns its own tracks, and only
+ * one chassis can be fitted at a time — buying another does not erase the work
+ * done on the first. */
 function CannonTree({ game }: { game: Game }) {
   const save = game.save;
   const fitted = CANNON_BY_ID[save.cannon?.id ?? ""] ?? CANNONS[0];
-  const [open, setOpen] = useState<string>(fitted.id);
   const free = game.admin.on && game.admin.credits;
-  const lv = save.cannon?.lv ?? {};
+  const [msg, setMsg] = useState<string | null>(null);
+  const fittedLv = save.cannon?.lv?.[fitted.id] ?? {};
+  const tiers = [...new Set(CANNONS.map((c) => c.tier))].sort((a, b) => a - b);
+  const build = (id: string) => setMsg(game.buyCannonChassis(id));
   return (
     <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)]">
       {/* ---- the tree ---- */}
       <div className="rounded-sm border border-white/10 bg-white/[0.02] p-3">
-        <div className="mb-2 text-[10px] font-bold tracking-[0.22em] text-cyan-200/60">CANNON TREE</div>
-        <div className="flex flex-col-reverse items-stretch gap-0">
-          {/* future tiers stack above tier 0 */}
-          <div className="flex items-center justify-center">
-            <div className="mb-1 h-5 w-px bg-gradient-to-t from-cyan-300/50 to-transparent" />
-          </div>
-          <div className="mb-1 rounded-sm border border-dashed border-white/15 bg-black/30 px-3 py-2 text-center text-[10px] font-bold tracking-[0.18em] text-white/25">
-            TIER 1 · NOT IN SERVICE
-          </div>
-          <div className="flex items-center justify-center">
-            <div className="my-1 h-6 w-px bg-cyan-300/40" />
-          </div>
-          {CANNONS.map((c) => {
-            const owned = c.cost === 0 || save.cannon?.id === c.id;
-            const selected = fitted.id === c.id;
+        <div className="mb-2 flex items-baseline justify-between">
+          <div className="text-[10px] font-bold tracking-[0.22em] text-cyan-200/60">CANNON TREE</div>
+          <div className="text-[10px] text-white/35">tier 0 at the bottom</div>
+        </div>
+        {msg && <div className="mb-2 rounded-sm border border-red-400/40 bg-red-500/10 px-2 py-1 text-[11px] text-red-200">{msg}</div>}
+        <div className="flex flex-col-reverse">
+          {tiers.map((tier) => {
+            const row = CANNONS.filter((c) => c.tier === tier);
             return (
-              <div key={c.id} className="flex flex-col items-stretch">
-                <button
-                  onClick={() => { game.selectCannon(c.id); setOpen(c.id); }}
-                  className={`group relative rounded-sm border px-3 py-2.5 text-left transition ${
-                    selected ? "border-yellow-300/80 bg-yellow-300/10 shadow-[0_0_22px_rgba(255,225,77,0.18)]"
-                      : owned ? "border-cyan-300/50 bg-cyan-400/5 hover:bg-cyan-400/10" : "border-white/15 bg-black/40 hover:bg-white/5"
-                  }`}
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2">
-                      <span className="grid h-6 w-6 place-items-center rounded-sm border border-yellow-300/50 bg-yellow-300/10 text-[11px] font-black text-yellow-200">{c.tier}</span>
-                      <span className={`text-sm font-black tracking-wide ${selected ? "text-yellow-100" : "text-white"}`}>{c.name}</span>
-                    </div>
-                    {selected && <span className="rounded-sm bg-yellow-300/20 px-1.5 py-0.5 text-[9px] font-black tracking-[0.16em] text-yellow-200">FITTED</span>}
-                  </div>
-                  <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] text-white/60">
-                    <span><b className="text-white/85">{fmtNum(cannonDmg(c, lv.dmg ?? 0))}</b> dmg</span>
-                    <span><b className="text-white/85">{cannonRate(c).toFixed(1)}</b>/s</span>
-                    <span>{c.range}u reach</span>
-                  </div>
-                </button>
+              <div key={tier}>
+                <div className="flex items-center justify-center">
+                  <div className={`my-1 w-px ${tier === 0 ? "h-4 bg-gradient-to-t from-cyan-300/50 to-transparent" : "h-6 bg-cyan-300/40"}`} />
+                </div>
+                <div className="mb-1 text-center text-[9px] font-bold tracking-[0.2em] text-white/30">TIER {tier}</div>
+                <div className={`grid gap-1.5 ${row.length > 1 ? "grid-cols-1 sm:grid-cols-3" : "grid-cols-1"}`}>
+                  {row.map((c) => {
+                    const owned = cannonOwned(save, c.id);
+                    const selected = fitted.id === c.id;
+                    const cl = save.cannon?.lv?.[c.id] ?? {};
+                    const problem = cannonBillProblem(save, c);
+                    return (
+                      <div
+                        key={c.id}
+                        className={`rounded-sm border transition ${
+                          selected ? "border-yellow-300/80 bg-yellow-300/10 shadow-[0_0_22px_rgba(255,225,77,0.18)]"
+                            : owned ? "border-cyan-300/50 bg-cyan-400/5" : "border-white/15 bg-black/40"
+                        }`}
+                      >
+                        <button
+                          onClick={() => { if (owned) { game.selectCannon(c.id); setMsg(null); } }}
+                          disabled={!owned}
+                          className={`w-full px-2.5 py-2 text-left ${owned && !selected ? "hover:bg-cyan-400/10" : ""} ${owned ? "" : "cursor-default"}`}
+                        >
+                          <div className="flex items-center justify-between gap-1">
+                            <div className="flex min-w-0 items-center gap-1.5">
+                              <span className="grid h-5 w-5 shrink-0 place-items-center rounded-sm border border-yellow-300/50 bg-yellow-300/10 text-[10px] font-black text-yellow-200">{c.tier}</span>
+                              <span className={`truncate text-[13px] font-black tracking-wide ${selected ? "text-yellow-100" : "text-white"}`}>{c.name}</span>
+                            </div>
+                            {selected ? <span className="shrink-0 rounded-sm bg-yellow-300/20 px-1 py-0.5 text-[8px] font-black tracking-[0.14em] text-yellow-200">FITTED</span>
+                              : owned ? <span className="shrink-0 rounded-sm bg-cyan-400/15 px-1 py-0.5 text-[8px] font-black tracking-[0.14em] text-cyan-200">OWNED</span>
+                                : <span className="shrink-0 rounded-sm bg-white/10 px-1 py-0.5 text-[8px] font-black tracking-[0.14em] text-white/40">LOCKED</span>}
+                          </div>
+                          <div className="mt-1 flex flex-wrap gap-x-2 gap-y-0.5 text-[10px] text-white/60">
+                            <span><b className="text-white/85">{fmtNum(cannonDmg(c, cl))}</b> dmg</span>
+                            <span><b className="text-white/85">{cannonRate(c, cl).toFixed(c.hitscan ? 2 : 1)}</b>/s</span>
+                            <span>{c.hitscan ? "hitscan" : `${c.range}u`}</span>
+                          </div>
+                        </button>
+                        {!owned && (
+                          <div className="border-t border-white/10 px-2.5 py-1.5">
+                            <div className="space-y-0.5 text-[10px] leading-tight text-white/45">
+                              {c.parts.map((b) => <div key={`${b.kind}-${b.tier}`}>· {partBillText(b)}</div>)}
+                              <div className="text-yellow-200/80">· {fmtNum(c.credits)} CR</div>
+                            </div>
+                            <button
+                              onClick={() => build(c.id)}
+                              disabled={!!problem}
+                              title={problem ?? `Build the ${c.name}`}
+                              className={`mt-1.5 w-full rounded-sm border px-2 py-1 text-[10px] font-black tracking-[0.16em] ${problem ? "border-white/10 text-white/25" : "border-yellow-300 bg-yellow-300/15 text-yellow-200 hover:bg-yellow-300/30"}`}
+                            >
+                              {problem ? "LOCKED" : "BUILD"}
+                            </button>
+                            {problem && <div className="mt-1 text-[9px] leading-tight text-red-300/60">{problem}</div>}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             );
           })}
         </div>
         <p className="mt-3 text-[10px] leading-relaxed text-white/35">
-          Upgrades belong to the chassis: a new gun starts its own track at zero and does not inherit the last one&apos;s work. Fire interval is fixed by the gun.
+          Upgrades belong to the chassis: a new gun starts its own tracks at zero and does not inherit the last one&apos;s work. Only one is fitted at a time, and swapping costs nothing.
         </p>
       </div>
 
-      {/* ---- the fitted gun's tracks ---- */}
+      {/* ---- the fitted gun ---- */}
       <div className="rounded-sm border border-white/10 bg-white/[0.02] p-3">
         <div className="flex items-baseline justify-between">
           <div className="text-[10px] font-bold tracking-[0.22em] text-cyan-200/60">FITTED · {fitted.name.toUpperCase()}</div>
           <div className="text-[10px] text-white/40">tier {fitted.tier}</div>
         </div>
         <p className="mt-1 text-[11px] leading-snug text-white/55">{fitted.desc}</p>
+        <div className="mt-2 flex flex-wrap gap-x-3 gap-y-0.5 rounded-sm border border-cyan-300/15 bg-cyan-400/5 px-2 py-1 text-[10px] text-white/55">
+          <span>{fitted.hitscan ? "hitscan line" : `${fmtNum(Math.round(fitted.speed))} u/s`}</span>
+          <span>{fitted.range}u reach</span>
+          <span>{fmtNum(fitted.dmg)} base dmg</span>
+          <span>{fitted.interval}s base interval</span>
+        </div>
         <div className="mt-3 grid gap-2">
-          {CANNON_TRACKS.map((t) => {
-            const l = lv[t.id] ?? 0;
+          {cannonTracks(fitted).map((t) => {
+            const l = fittedLv[t.id] ?? 0;
             const maxed = l >= t.max;
             const price = free ? 0 : cannonTrackCost(fitted, t, l);
             const can = !maxed && (free || save.credits >= price);
-            const now = `${fmtNum(cannonDmg(fitted, l))} dmg`;
-            const next = `${fmtNum(cannonDmg(fitted, l + 1))} dmg`;
+            const now = cannonTrackValue(fitted, t.id, l);
+            const next = cannonTrackValue(fitted, t.id, Math.min(t.max, l + 1));
             return (
               <div key={t.id} className="rounded-sm border border-white/15 bg-white/[0.03] p-2.5">
                 <div className="flex items-center justify-between">
@@ -644,7 +686,7 @@ function CannonTree({ game }: { game: Game }) {
                 <div className="mt-2 flex items-center justify-between gap-2">
                   <div className="text-xs text-cyan-100">{now}{!maxed && <span className="text-emerald-300"> → {next}</span>}</div>
                   <div className="flex gap-1">
-                    {[1, 5].map((n) => (
+                    {t.max > 1 && [1, 5].map((n) => (
                       <button
                         key={n}
                         disabled={!can}
@@ -654,13 +696,24 @@ function CannonTree({ game }: { game: Game }) {
                         +{n}
                       </button>
                     ))}
-                    <button
-                      disabled={!can}
-                      onClick={() => game.buyCannon(t.id, t.max - l)}
-                      className={`rounded-sm border px-2 py-1 text-[11px] font-bold ${can ? "border-cyan-300 bg-cyan-400/15 text-cyan-100 hover:bg-cyan-400/30" : "border-white/10 text-white/30"}`}
-                    >
-                      MAX
-                    </button>
+                    {t.max > 1 && (
+                      <button
+                        disabled={!can}
+                        onClick={() => game.buyCannon(t.id, t.max - l)}
+                        className={`rounded-sm border px-2 py-1 text-[11px] font-bold ${can ? "border-cyan-300 bg-cyan-400/15 text-cyan-100 hover:bg-cyan-400/30" : "border-white/10 text-white/30"}`}
+                      >
+                        MAX
+                      </button>
+                    )}
+                    {t.max === 1 && (
+                      <button
+                        disabled={!can}
+                        onClick={() => game.buyCannon(t.id, 1)}
+                        className={`rounded-sm border px-2 py-1 text-[11px] font-bold ${can ? "border-yellow-300 bg-yellow-300/15 text-yellow-200 hover:bg-yellow-300/30" : "border-white/10 text-white/30"}`}
+                      >
+                        FIT
+                      </button>
+                    )}
                   </div>
                 </div>
                 <div className="mt-1 text-right text-[10px] text-white/40">{maxed ? "fully calibrated" : `${fmtNum(price)} CR per level`}</div>
@@ -668,6 +721,9 @@ function CannonTree({ game }: { game: Game }) {
             );
           })}
         </div>
+        <p className="mt-2 text-[10px] leading-relaxed text-white/30">
+          Barrels stop at two: one extra round per trigger, and it is priced as the last thing a gun ever needs.
+        </p>
       </div>
     </div>
   );

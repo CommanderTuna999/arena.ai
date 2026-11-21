@@ -8,7 +8,7 @@
  *   CHANGELOG and mirror the details in docs/CHANGELOG.md.
  */
 
-export const VERSION = "2.11.0";
+export const VERSION = "2.12.0";
 
 export interface ChangeEntry {
   version: string;
@@ -19,6 +19,19 @@ export interface ChangeEntry {
 }
 
 export const CHANGELOG: ChangeEntry[] = [
+  {
+    version: "2.12.0",
+    date: "20 Nov 2026",
+    title: "Three guns, and shields that push back",
+    points: [
+      "The cannon tree reads bottom-up from the free Stinger, and the tier 1 row is no longer a placeholder: the Skewer, the Peashooter and the Workhorse are in service.",
+      "Skewer: 200 damage on a 1.5s cycle, fired as a hitscan line you can see. Peashooter: 15 damage every 0.1s with a wide, hopeless spray. Workhorse: 45 damage every 0.55s, dead ordinary.",
+      "A chassis is paid for twice: 300 credits plus a bill of named common parts and one uncommon core. The tree lists the bill and eats the cheapest matching parts in storage when you build.",
+      "Upgrades stay with the gun. Skewer: Damage, Crit Chance, Crit Damage, Physical Penetration. Peashooter: Damage, Accuracy, Projectile Speed. Workhorse: Damage, Fire Rate, Physical Penetration, Barrels.",
+      "Barrels stop at two - one extra round per trigger - and the single level costs 9,600 credits on the Workhorse. Boring guns are not cheap guns.",
+      "Energy shields are solid walls now: the hull is lifted back onto the outside face every frame, so a panel cannot be flown through while the shock is cooling down. Contact still discharges into the hull and throws you off.",
+    ],
+  },
   {
     version: "2.11.0",
     date: "21 Nov 2026",

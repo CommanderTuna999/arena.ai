@@ -8,7 +8,7 @@ How to read it: enemy health is the sum of every part at that rarity tier. Enemy
 1. CORE FORMULAS
 ============================================================
 
-Player cannon: every cannon is a chassis (`CANNONS` in data.ts) with its **own** upgrade track. The fitted **Stinger** fires a 20-damage round bolt on a fixed 0.7s interval (640u/s, 820u reach) with a small charge on impact; its only upgrade is Damage, `20 x 1.2^level` (30 levels, `20 x 1.45^level` credits). One bolt per trigger, no critical hits, no extra barrels — the weapons shop category was removed with them. The tree lives in the base under the CANNON tab, tier 0 at the bottom.
+Player cannon: every cannon is a chassis (`CANNONS` in data.ts) with its **own** upgrade tracks and its own levels. The tree lives in the base under the CANNON tab, drawn bottom-up: the free **Stinger** (20 damage, 0.7s interval, 640u/s, 820u reach, small charge on impact, Damage track only) sits at the bottom and the three tier 1 guns — **Skewer** (200 damage hitscan, 1.5s), **Peashooter** (15 damage, 0.1s spray) and **Workhorse** (45 damage, 0.55s) — sit above it, each for 300 credits plus a bill of named common parts and one uncommon core. Crit is a Skewer track, the Workhorse's barrels stop at two (9,600 credits for the single level), and everything is per chassis: a new gun starts at zero and does not inherit the last one's work.
 Crafted weapon: damage per hit = st.dmg x wpn.dmg x eff (then x2.2 during Overdrive; there are no critical hits). Cooldown = wpn.cd / (0.7 + 0.3 x eff), so 100% efficiency is the listed cooldown and 30% efficiency is 1.27x slower (cd / 0.79).
 Enemy damage: eDmg = 16 x DMG_MUL[tier] = 16 / 48 / 144 / 432 / 1,296 / 3,888. Every ability, gun, missile and contact hit is a multiplier of that eDmg.
 Enemy hull: every part HP is generated from HP_MUL[tier] = 1 / 4 / 18 / 80 / 360 / 1,600, with part size and shape adding their own multipliers. The tables below give the resulting totals.
@@ -763,10 +763,27 @@ Shockwave (ab_shockwave): 16s base cooldown. 520u blast: 5x st.dmg x eff, 900u/s
 9. BASE CANNON AND UPGRADES
 ============================================================
 
-Base cannon (Stinger): kinetic, st.dmg = 20 x 1.2^damage-track per shot; fixed 0.7s interval; one bolt per trigger; 820u range; 640u/s; a small charge (0.3x the bolt's damage in a 44u radius) pops on impact; Kinetic rounds are stopped dead by enemy energy shields, which take no damage.
+The tree is drawn bottom-up: the free **Stinger** at the bottom, the three tier 1 chassis above it. Only one gun is fitted at a time; fitting another is free and every chassis keeps its own levels.
+
+Chassis | Tier | Damage | Interval | Round | Upgrades | Bill
+Stinger | 0 | 20 | 0.7s | 640u/s bolt, 820u reach, small charge (0.3x the round in a 44u radius) | Damage | free, fitted at the start
+Skewer | 1 (needs Stinger) | 200 | 1.5s | hitscan line, 2400u, drawn as a hard white line | Damage, Crit Chance, Crit Damage, Physical Penetration | 300 CR + 2x Common carapace plate, 2x Common antenna arm, 1x Uncommon core
+Peashooter | 1 (needs Stinger) | 15 | 0.1s | 430u/s seed, 720u reach, 12.6 deg base spread | Damage, Accuracy, Projectile Speed | 300 CR + 1x Common carapace plate, 1x Common antenna arm, 1x Common wing, 1x Uncommon core
+Workhorse | 1 (needs Stinger) | 45 | 0.55s | 720u/s round, 900u reach, 1.7 deg base spread | Damage, Fire Rate, Physical Penetration, Barrels (2) | 300 CR + 2x Common carapace plate, 1x Common antenna arm, 1x Common body segment, 1x Uncommon core
+
+Bills name a part kind and a rarity, never a species: any combination's carapace plate will do. The tree consumes the cheapest matching parts in storage when you build.
+
+Kinetic rounds (every chassis) are stopped dead by enemy energy shields, which take no damage. Energy panels are also **solid**: the hull is lifted back onto the outside face every frame whether or not the shock is on cooldown, so a panel cannot be flown through at any speed. Contact still discharges 25x the body's damage (capped below a full hull) and throws the ship off.
 
 Upgrade | Max | Effect per level | Cost
-Damage (fitted cannon) | 30 | Damage per bolt, per cannon. 24 dmg at L1, 4.75K dmg at max | 20 x 1.45^level x chassis cost multiplier
+Damage (per chassis) | 30 | Damage per round, per cannon. 24 dmg at L1, 4.75K dmg at max | 20 x 1.45^level x chassis cost multiplier
+Fire Rate (Workhorse) | 20 | Interval x0.94 per level: 0.55s at L0, 0.16s at max | 45 x 1.5^level x 1.6
+Crit Chance (Skewer) | 15 | +5% chance of a critical round per level (75% at max) | 120 x 1.55^level x 2.4
+Crit Damage (Skewer) | 15 | Critical multiplier x2.00 at L0, +0.25 per level (x5.75 at max) | 90 x 1.5^level x 2.4
+Physical Penetration (Skewer, Workhorse) | 8 | Rounds pass through 1 more piece per level (80% damage after each) | 260 x 1.65^level x chassis cost multiplier
+Accuracy (Peashooter) | 15 | Spread x0.9 per level: 12.6 deg at L0, 2.6 deg at max | 40 x 1.45^level
+Projectile Speed (Peashooter) | 12 | Round speed x1.08 per level: 430 u/s at L0, 1,083 u/s at max | 55 x 1.45^level
+Barrels (Workhorse) | 1 | Two rounds per trigger instead of one. Never more than two barrels | 6,000 x 1.6 = 9,600 credits for the single level
 Hull Plating (hull) | 30 | Maximum hull integrity. 122 HP at L1, 39.0K HP at max | 25 x 1.5^level credits
 Nano Repair (regen) | 10 | Hull regenerates every second. 0.5%/s at L1, 5.0%/s at max | 70 x 1.6^level credits
 Reactive Armour (armor) | 14 | Flat percentage damage reduction. -3.5% dmg at L1, -49.0% dmg at max | 90 x 1.7^level credits

@@ -119,10 +119,17 @@ export const UPGRADE_BY_ID: Record<string, UpgradeDef> = Object.fromEntries(UPGR
 
 /* ---------- base cannons ----------
  * A cannon is a chassis plus its own upgrade tracks: two ships with different guns
- * do not share a bore size, so damage and rate are per cannon, never global.
- * The tree is displayed bottom-up (tier 0 at the bottom); only the starter exists. */
+ * do not share a bore size, so every track is per cannon, never global. The tree is
+ * displayed bottom-up: the free Stinger sits at the bottom and every gun is bought
+ * and upgraded while it is bolted to the hull.
+ *
+ * Chassis prices are paid twice over — credits and a component bill. Tier 1 guns ask
+ * for a handful of common parts of a named kind plus one uncommon core, so the hull
+ * you scrap for a new gun is a shopping list, not a pile. */
+export type CannonTrackId = "dmg" | "rate" | "crit" | "critDmg" | "pen" | "acc" | "speed" | "barrels";
+
 export interface CannonTrack {
-  id: "dmg" | "rate";
+  id: CannonTrackId;
   name: string;
   desc: string;
   max: number;
@@ -130,22 +137,41 @@ export interface CannonTrack {
   base: number;
   growth: number;
 }
+
+/** one line of a chassis bill: a kind of part, a rarity (tier index) and how many.
+ *  No species is named — the sheet only asks for "an uncommon core". */
+export interface PartBill {
+  kind: PartKind;
+  tier: number;
+  count: number;
+}
+
 export interface CannonDef {
   id: string;
   name: string;
   /** tree row: 0 sits at the bottom of the tree */
   tier: number;
   desc: string;
-  /** damage of one bolt before the damage track */
+  /** damage of one round before the damage track */
   dmg: number;
-  /** seconds between bolts before the rate track */
+  /** seconds between rounds before the rate track */
   interval: number;
-  /** bolt speed and reach, in world units */
+  /** round speed and reach, in world units */
   speed: number;
   range: number;
-  /** purchase price; 0 means it is handed to you at the start */
-  cost: number;
-  /** every price on this chassis is scaled by this */
+  /** hitscan guns draw an instant line instead of throwing a travelling round */
+  hitscan?: boolean;
+  /** spread of the muzzle, in radians, before the accuracy track */
+  spread?: number;
+  /** small charge that pops where the round lands (the Stinger's signature) */
+  boom?: number;
+  /** credits the tree charges for the chassis */
+  credits: number;
+  /** component bill, on top of the credits */
+  parts: PartBill[];
+  /** tracks this chassis owns, in display order */
+  tracks: CannonTrackId[];
+  /** every track price on this chassis is scaled by this */
   costMul: number;
   requires: string | null;
 }
@@ -154,22 +180,125 @@ export const CANNONS: CannonDef[] = [
   {
     id: "sting", name: "Stinger", tier: 0,
     desc: "The gun the yard gives every pilot: one fat round bolt at a time, slow enough to watch, with a small charge that pops on impact.",
-    dmg: 20, interval: 0.7, speed: 640, range: 820, cost: 0, costMul: 1, requires: null,
+    dmg: 20, interval: 0.7, speed: 640, range: 820, boom: 1,
+    credits: 0, parts: [], tracks: ["dmg"], costMul: 1, requires: null,
+  },
+  {
+    id: "skewer", name: "Skewer", tier: 1,
+    desc: "Pretty accurate. A hitscan slug drawn as a hard white line from the muzzle to whatever it stops inside — and at 200 a shot, that is usually the core.",
+    dmg: 200, interval: 1.5, speed: 0, range: 2400, hitscan: true,
+    credits: 300,
+    parts: [{ kind: "armor", tier: 0, count: 2 }, { kind: "arm", tier: 0, count: 2 }, { kind: "core", tier: 1, count: 1 }],
+    tracks: ["dmg", "crit", "critDmg", "pen"], costMul: 2.4, requires: "sting",
+  },
+  {
+    id: "peashooter", name: "Peashooter", tier: 1,
+    desc: "Spray and pray, huh? A hose of weak little seeds at a ludicrous rate: light, fast-firing and hopeless past knife range until you buy the accuracy.",
+    dmg: 15, interval: 0.1, speed: 430, range: 720, spread: 0.22,
+    credits: 300,
+    parts: [{ kind: "armor", tier: 0, count: 1 }, { kind: "arm", tier: 0, count: 1 }, { kind: "wing", tier: 0, count: 1 }, { kind: "core", tier: 1, count: 1 }],
+    tracks: ["dmg", "acc", "speed"], costMul: 1, requires: "sting",
+  },
+  {
+    id: "workhorse", name: "Workhorse", tier: 1,
+    desc: "Boring... and that is the point. Medium pace, medium accuracy, medium punch, and a barrel upgrade that doubles the whole thing if you can pay for it.",
+    dmg: 45, interval: 0.55, speed: 720, range: 900, spread: 0.03,
+    credits: 300,
+    parts: [{ kind: "armor", tier: 0, count: 2 }, { kind: "arm", tier: 0, count: 1 }, { kind: "segment", tier: 0, count: 1 }, { kind: "core", tier: 1, count: 1 }],
+    tracks: ["dmg", "rate", "pen", "barrels"], costMul: 1.6, requires: "sting",
   },
 ];
 export const CANNON_BY_ID: Record<string, CannonDef> = Object.fromEntries(CANNONS.map((c) => [c.id, c]));
 
+/** every track any gun can carry. A chassis picks the ones it actually has. */
 export const CANNON_TRACKS: CannonTrack[] = [
-  { id: "dmg", name: "Damage", desc: "Damage of every bolt this cannon fires.", max: 30, base: 20, growth: 1.45 },
+  { id: "dmg", name: "Damage", desc: "Damage of every round this cannon fires.", max: 30, base: 20, growth: 1.45 },
+  { id: "rate", name: "Fire Rate", desc: "Shortens the reload between shots.", max: 20, base: 45, growth: 1.5 },
+  { id: "crit", name: "Crit Chance", desc: "Chance for a round to find a seam and hit far harder.", max: 15, base: 120, growth: 1.55 },
+  { id: "critDmg", name: "Crit Damage", desc: "How hard a critical round lands.", max: 15, base: 90, growth: 1.5 },
+  { id: "pen", name: "Physical Penetration", desc: "Rounds punch through one more piece before stopping.", max: 8, base: 260, growth: 1.65 },
+  { id: "acc", name: "Accuracy", desc: "Tightens the spray pattern.", max: 15, base: 40, growth: 1.45 },
+  { id: "speed", name: "Projectile Speed", desc: "Faster rounds: less lead on a moving target.", max: 12, base: 55, growth: 1.45 },
+  { id: "barrels", name: "Barrels", desc: "A second barrel: two rounds on every trigger. One level, and it costs more than the gun did.", max: 1, base: 6000, growth: 1 },
 ];
 export const CANNON_TRACK_BY_ID: Record<string, CannonTrack> = Object.fromEntries(CANNON_TRACKS.map((t) => [t.id, t]));
+/** the tracks a chassis actually carries, in display order */
+export const cannonTracks = (c: CannonDef): CannonTrack[] =>
+  c.tracks.map((id) => CANNON_TRACK_BY_ID[id]).filter((t): t is CannonTrack => !!t);
 
 export const cannonTrackCost = (c: CannonDef, t: CannonTrack, level: number) =>
   Math.round(t.base * Math.pow(t.growth, level) * c.costMul);
-/** bolt damage at a given damage-track level */
-export const cannonDmg = (c: CannonDef, level: number) => c.dmg * Math.pow(1.2, level);
-/** bolts per second: the interval is fixed by the chassis, per the sheet */
-export const cannonRate = (c: CannonDef) => 1 / c.interval;
+
+const lvl = (lv: Record<string, number> | undefined, id: CannonTrackId) => lv?.[id] ?? 0;
+
+/** damage of one round at the current damage-track level */
+export const cannonDmg = (c: CannonDef, lv?: Record<string, number>) => c.dmg * Math.pow(1.2, lvl(lv, "dmg"));
+/** rounds per second: chassis interval shortened by the fire-rate track */
+export const cannonRate = (c: CannonDef, lv?: Record<string, number>) =>
+  1 / (c.interval * Math.pow(0.94, lvl(lv, "rate")));
+/** critical chance, 0 when the gun has no crit track */
+export const cannonCrit = (lv?: Record<string, number>) => 0.05 * lvl(lv, "crit");
+/** critical damage multiplier (2x base, +0.25 per crit-damage level) */
+export const cannonCritMul = (lv?: Record<string, number>) => 2 + 0.25 * lvl(lv, "critDmg");
+/** extra pieces a round passes through */
+export const cannonPierce = (lv?: Record<string, number>) => lvl(lv, "pen");
+/** rounds thrown per trigger: two at most, per the sheet's "Barrels (2)" */
+export const cannonBarrels = (lv?: Record<string, number>) => 1 + Math.min(1, lvl(lv, "barrels"));
+/** round speed at the current projectile-speed level */
+export const cannonSpeed = (c: CannonDef, lv?: Record<string, number>) => c.speed * Math.pow(1.08, lvl(lv, "speed"));
+/** muzzle spread in radians; the accuracy track tightens it by 10% a level */
+export const cannonSpread = (c: CannonDef, lv?: Record<string, number>) => (c.spread ?? 0) * Math.pow(0.9, lvl(lv, "acc"));
+
+/** the number a track shows at a given level (the UI prints now → next) */
+export function cannonTrackValue(c: CannonDef, id: CannonTrackId, level: number): string {
+  const one = { [id]: level } as Record<string, number>;
+  switch (id) {
+    case "dmg": return `${fmtNum(cannonDmg(c, one))} dmg`;
+    case "rate": return `${cannonRate(c, one).toFixed(2)}/s`;
+    case "crit": return `${Math.round(cannonCrit(one) * 100)}% crit`;
+    case "critDmg": return `x${cannonCritMul(one).toFixed(2)} crit`;
+    case "pen": return level ? `pierces ${level}` : "stops on impact";
+    case "acc": return `${((cannonSpread(c, one) * 180) / Math.PI).toFixed(1)}° spread`;
+    case "speed": return `${fmtNum(Math.round(cannonSpeed(c, one)))} u/s`;
+    case "barrels": return `${cannonBarrels(one)} barrels`;
+  }
+}
+
+/* ---------- chassis bills ---------- */
+export const PART_KIND_NAME: Record<PartKind, string> = {
+  core: "core", segment: "body segment", armor: "carapace plate", leg: "leg", arm: "antenna arm",
+  wing: "wing", weapon: "weapon", shield: "shield generator", spike: "spike",
+};
+/** "2× Common carapace plate" — species deliberately not named */
+export const partBillText = (b: PartBill) =>
+  `${b.count}× ${RARITIES[clamp(b.tier, 0, RARITIES.length - 1)].name} ${PART_KIND_NAME[b.kind]}`;
+
+export const cannonOwned = (s: SaveData, id: string) => id === CANNONS[0].id || !!s.cannon?.owned?.includes(id);
+/** what is standing between the pilot and this chassis (null = buildable) */
+export function cannonBillProblem(s: SaveData, c: CannonDef): string | null {
+  if (cannonOwned(s, c.id)) return null;
+  if (c.requires && !cannonOwned(s, c.requires)) {
+    return `Requires the ${CANNON_BY_ID[c.requires]?.name ?? c.requires}`;
+  }
+  if (s.credits < c.credits) return `Needs ${fmtNum(c.credits)} credits`;
+  for (const b of c.parts) {
+    const have = s.inventory.filter((x) => x.kind === b.kind && x.tier === b.tier).length;
+    if (have < b.count) return `Needs ${partBillText(b)}`;
+  }
+  return null;
+}
+/** the inventory ids a chassis purchase would consume: cheapest of each bill line first */
+export function cannonBillPicks(s: SaveData, c: CannonDef): string[] {
+  const out: string[] = [];
+  for (const b of c.parts) {
+    const picks = s.inventory
+      .filter((x) => x.kind === b.kind && x.tier === b.tier && !out.includes(x.id))
+      .sort((a, z) => a.value - z.value)
+      .slice(0, b.count);
+    for (const p of picks) out.push(p.id);
+  }
+  return out;
+}
 
 export const UP_CATS: { id: UpCat; name: string; color: string }[] = [
   { id: "hull", name: "Hull", color: "#4dffb4" },
@@ -452,6 +581,15 @@ export const ABILITY_BY_ID: Record<string, AbilitySpec> = Object.fromEntries(ABI
  *   autoSell     — sell docked components automatically
  * Version history lives in src/game/changelog.ts (semantic: 1.x features, 1.0.x fixes).
  */
+export interface CannonSave {
+  /** the chassis bolted to the hull right now */
+  id: string;
+  /** chassis bought from the tree; the free tier-0 gun is always in here */
+  owned: string[];
+  /** cannon id -> track id -> level */
+  lv: Record<string, Record<string, number>>;
+}
+
 export interface SaveData {
   v: number;
   ts: number;
@@ -461,8 +599,9 @@ export interface SaveData {
   kills: number;
   seq: number;
   upgrades: Record<string, number>;
-  /** fitted cannon and its own upgrade levels (not shared with any other gun) */
-  cannon: { id: string; lv: Record<string, number> };
+  /** the cannon tree: which chassis are owned, which is bolted on, and every
+   *  chassis' own track levels (nothing is shared between guns) */
+  cannon: CannonSave;
   inventory: Comp[];
   crafted: Crafted[];
   equip: Equip;
@@ -481,7 +620,7 @@ export interface SaveData {
 export function newSave(): SaveData {
   return {
     v: 2, ts: Date.now(), name: "",
-    credits: 60, earned: 0, kills: 0, seq: 1, upgrades: {}, cannon: { id: CANNONS[0].id, lv: {} }, inventory: [], crafted: [],
+    credits: 60, earned: 0, kills: 0, seq: 1, upgrades: {}, cannon: { id: CANNONS[0].id, owned: [CANNONS[0].id], lv: {} }, inventory: [], crafted: [],
     equip: { weapon: [null, null, null], shield: null, armor: null, optics: null, utility: null },
     abilitySlots: [null, null, null, null, null], autoSell: false, autoFire: true, showCompInfo: true, showRanges: false, bestiary: {},
   };
@@ -492,15 +631,43 @@ export function migrate(raw: unknown): SaveData {
   if (!raw || typeof raw !== "object") return d;
   const r = raw as Partial<SaveData>;
   const abilitySlots = [0, 1, 2, 3, 4].map((i) => r.abilitySlots?.[i] ?? null);
-  /* v2.9 and earlier kept cannon damage and fire rate in the global upgrade map */
+  /* v2.9 and earlier kept cannon damage and fire rate in the global upgrade map;
+   * v2.11 and earlier kept one flat level map for the fitted gun. Both fold into
+   * the per-cannon tree, and only tracks the chassis actually carries survive. */
   const legacy = r.upgrades ?? {};
-  const saved = r.cannon;
-  const cannon = {
-    id: saved && CANNON_BY_ID[saved.id] ? saved.id : CANNONS[0].id,
-    lv: { ...(saved?.lv ?? {}) } as Record<string, number>,
-  };
-  if (cannon.lv.dmg === undefined && typeof legacy.dmg === "number") cannon.lv.dmg = legacy.dmg;
-  if (cannon.lv.rate === undefined && typeof legacy.rate === "number") cannon.lv.rate = legacy.rate;
+  const saved = r.cannon as unknown as { id?: string; owned?: string[]; lv?: Record<string, unknown> } | undefined;
+  const cannon: CannonSave = { id: CANNONS[0].id, owned: [CANNONS[0].id], lv: {} };
+  if (saved) {
+    if (saved.id && CANNON_BY_ID[saved.id]) cannon.id = saved.id;
+    const rawLv = saved.lv ?? {};
+    const vals = Object.values(rawLv);
+    if (vals.every((v) => typeof v === "number")) {
+      /* flat map: it described the fitted gun */
+      const flat = Object.fromEntries(Object.entries(rawLv).filter(([, v]) => typeof v === "number")) as Record<string, number>;
+      if (Object.keys(flat).length) cannon.lv[cannon.id] = flat;
+    } else {
+      for (const [cid, tracks] of Object.entries(rawLv)) {
+        if (CANNON_BY_ID[cid] && tracks && typeof tracks === "object") cannon.lv[cid] = { ...(tracks as Record<string, number>) };
+      }
+    }
+    if (Array.isArray(saved.owned)) {
+      for (const id of saved.owned) if (CANNON_BY_ID[id]) cannon.owned.push(id);
+    }
+  }
+  if (typeof legacy.dmg === "number") {
+    const own = (cannon.lv[cannon.id] ??= {});
+    if (own.dmg === undefined) own.dmg = legacy.dmg;
+  }
+  /* prune tracks the chassis no longer has (the Stinger lost its rate track) and
+   * keep every gun that has levels in the owned list */
+  for (const [cid, tracks] of Object.entries(cannon.lv)) {
+    const def = CANNON_BY_ID[cid];
+    if (!def) { delete cannon.lv[cid]; continue; }
+    for (const k of Object.keys(tracks)) if (!def.tracks.includes(k as CannonTrackId)) delete tracks[k];
+    if (def.tracks.every((k) => !tracks[k]) && !cannon.owned.includes(cid) && cid !== cannon.id) delete cannon.lv[cid];
+  }
+  cannon.owned = [...new Set([CANNONS[0].id, ...cannon.owned, ...Object.keys(cannon.lv)])].filter((id) => !!CANNON_BY_ID[id]);
+  if (!cannon.owned.includes(cannon.id)) cannon.id = CANNONS[0].id;
   return {
     ...d,
     ...r,
@@ -565,8 +732,17 @@ export function decodeSave(code: string): SaveData | null {
 
 /* ---------- derived stats ---------- */
 export interface Stats {
-  dmg: number; rate: number; barrels: number; crit: number;
-  /** main-cannon ballistics; fixed for now, the cannon system gets reworked next */
+  /** main-cannon damage per round, rounds per second and rounds per trigger */
+  dmg: number; rate: number; barrels: number;
+  /** critical hit chance and multiplier (0 when the gun has no crit track) */
+  crit: number; critMul: number;
+  /** extra pieces a round passes through, and the muzzle spread in radians */
+  pierce: number; spread: number;
+  /** the Stinger's little impact charge (0 for every other chassis) */
+  boom: number;
+  /** hitscan guns draw a line instead of throwing a round */
+  hitscan: boolean;
+  /** round speed and reach, from the chassis and its projectile-speed track */
   bulletSpeed: number; bulletRange: number;
   hull: number; regen: number; armor: number; reactive: number; thorn: number; poisonResist: number;
   shieldMax: number; shieldRegen: number; shieldDelay: number; reflect: boolean; dampers: number;
@@ -586,8 +762,8 @@ export function computeStats(s: SaveData): Stats {
   let hull = 100 * Math.pow(1.19, L("hull"));
   /* the cannon carries its own upgrades; nothing here is shared with the shop */
   const cannon = CANNON_BY_ID[s.cannon?.id ?? ""] ?? CANNONS[0];
-  const CL = (id: string) => s.cannon?.lv?.[id] ?? 0;
-  const baseDmg = cannonDmg(cannon, CL("dmg"));
+  const cl = s.cannon?.lv?.[cannon.id] ?? {};
+  const baseDmg = cannonDmg(cannon, cl);
   let shieldMax = L("shield") ? 60 * Math.pow(1.22, L("shield") - 1) : 0;
   let shieldRegen = 0.18;
   let shieldDelay = 4;
@@ -658,12 +834,17 @@ export function computeStats(s: SaveData): Stats {
 
   return {
     dmg: baseDmg,
-    rate: cannonRate(cannon),
-    /* weapon-side tuning lives on the cannon itself now: one bolt per trigger,
-     * no critical hits (the sheet's cannon has a damage track and nothing else) */
-    barrels: 1,
-    crit: 0,
-    bulletSpeed: cannon.speed,
+    rate: cannonRate(cannon, cl),
+    /* weapon-side tuning lives on the cannon itself: crit and barrels are tracks a
+     * chassis may or may not carry, and the Stinger carries neither */
+    barrels: cannonBarrels(cl),
+    crit: cannonCrit(cl),
+    critMul: cannonCritMul(cl),
+    pierce: cannonPierce(cl),
+    spread: cannonSpread(cannon, cl),
+    boom: cannon.boom ?? 0,
+    hitscan: !!cannon.hitscan,
+    bulletSpeed: cannonSpeed(cannon, cl),
     bulletRange: cannon.range,
     hull,
     regen,
