@@ -8,7 +8,7 @@
  *   CHANGELOG and mirror the details in docs/CHANGELOG.md.
  */
 
-export const VERSION = "2.13.1";
+export const VERSION = "2.14.0";
 
 export interface ChangeEntry {
   version: string;
@@ -19,6 +19,14 @@ export interface ChangeEntry {
 }
 
 export const CHANGELOG: ChangeEntry[] = [
+  {
+    version: "2.14.0",
+    date: "20 Nov 2026",
+    title: "Balance changes",
+    points: [
+      "Balanced some stuff ig",
+    ],
+  },
   {
     version: "2.13.1",
     date: "20 Nov 2026",

@@ -972,6 +972,28 @@ function drawCannon(g: Game, ctx: CanvasRenderingContext2D, z: number, t: number
     ctx.beginPath(); ctx.arc(tip, 0, gr, 0, TAU); ctx.fill();
   }
 
+  /* a jammed gun is a kettle: red-hot shroud, hissing steam out of the vents,
+   * and no flash at all until the timer runs out */
+  if (p.jam > 0) {
+    const j = st.overheat > 0 ? clamp(p.jam / st.overheat, 0, 1) : 0;
+    const pulse = 0.55 + 0.45 * Math.sin(t * 22);
+    ctx.globalAlpha = 0.55 * j;
+    ctx.fillStyle = `rgba(255,${Math.round(70 + 90 * (1 - j))},60,1)`;
+    ctx.beginPath();
+    ctx.ellipse(look.len * 0.62 - back, 0, look.len * 0.3, bore + 4.5, 0, 0, TAU);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+    for (let k = 0; k < 3; k++) {
+      const ph = ((t * 0.9 + k / 3) % 1);
+      const sx = look.len * (0.35 + 0.5 * ph) - back;
+      const sy = (k % 2 ? 1 : -1) * (bore + 2 + 9 * ph);
+      ctx.globalAlpha = (1 - ph) * 0.5 * pulse;
+      ctx.fillStyle = "#ffd9c2";
+      ctx.beginPath(); ctx.arc(sx, sy, 1.6 + 3.4 * ph, 0, TAU); ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+  }
+
   /* flash on whichever barrel actually fired — one at a time on a twin */
   if (p.muzzleFlash > 0) {
     mz.forEach((m, i) => {

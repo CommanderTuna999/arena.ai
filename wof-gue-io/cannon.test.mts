@@ -2,7 +2,8 @@
 import { Game } from "@/game/engine";
 import {
   CANNONS, CANNON_BY_ID, CANNON_TRACK_BY_ID, cannonBarrels, cannonCrit, cannonCritMul, cannonDmg,
-  cannonOwned, cannonRate, cannonSpread, cannonTracks, cannonTrackCost, computeStats, migrate, newSave,
+  cannonHeatDmg, cannonHeatSpread, cannonOwned, cannonRate, cannonSpread, cannonTracks, cannonTrackCost,
+  computeStats, migrate, newSave,
   type Comp,
 } from "@/game/data";
 
@@ -28,28 +29,37 @@ assert(tier1.length === 3, `three tier 1 chassis (${tier1.map((c) => c.name).joi
 assert(tier1.every((c) => c.requires === "sting"), "every tier 1 chassis requires the Stinger");
 assert(tier1.every((c) => c.name !== "" && c.desc.length > 6), "every tier 1 chassis has a name and a description");
 
-/* --- bills: 3-4 common legs/cores/heads/antennae plus an uncommon core --- */
+/* --- bills: common legs, heads and a pile of common cores, straight off the sheet --- */
 const ALLOWED = new Set(["leg", "core", "segment", "spike"]);
+const cores = (c: (typeof tier1)[number]) => c.parts.filter((b) => b.kind === "core").reduce((n, b) => n + b.count, 0);
 for (const c of tier1) {
   const commons = c.parts.filter((b) => b.tier === 0);
-  const uncommon = c.parts.filter((b) => b.tier === 1);
   const commonCount = commons.reduce((n, b) => n + b.count, 0);
-  assert(commonCount >= 3 && commonCount <= 4, `${c.name}: ${commonCount} common parts in the bill`);
-  assert(commons.every((b) => ALLOWED.has(b.kind)), `${c.name}: every common is a leg, core, head or antenna (${commons.map((b) => b.label).join(", ")})`);
-  assert(commons.some((b) => b.kind === "leg"), `${c.name}: legs are the bulk of the bill`);
-  assert(uncommon.length === 1 && uncommon[0].kind === "core" && uncommon[0].count === 1, `${c.name}: one uncommon core, no species named`);
-  assert(c.credits === 300, `${c.name}: 300 credits on top of the parts`);
+  assert(commons.length === c.parts.length, `${c.name}: the whole bill is common parts (no rare materials)`);
+  assert(commons.every((b) => ALLOWED.has(b.kind)), `${c.name}: every line is a leg, core, head or antenna (${commons.map((b) => b.label).join(", ")})`);
+  assert(commons.some((b) => b.kind === "leg" && b.count === 2), `${c.name}: two common legs`);
+  assert(cores(c) >= 5, `${c.name}: cores are the bulk of the bill (${cores(c)})`);
+  assert(c.credits === (c.id === "peashooter" ? 300 : 500), `${c.name}: ${c.credits} credits on top of the parts`);
 }
 assert(tier1.every((c) => c.parts.every((b) => !("species" in b))), "no bill line names a species");
+assert(CANNONS.every((c) => !/MK\d/.test(c.id)), "the MK numbers live in the names, not the ids");
+assert(skewer.name === "Skewer MK1" && pea.name === "Peashooter MK1" && horse.name === "Workhorse MK1", "the tier 1 guns are the sheet's MK1s");
 
 /* --- the frames' upgrades, per chassis --- */
 assert(cannonTracks(sting).map((t) => t.id).join() === "dmg", "the Stinger has a damage track and nothing else");
-assert(cannonTracks(skewer).map((t) => t.id).join() === "dmg,crit,critDmg,pen", "the Skewer carries damage, crit chance, crit damage and penetration");
-assert(cannonTracks(pea).map((t) => t.id).join() === "dmg,acc,speed,crit,critDmg", "the Peashooter carries damage, accuracy, projectile speed, crit chance and crit damage");
+assert(cannonTracks(skewer).map((t) => t.id).join() === "crit,critDmg,pen,dmg", "the Skewer carries crit chance, crit damage, penetration and damage");
+assert(cannonTracks(pea).map((t) => t.id).join() === "acc,speed,dmg,crit,critDmg", "the Peashooter carries accuracy, projectile speed, damage, crit chance and crit damage");
 assert(cannonTracks(horse).map((t) => t.id).join() === "dmg,rate,pen,barrels", "the Workhorse carries damage, fire rate, penetration and barrels");
-assert(skewer.hitscan === true && skewer.dmg === 200 && skewer.interval === 1.5, "the Skewer is a 200-damage hitscan with a 1.5s interval");
+assert(CANNON_TRACK_BY_ID["pen"].name === "Penetration", "the sheet calls the track Penetration");
+assert(skewer.hitscan === true && skewer.dmg === 300 && skewer.interval === 1.2, "the Skewer is a 300-damage hitscan on a 1.2s interval");
 assert(pea.dmg === 35 && Math.abs(pea.interval - 0.1) < 1e-9 && (pea.spread ?? 0) > 0.1, "the Peashooter is a 35-damage spray gun");
-assert(horse.dmg === 45 && (horse.spread ?? 0) < 0.1, "the Workhorse sits in the middle");
+assert(horse.dmg === 55 && (horse.spread ?? 0) < 0.1, "the Workhorse starts at 55 a round");
+assert(cannonHeatDmg(horse, 0) === 1 && Math.abs(cannonHeatDmg(horse, 1) - 300 / 55) < 1e-9, "and hits 300 when the gauge is full");
+assert(Math.round(cannonDmg(horse) * cannonHeatDmg(horse, 1)) === 300, "55 x the full-heat multiplier is the sheet's 300");
+assert(cannonHeatSpread(horse, 0) === 1 && cannonHeatSpread(horse, 1) > 2, "a hot Workhorse throws them wide");
+assert(horse.overheat === 3, "and a full gauge is a three-second cool-off");
+assert(sting.overheat === undefined || sting.overheat === undefined, "the Stinger never jams");
+assert(tier1.every((c) => c.overheat === 3 || c.overheat === undefined), "only the guns the sheet cooks can jam");
 
 /* --- barrels stop at two, and cost a fortune to get there --- */
 const barrels = CANNON_TRACK_BY_ID["barrels"];
@@ -67,19 +77,19 @@ g.save.credits = 1000;
 assert(g.buyCannonChassis("skewer") !== null, "cannot build the Skewer without the parts in storage");
 /* right kinds, wrong part names: a plain body segment is not a head, a plain
  * spike is not an antenna */
-g.save.inventory = [comp("segment", 0, "s0"), comp("spike", 0, "sp0", "Tail Spike"), comp("leg", 0, "l0"), comp("leg", 0, "l4"), comp("core", 1, "c0")];
+g.save.inventory = [comp("segment", 0, "s0"), comp("spike", 0, "sp0", "Tail Spike"), comp("leg", 0, "l0"), comp("leg", 0, "l4"), comp("core", 0, "c0")];
 const nameProb = g.buyCannonChassis("skewer");
-assert(!!nameProb && /antenna|head/i.test(nameProb), `a body segment and a spike do not stand in for a head and an antenna (${nameProb})`);
+assert(!!nameProb && /antenna|head|core/i.test(nameProb), `a body segment and a spike do not stand in for a head and an antenna (${nameProb})`);
 g.save.inventory = [
   comp("leg", 0, "l1"), comp("leg", 0, "l2"), comp("leg", 0, "l3"),
   comp("spike", 0, "an1", "Worker Ant Antenna"), comp("spike", 0, "sp1", "Tail Spike"),
   comp("segment", 0, "h1", "Mantis Head"), comp("segment", 0, "s1", "Body Segment"),
-  comp("core", 1, "c1"), comp("core", 1, "c2"),
+  ...Array.from({ length: 7 }, (_, i) => comp("core", 0, `k${i}`)),
 ];
-assert(g.buyCannonChassis("skewer") === null, "2 legs, an antenna, a head and an uncommon core build the Skewer");
+assert(g.buyCannonChassis("skewer") === null, "2 legs, an antenna, a head and six common cores build the Skewer");
 const left = g.save.inventory.map((c: Comp) => c.id).sort().join();
-assert(left === "c2,l3,s1,sp1", `exactly the bill is consumed (left: ${left})`);
-assert(g.save.credits === 700, `300 credits were spent (left ${g.save.credits})`);
+assert(left === "k6,l3,s1,sp1", `exactly the bill is consumed (left: ${left})`);
+assert(g.save.credits === 500, `500 credits were spent (left ${g.save.credits})`);
 assert(cannonOwned(g.save, "skewer") && g.save.cannon.id === "skewer", "the new chassis is owned and fitted");
 
 /* --- one gun per tier (and admin mode is the only way around it) --- */
@@ -87,7 +97,7 @@ const gt = new Game(newSave(), "t") as any;
 gt.save.credits = 100000;
 gt.save.inventory = [
   comp("leg", 0, "t1"), comp("leg", 0, "t2"), comp("leg", 0, "t3"), comp("leg", 0, "t4"),
-  comp("core", 0, "t5"), comp("core", 0, "t6"), comp("core", 1, "t7"), comp("core", 1, "t8"),
+  ...Array.from({ length: 12 }, (_, i) => comp("core", 0, `t${10 + i}`)),
   comp("segment", 0, "t9", "Mantis Head"),
 ];
 assert(gt.buyCannonChassis("peashooter") === null, "the Peashooter can be bought while tier 1 is empty");
@@ -115,7 +125,7 @@ g.selectCannon("sting");
 g.buyCannon("dmg", 5);
 assert(Math.abs(computeStats(g.save).dmg - cannonDmg(sting, { dmg: 5 })) < 1e-9, "Stinger damage follows its own track");
 g.selectCannon("skewer");
-assert(computeStats(g.save).dmg === 200, `a fresh chassis starts at its own damage (${computeStats(g.save).dmg})`);
+assert(computeStats(g.save).dmg === 300, `a fresh chassis starts at its own damage (${computeStats(g.save).dmg})`);
 g.buyCannon("crit", 4);
 assert(Math.abs(computeStats(g.save).crit - 0.2) < 1e-9, "the Skewer's crit track feeds its crit chance");
 g.buyCannon("critDmg", 4);
@@ -146,8 +156,9 @@ gf.player.x = 5200; gf.player.y = 0; gf.player.dead = false;
 gf.save.cannon.owned.push("workhorse");
 gf.selectCannon("workhorse");
 gf.input.lmb = true;
-const fire = () => { gf.player.fireCd = 0; gf.bullets = []; (gf as any).firePlayer(1 / 60); return gf.bullets as { x: number; y: number }[]; };
+const fire = () => { gf.player.fireCd = 0; gf.bullets = []; (gf as any).firePlayer(1 / 60); return gf.bullets as { x: number; y: number; dmg: number }[]; };
 gf.player.barrelRec = [0, 0];
+gf.player.heat = 0;
 let shots = fire();
 assert(shots.length === 1, `one round per trigger before the barrel upgrade (got ${shots.length})`);
 assert(gf.player.muzzle === 1, "the second barrel is up next: a twin alternates");
@@ -161,12 +172,75 @@ assert(gf.player.heat > 0, "firing heats the barrel");
 const hot = gf.player.heat;
 gf.player.dead = false; gf.update(0.5);
 assert(gf.player.heat < hot, "and it cools off when you stop");
+
+/* --- a cold round is 55, a hot one is the sheet's 300 --- */
+gf.player.heat = 0;
+shots = fire();
+assert(Math.abs(shots[0].dmg - 55) < 1e-9, `a cold round hits for 55 (got ${shots[0].dmg})`);
+gf.player.heat = 0.5;
+shots = fire();
+assert(shots[0].dmg > 55 && shots[0].dmg < 300, `a half-hot round sits between the two (${shots[0].dmg.toFixed(0)})`);
+gf.player.heat = 0.999;
+shots = fire();
+assert(Math.round(shots[0].dmg) >= 299, `a gauge about to blow hits for 300 (${shots[0].dmg.toFixed(0)})`);
+gf.player.heat = 0; gf.player.jam = 0;
+
+/* --- the second barrel alternates too, and shares the heat --- */
 gf.save.credits = 100000;
 gf.buyCannon("barrels", 1);
+gf.player.heat = 0; gf.player.muzzle = 0;
 shots = fire();
-assert(shots.length === 2, `the barrel upgrade throws two rounds (got ${shots.length})`);
-assert(Math.hypot(shots[0].x - shots[1].x, shots[0].y - shots[1].y) > 5, "and they leave from two different muzzles");
-assert(gf.player.barrelRec[0] === 1 && gf.player.barrelRec[1] === 1, "both barrels kick when both fire");
+assert(shots.length === 1, `the second barrel does not double the round, it takes turns (got ${shots.length})`);
+assert(gf.player.muzzle === 1, "the barrels still alternate after the upgrade");
+gf.player.heat = 0;
+fire();
+assert(Math.abs(gf.player.heat - gf.stats.heatPerShot / 2) < 1e-9, "two barrels split the heat, so the gun runs cooler");
+gf.player.barrelRec = [0, 0];
+gf.player.muzzle = 0;
+fire();
+assert(gf.player.barrelRec[0] === 1 && gf.player.barrelRec[1] === 0, "and exactly one barrel recoils per trigger");
+
+/* --- a full gauge jams the trigger for three seconds --- */
+const gh = new Game(newSave(), "t") as any;
+gh.player.x = 5200; gh.player.y = 0; gh.player.dead = false;
+gh.save.cannon.owned.push("workhorse");
+gh.selectCannon("workhorse");
+gh.input.lmb = true;
+let guard = 0;
+while (gh.player.jam <= 0 && guard++ < 200) { gh.player.fireCd = 0; gh.bullets = []; gh.firePlayer(1 / 60); }
+assert(gh.player.jam > 2.9 && gh.player.jam <= 3, `a full gauge jams for three seconds (${gh.player.jam.toFixed(2)}s after ${guard} rounds)`);
+assert(guard > 10, `it takes a dozen rounds to cook (${guard})`);
+gh.player.fireCd = 0; gh.bullets = [];
+gh.firePlayer(1 / 60);
+assert(gh.bullets.length === 0, "a jammed gun does not fire");
+/* nothing hunts a test range: keep the ship clean so the clock is the only thing moving */
+const step = (n: number) => {
+  for (let i = 0; i < n; i++) {
+    gh.enemies.length = 0;
+    gh.player.dead = false;
+    gh.player.hp = gh.stats.hull;
+    gh.player.x = 5200; gh.player.y = 0;
+    gh.update(0.05);
+  }
+};
+step(20);   // one second
+assert(gh.player.jam < 2.1 && gh.player.jam > 1.9, `the jam counts down, one second at a time (${gh.player.jam.toFixed(2)}s)`);
+gh.player.fireCd = 0; gh.bullets = [];
+gh.firePlayer(1 / 60);
+assert(gh.bullets.length === 0, "and it stays dead until the timer runs out");
+step(45);   // and the rest of the cool-off
+assert(gh.player.jam === 0 && gh.player.heat < 0.05, `then it is cold and ready again (${gh.player.jam.toFixed(2)}s)`);
+gh.player.fireCd = 0; gh.bullets = [];
+gh.firePlayer(1 / 60);
+assert(gh.bullets.length === 1, "and it fires again");
+
+/* a gun the sheet does not cook never jams */
+const gs = new Game(newSave(), "t") as any;
+gs.player.x = 5200; gs.player.y = 0; gs.player.dead = false;
+gs.input.lmb = true;
+let gsN = 0;
+while (gsN++ < 400) { gs.player.fireCd = 0; gs.bullets = []; gs.firePlayer(1 / 60); }
+assert(gs.player.jam === 0 && gs.player.heat >= 1, "the Stinger heats up but never locks out");
 
 /* --- accuracy and speed tracks only move what they should --- */
 assert(cannonSpread(pea, { acc: 0 }) > cannonSpread(pea, { acc: 10 }), "accuracy tightens the Peashooter's spray");

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type CSSProperties } from "react";
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { Game, type Hud } from "@/game/engine";
 import { render } from "@/game/render";
@@ -8,7 +8,7 @@ import {
   ABILITY_LIST, CANNONS, CANNON_BY_ID, CAT_NAME, DMG_INFO, KIND_CAT, RARITIES, RECIPES, RECIPE_BY_ID, SLOT_NAME, UPGRADES, UP_CATS,
   cannonBillProblem, cannonDmg, cannonOwned, cannonRate, cannonTracks, cannonTrackCost, cannonTrackValue, craftEfficiency, damageProfile,
   migrate, newSave, partBillText, recipeProblem, upgradeCost,
-  type CannonDef, type Comp, type Recipe, type SaveData, type Slot, type UpCat,
+  type CannonDef, type CannonTrackId, type Comp, type Recipe, type SaveData, type Slot, type UpCat,
 } from "@/game/data";
 import { clamp, fmtNum } from "@/game/math";
 import { SPECIES_LIST } from "@/game/enemies";
@@ -323,6 +323,24 @@ function Hud_({ hud, creditRef, onOpen, onHelp, onAdmin, onSettings, onBestiary,
         <Bar v={hud.hp} max={hud.maxHp} color={hpCol} h={12} />
         {hud.maxShield > 0 && <Bar v={hud.shield} max={hud.maxShield} color="#4dd2ff" h={8} />}
         {hud.hasBoost && <Bar v={hud.boost} max={100} color="#ff9d4d" h={6} />}
+        {/* the gauge only means something on a gun that cooks: damage climbs with
+            it, and a full gauge is three seconds of dead trigger */}
+        {hud.jamOf > 0 && (hud.heat > 0.02 || hud.jam > 0) && (
+          <div className="flex items-center gap-1.5" title={hud.jam > 0 ? `Overheated - cooling ${hud.jam.toFixed(1)}s` : "Barrel heat: damage climbs as it heats"}>
+            <span className={`text-[11px] leading-none ${hud.jam > 0 ? "text-red-400" : "text-amber-300/80"}`}>{hud.jam > 0 ? "⚠" : "▲"}</span>
+            <div className={`relative w-28 overflow-hidden rounded-sm border bg-black/50 ${hud.jam > 0 ? "border-red-400/70" : "border-white/20"}`} style={{ height: 8 }}>
+              <div
+                className="absolute inset-y-0 left-0 transition-[width] duration-75"
+                style={{
+                  width: `${clamp(hud.heat, 0, 1) * 100}%`,
+                  background: hud.jam > 0 ? "#ff4d6d" : hud.heat > 0.75 ? "#ff7a3d" : "#ffd24d",
+                  boxShadow: `0 0 10px ${hud.jam > 0 ? "#ff4d6d" : "#ffb04d"}`,
+                }}
+              />
+            </div>
+            {hud.jam > 0 && <span className="text-[9px] font-black text-red-300">{hud.jam.toFixed(1)}s</span>}
+          </div>
+        )}
         {(hud.baseNear || hud.baseHp < hud.baseMaxHp) && !hud.baseLost && (
           <div className="flex items-center gap-1.5" title={`Base integrity · ${hud.baseTurrets.filter(Boolean).length}/6 defence turrets`}>
             <span className="text-[11px] leading-none text-emerald-300 drop-shadow-[0_0_6px_#4dffd2]">⬢</span>
@@ -608,176 +626,288 @@ function CannonIcon({ c, className }: { c: CannonDef; className?: string }) {
   );
 }
 
-/* Cannon tree, drawn bottom-up exactly like the sheet: the free Stinger at the
- * bottom, the tier 1 chassis above it. Every gun owns its own tracks, and only
- * one chassis can be fitted at a time — buying another does not erase the work
- * done on the first. */
+/* A small glyph for every upgrade node, so a branch is pictures and not just
+ * words: a round for damage, a dial for rate, a seam for crit, a spike through
+ * plating for penetration, a crosshair for accuracy, chevrons for speed and a
+ * pair of tubes for the second barrel. */
+function TrackIcon({ id, hue, className }: { id: CannonTrackId; hue: number; className?: string }) {
+  const c = `hsl(${hue} 92% 66%)`;
+  const dim = `hsl(${hue} 60% 40%)`;
+  const g = (children: ReactNode) => (
+    <svg viewBox="0 0 20 20" className={className} aria-hidden fill="none" stroke={c} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+      {children}
+    </svg>
+  );
+  switch (id) {
+    case "dmg": return g(<><circle cx="7" cy="10" r="3.4" fill={c} fillOpacity={0.25} /><path d="M12 10h5M14 7.6l2.4 2.4-2.4 2.4" /></>);
+    case "rate": return g(<><circle cx="10" cy="10" r="6.2" stroke={dim} /><path d="M10 6.2V10l3 1.8" /></>);
+    case "crit": return g(<><path d="M10 2.6l2 4.6 4.9.5-3.7 3.3 1.1 4.8-4.3-2.5-4.3 2.5 1.1-4.8L3.1 7.7l4.9-.5z" fill={c} fillOpacity={0.2} /></>);
+    case "critDmg": return g(<><path d="M10 2.6l2 4.6 4.9.5-3.7 3.3 1.1 4.8-4.3-2.5-4.3 2.5 1.1-4.8L3.1 7.7l4.9-.5z" fill={c} fillOpacity={0.2} /><circle cx="10" cy="9.6" r="2" stroke="#fff8cf" /></>);
+    case "pen": return g(<><path d="M2 10h8M7 6.6L10.6 10 7 13.4" /><path d="M12.5 3.5v13" stroke={dim} /><path d="M15 10h3.4" /></>);
+    case "acc": return g(<><circle cx="10" cy="10" r="6" stroke={dim} /><circle cx="10" cy="10" r="2.4" /><path d="M10 1.6v3.4M10 15v3.4M1.6 10h3.4M15 10h3.4" /></>);
+    case "speed": return g(<><path d="M3 5.6l5 4.4-5 4.4M9.6 5.6l5 4.4-5 4.4M16.2 5.6l2.2 4.4-2.2 4.4" stroke={dim} /><path d="M3 5.6l5 4.4-5 4.4" /></>);
+    case "barrels": return g(<><rect x="3" y="5.4" width="14" height="3" rx="1" /><rect x="3" y="11.4" width="14" height="3" rx="1" /><path d="M17 6.9h1.6M17 12.9h1.6" /></>);
+  }
+}
+
+/* Cannon tree, drawn as a tree: the free Stinger is the root at the bottom, a
+ * trunk climbs to a bus, and every chassis of the next tier hangs off it as a
+ * node. A node is small on purpose — its own silhouette, its name, its state —
+ * and it only opens into the full card (the sheet's line, the numbers, the bill
+ * and the build button) while you are on it. Take a gun in a tier and the rest
+ * of that row greys out: one gun per tier is not a rule to be read, it is a row
+ * that is no longer for sale. */
 function CannonTree({ game }: { game: Game }) {
   const save = game.save;
   const fitted = CANNON_BY_ID[save.cannon?.id ?? ""] ?? CANNONS[0];
   const free = game.admin.on && game.admin.credits;
   const [msg, setMsg] = useState<string | null>(null);
+  const [open, setOpen] = useState<string | null>(null);
   const fittedLv = save.cannon?.lv?.[fitted.id] ?? {};
   const tiers = [...new Set(CANNONS.map((c) => c.tier))].sort((a, b) => a - b);
   const build = (id: string) => setMsg(game.buyCannonChassis(id));
+  const freeParts = game.admin.on && game.admin.components;
+
+  /* one node: compact by default, the whole card while it is open */
+  const node = (c: CannonDef, down: boolean, align: "left" | "mid" | "right") => {
+    const owned = cannonOwned(save, c.id);
+    const selected = fitted.id === c.id;
+    const cl = save.cannon?.lv?.[c.id] ?? {};
+    const problem = cannonBillProblem(save, c, freeParts, game.admin.on);
+    /* the row is decided: everything else in it is out of the running */
+    const dim = !owned && CANNONS.some((o) => o.id !== c.id && o.tier === c.tier && cannonOwned(save, o.id));
+    const hot = Math.round(cannonDmg(c, cl) * (c.heatMax ?? 1));
+    const isOpen = open === c.id;
+    return (
+      <div
+        key={c.id}
+        className="relative"
+        onMouseEnter={() => setOpen(c.id)}
+        onMouseLeave={() => setOpen((v) => (v === c.id ? null : v))}
+      >
+        <button
+          onClick={() => {
+            setOpen((v) => (v === c.id ? null : c.id));
+            if (owned) { game.selectCannon(c.id); setMsg(null); }
+          }}
+          title={owned ? `${c.name} — click to fit` : c.name}
+          className={`flex w-full flex-col items-center gap-0.5 rounded-sm border px-1 pb-1 pt-1.5 transition duration-150 ${
+            selected ? "border-yellow-300/80 bg-yellow-300/10 shadow-[0_0_20px_rgba(255,225,77,0.22)]"
+              : owned ? "border-cyan-300/50 bg-cyan-400/5 hover:border-cyan-200/80 hover:bg-cyan-400/10"
+                : dim ? "border-white/10 bg-black/30 opacity-35 grayscale"
+                  : "border-white/20 bg-black/40 hover:border-white/45 hover:bg-white/5"
+          } ${isOpen ? "scale-[1.05]" : ""}`}
+        >
+          <CannonIcon c={c} className="h-7 w-14 shrink-0" />
+          <span className={`w-full truncate text-center text-[10px] font-black leading-tight tracking-wide ${selected ? "text-yellow-100" : owned ? "text-cyan-100" : "text-white/80"}`}>
+            {c.name}
+          </span>
+          <span className="text-[7px] font-black tracking-[0.16em]">
+            {selected ? <span className="text-yellow-300">FITTED</span>
+              : owned ? <span className="text-cyan-300/80">OWNED</span>
+                : <span className="text-white/30">T{c.tier}</span>}
+          </span>
+        </button>
+
+        {isOpen && (
+          <div
+            className={`absolute z-40 w-[248px] ${align === "left" ? "left-0" : align === "right" ? "right-0" : "left-1/2 -translate-x-1/2"} ${
+              down ? "top-full pt-1" : "bottom-full pb-1"
+            }`}
+          >
+            <div className={`rounded-sm border bg-[#050e16]/97 p-2 shadow-[0_14px_44px_rgba(0,0,0,0.8)] ${selected ? "border-yellow-300/60" : owned ? "border-cyan-300/50" : "border-white/25"}`}>
+              <div className="flex items-center gap-1.5">
+                <CannonIcon c={c} className="h-6 w-12 shrink-0" />
+                <span className={`min-w-0 flex-1 truncate text-[12px] font-black ${selected ? "text-yellow-100" : "text-white"}`}>{c.name}</span>
+                <span className="shrink-0 rounded-sm border border-yellow-300/40 bg-yellow-300/10 px-1 py-0.5 text-[8px] font-black text-yellow-200">TIER {c.tier}</span>
+              </div>
+              <p className="mt-1 text-[10px] italic leading-snug text-white/55">{c.desc}</p>
+              <div className="mt-1 flex flex-wrap gap-x-2 gap-y-0.5 text-[10px] text-white/60">
+                <span>
+                  <b className="text-white/90">{fmtNum(cannonDmg(c, cl))}</b>
+                  {hot !== cannonDmg(c, cl) && <> → <b className="text-orange-300">{fmtNum(hot)}</b> hot</>} dmg
+                </span>
+                <span><b className="text-white/90">{cannonRate(c, cl).toFixed(c.hitscan ? 2 : 1)}</b>/s</span>
+                <span>{c.hitscan ? "hitscan" : `${c.range}u`}</span>
+              </div>
+              {owned ? (
+                <button
+                  onClick={() => { game.selectCannon(c.id); setMsg(null); setOpen(null); }}
+                  disabled={selected}
+                  className={`mt-1.5 w-full rounded-sm border px-2 py-1 text-[10px] font-black tracking-[0.16em] ${
+                    selected ? "border-yellow-300/50 text-yellow-200/80" : "border-cyan-300 bg-cyan-400/15 text-cyan-100 hover:bg-cyan-400/30"
+                  }`}
+                >
+                  {selected ? "FITTED" : "FIT THIS GUN"}
+                </button>
+              ) : (
+                <>
+                  <div className="mt-1.5 space-y-0.5 rounded-sm border border-white/10 bg-black/40 px-1.5 py-1 text-[9px] leading-tight text-white/50">
+                    {c.parts.map((b, i) => <div key={`${b.kind}-${b.tier}-${i}`}>· {partBillText(b)}</div>)}
+                    <div className="text-yellow-200/80">· {fmtNum(c.credits)} CR</div>
+                  </div>
+                  <button
+                    onClick={() => { const m = game.buyCannonChassis(c.id); setMsg(m); }}
+                    disabled={!!problem}
+                    title={problem ?? `Build the ${c.name}`}
+                    className={`mt-1.5 w-full rounded-sm border px-2 py-1 text-[10px] font-black tracking-[0.16em] ${
+                      problem ? "border-white/10 text-white/25" : "border-yellow-300 bg-yellow-300/15 text-yellow-200 hover:bg-yellow-300/30"
+                    }`}
+                  >
+                    {problem ? "LOCKED" : "BUILD"}
+                  </button>
+                  {problem && <div className="mt-1 text-[9px] leading-tight text-red-300/70">{problem}</div>}
+                </>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const rows = [...tiers].sort((a, b) => b - a);
   return (
     <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)]">
       {/* ---- the tree ---- */}
       <div className="rounded-sm border border-white/10 bg-white/[0.02] p-3">
-        <div className="mb-2 flex items-baseline justify-between">
+        <div className="mb-1 flex items-baseline justify-between">
           <div className="text-[10px] font-bold tracking-[0.22em] text-cyan-200/60">CANNON TREE</div>
-          <div className="text-[10px] text-white/35">tier 0 at the bottom</div>
+          <div className="text-[10px] text-white/30">root at the bottom</div>
         </div>
-        {msg && <div className="mb-2 rounded-sm border border-red-400/40 bg-red-500/10 px-2 py-1 text-[11px] text-red-200">{msg}</div>}
-        <div className="flex flex-col-reverse">
-          {tiers.map((tier) => {
+        {msg && <div className="mb-1 rounded-sm border border-red-400/40 bg-red-500/10 px-2 py-1 text-[11px] text-red-200">{msg}</div>}
+        <div className="pt-1">
+          {rows.map((tier, ri) => {
             const row = CANNONS.filter((c) => c.tier === tier);
+            const last = ri === rows.length - 1;
+            const nodes = row.length > 1
+              ? row.map((c, i) => node(c, true, i === 0 ? "left" : i === row.length - 1 ? "right" : "mid"))
+              : [<div key="l" />, <div key="c">{node(row[0], false, "mid")}</div>, <div key="r" />];
             return (
               <div key={tier}>
-                <div className="flex items-center justify-center">
-                  <div className={`my-1 w-px ${tier === 0 ? "h-4 bg-gradient-to-t from-cyan-300/50 to-transparent" : "h-6 bg-cyan-300/40"}`} />
-                </div>
-                <div className="mb-1 text-center text-[9px] font-bold tracking-[0.2em] text-white/30">TIER {tier}</div>
-                <div className={`grid gap-1.5 ${row.length > 1 ? "grid-cols-1 sm:grid-cols-3" : "grid-cols-1"}`}>
-                  {row.map((c) => {
-                    const owned = cannonOwned(save, c.id);
-                    const selected = fitted.id === c.id;
-                    const cl = save.cannon?.lv?.[c.id] ?? {};
-                    const adminFree = game.admin.on && game.admin.components;
-                    const problem = cannonBillProblem(save, c, adminFree, game.admin.on);
-                    return (
-                      <div
-                        key={c.id}
-                        className={`rounded-sm border transition ${
-                          selected ? "border-yellow-300/80 bg-yellow-300/10 shadow-[0_0_22px_rgba(255,225,77,0.18)]"
-                            : owned ? "border-cyan-300/50 bg-cyan-400/5" : "border-white/15 bg-black/40"
-                        }`}
-                      >
-                        <button
-                          onClick={() => { if (owned) { game.selectCannon(c.id); setMsg(null); } }}
-                          disabled={!owned}
-                          className={`w-full px-2.5 py-2 text-left ${owned && !selected ? "hover:bg-cyan-400/10" : ""} ${owned ? "" : "cursor-default"}`}
-                        >
-                          <div className="flex items-start gap-1.5">
-                            <CannonIcon c={c} className="mt-0.5 h-6 w-11 shrink-0 opacity-90" />
-                            <div className="min-w-0 flex-1">
-                              <div className="flex items-center justify-between gap-1">
-                                <div className="flex min-w-0 items-center gap-1.5">
-                                  <span className="grid h-5 w-5 shrink-0 place-items-center rounded-sm border border-yellow-300/50 bg-yellow-300/10 text-[10px] font-black text-yellow-200">{c.tier}</span>
-                                  <span className={`truncate text-[13px] font-black tracking-wide ${selected ? "text-yellow-100" : "text-white"}`}>{c.name}</span>
-                                </div>
-                                {selected ? <span className="shrink-0 rounded-sm bg-yellow-300/20 px-1 py-0.5 text-[8px] font-black tracking-[0.14em] text-yellow-200">FITTED</span>
-                                  : owned ? <span className="shrink-0 rounded-sm bg-cyan-400/15 px-1 py-0.5 text-[8px] font-black tracking-[0.14em] text-cyan-200">OWNED</span>
-                                    : <span className="shrink-0 rounded-sm bg-white/10 px-1 py-0.5 text-[8px] font-black tracking-[0.14em] text-white/40">LOCKED</span>}
-                              </div>
-                              <div className="mt-1 flex flex-wrap gap-x-2 gap-y-0.5 text-[10px] text-white/60">
-                                <span><b className="text-white/85">{fmtNum(cannonDmg(c, cl))}</b> dmg</span>
-                                <span><b className="text-white/85">{cannonRate(c, cl).toFixed(c.hitscan ? 2 : 1)}</b>/s</span>
-                                <span>{c.hitscan ? "hitscan" : `${c.range}u`}</span>
-                              </div>
-                            </div>
+                <div className="mb-1 text-center text-[8px] font-bold tracking-[0.28em] text-white/25">TIER {tier}</div>
+                <div className="grid grid-cols-3 gap-1.5">{nodes}</div>
+                {!last && (
+                  <>
+                    {row.length > 1 && (
+                      <div className="grid grid-cols-3">
+                        {row.map((c, i) => (
+                          <div key={c.id} className="relative h-4">
+                            <div className="absolute inset-y-0 left-1/2 w-px bg-cyan-300/35" />
+                            <div
+                              className="absolute bottom-0 h-px bg-cyan-300/35"
+                              style={{ left: i === 0 ? "50%" : "-3px", right: i === row.length - 1 ? "50%" : "-3px" }}
+                            />
+                            {i === Math.floor((row.length - 1) / 2) && <div className="absolute -bottom-1 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full bg-cyan-300/60" />}
                           </div>
-                        </button>
-                        {!owned && (
-                          <div className="border-t border-white/10 px-2.5 py-1.5">
-                            <div className="space-y-0.5 text-[10px] leading-tight text-white/45">
-                              {c.parts.map((b) => <div key={`${b.kind}-${b.tier}`}>· {partBillText(b)}</div>)}
-                              <div className="text-yellow-200/80">· {fmtNum(c.credits)} CR</div>
-                            </div>
-                            <button
-                              onClick={() => build(c.id)}
-                              disabled={!!problem}
-                              title={problem ?? `Build the ${c.name}`}
-                              className={`mt-1.5 w-full rounded-sm border px-2 py-1 text-[10px] font-black tracking-[0.16em] ${problem ? "border-white/10 text-white/25" : "border-yellow-300 bg-yellow-300/15 text-yellow-200 hover:bg-yellow-300/30"}`}
-                            >
-                              {problem ? "LOCKED" : "BUILD"}
-                            </button>
-                            {problem && <div className="mt-1 text-[9px] leading-tight text-red-300/60">{problem}</div>}
-                          </div>
-                        )}
+                        ))}
                       </div>
-                    );
-                  })}
-                </div>
+                    )}
+                    <div className="grid grid-cols-3">
+                      <div /><div className="h-5"><div className="mx-auto h-full w-px bg-cyan-300/35" /></div><div />
+                    </div>
+                  </>
+                )}
               </div>
             );
           })}
         </div>
-        <p className="mt-3 text-[10px] leading-relaxed text-white/35">
-          Upgrades belong to the chassis: a new gun starts its own tracks at zero and does not inherit the last one&apos;s work. Only one is fitted at a time, and swapping costs nothing.
+        <p className="mt-2 text-[10px] leading-relaxed text-white/35">
+          Hover a node for its numbers, its bill and the build button. One chassis per tier: buy one and the rest of that row greys out. Upgrades belong to the gun, and swapping costs nothing.
         </p>
       </div>
 
-      {/* ---- the fitted gun ---- */}
+      {/* ---- the fitted gun's branch ---- */}
       <div className="rounded-sm border border-white/10 bg-white/[0.02] p-3">
         <div className="flex items-baseline justify-between">
-          <div className="text-[10px] font-bold tracking-[0.22em] text-cyan-200/60">FITTED · {fitted.name.toUpperCase()}</div>
+          <div className="text-[10px] font-bold tracking-[0.22em] text-cyan-200/60">BRANCH · {fitted.name.toUpperCase()}</div>
           <div className="text-[10px] text-white/40">tier {fitted.tier}</div>
         </div>
-        <div className="mt-1.5 flex items-center gap-2">
+        <div className="mt-1.5 flex items-center gap-2 rounded-sm border border-white/10 bg-white/[0.02] p-1.5">
           <CannonIcon c={fitted} className="h-10 w-20 shrink-0" />
-          <p className="text-[11px] leading-snug text-white/55">{fitted.desc}</p>
+          <div className="min-w-0">
+            <p className="text-[11px] leading-snug text-white/60">{fitted.desc}</p>
+            <p className="mt-0.5 text-[10px] text-white/40">
+              {fmtNum(cannonDmg(fitted, fittedLv))} dmg
+              {fitted.heatMax && fitted.heatMax > 1 && <> · <span className="text-orange-300/80">{fmtNum(cannonDmg(fitted, fittedLv) * fitted.heatMax)} at full heat</span></>}
+              {fitted.overheat ? ` · ${fitted.overheat}s cool-down` : ""}
+            </p>
+          </div>
         </div>
-        <div className="mt-3 grid gap-2">
-          {cannonTracks(fitted).map((t) => {
-            const l = fittedLv[t.id] ?? 0;
-            const maxed = l >= t.max;
-            const price = free ? 0 : cannonTrackCost(fitted, t, l);
-            const can = !maxed && (free || save.credits >= price);
-            const now = cannonTrackValue(fitted, t.id, l);
-            const next = cannonTrackValue(fitted, t.id, Math.min(t.max, l + 1));
-            return (
-              <div key={t.id} className="rounded-sm border border-white/15 bg-white/[0.03] p-2.5">
-                <div className="flex items-center justify-between">
-                  <div className="text-sm font-bold text-yellow-200">{t.name}</div>
-                  <div className="text-[11px] text-white/60">LV {l}/{t.max}</div>
-                </div>
-                <div className="text-[11px] text-white/55">{t.desc}</div>
-                <div className="mt-1.5 flex gap-px">
-                  {Array.from({ length: t.max }).map((_, i) => (
-                    <div key={i} className="h-1.5 flex-1" style={{ background: i < l ? "#ffd24d" : "rgba(255,255,255,0.1)" }} />
-                  ))}
-                </div>
-                <div className="mt-2 flex items-center justify-between gap-2">
-                  <div className="text-xs text-cyan-100">{now}{!maxed && <span className="text-emerald-300"> → {next}</span>}</div>
-                  <div className="flex gap-1">
-                    {t.max > 1 && [1, 5].map((n) => (
-                      <button
-                        key={n}
-                        disabled={!can}
-                        onClick={() => game.buyCannon(t.id, n)}
-                        className={`rounded-sm border px-2 py-1 text-[11px] font-bold ${can ? "border-yellow-300 bg-yellow-300/15 text-yellow-200 hover:bg-yellow-300/30" : "border-white/10 text-white/30"}`}
-                      >
-                        +{n}
-                      </button>
+
+        <div className="relative mt-2 pl-3">
+          {/* the branch spine every upgrade node hangs off */}
+          <div className="absolute bottom-3 left-0 top-2 w-px bg-cyan-300/25" />
+          <div className="grid gap-1.5">
+            {cannonTracks(fitted).map((t) => {
+              const l = fittedLv[t.id] ?? 0;
+              const maxed = l >= t.max;
+              const room = t.max - l;
+              const price = free ? 0 : cannonTrackCost(fitted, t, l);
+              const now = cannonTrackValue(fitted, t.id, l);
+              const next = cannonTrackValue(fitted, t.id, Math.min(t.max, l + 1));
+              /* a size only shows if the track could ever take it, and it greys
+               * out the moment there is not enough of the track left */
+              const sizes = [1, 5, 10].filter((n) => t.max >= n);
+              const affordable = (n: number) => {
+                let total = 0;
+                for (let k = 0; k < n; k++) total += free ? 0 : cannonTrackCost(fitted, t, l + k);
+                return free || save.credits >= total;
+              };
+              const buy = (n: number) => {
+                let total = 0;
+                for (let k = 0; k < n; k++) total += free ? 0 : cannonTrackCost(fitted, t, l + k);
+                return `${n} level${n > 1 ? "s" : ""} for ${fmtNum(total)} CR`;
+              };
+              return (
+                <div key={t.id} className="relative rounded-sm border border-white/15 bg-white/[0.03] p-2">
+                  <div className="absolute -left-3 top-4 h-px w-3 bg-cyan-300/25" />
+                  <div className="flex items-center gap-1.5">
+                    <TrackIcon id={t.id} hue={fitted.look.hue} className="h-4 w-4 shrink-0" />
+                    <div className="min-w-0 flex-1 truncate text-[12px] font-bold text-yellow-200">{t.name}</div>
+                    <div className="shrink-0 text-[10px] text-white/55">LV {l}/{t.max}</div>
+                  </div>
+                  <div className="mt-0.5 text-[10px] leading-snug text-white/50">{t.desc}</div>
+                  <div className="mt-1 flex gap-px">
+                    {Array.from({ length: t.max }).map((_, i) => (
+                      <div key={i} className="h-1 flex-1" style={{ background: i < l ? "#ffd24d" : "rgba(255,255,255,0.1)" }} />
                     ))}
-                    {t.max > 1 && (
+                  </div>
+                  <div className="mt-1.5 flex items-center justify-between gap-2">
+                    <div className="min-w-0 truncate text-[11px] text-cyan-100">{now}{!maxed && <span className="text-emerald-300"> → {next}</span>}</div>
+                    <div className="flex shrink-0 gap-1">
+                      {sizes.map((n) => {
+                        const can = !maxed && room >= n && affordable(n);
+                        return (
+                          <button
+                            key={n}
+                            disabled={!can}
+                            onClick={() => game.buyCannon(t.id, n)}
+                            title={can ? buy(n) : room < n ? `only ${room} level${room === 1 ? "" : "s"} left` : "not enough credits"}
+                            className={`rounded-sm border px-1.5 py-0.5 text-[10px] font-bold ${can ? "border-yellow-300 bg-yellow-300/15 text-yellow-200 hover:bg-yellow-300/30" : "border-white/10 text-white/25"}`}
+                          >
+                            +{n}
+                          </button>
+                        );
+                      })}
                       <button
-                        disabled={!can}
-                        onClick={() => game.buyCannon(t.id, t.max - l)}
-                        className={`rounded-sm border px-2 py-1 text-[11px] font-bold ${can ? "border-cyan-300 bg-cyan-400/15 text-cyan-100 hover:bg-cyan-400/30" : "border-white/10 text-white/30"}`}
+                        disabled={maxed}
+                        onClick={() => game.buyCannon(t.id, room)}
+                        title={maxed ? "fully calibrated" : `all ${room} remaining level${room === 1 ? "" : "s"}`}
+                        className={`rounded-sm border px-1.5 py-0.5 text-[10px] font-bold ${maxed ? "border-white/10 text-white/25" : "border-cyan-300 bg-cyan-400/15 text-cyan-100 hover:bg-cyan-400/30"}`}
                       >
                         MAX
                       </button>
-                    )}
-                    {t.max === 1 && (
-                      <button
-                        disabled={!can}
-                        onClick={() => game.buyCannon(t.id, 1)}
-                        className={`rounded-sm border px-2 py-1 text-[11px] font-bold ${can ? "border-yellow-300 bg-yellow-300/15 text-yellow-200 hover:bg-yellow-300/30" : "border-white/10 text-white/30"}`}
-                      >
-                        FIT
-                      </button>
-                    )}
+                    </div>
                   </div>
+                  <div className="mt-0.5 text-right text-[9px] text-white/35">{maxed ? "fully calibrated" : `${fmtNum(price)} CR per level`}</div>
                 </div>
-                <div className="mt-1 text-right text-[10px] text-white/40">{maxed ? "fully calibrated" : `${fmtNum(price)} CR per level`}</div>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
         <p className="mt-2 text-[10px] leading-relaxed text-white/30">
-          Barrels stop at two: one extra round per trigger, and it is priced as the last thing a gun ever needs.
+          A button greys out when the gun has fewer levels left than it buys. Barrels stop at two, and the second one alternates with the first.
         </p>
       </div>
     </div>
@@ -786,10 +916,8 @@ function CannonTree({ game }: { game: Game }) {
 
 function Upgrades({ game }: { game: Game }) {
   const [cat, setCat] = useState<UpCat>("hull");
-  const [qty, setQty] = useState<1 | 5 | 10 | "max">(1);
   const save = game.save;
   const free = game.admin.on && game.admin.credits;
-  const qtyOptions: (1 | 5 | 10 | "max")[] = [1, 5, 10, "max"];
   return (
     <div>
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
@@ -798,30 +926,22 @@ function Upgrades({ game }: { game: Game }) {
             <button key={c.id} onClick={() => setCat(c.id)} className="rounded-sm border px-3 py-1 text-xs font-bold tracking-wider" style={{ borderColor: cat === c.id ? c.color : "rgba(255,255,255,0.15)", color: c.color, background: cat === c.id ? c.color + "22" : "transparent" }}>{c.name.toUpperCase()}</button>
           ))}
         </div>
-        <div className="flex items-center gap-1 rounded-sm border border-white/10 bg-white/[0.03] px-1.5 py-1">
-          <span className="mr-1 text-[9px] font-bold tracking-[0.18em] text-white/40">BUY</span>
-          {qtyOptions.map((q) => (
-            <button key={q} onClick={() => setQty(q)} className={`rounded-sm border px-1.5 py-0.5 text-[10px] font-bold ${qty === q ? "border-cyan-300 bg-cyan-400/25 text-white" : "border-white/15 text-cyan-200/60 hover:bg-white/10"}`}>
-              {q === "max" ? "MAX" : `${q}×`}
-            </button>
-          ))}
-        </div>
+        <div className="text-[9px] font-bold tracking-[0.18em] text-white/30">ONE BUTTON PER SIZE · A SIZE THAT DOES NOT FIT IS GREYED</div>
       </div>
       <div className="grid gap-2 md:grid-cols-2">
         {UPGRADES.filter((u) => u.cat === cat).map((u) => {
           const l = save.upgrades[u.id] ?? 0;
           const maxed = l >= u.max;
           const room = u.max - l;
-          const want = qty === "max" ? room : Math.min(qty, room);
-          let n = 0, total = 0, fullTotal = 0;
-          for (let k = 0; k < want; k++) {
-            const c = free ? 0 : upgradeCost(u, l + k);
-            fullTotal += c;
-            if (free || total + c <= save.credits) { total += c; n++; }
-          }
-          const can = !maxed && (qty === "max" ? n > 0 : n === want);
           const color = UP_CATS.find((c) => c.id === u.cat)!.color;
-          const label = maxed ? "MAX" : qty === "max" ? (n ? `MAX ${n}× · ${fmtNum(total)} CR` : `${fmtNum(upgradeCost(u, l))} CR`) : `${want}× · ${fmtNum(fullTotal)} CR`;
+          /* a size only shows if the track could ever take it, and it greys out
+           * the moment there is not enough of the track left to buy it */
+          const sizes = [1, 5, 10].filter((n) => u.max >= n);
+          const cost = (n: number) => {
+            let total = 0;
+            for (let k = 0; k < n; k++) total += free ? 0 : upgradeCost(u, l + k);
+            return total;
+          };
           return (
             <div key={u.id} className="rounded-sm border border-white/15 bg-white/[0.03] p-2.5">
               <div className="flex items-center justify-between">
@@ -833,10 +953,32 @@ function Upgrades({ game }: { game: Game }) {
                 {Array.from({ length: u.max }).map((_, i) => <div key={i} className="h-1.5 flex-1" style={{ background: i < l ? color : "rgba(255,255,255,0.1)" }} />)}
               </div>
               <div className="mt-2 flex items-center justify-between gap-2">
-                <div className="text-xs text-cyan-100">{u.fmt(l)}{!maxed && <span className="text-emerald-300"> → {u.fmt(l + 1)}</span>}</div>
-                <button disabled={!can} onClick={() => game.buy(u.id, qty === "max" ? room : want)} title={qty === "max" ? "Buy as many levels as you can afford" : `Buy ${want} level(s)`} className={`rounded-sm border px-3 py-1 text-xs font-bold ${can ? "border-yellow-300 bg-yellow-300/15 text-yellow-200 hover:bg-yellow-300/30" : "border-white/10 text-white/30"}`}>
-                  {label}
-                </button>
+                <div className="min-w-0 truncate text-xs text-cyan-100">{u.fmt(l)}{!maxed && <span className="text-emerald-300"> → {u.fmt(l + 1)}</span>}</div>
+                <div className="flex shrink-0 gap-1">
+                  {sizes.map((n) => {
+                    const price = cost(n);
+                    const can = !maxed && room >= n && (free || save.credits >= price);
+                    return (
+                      <button
+                        key={n}
+                        disabled={!can}
+                        onClick={() => game.buy(u.id, n)}
+                        title={can ? `${n} level${n > 1 ? "s" : ""} for ${fmtNum(price)} CR` : room < n ? `only ${room} level${room === 1 ? "" : "s"} left` : "not enough credits"}
+                        className={`rounded-sm border px-1.5 py-0.5 text-[10px] font-bold ${can ? "border-yellow-300 bg-yellow-300/15 text-yellow-200 hover:bg-yellow-300/30" : "border-white/10 text-white/25"}`}
+                      >
+                        +{n}
+                      </button>
+                    );
+                  })}
+                  <button
+                    disabled={maxed}
+                    onClick={() => game.buy(u.id, room)}
+                    title={maxed ? "maxed" : `all ${room} remaining level${room === 1 ? "" : "s"}`}
+                    className={`rounded-sm border px-1.5 py-0.5 text-[10px] font-bold ${maxed ? "border-white/10 text-white/25" : "border-cyan-300 bg-cyan-400/15 text-cyan-100 hover:bg-cyan-400/30"}`}
+                  >
+                    MAX
+                  </button>
+                </div>
               </div>
             </div>
           );

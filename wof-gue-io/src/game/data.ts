@@ -193,9 +193,17 @@ export interface CannonDef {
   muzzles: { x: number; y: number }[];
   /** hull shove (world units/s) applied along the shot */
   kick: number;
-  /** heat added per trigger, 0..1 of the gauge. Cooling is shared; each gun's
-   *  own curve and the overheat lockout arrive with the cooling tracks. */
+  /** heat added per trigger, 0..1 of the gauge (split between the barrels of a
+   *  twin, so a second barrel runs cooler). */
   heat: number;
+  /** damage multiplier at a full gauge; 1 (or absent) means heat does not feed
+   *  the round. The Workhorse reads 300/55 here: it chews harder as it cooks. */
+  heatMax?: number;
+  /** spread multiplier at a full gauge; a hot gun wanders. Absent means 1. */
+  heatSpread?: number;
+  /** seconds of forced cooling once the gauge fills; absent means the gun can
+   *  never overheat. */
+  overheat?: number;
   look: CannonLook;
   /** tracks this chassis owns, in display order */
   tracks: CannonTrackId[];
@@ -210,52 +218,53 @@ export const CANNONS: CannonDef[] = [
     desc: "Everyone’s gotta start somewhere.",
     dmg: 20, interval: 0.7, speed: 640, range: 820, boom: 1,
     credits: 0, parts: [], tracks: ["dmg"], costMul: 1, requires: null,
-    muzzles: [{ x: 19, y: 0 }], kick: 9, heat: 0.055,
+    muzzles: [{ x: 19, y: 0 }], kick: 9, heat: 0.055, heatMax: 1, heatSpread: 1,
     look: { len: 20, bore: 5.2, hue: 188, style: "bolt" },
   },
   {
-    id: "skewer", name: "Skewer", tier: 1,
+    id: "skewer", name: "Skewer MK1", tier: 1,
     desc: "Pretty accurate.",
-    dmg: 200, interval: 1.5, speed: 0, range: 2400, hitscan: true,
-    credits: 300,
+    dmg: 300, interval: 1.2, speed: 0, range: 2400, hitscan: true,
+    credits: 500,
     parts: [
       { kind: "leg", tier: 0, count: 2, label: "leg" },
       { kind: "spike", tier: 0, count: 1, name: "Antenna", label: "antenna" },
       { kind: "segment", tier: 0, count: 1, name: "Head", label: "head" },
-      { kind: "core", tier: 1, count: 1, label: "core" },
+      { kind: "core", tier: 0, count: 6, label: "core" },
     ],
-    tracks: ["dmg", "crit", "critDmg", "pen"], costMul: 2.4, requires: "sting",
-    muzzles: [{ x: 37, y: 0 }], kick: 34, heat: 0.34,
+    tracks: ["crit", "critDmg", "pen", "dmg"], costMul: 2.4, requires: "sting",
+    muzzles: [{ x: 37, y: 0 }], kick: 34, heat: 0.34, heatMax: 1, heatSpread: 1,
     look: { len: 38, bore: 3.2, hue: 196, style: "lance" },
   },
   {
-    id: "peashooter", name: "Peashooter", tier: 1,
+    id: "peashooter", name: "Peashooter MK1", tier: 1,
     desc: "Spray and pray, huh?",
     dmg: 35, interval: 0.1, speed: 430, range: 720, spread: 0.22,
     credits: 300,
     parts: [
       { kind: "leg", tier: 0, count: 2, label: "leg" },
-      { kind: "core", tier: 0, count: 1, label: "core" },
-      { kind: "core", tier: 1, count: 1, label: "core" },
+      { kind: "core", tier: 0, count: 6, label: "core" },
     ],
-    tracks: ["dmg", "acc", "speed", "crit", "critDmg"], costMul: 1, requires: "sting",
-    muzzles: [{ x: 16, y: 0 }], kick: 3, heat: 0.012,
+    tracks: ["acc", "speed", "dmg", "crit", "critDmg"], costMul: 1, requires: "sting",
+    muzzles: [{ x: 16, y: 0 }], kick: 3, heat: 0.012, heatMax: 1, heatSpread: 1,
     look: { len: 16, bore: 3.4, hue: 142, style: "spray" },
   },
   {
-    id: "workhorse", name: "Workhorse", tier: 1,
+    id: "workhorse", name: "Workhorse MK1", tier: 1,
     desc: "Boring...",
-    dmg: 45, interval: 0.55, speed: 720, range: 900, spread: 0.03,
-    credits: 300,
+    /* chews harder the hotter it gets and wanders the closer it is to cooking:
+     * 55 a round cold, 300 at a full gauge, then three seconds of cooling */
+    dmg: 55, interval: 0.55, speed: 720, range: 900, spread: 0.03,
+    credits: 500,
     parts: [
       { kind: "leg", tier: 0, count: 2, label: "leg" },
       { kind: "segment", tier: 0, count: 1, name: "Head", label: "head" },
-      { kind: "core", tier: 0, count: 1, label: "core" },
-      { kind: "core", tier: 1, count: 1, label: "core" },
+      { kind: "core", tier: 0, count: 5, label: "core" },
     ],
     tracks: ["dmg", "rate", "pen", "barrels"], costMul: 1.6, requires: "sting",
-    /* a genuine twin: rounds alternate barrels, and the barrel upgrade fires both */
-    muzzles: [{ x: 25, y: -5.5 }, { x: 25, y: 5.5 }], kick: 16, heat: 0.06,
+    /* a genuine twin: one round per trigger, alternating barrels, always */
+    muzzles: [{ x: 25, y: -5.5 }, { x: 25, y: 5.5 }], kick: 16, heat: 0.08,
+    heatMax: 300 / 55, heatSpread: 4, overheat: 3,
     look: { len: 26, bore: 4.6, hue: 34, style: "twin" },
   },
 ];
@@ -267,10 +276,10 @@ export const CANNON_TRACKS: CannonTrack[] = [
   { id: "rate", name: "Fire Rate", desc: "Shortens the reload between shots.", max: 20, base: 45, growth: 1.5 },
   { id: "crit", name: "Crit Chance", desc: "Chance for a round to find a seam and hit far harder.", max: 15, base: 120, growth: 1.55 },
   { id: "critDmg", name: "Crit Damage", desc: "How hard a critical round lands.", max: 15, base: 90, growth: 1.5 },
-  { id: "pen", name: "Physical Penetration", desc: "Rounds punch through one more piece before stopping.", max: 8, base: 260, growth: 1.65 },
+  { id: "pen", name: "Penetration", desc: "Rounds punch through one more piece before stopping.", max: 8, base: 260, growth: 1.65 },
   { id: "acc", name: "Accuracy", desc: "Tightens the spray pattern.", max: 15, base: 40, growth: 1.45 },
   { id: "speed", name: "Projectile Speed", desc: "Faster rounds: less lead on a moving target.", max: 12, base: 55, growth: 1.45 },
-  { id: "barrels", name: "Barrels", desc: "A second barrel: two rounds on every trigger. One level, and it costs more than the gun did.", max: 1, base: 6000, growth: 1 },
+  { id: "barrels", name: "Barrels", desc: "A second barrel. Rounds alternate between the two, so each barrel fires at half the rate and the gun runs cooler for longer.", max: 1, base: 6000, growth: 1 },
 ];
 export const CANNON_TRACK_BY_ID: Record<string, CannonTrack> = Object.fromEntries(CANNON_TRACKS.map((t) => [t.id, t]));
 /** the tracks a chassis actually carries, in display order */
@@ -299,6 +308,17 @@ export const cannonBarrels = (lv?: Record<string, number>) => 1 + Math.min(1, lv
 export const cannonSpeed = (c: CannonDef, lv?: Record<string, number>) => c.speed * Math.pow(1.08, lvl(lv, "speed"));
 /** muzzle spread in radians; the accuracy track tightens it by 10% a level */
 export const cannonSpread = (c: CannonDef, lv?: Record<string, number>) => (c.spread ?? 0) * Math.pow(0.9, lvl(lv, "acc"));
+/** damage multiplier at a given gauge level: 1 for every gun that does not cook */
+export const cannonHeatDmg = (c: CannonDef, heat: number) =>
+  1 + ((c.heatMax ?? 1) - 1) * clamp(heat, 0, 1);
+/** spread multiplier at a given gauge level: a hot barrel wanders */
+export const cannonHeatSpread = (c: CannonDef, heat: number) =>
+  1 + ((c.heatSpread ?? 1) - 1) * clamp(heat, 0, 1);
+/** a round's damage with the gauge where it is (the hull reads this for the HUD) */
+export const cannonHotDmg = (c: CannonDef, lv: Record<string, number> | undefined, heat: number) =>
+  cannonDmg(c, lv) * cannonHeatDmg(c, heat);
+/** this chassis can jam at all? */
+export const cannonJams = (c: CannonDef) => (c.overheat ?? 0) > 0;
 
 /** the number a track shows at a given level (the UI prints now → next) */
 export function cannonTrackValue(c: CannonDef, id: CannonTrackId, level: number): string {
@@ -805,6 +825,9 @@ export interface Stats {
   bulletSpeed: number; bulletRange: number;
   /** the fitted chassis and everything the hull and the HUD need to draw it */
   cannonId: string; muzzles: { x: number; y: number }[]; kick: number; heatPerShot: number;
+  /** how heat changes the gun: damage and spread multipliers at a full gauge,
+   *  and the forced cool-down in seconds (0 = this gun never jams) */
+  heatDmg: number; heatSpread: number; overheat: number;
   hull: number; regen: number; armor: number; reactive: number; thorn: number; poisonResist: number;
   shieldMax: number; shieldRegen: number; shieldDelay: number; reflect: boolean; dampers: number;
   dodge: number; kinetic: number; novaOnHit: number; nullField: number;
@@ -911,6 +934,9 @@ export function computeStats(s: SaveData): Stats {
     muzzles: cannon.muzzles,
     kick: cannon.kick,
     heatPerShot: cannon.heat,
+    heatDmg: cannon.heatMax ?? 1,
+    heatSpread: cannon.heatSpread ?? 1,
+    overheat: cannon.overheat ?? 0,
     hull,
     regen,
     armor,
