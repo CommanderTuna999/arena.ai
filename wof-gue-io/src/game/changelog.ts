@@ -8,7 +8,7 @@
  *   CHANGELOG and mirror the details in docs/CHANGELOG.md.
  */
 
-export const VERSION = "2.4.0";
+export const VERSION = "2.5.0";
 
 export interface ChangeEntry {
   version: string;
@@ -19,6 +19,17 @@ export interface ChangeEntry {
 }
 
 export const CHANGELOG: ChangeEntry[] = [
+  {
+    version: "2.5.0",
+    date: "21 Nov 2026",
+    title: "Accounts, a neon ladybug and a proper name",
+    points: [
+      "Log in with a callsign and a password. The title screen carries a small ACCOUNT chip: create an account once, then sign in from then on.",
+      "Every account gets its own save slot, so two pilots can share one browser without overwriting each other. Progress already made as a guest is carried into a new account on its first login instead of being thrown away.",
+      "Passwords are never stored as text. On a host with a database the server keeps a salted scrypt hash and a signed, http-only cookie holds the session; on a host without one the same login runs in the browser with PBKDF2, so the form works everywhere.",
+      "The browser tab now reads wofgue.io on every page, and the site icon is a neon ladybug instead of the framework default.",
+    ],
+  },
   {
     version: "2.4.0",
     date: "21 Nov 2026",
@@ -361,7 +372,7 @@ export const CHANGELOG: ChangeEntry[] = [
   {
     version: "1.0",
     date: "19 Nov 2026",
-    title: "Neon Hive expansion",
+    title: "First content expansion",
     points: [
       "22 new insect species plus a segmented boss, for 32 in total.",
       "51 recipes: 19 weapons, 10 shields, 11 armours, optics, utilities and 8 abilities.",

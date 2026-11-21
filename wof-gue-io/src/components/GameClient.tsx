@@ -13,8 +13,8 @@ import { SPECIES_LIST } from "@/game/enemies";
 import SettingsPanel from "@/components/SettingsPanel";
 import RecipeIcon from "@/components/RecipeIcon";
 import Bestiary, { BeeIcon } from "@/components/Bestiary";
+import { resolveSession, saveKeyFor } from "@/game/accounts";
 
-const SAVE_KEY = "neon-hive-save-v1";
 const PID_KEY = "neon-hive-pid";
 
 function getPid() {
@@ -26,10 +26,10 @@ function getPid() {
   return id;
 }
 
-async function loadSave(pid: string): Promise<SaveData> {
+async function loadSave(pid: string, saveKey: string): Promise<SaveData> {
   let local: SaveData | null = null;
   try {
-    const raw = localStorage.getItem(SAVE_KEY);
+    const raw = localStorage.getItem(saveKey);
     if (raw) local = migrate(JSON.parse(raw));
   } catch { /* ignore */ }
   let remote: SaveData | null = null;
@@ -54,6 +54,7 @@ export default function GameClient() {
   const [hud, setHud] = useState<Hud | null>(null);
   const creditRef = useRef<HTMLDivElement | null>(null);
   const [game, setGame] = useState<Game | null>(null);
+  const [account, setAccount] = useState<string | null>(null);
   const gameRef2 = useRef<Game | null>(null);
   useEffect(() => { gameRef2.current = game; }, [game]);
 
@@ -95,12 +96,18 @@ export default function GameClient() {
     const cleanups: (() => void)[] = [];
 
     (async () => {
-      const pid = getPid();
-      const save = await loadSave(pid);
+      /* Accounts come first: a signed-in player plays their own save slot. */
+      const sess = await resolveSession();
+      if (stopped) return;
+      setAccount(sess?.name ?? null);
+      const pid = sess ? sess.id : getPid();
+      const saveKey = saveKeyFor(sess);
+      const save = await loadSave(pid, saveKey);
       if (stopped) return;
       const canvas = canvasRef.current!;
       const ctx = canvas.getContext("2d")!;
       const game = new Game(save, pid);
+      game.localSaveKey = saveKey;
       gameRef.current = game;
       setGame(game);
       if (!localStorage.getItem("neon-hive-help")) setHelp(true);
@@ -194,7 +201,7 @@ export default function GameClient() {
       <canvas ref={canvasRef} className="block cursor-crosshair" />
       <div className="pointer-events-none fixed inset-0" style={{ background: "radial-gradient(ellipse at center, transparent 55%, rgba(0,0,10,0.65) 100%)" }} />
       {!hud && <div className="absolute inset-0 grid place-items-center text-xl tracking-[0.4em] text-cyan-300">LOADING SAVE…</div>}
-      {hud && game && <Hud_ hud={hud} creditRef={creditRef} onOpen={() => { game.blur(); setAdminOpen(false); setMenu(true); }} onHelp={() => setHelp(true)} onAdmin={() => { game.blur(); setMenu(false); setAdminOpen(true); }} onToggleAuto={() => game.toggleAutoFire()} onSettings={() => { game.blur(); setSettingsOpen(true); }} onBestiary={() => { game.blur(); setBestiaryOpen(true); }} onHome={goHome} />}
+      {hud && game && <Hud_ hud={hud} creditRef={creditRef} onOpen={() => { game.blur(); setAdminOpen(false); setMenu(true); }} onHelp={() => setHelp(true)} onAdmin={() => { game.blur(); setMenu(false); setAdminOpen(true); }} onToggleAuto={() => game.toggleAutoFire()} onSettings={() => { game.blur(); setSettingsOpen(true); }} onBestiary={() => { game.blur(); setBestiaryOpen(true); }} onHome={goHome} account={account} />}
       {hud && game && adminOpen && <AdminPanel game={game} hud={hud} onClose={() => setAdminOpen(false)} />}
       {hud && game && menu && <Hangar game={game} hud={hud} onClose={() => setMenu(false)} />}
       {game && bestiaryOpen && <Bestiary bestiary={game.save.bestiary ?? {}} onClose={() => { setBestiaryOpen(false); game.blur(); }} />}
@@ -269,7 +276,7 @@ function HarpoonGlyph({ state, load, hp }: { state: number; load: number; hp: nu
   );
 }
 
-function Hud_({ hud, creditRef, onOpen, onHelp, onAdmin, onSettings, onBestiary, onHome, onToggleAuto }: { hud: Hud; creditRef: React.RefObject<HTMLDivElement | null>; onOpen: () => void; onHelp: () => void; onAdmin: () => void; onSettings: () => void; onBestiary: () => void; onHome: () => void; onToggleAuto: () => void }) {
+function Hud_({ hud, creditRef, onOpen, onHelp, onAdmin, onSettings, onBestiary, onHome, onToggleAuto, account }: { hud: Hud; creditRef: React.RefObject<HTMLDivElement | null>; onOpen: () => void; onHelp: () => void; onAdmin: () => void; onSettings: () => void; onBestiary: () => void; onHome: () => void; onToggleAuto: () => void; account: string | null }) {
   const hpCol = hud.hp / hud.maxHp > 0.5 ? "#2dffa0" : hud.hp / hud.maxHp > 0.25 ? "#ffd24d" : "#ff4d6d";
   const [selAb, setSelAb] = useState<number | null>(null);
   return (
@@ -330,6 +337,7 @@ function Hud_({ hud, creditRef, onOpen, onHelp, onAdmin, onSettings, onBestiary,
           AUTO {hud.autoFire ? "ON" : "OFF"}
         </button>
         {hud.overdrive && <span className="font-bold text-yellow-300">⚡ OVERDRIVE</span>}
+        {account && <span className="text-cyan-200/45">@{account}</span>}
         {hud.admin.on && <span className="font-bold text-fuchsia-300">ADMIN</span>}
       </div>
 

@@ -1,14 +1,21 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useRef, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { migrate, newSave, type SaveData } from "@/game/data";
 import { VERSION } from "@/game/changelog";
 import SettingsPanel from "@/components/SettingsPanel";
 import ChangelogPanel from "@/components/ChangelogPanel";
 import Backdrop from "@/components/Backdrop";
+import AuthPanel from "@/components/AuthPanel";
+import {
+  GUEST_SAVE_KEY, resolveSession, saveKeyFor, signOut,
+  type Session,
+} from "@/game/accounts";
 
-const SAVE_KEY = "neon-hive-save-v1";
+/* Which save this browser is showing: the guest profile, or the signed-in
+ * profile's own slot. Signing in swaps the key and the store re-reads. */
+let activeSaveKey = GUEST_SAVE_KEY;
 
 /* ------------------------------------------------------------------ store
  * A tiny external store for the local save so the title screen can read it
@@ -21,7 +28,7 @@ const listeners = new Set<() => void>();
 
 function readLocal(): SaveData {
   try {
-    const raw = localStorage.getItem(SAVE_KEY);
+    const raw = localStorage.getItem(activeSaveKey);
     if (raw) return migrate(JSON.parse(raw));
   } catch { /* storage may be unavailable */ }
   return newSave();
@@ -32,7 +39,7 @@ function currentSave(): SaveData {
    * unmounting on the way back to this screen, and a stale module-level cache
    * used to resurrect pre-run progress (wiping the run on the next PLAY). */
   let raw: string | null = null;
-  try { raw = localStorage.getItem(SAVE_KEY); } catch { /* storage may be unavailable */ }
+  try { raw = localStorage.getItem(activeSaveKey); } catch { /* storage may be unavailable */ }
   if (!clientSave || raw !== clientRaw) {
     clientRaw = raw;
     clientSave = readLocal();
@@ -42,14 +49,14 @@ function currentSave(): SaveData {
 
 function storeSave(save: SaveData) {
   clientSave = save;
-  try { clientRaw = JSON.stringify(save); localStorage.setItem(SAVE_KEY, clientRaw); } catch { /* ignore */ }
+  try { clientRaw = JSON.stringify(save); localStorage.setItem(activeSaveKey, clientRaw); } catch { /* ignore */ }
   listeners.forEach((l) => l());
 }
 
 function subscribe(listener: () => void) {
   listeners.add(listener);
   const onStorage = (e: StorageEvent) => {
-    if (e.key !== SAVE_KEY) return;
+    if (e.key !== activeSaveKey) return;
     clientSave = null;
     clientRaw = null;
     listener();
@@ -61,16 +68,46 @@ function subscribe(listener: () => void) {
   };
 }
 
+/** Point the store at another profile's save slot and re-read it. */
+function activateKey(key: string) {
+  if (key === activeSaveKey) return;
+  activeSaveKey = key;
+  clientSave = null;
+  clientRaw = null;
+  listeners.forEach((l) => l());
+}
+
 /** Wofgue.io title screen: callsign, Play, settings and changelog. */
 export default function StartScreen() {
   const router = useRouter();
   const save = useSyncExternalStore(subscribe, currentSave, () => SERVER_SAVE);
   const [typedName, setTypedName] = useState<string | null>(null);
-  const name = typedName ?? save.name;
   const [err, setErr] = useState("");
   const [settings, setSettings] = useState(false);
   const [changes, setChanges] = useState(false);
+  const [authOpen, setAuthOpen] = useState(false);
+  const [sess, setSess] = useState<Session | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const name = typedName ?? (save.name || sess?.name || "");
+
+  /* Signing in swaps the save slot under the title screen, so the store is
+   * pointed at the right key as soon as the session is known. */
+  const enterProfile = useCallback((next: Session | null) => {
+    activateKey(saveKeyFor(next));
+    setSess(next);
+    setTypedName(null);
+  }, []);
+
+  useEffect(() => {
+    let alive = true;
+    void resolveSession().then((s) => { if (alive) enterProfile(s); });
+    return () => { alive = false; };
+  }, [enterProfile]);
+
+  const logout = async () => {
+    await signOut();
+    enterProfile(null);
+  };
 
   const persist = (next: SaveData) => storeSave(next);
 
@@ -88,6 +125,27 @@ export default function StartScreen() {
   return (
     <main className="relative flex min-h-[100dvh] w-full flex-col items-center justify-center overflow-hidden bg-[#04050c] px-6 py-12 text-slate-100">
       <Backdrop />
+
+      <div className="absolute right-4 top-4 z-20 flex items-center gap-2 text-[10px] tracking-[0.2em]">
+        {sess ? (
+          <>
+            <span className="max-w-[9rem] truncate text-cyan-200/80" title="Signed in">@{sess.name}</span>
+            <button
+              onClick={() => void logout()}
+              className="rounded-sm border border-white/15 px-2 py-1 font-bold text-white/35 transition hover:border-cyan-300/50 hover:text-cyan-200"
+            >
+              LOG OUT
+            </button>
+          </>
+        ) : (
+          <button
+            onClick={() => setAuthOpen(true)}
+            className="rounded-sm border border-cyan-300/40 px-2.5 py-1 font-bold text-cyan-200/80 transition hover:border-cyan-300 hover:bg-cyan-400/10 hover:text-cyan-100"
+          >
+            LOG IN
+          </button>
+        )}
+      </div>
 
       <div className="relative z-10 flex w-full flex-col items-center">
         <h1 className="select-none whitespace-nowrap text-center text-[clamp(2.9rem,14.5vw,10.5rem)] font-black uppercase leading-[0.82] tracking-[-0.055em] text-white [text-shadow:0_0_16px_rgba(125,249,255,0.35),0_0_70px_rgba(77,255,210,0.28),0_0_140px_rgba(77,255,210,0.16)]">
@@ -158,6 +216,13 @@ export default function StartScreen() {
         </Modal>
       )}
       {changes && <ChangelogPanel onClose={() => setChanges(false)} />}
+      {authOpen && (
+        <Modal title="ACCOUNT" onClose={() => setAuthOpen(false)}>
+          <AuthPanel
+            onDone={(next) => { setAuthOpen(false); enterProfile(next); }}
+          />
+        </Modal>
+      )}
     </main>
   );
 }

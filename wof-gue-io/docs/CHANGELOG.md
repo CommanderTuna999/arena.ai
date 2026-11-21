@@ -3,6 +3,33 @@
 Everything below is implemented in the current build. Numbers are the actual constants used by
 the simulation, not design targets.
 
+## 0. v2.5.0 — accounts, neon ladybug, real name on the tab
+
+### Accounts
+- `src/server/auth.ts` + `/api/auth/{register,login,logout,me}`: callsigns are unique (case-insensitive
+  `name_key`), passwords are `scrypt` hashes with a 16-byte per-user salt, and comparison is constant-time.
+  The session is a `wof_session` cookie: http-only, sameSite=lax, 30 days, HMAC-SHA256 signed payload
+  (`AUTH_SECRET`, falling back to a dev secret), `secure` in production.
+- `users` was added to `src/db/schema.ts`; `ensureSchema()` creates the table with `create table if not
+  exists` on the first auth call, so a fresh Postgres needs no migration step.
+- `src/game/accounts.ts` is the one client API (`register`, `signIn`, `signOut`, `resolveSession`,
+  `saveKeyFor`, `adoptGuestSave`). It asks `/api/auth/me` whether the host has a database: if yes the
+  server does the hashing, if no the same form registers a browser account (PBKDF2-SHA256, 120k rounds,
+  16-byte salt, only the hash is written to `wof.accounts.v1`).
+- Saves are per profile: guest stays on `neon-hive-save-v1`, accounts get `neon-hive-save-v1::<user id>`
+  locally and the server row is keyed by the user id. `/api/save` now ignores the request id when a
+  session cookie is present, so a signed-in player can only read and write their own save.
+  `adoptGuestSave()` seeds a new account from the guest slot so signing up never loses progress.
+- The title screen shows a small `@callsign / LOG OUT` chip top-right, or `LOG IN` when signed out; the
+  ACCOUNT modal holds the LOG IN / CREATE ACCOUNT form. In-game the handle rides next to AUTO in the top
+  strip.
+
+### Site identity
+- `src/app/play/page.tsx` metadata title is now `wofgue.io` (it still said `Neon Hive — Play`), matching
+  the root layout. The historical changelog title "Neon Hive expansion" was renamed.
+- `src/app/icon.svg` is a neon ladybug — crimson shell with a cyan rim and glow, dark head, cyan legs and
+  antennae with lit tips — served by Next's icon convention at `/icon.svg` with `sizes="any"`.
+
 ## 0. v2.4.0 — neon credit chip, bestiary by rarity
 
 ### Credit chip
