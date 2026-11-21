@@ -3,6 +3,37 @@
 Everything below is implemented in the current build. Numbers are the actual constants used by
 the simulation, not design targets.
 
+## 0. v2.7.0 — aggro ranges, deploy standby screen, transparent icon
+
+### Aggro by rarity
+- `AGGRO_RANGE = [360, 460, 580, 720, 880, 1060]` for tiers 0-5, plus `min(radius, 700) * 0.22`;
+  the old formula was `(650 + radius * 1.2) * (1 + 0.12 * tier)` with a 2.4-5.4x leash, which let even
+  a common trail you across the map.
+- The leash is now `1.18x` the notice range, so leaving the range ends the chase on the next tick:
+  `e.aggro = false`, `e.act = null` (no half-finished lunge) and `e.gap >= 0.5`. Lost-aggression bugs
+  fall back to the existing wander code, which walks them home once they are more than 700u out.
+- The boss gets `1.6x` notice range and a `2.4x` leash so it still hunts the middle of the map.
+
+### Deploy standby screen
+- `GET /api/update-status` compares `VERCEL_GIT_COMMIT_SHA` with the repo's HEAD commit on the same
+  branch (GitHub API, 45 s in-memory cache, silent on failure). On a local build without Vercel's git
+  env it reports `tracking: false`.
+- `UpdateGuard` (mounted in the root layout, so every page has it) polls that endpoint every 8 s and on
+  visibility/pageshow. A newer commit puts up "PAUSING GAMEPLAY FOR UPDATE · PLEASE STAND BY",
+  dispatches `wof:updating` (GameClient sets `game.paused = true`, blurs input and calls `beaconSave()`)
+  and keeps holding until the new build is live. If the build's `VERSION` no longer matches the
+  bundle, the tab reloads into the new build once (`?v=` cache buster, sessionStorage guard).
+  A push that never gets deployed gives up after four minutes so the game is not walled off.
+- `VersionGuard` is gone; its cache/service-worker cleanup moved into `UpdateGuard`.
+
+### Icon
+- `src/app/icon.svg` dropped the dark rounded tile and its rim: the mantis now sits on a transparent
+  background.
+
+### Database
+- The `pg` pool is sized for serverless (`max: 5`, 30 s idle timeout, `allowExitOnIdle`) so a pooled
+  Neon connection string is safe to attach.
+
 ## 0. v2.6.0 — guest runs, mantis icon, magnet cap at mass 7
 
 ### Guests are anonymous and non-persistent

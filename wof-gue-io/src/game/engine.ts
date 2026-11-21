@@ -96,6 +96,15 @@ const SHELL_DMG = 2_500_000;
 const MYTHIC_SHELL_FRAC = 0.55;
 /** Only parts this light can be dragged by the magnet or scooped on contact. */
 const PICKUP_MASS = 7;
+/* How far a bug notices the player, per rarity (common -> mythical). A big body
+ * adds a little reach on top; the leash is only a hair longer than the notice
+ * range, so stepping out of it ends the chase. */
+const AGGRO_RANGE = [360, 460, 580, 720, 880, 1060];
+const AGGRO_SIZE = 0.22;
+const AGGRO_LEASH = 1.18;
+/** The one boss hunts across most of the middle of the map. */
+const BOSS_AGGRO_MUL = 1.6;
+const BOSS_LEASH = 2.4;
 const BASE_REPAIR_IDLE = 120;
 /** the siege cannon stays powered for this long after the last intruder leaves */
 const BASE_POWER_IDLE = 120;
@@ -765,6 +774,8 @@ export class Game {
     this.zoom = clamp(this.zoom * (dy > 0 ? 0.9 : 1.1), this.stats.zoomMin, 1);
   }
   blur() { this.input.keys.clear(); this.input.lmb = false; }
+  /** Halts the simulation while the site swaps in a new build. */
+  paused = false;
 
   private abilityAt(i: number) {
     const id = this.save.abilitySlots[i];
@@ -2220,10 +2231,20 @@ export class Game {
       if (e.dotT <= 0) e.dot = 0;
     }
     const safe = this.inSafe() || p.dead;
-    // higher tiers refuse to let you disengage: bigger aggro radius and a much longer leash
-    const aggroR = (650 + Math.min(e.radius, 700) * 1.2) * (1 + 0.12 * e.tier);
-    if (!e.aggro) { if (!safe && dist < aggroR) e.aggro = true; }
-    else if (safe || dist > aggroR * (2.4 + 0.6 * e.tier)) e.aggro = false;
+    /* Aggro range scales with rarity: a common barely notices you, a mythical
+     * picks you up from a screen and a half away. Walk out of that range and
+     * the chase is over - the bug drops whatever it was winding up and goes
+     * back to patrolling its home ground. */
+    const boss = e.chunk === "boss";
+    const noticeR = (AGGRO_RANGE[clamp(e.tier, 0, 5)] + Math.min(e.radius, 700) * AGGRO_SIZE) * (boss ? BOSS_AGGRO_MUL : 1);
+    const leashR = noticeR * (boss ? BOSS_LEASH : AGGRO_LEASH);
+    if (!e.aggro) {
+      if (!safe && dist < noticeR) e.aggro = true;
+    } else if (safe || dist > leashR) {
+      e.aggro = false;
+      e.act = null;           // no half-finished lunges once interest is lost
+      e.gap = Math.max(e.gap, 0.5);
+    }
     for (let i = 0; i < e.abilCd.length; i++) if (e.abilCd[i] > 0) e.abilCd[i] -= dt;
     if (e.gap > 0) e.gap -= dt;
 
@@ -3295,6 +3316,7 @@ export class Game {
 
   /* ---------------- main update ---------------- */
   update(dtRaw: number) {
+    if (this.paused) { this.blur(); return; }
     const dt = Math.min(dtRaw, 0.05);
     this.t += dt;
     if (this.discovery) { this.discovery.t -= dt; if (this.discovery.t <= 0) this.discovery = null; }

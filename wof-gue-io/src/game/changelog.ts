@@ -8,7 +8,7 @@
  *   CHANGELOG and mirror the details in docs/CHANGELOG.md.
  */
 
-export const VERSION = "2.6.0";
+export const VERSION = "2.7.0";
 
 export interface ChangeEntry {
   version: string;
@@ -19,6 +19,17 @@ export interface ChangeEntry {
 }
 
 export const CHANGELOG: ChangeEntry[] = [
+  {
+    version: "2.7.0",
+    date: "21 Nov 2026",
+    title: "Aggro ranges, standby screen, clean icon",
+    points: [
+      "Every bug now has an aggro range that follows its rarity: about 360u for a common, rising to 1060u for a mythical, plus a little extra for a big body. Bigger rarities notice you further out.",
+      "Step out of that range and the chase ends - the bug drops the swing or lunge it was winding up and wanders back to its home ground. The only exception is the boss, which hunts across most of the middle of the map.",
+      "Pushing an update now puts the live site on standby: within a few seconds of a new commit the screen reads PAUSING GAMEPLAY FOR UPDATE, the simulation is paused and saves are flushed, then the tab reloads itself into the new build.",
+      "The site icon is the mantis on a transparent background now, with no tile behind it.",
+    ],
+  },
   {
     version: "2.6.0",
     date: "21 Nov 2026",

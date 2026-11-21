@@ -170,6 +170,16 @@ export default function GameClient() {
         window.removeEventListener("mouseup", mu); canvas.removeEventListener("contextmenu", cm); canvas.removeEventListener("wheel", wh);
       });
 
+      /* The site pauses the sim while it swaps to a new build (see UpdateGuard). */
+      const onUpdating = () => { game.paused = true; game.beaconSave(); };
+      const onResume = () => { game.paused = false; };
+      window.addEventListener("wof:updating", onUpdating);
+      window.addEventListener("wof:resume", onResume);
+      cleanups.push(() => {
+        window.removeEventListener("wof:updating", onUpdating);
+        window.removeEventListener("wof:resume", onResume);
+      });
+
       const vis = () => { if (document.visibilityState === "hidden") game.beaconSave(); };
       const unload = () => game.beaconSave();
       document.addEventListener("visibilitychange", vis);

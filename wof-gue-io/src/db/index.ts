@@ -14,7 +14,16 @@ const globalForDb = globalThis as typeof globalThis & {
 };
 
 export const pool: Pool | null = databaseUrl
-  ? (globalForDb.__arenaNextJsPostgresqlPool ?? new Pool({ connectionString: databaseUrl }))
+  ? (globalForDb.__arenaNextJsPostgresqlPool ?? new Pool({
+      connectionString: databaseUrl,
+      /* Serverless: many short-lived instances, so keep each one's pool small
+       * and let idle clients go. A pooled Neon/Vercel connection string does the
+       * real fan-in for us. */
+      max: 5,
+      idleTimeoutMillis: 30_000,
+      connectionTimeoutMillis: 10_000,
+      allowExitOnIdle: true,
+    }))
   : null;
 
 if (process.env.NODE_ENV !== "production" && pool) {

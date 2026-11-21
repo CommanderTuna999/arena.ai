@@ -1,7 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
 <defs><filter id="g" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="0.7" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
-<rect width="64" height="64" rx="14" fill="#050a10"/>
-<rect x="0.75" y="0.75" width="62.5" height="62.5" rx="13.25" fill="none" stroke="#2b6f4f" stroke-width="1.5" opacity="0.9"/>
 <g filter="url(#g)">
 <polygon points="31.83,35.32 35.31,41.00 37.34,39.81 34.06,34.00" fill="hsla(92,60%,14%,0.92)" stroke="hsl(92,70%,46%)" stroke-width="1.1" stroke-linejoin="round"/>
 <polygon points="34.77,40.09 38.19,45.69 40.03,44.61 36.80,38.89" fill="hsla(92,60%,14%,0.92)" stroke="hsl(92,70%,46%)" stroke-width="1.1" stroke-linejoin="round"/>
