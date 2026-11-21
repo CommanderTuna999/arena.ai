@@ -809,8 +809,27 @@ function Settings({ game }: { game: Game }) {
 /* ---------------------------------------------------------------- Admin */
 function AdminPanel({ game, hud, onClose }: { game: Game; hud: Hud; onClose: () => void }) {
   const a = hud.admin;
-  const [spi, setSpi] = useState(0);
-  const [tier, setTier] = useState(2);
+  /* Remember the last species/rarity picked in the spawner: spawning the same
+   * test subject over and over should not need two dropdown clicks each time.
+   * The panel only mounts after a click, so reading storage here is client-only. */
+  const [spawn, setSpawn] = useState<{ spi: number; tier: number }>(() => {
+    try {
+      const raw = typeof window !== "undefined" ? window.localStorage.getItem("wof-admin-spawn") : null;
+      if (!raw) return { spi: 0, tier: 2 };
+      const o = JSON.parse(raw) as { id?: string; tier?: number };
+      const idx = o.id ? SPECIES_LIST.findIndex((sp) => sp.id === o.id) : -1;
+      const tv = typeof o.tier === "number" ? clamp(Math.round(o.tier), 0, 5) : 2;
+      return { spi: idx >= 0 ? idx : 0, tier: tv };
+    } catch { return { spi: 0, tier: 2 }; }
+  });
+  const spi = spawn.spi, tier = spawn.tier;
+  const setSpi = (v: number) => setSpawn((cur) => ({ ...cur, spi: v }));
+  const setTier = (v: number) => setSpawn((cur) => ({ ...cur, tier: v }));
+  useEffect(() => {
+    try {
+      window.localStorage.setItem("wof-admin-spawn", JSON.stringify({ id: SPECIES_LIST[spi]?.id, tier }));
+    } catch { /* storage unavailable */ }
+  }, [spi, tier]);
   const rows: [keyof typeof a, string, string][] = [
     ["credits", "Infinite Credits", "Upgrades cost nothing and crafting stays affordable."],
     ["health", "Infinite Health", "Hull and shield are pinned at maximum."],

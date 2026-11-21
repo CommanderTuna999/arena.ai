@@ -8,7 +8,7 @@
  *   CHANGELOG and mirror the details in docs/CHANGELOG.md.
  */
 
-export const VERSION = "2.0.7";
+export const VERSION = "2.0.8";
 
 export interface ChangeEntry {
   version: string;
@@ -19,6 +19,16 @@ export interface ChangeEntry {
 }
 
 export const CHANGELOG: ChangeEntry[] = [
+  {
+    version: "2.0.8",
+    date: "21 Nov 2026",
+    title: "Enemies that can actually turn",
+    points: [
+      "Rarity no longer divides turn rate: common through epic all turn at the species rate (the old formula divided it by up to 4.2x), legendary turns at 0.9x and mythical at 0.8x. A mythical now swings around in about two seconds instead of ten.",
+      "Legs are now the steering: each destroyed leg part scales the turn rate down in proportion to the legs still attached. Half the legs gone means half the turn rate, and a legless body cannot turn at all (it also cannot walk). Serpentine bodies have no legs and keep steering normally.",
+      "The admin spawner remembers the species and rarity you last picked (browser storage), so reopening the panel lands on the same test subject.",
+    ],
+  },
   {
     version: "2.0.7",
     date: "21 Nov 2026",

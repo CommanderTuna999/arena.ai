@@ -1,5 +1,5 @@
 WOF GUE — STAT COMPENDIUM
-Build 2.0.7 · 21 November 2026
+Build 2.0.8 · 21 November 2026
 
 HOW TO READ THIS
 C / U / R / E / L / M = Common, Uncommon, Rare, Epic, Legendary, Mythic.
@@ -47,6 +47,7 @@ Hull shells (armour plating): tier 2 and above carry solid layers holding 60% of
 ════════════════════════════════════════
 ENEMIES — 32 SPECIES
 ════════════════════════════════════════
+Turn speed: common through epic share the species rate; legendary ×0.9, mythical ×0.8. Destroyed legs scale it down and a legless body cannot turn.
 
 ────────────────────────────────────────
 1. DRAGONFLY
@@ -63,7 +64,7 @@ CORE HEALTH
 C 30 · U 120 · R 540 · E 2,400 · L 10,800 · M 48,000
 
 TURN SPEED
-C 2.12 · U 1.03 · R 0.68 · E 0.51 · L 0.41 · M 0.34
+C 2.12 · U 2.12 · R 2.12 · E 2.12 · L 1.91 · M 1.70
 
 MOVE SPEED
 C 210 · U 218 · R 227 · E 235 · L 244 · M 252
@@ -107,7 +108,7 @@ CORE HEALTH
 C 30 · U 120 · R 540 · E 2,400 · L 10,800 · M 48,000
 
 TURN SPEED
-C 1.46 · U 0.71 · R 0.47 · E 0.35 · L 0.28 · M 0.23
+C 1.46 · U 1.46 · R 1.46 · E 1.46 · L 1.31 · M 1.17
 
 MOVE SPEED
 C 115 · U 120 · R 124 · E 129 · L 133 · M 138
@@ -150,7 +151,7 @@ CORE HEALTH
 C 30 · U 120 · R 540 · E 2,400 · L 10,800 · M 48,000
 
 TURN SPEED
-C 1.69 · U 0.82 · R 0.55 · E 0.41 · L 0.32 · M 0.27
+C 1.69 · U 1.69 · R 1.69 · E 1.69 · L 1.52 · M 1.35
 
 MOVE SPEED
 C 140 · U 146 · R 151 · E 157 · L 162 · M 168
@@ -193,7 +194,7 @@ CORE HEALTH
 C 30 · U 120 · R 540 · E 2,400 · L 10,800 · M 48,000
 
 TURN SPEED
-C 1.83 · U 0.89 · R 0.59 · E 0.44 · L 0.35 · M 0.29
+C 1.83 · U 1.83 · R 1.83 · E 1.83 · L 1.65 · M 1.47
 
 MOVE SPEED
 C 130 · U 135 · R 140 · E 146 · L 151 · M 156
@@ -237,7 +238,7 @@ CORE HEALTH
 C 30 · U 120 · R 540 · E 2,400 · L 10,800 · M 48,000
 
 TURN SPEED
-C 1.94 · U 0.95 · R 0.62 · E 0.47 · L 0.37 · M 0.31
+C 1.94 · U 1.94 · R 1.94 · E 1.94 · L 1.74 · M 1.55
 
 MOVE SPEED
 C 120 · U 125 · R 130 · E 134 · L 139 · M 144
@@ -281,7 +282,7 @@ CORE HEALTH
 C 30 · U 120 · R 540 · E 2,400 · L 10,800 · M 48,000
 
 TURN SPEED
-C 1.43 · U 0.68 · R 0.43 · E 0.31 · L 0.24 · M 0.20
+C 1.43 · U 1.39 · R 1.35 · E 1.31 · L 1.14 · M 0.98
 
 MOVE SPEED
 C 170 · U 177 · R 184 · E 190 · L 197 · M 204
@@ -324,7 +325,7 @@ CORE HEALTH
 C 30 · U 120 · R 540 · E 2,400 · L 10,800 · M 48,000
 
 TURN SPEED
-C 2.26 · U 1.10 · R 0.73 · E 0.55 · L 0.43 · M 0.36
+C 2.26 · U 2.26 · R 2.26 · E 2.26 · L 2.04 · M 1.81
 
 MOVE SPEED
 C 190 · U 198 · R 205 · E 213 · L 220 · M 228
@@ -367,7 +368,7 @@ CORE HEALTH
 C 30 · U 120 · R 540 · E 2,400 · L 10,800 · M 48,000
 
 TURN SPEED
-C 1.86 · U 0.91 · R 0.60 · E 0.45 · L 0.36 · M 0.30
+C 1.86 · U 1.86 · R 1.86 · E 1.86 · L 1.68 · M 1.49
 
 MOVE SPEED
 C 110 · U 114 · R 119 · E 123 · L 128 · M 132
@@ -408,7 +409,7 @@ CORE HEALTH
 C 30 · U 120 · R 540 · E 2,400 · L 10,800 · M 48,000
 
 TURN SPEED
-C 2.19 · U 1.07 · R 0.71 · E 0.53 · L 0.42 · M 0.35
+C 2.19 · U 2.19 · R 2.19 · E 2.19 · L 1.97 · M 1.75
 
 MOVE SPEED
 C 150 · U 156 · R 162 · E 168 · L 174 · M 180
@@ -451,7 +452,7 @@ CORE HEALTH
 C 30 · U 120 · R 540 · E 2,400 · L 10,800 · M 48,000
 
 TURN SPEED
-C 1.81 · U 0.89 · R 0.59 · E 0.44 · L 0.35 · M 0.29
+C 1.81 · U 1.81 · R 1.81 · E 1.81 · L 1.63 · M 1.45
 
 MOVE SPEED
 C 125 · U 130 · R 135 · E 140 · L 145 · M 150
@@ -495,7 +496,7 @@ CORE HEALTH
 C 30 · U 120 · R 540 · E 2,400 · L 10,800 · M 48,000
 
 TURN SPEED
-C 2.42 · U 1.18 · R 0.78 · E 0.58 · L 0.46 · M 0.39
+C 2.42 · U 2.42 · R 2.42 · E 2.42 · L 2.18 · M 1.93
 
 MOVE SPEED
 C 165 · U 172 · R 178 · E 185 · L 191 · M 198
@@ -535,7 +536,7 @@ CORE HEALTH
 C 30 · U 120 · R 540 · E 2,400 · L 10,800 · M 48,000
 
 TURN SPEED
-C 2.31 · U 1.13 · R 0.74 · E 0.56 · L 0.44 · M 0.37
+C 2.31 · U 2.31 · R 2.31 · E 2.31 · L 2.08 · M 1.85
 
 MOVE SPEED
 C 175 · U 182 · R 189 · E 196 · L 203 · M 210
@@ -575,7 +576,7 @@ CORE HEALTH
 C 30 · U 120 · R 540 · E 2,400 · L 10,800 · M 48,000
 
 TURN SPEED
-C 1.88 · U 0.92 · R 0.61 · E 0.45 · L 0.36 · M 0.30
+C 1.88 · U 1.88 · R 1.88 · E 1.88 · L 1.69 · M 1.50
 
 MOVE SPEED
 C 155 · U 161 · R 167 · E 174 · L 180 · M 186
@@ -615,7 +616,7 @@ CORE HEALTH
 C 30 · U 120 · R 540 · E 2,400 · L 10,800 · M 48,000
 
 TURN SPEED
-C 2.36 · U 1.15 · R 0.76 · E 0.57 · L 0.45 · M 0.38
+C 2.36 · U 2.36 · R 2.36 · E 2.36 · L 2.13 · M 1.89
 
 MOVE SPEED
 C 190 · U 198 · R 205 · E 213 · L 220 · M 228
@@ -655,7 +656,7 @@ CORE HEALTH
 C 30 · U 120 · R 540 · E 2,400 · L 10,800 · M 48,000
 
 TURN SPEED
-C 2.98 · U 1.46 · R 0.96 · E 0.72 · L 0.57 · M 0.48
+C 2.98 · U 2.98 · R 2.98 · E 2.98 · L 2.68 · M 2.39
 
 MOVE SPEED
 C 220 · U 229 · R 238 · E 246 · L 255 · M 264
@@ -695,7 +696,7 @@ CORE HEALTH
 C 30 · U 120 · R 540 · E 2,400 · L 10,800 · M 48,000
 
 TURN SPEED
-C 1.96 · U 0.96 · R 0.63 · E 0.47 · L 0.38 · M 0.31
+C 1.96 · U 1.96 · R 1.96 · E 1.96 · L 1.76 · M 1.57
 
 MOVE SPEED
 C 120 · U 125 · R 130 · E 134 · L 139 · M 144
@@ -735,7 +736,7 @@ CORE HEALTH
 C 30 · U 120 · R 540 · E 2,400 · L 10,800 · M 48,000
 
 TURN SPEED
-C 1.43 · U 0.68 · R 0.44 · E 0.32 · L 0.25 · M 0.21
+C 1.43 · U 1.40 · R 1.37 · E 1.34 · L 1.18 · M 1.03
 
 MOVE SPEED
 C 105 · U 109 · R 113 · E 118 · L 122 · M 126
@@ -776,7 +777,7 @@ CORE HEALTH
 C 30 · U 120 · R 540 · E 2,400 · L 10,800 · M 48,000
 
 TURN SPEED
-C 2.40 · U 1.17 · R 0.77 · E 0.58 · L 0.46 · M 0.38
+C 2.40 · U 2.40 · R 2.40 · E 2.40 · L 2.16 · M 1.92
 
 MOVE SPEED
 C 200 · U 208 · R 216 · E 224 · L 232 · M 240
@@ -816,7 +817,7 @@ CORE HEALTH
 C 30 · U 120 · R 540 · E 2,400 · L 10,800 · M 48,000
 
 TURN SPEED
-C 2.03 · U 0.99 · R 0.65 · E 0.49 · L 0.39 · M 0.32
+C 2.03 · U 2.03 · R 2.03 · E 2.03 · L 1.82 · M 1.62
 
 MOVE SPEED
 C 135 · U 140 · R 146 · E 151 · L 157 · M 162
@@ -857,7 +858,7 @@ CORE HEALTH
 C 30 · U 120 · R 540 · E 2,400 · L 10,800 · M 48,000
 
 TURN SPEED
-C 1.68 · U 0.81 · R 0.53 · E 0.39 · L 0.30 · M 0.25
+C 1.68 · U 1.65 · R 1.63 · E 1.60 · L 1.42 · M 1.24
 
 MOVE SPEED
 C 120 · U 125 · R 130 · E 134 · L 139 · M 144
@@ -898,7 +899,7 @@ CORE HEALTH
 C 30 · U 120 · R 540 · E 2,400 · L 10,800 · M 48,000
 
 TURN SPEED
-C 1.89 · U 0.92 · R 0.61 · E 0.45 · L 0.36 · M 0.30
+C 1.89 · U 1.89 · R 1.89 · E 1.89 · L 1.70 · M 1.51
 
 MOVE SPEED
 C 135 · U 140 · R 146 · E 151 · L 157 · M 162
@@ -939,7 +940,7 @@ CORE HEALTH
 C 30 · U 120 · R 540 · E 2,400 · L 10,800 · M 48,000
 
 TURN SPEED
-C 1.93 · U 0.94 · R 0.62 · E 0.46 · L 0.37 · M 0.31
+C 1.93 · U 1.93 · R 1.93 · E 1.93 · L 1.73 · M 1.54
 
 MOVE SPEED
 C 140 · U 146 · R 151 · E 157 · L 162 · M 168
@@ -980,7 +981,7 @@ CORE HEALTH
 C 30 · U 120 · R 540 · E 2,400 · L 10,800 · M 48,000
 
 TURN SPEED
-C 2.31 · U 1.13 · R 0.75 · E 0.56 · L 0.44 · M 0.37
+C 2.31 · U 2.31 · R 2.31 · E 2.31 · L 2.08 · M 1.85
 
 MOVE SPEED
 C 185 · U 192 · R 200 · E 207 · L 215 · M 222
@@ -1020,7 +1021,7 @@ CORE HEALTH
 C 30 · U 120 · R 540 · E 2,400 · L 10,800 · M 48,000
 
 TURN SPEED
-C 2.69 · U 1.31 · R 0.87 · E 0.65 · L 0.52 · M 0.43
+C 2.69 · U 2.69 · R 2.69 · E 2.69 · L 2.42 · M 2.15
 
 MOVE SPEED
 C 230 · U 239 · R 248 · E 258 · L 267 · M 276
@@ -1060,7 +1061,7 @@ CORE HEALTH
 C 30 · U 120 · R 540 · E 2,400 · L 10,800 · M 48,000
 
 TURN SPEED
-C 1.74 · U 0.85 · R 0.56 · E 0.42 · L 0.33 · M 0.28
+C 1.74 · U 1.74 · R 1.74 · E 1.74 · L 1.56 · M 1.39
 
 MOVE SPEED
 C 130 · U 135 · R 140 · E 146 · L 151 · M 156
@@ -1101,7 +1102,7 @@ CORE HEALTH
 C 30 · U 120 · R 540 · E 2,400 · L 10,800 · M 48,000
 
 TURN SPEED
-C 1.98 · U 0.97 · R 0.64 · E 0.48 · L 0.38 · M 0.32
+C 1.98 · U 1.98 · R 1.98 · E 1.98 · L 1.79 · M 1.59
 
 MOVE SPEED
 C 165 · U 172 · R 178 · E 185 · L 191 · M 198
@@ -1141,7 +1142,7 @@ CORE HEALTH
 C 30 · U 120 · R 540 · E 2,400 · L 10,800 · M 48,000
 
 TURN SPEED
-C 1.28 · U 0.63 · R 0.41 · E 0.31 · L 0.25 · M 0.21
+C 1.28 · U 1.28 · R 1.28 · E 1.28 · L 1.16 · M 1.03
 
 MOVE SPEED
 C 92 · U 96 · R 99 · E 103 · L 107 · M 110
@@ -1182,7 +1183,7 @@ CORE HEALTH
 C 30 · U 120 · R 540 · E 2,400 · L 10,800 · M 48,000
 
 TURN SPEED
-C 1.32 · U 0.64 · R 0.43 · E 0.32 · L 0.25 · M 0.21
+C 1.32 · U 1.32 · R 1.32 · E 1.32 · L 1.19 · M 1.06
 
 MOVE SPEED
 C 115 · U 120 · R 124 · E 129 · L 133 · M 138
@@ -1223,7 +1224,7 @@ CORE HEALTH
 C 30 · U 120 · R 540 · E 2,400 · L 10,800 · M 48,000
 
 TURN SPEED
-C 1.78 · U 0.87 · R 0.57 · E 0.43 · L 0.34 · M 0.28
+C 1.78 · U 1.78 · R 1.78 · E 1.78 · L 1.60 · M 1.42
 
 MOVE SPEED
 C 110 · U 114 · R 119 · E 123 · L 128 · M 132
@@ -1264,7 +1265,7 @@ CORE HEALTH
 C 30 · U 120 · R 540 · E 2,400 · L 10,800 · M 48,000
 
 TURN SPEED
-C 2.02 · U 0.99 · R 0.65 · E 0.49 · L 0.39 · M 0.32
+C 2.02 · U 2.02 · R 2.02 · E 2.02 · L 1.82 · M 1.62
 
 MOVE SPEED
 C 205 · U 213 · R 221 · E 230 · L 238 · M 246
@@ -1304,7 +1305,7 @@ CORE HEALTH
 C 30 · U 120 · R 540 · E 2,400 · L 10,800 · M 48,000
 
 TURN SPEED
-C 2.15 · U 1.05 · R 0.69 · E 0.52 · L 0.41 · M 0.34
+C 2.15 · U 2.15 · R 2.15 · E 2.15 · L 1.93 · M 1.72
 
 MOVE SPEED
 C 170 · U 177 · R 184 · E 190 · L 197 · M 204
@@ -1345,7 +1346,7 @@ CORE HEALTH
 C 30 · U 120 · R 540 · E 2,400 · L 10,800 · M 48,000
 
 TURN SPEED
-C 1.31 · U 0.61 · R 0.39 · E 0.28 · L 0.21 · M 0.17
+C 1.31 · U 1.26 · R 1.21 · E 1.16 · L 1.00 · M 0.86
 
 MOVE SPEED
 C 430 · U 447 · R 464 · E 482 · L 499 · M 516

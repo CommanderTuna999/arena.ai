@@ -3,6 +3,19 @@
 Everything below is implemented in the current build. Numbers are the actual constants used by
 the simulation, not design targets.
 
+## 0. v2.0.8 — enemies that can actually turn
+
+### Turn rate by rarity
+- `makeEnemy` built turn as `spd.turn / ((1 + tier * 1.05) * (1 + radius / (size * 6)))`. The size term is constant across tiers (radius scales with `b.size`), so the whole rarity penalty was the `1 + 1.05·tier` divisor: 4.2x at epic, 6.3x at mythical.
+- New `TIER_TURN = [1, 1, 1, 1, 0.9, 0.8]`: common through epic share the species rate, legendary is 10% slower and mythical 20% slower. Mythic dragonfly turn went from 0.34 to 1.47 rad/s (a 180° swing in ~2.1s rather than ~10.5s).
+
+### Legs steer
+- `Enemy.turnFrac` (new field, initialised to 1) is recomputed in `refreshMobility` from the share of `leg` parts still alive: `clamp(aliveLegs / legCount, 0, 1)`. Serpentine rigs (`id === "serpent"`) and bodies with no legs keep 1.
+- `updateEnemies` uses `turnMul = e.turnFrac` (was `0.3 + 0.7 * mobility`, which left a legless body steering at 30%). `runAct`'s `turnTo` multiplies by `turnFrac` too, so charge/swing wind-ups respect it. With every leg destroyed the body cannot rotate at all, and `mobility` already drops to 0 so it cannot walk either.
+
+### Admin spawner memory
+- `AdminPanel` seeds `spawn` state lazily from `localStorage["wof-admin-spawn"]` (`{ id, tier }`, matched back to the species by id) and writes it back whenever the selection changes, so the panel reopens on the last enemy and rarity picked.
+
 ## 0. v2.0.7 — plating you can see and hit
 
 ### Thicker slabs
