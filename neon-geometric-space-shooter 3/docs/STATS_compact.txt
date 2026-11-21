@@ -1,8 +1,8 @@
-WOF GUE — COMPLETE STAT COMPENDIUM (build 2.1.0)
+WOF GUE — COMPLETE STAT COMPENDIUM (build 2.1.2)
 Generated 21 Nov 2026. Every number below is a simulation constant. Health is the sum of all parts at that tier; enemy damage is a multiple of eDmg; weapon damage is a multiple of the player cannon damage st.dmg.
 
 1. FORMULAS
-Base cannon: st.dmg per shot (10 x 1.2^Cannon Damage level); rate 4 + 0.7 x Fire Rate level shots/s; 1 + Extra Barrels shots per trigger; range 760 x 1.08^Rail Coils level; speed 900 x 1.10^Rail Coils level. Kinetic type.
+Base cannon: st.dmg per shot (10 x 1.2^Cannon Damage level); rate 4 + 0.7 x Fire Rate level shots/s; 1 + Extra Barrels shots per trigger; range 760u; speed 900u/s. Kinetic type.
 Crafted weapon: st.dmg x wpn.dmg x eff per hit; x2.5 crit; x2.2 Overdrive. Cooldown = wpn.cd / (0.7 + 0.3 x eff). Efficiency 0.30 minimum, 1.00 typical, raw max 2.25.
 Enemy gun mounts: 0.4x eDmg at 1.1-1.7s cadence; missile pods: 1.1x eDmg at 4.5-6s cadence. Enemy eDmg = 16 x DMG_MUL[tier] = 16 / 48 / 144 / 432 / 1,296 / 3,888. Contact = 0.25x eDmg every 0.7s. Enemy HP scale = HP_MUL[tier] = 1 / 4 / 18 / 80 / 360 / 1,600 with part-size multipliers.
 Player hull = 100 x 1.22^Hull level. Damage order: dodge -> armour -> Kinetic Barrier (while shield holds) -> Aegis barrier -> shield -> hull. Armour reduction is multiplicative with Reactive Lattice.
@@ -20,7 +20,7 @@ Chunk seed pass rate = clamp(density/2.6, 0.03, 1): common 100%, uncommon 84.6%,
 3. DAMAGE TYPES AND ENEMY DEFENCES
 Energy shields: a blue hex stops every projectile dead except energy, shock and thermal, which pass straight through. Blocked hits do nothing to the bubble - it has no charge to strip and only disappears when its Shield Generator part is destroyed. Bypass laser ignores bubbles; rail sniper does not. Kinetic: base cannon, scatter, hmg, rail, drones. Explosive: missile, homing, flak, mines, cluster. Corrosive: acid, venom. All stopped. Shock: emp, chain, gravity, sonic; passes. Thermal: cutter; passes. Physical: collisions are not projectiles; physical rounds are stopped.
 Energy shield: each Shield Generator projects a 1.9x body-size hex bubble, local to that generator, not body-wide. Energy/shock/thermal pass through; all other projectiles and beams stop at the edge and deal nothing. The bubble never depletes and only vanishes when the generator part is destroyed. Bypass laser ignores bubbles. Direct AoE (EMP, chain, sonic, gravity, mines, explosions) skips the bubble check.
-Hull shells: tier 2+ gets tier-1 solid armour layers, 60% of total hull each (T5 = 4 x 943,872 on a 1.57M hull). A hit is swallowed by the outer layer for 30% (bullets/missile 30-40%), 22% (beams), 40% (blasts), 15% (shock); Plate Breaker up to 2.5x. Breaking a layer emits a damaging shockwave.
+Hull shells: tier 2+ gets tier-1 solid armour layers, 60% of total hull each (T5 = 4 x 943,872 on a 1.57M hull). A hit is swallowed by the outer layer for 30% (bullets/missile 30-40%), 22% (beams), 40% (blasts), 15% (shock). Breaking a layer emits a damaging shockwave. Legendary legs carry 1 plating layer of their own, mythical legs 2.
 
 4. ENEMIES (32 SPECIES)
 1. Dragonfly (dragonfly) — zones 0-4; flying ranged, keep 330u; speed 210, turn 3.4; pack 1/1/1/1/1/1.
@@ -246,7 +246,8 @@ Time Warp: 24s base cd; 4s slow within 900u to max(0.10,0.25-0.05f) speed. D5, 7
 Shockwave: 16s base cd; 520u, 5f x st.dmg, 900u/s knockback, 0.5s stun. D4, 6 parts (1x Plate/Body + 1x Dung/Scarab).
 All active cooldowns = base / (0.7 + 0.30 x f).
 
-Turning: common through epic share the species turn rate (legendary x0.9, mythical x0.8). Turn rate scales with the share of legs still attached; a legless body cannot turn.
+Turning: common through epic share the species turn rate (legendary x0.9, mythical x0.8). Turn rate and walking scale with healthy limbs; a legless body cannot turn.
+Legs cripple below 35% health: a crippled limb stops pushing, steering and swinging while still attached; 50% still works.
 Enemy turrets (epic+): gun 900u 1.35s 0.4x 560u/s; rotary 700u 0.16s 0.05x 720u/s 0.16 rad; scatter 700u 2.6s 7x0.2x 420u/s 0.5 rad; heavy 1200u 5.0s 1.8x instant hitscan + 260u/s recoil and heavy screenshake on hit; laser 1000u 2.4s 1.0x 1500u/s energy (ignores kinetic shields). Bodies without a natural gun/shield roll one: 12%+6%/tier and 10%+5%/tier (30%/25% epic, 42%/35% mythical); rolled guns pick from rotary/scatter/laser/heavy.
 9. BASE CANNON AND UPGRADES
 Cannon Damage max 30: 10 x 1.2^L per shot. Fire Rate max 12: 4+0.7L shots/s. Extra Barrels max 4: 1+L shots. Targeting Matrix max 10: 5+4L% crit for 2.5x. Base-cannon pierce, plate, core and splash upgrades are gone; only weapon recipes add those now.

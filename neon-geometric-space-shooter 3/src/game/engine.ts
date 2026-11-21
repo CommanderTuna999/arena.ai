@@ -60,6 +60,10 @@ const SEED_BUDGET = 1;
 const SHELL_TAKE: Record<DmgSrc, number> = { kinetic: 0.3, missile: 0.32, explosive: 0.4, laser: 0.22, shock: 0.15, dot: 0.1 };
 /** each plating layer carries this share of the enemy's total part hull */
 export const SHELL_HP_FRAC = 0.6;
+
+/** A leg below this share of its health stops pushing and steering: it is crippled. */
+export const LEG_CRIPPLE_FRAC = 0.35;
+export const legHealthy = (p: Part) => p.alive && p.hp > p.maxHp * LEG_CRIPPLE_FRAC;
 /* How far the drawn slabs stand proud of the part they wrap. Shared with the
  * renderer so the collision shell lines up with what the player can see. */
 export const SHELL_BASE_GROW = 20;
@@ -102,6 +106,10 @@ export interface Enemy {
   speed: number; turn: number; mobility: number; legCount: number; wingCount: number;
   /** share of the legs still attached; 0 means the body cannot turn at all */
   turnFrac: number;
+  /** plating layers bolted over the legs (0 below legendary) */
+  legPlate: number;
+  /** per leg animation group: true once every leg part in it is crippled */
+  crippledLegs: boolean[];
   abil: AbilityDef[]; abilCd: number[]; gap: number; act: Act | null; stun: number;
   wander: { x: number; y: number; t: number }; roleGroups: Record<string, number[]>;
   walk: number; dead: boolean; eDmg: number; keep: number; strafe: number; strafeT: number;
@@ -1086,7 +1094,8 @@ export class Game {
     const dx = wx - e.x, dy = wy - e.y;
     const lx = dx * ca + dy * sa, ly = -dx * sa + dy * ca;
     for (const p of e.parts) {
-      if (!p.alive || (p.kind !== "segment" && p.kind !== "armor")) continue;
+      const plated = p.kind === "segment" || p.kind === "armor" || (p.kind === "leg" && e.legPlate > 0);
+      if (!p.alive || !plated) continue;
       let x = lx, y = ly;
       if (p.g >= 0) {
         const g = e.groups[p.g];
@@ -1097,7 +1106,7 @@ export class Game {
         }
       }
       if (p.seg >= 0 && e.bend) y -= this.bendOff(e, p);
-      const r = p.r + plateGrow(p.r, layers);
+      const r = p.r + plateGrow(p.r, p.kind === "leg" ? e.legPlate : layers);
       const px = x - p.cx, py = y - p.cy;
       if (px * px + py * py <= r * r) return true;
     }
@@ -1151,8 +1160,12 @@ export class Game {
      * vanish in empty space long before they reached the armour. */
     let plateR = 0;
     for (const p of b.parts) {
-      if (p.kind !== "segment" && p.kind !== "armor") continue;
-      plateR = Math.max(plateR, Math.hypot(p.cx, p.cy) + p.r + plateGrow(p.r, Math.max(1, shellN)));
+      const body = p.kind === "segment" || p.kind === "armor";
+      const leg = p.kind === "leg" && tier >= 4;
+      if (!body && !leg) continue;
+      /* legendary legs carry 1 slab layer, mythical legs 2 - the body keeps tier-1 */
+      const n = leg ? tier - 3 : Math.max(1, shellN);
+      plateR = Math.max(plateR, Math.hypot(p.cx, p.cy) + p.r + plateGrow(p.r, n));
     }
     const coreR = b.parts[b.parts.findIndex((q) => q.id === b.coreId)]?.r ?? 0;
     if (shellN && plateR <= 0) plateR = b.radius;
@@ -1171,7 +1184,7 @@ export class Game {
     return {
       id: this.idc++, sp: spi, spd, tier, x, y, a: Math.random() * TAU, vx: 0, vy: 0, S: b.size, radius: b.radius,
       parts: b.parts, groups: b.groups, order: b.order, coreId: b.coreId, chunk: key, home: { x, y }, aggro: false, barT: 0,
-      speed: spd.speed * (1 + 0.04 * tier), turn: (spd.turn * TIER_TURN[clamp(tier, 0, 5)]) / (1 + b.radius / (b.size * 6)), mobility: 1, legCount: b.legCount, wingCount: b.wingCount, turnFrac: 1,
+      speed: spd.speed * (1 + 0.04 * tier), turn: (spd.turn * TIER_TURN[clamp(tier, 0, 5)]) / (1 + b.radius / (b.size * 6)), mobility: 1, legCount: b.legCount, wingCount: b.wingCount, turnFrac: 1, legPlate: tier >= 4 ? tier - 3 : 0, crippledLegs: [],
       abil, abilCd: abil.map(() => 1 + Math.random() * 3), gap: 1, act: null, stun: 0, wander: { x, y, t: 0 }, roleGroups,
       walk: Math.random() * 6, dead: false, eDmg: 16 * DMG_MUL[tier], keep: spd.keep + b.radius * 0.9, strafe: Math.random() < 0.5 ? 1 : -1, strafeT: 2,
       tags, shields: [], weaponParts, shieldParts, dist: 9999, bdist: 9999, contactCd: 0, hasChange: false, gen: 0,
@@ -1371,24 +1384,45 @@ export class Game {
     this.trackDamage(e, Math.min(dmg, Math.max(0, p.hp)), fromBase);
     p.hp -= dmg; p.hurt = 0.1; p.barT = 3.5; e.barT = 4;
     e.aggro = true;
+    if (p.kind === "leg" && p.hp > 0) this.refreshMobility(e);
     if (wx !== 0 || wy !== 0) for (let i = 0; i < 2; i++) this.addParticle(wx, wy, (Math.random() - 0.5) * 220, (Math.random() - 0.5) * 220, p.stroke, 2.5, 0.25, Math.floor(Math.random() * 3));
     if (p.hp <= 0 && p.alive) this.breakPart(e, p, !fromBase, fromBase);
   }
   private refreshMobility(e: Enemy) {
+    if (e.crippledLegs.length !== e.groups.length) e.crippledLegs = new Array(e.groups.length).fill(false);
     if (e.spd.id === "serpent") { e.mobility = 1; e.turnFrac = 1; return; } // snakes have no legs to lose
-    let legs = 0, wings = 0;
-    for (const p of e.parts) { if (!p.alive) continue; if (p.kind === "leg") legs++; else if (p.kind === "wing") wings++; }
+    let legs = 0, legTotal = 0, wings = 0;
+    const limbs = e.roleGroups.leg ?? [];
+    if (limbs.length) {
+      /* One group = one limb (a whole leg chain). A limb is crippled once its
+       * remaining health drops below the threshold, before it snaps off. */
+      for (const gi of limbs) {
+        let hp = 0, max = 0;
+        for (const p of e.parts) if (p.kind === "leg" && p.g === gi) { max += p.maxHp; if (p.alive) hp += p.hp; }
+        const ok = max > 0 && hp > max * LEG_CRIPPLE_FRAC;
+        e.crippledLegs[gi] = !ok;
+        legTotal++;
+        if (ok) legs++;
+      }
+    } else {
+      /* no limb grouping: fall back to counting leg parts */
+      for (const p of e.parts) {
+        if (p.kind !== "leg") continue;
+        legTotal++;
+        if (legHealthy(p)) legs++;
+      }
+    }
+    for (const p of e.parts) if (p.kind === "wing" && p.alive) wings++;
+    const lf = legTotal ? legs / legTotal : 0;
     if (e.spd.flying) {
       const wf = e.wingCount ? wings / e.wingCount : 0;
-      const lf = e.legCount ? legs / e.legCount : 0;
       e.mobility = wf > 0 ? Math.max(0.3, wf) : lf > 0 ? 0.18 : 0;
     } else {
-      const lf = e.legCount ? legs / e.legCount : 0;
       e.mobility = lf > 0 ? Math.max(0.2, lf) : 0;
     }
     /* Losing legs costs steering: a half-legged insect turns at half rate and a
      * legless one cannot turn at all. */
-    e.turnFrac = e.legCount ? clamp(legs / e.legCount, 0, 1) : 1;
+    e.turnFrac = legTotal ? clamp(lf, 0, 1) : 1;
   }
   private breakPart(e: Enemy, p: Part, byPlayer: boolean, byBase = false) {
     if (!p.alive) return;
@@ -2094,9 +2128,13 @@ export class Game {
     e.walk += dt * (3 + moving * 9);
 
     // group animation
-    for (const g of e.groups) {
+    for (let gi = 0; gi < e.groups.length; gi++) {
+      const g = e.groups[gi];
       switch (g.role) {
-        case "leg": g.ang = Math.sin(e.walk + g.phase) * g.amp * Math.min(1, moving * 1.6 + 0.04); break;
+        case "leg": {
+          if (e.crippledLegs[gi]) { g.ang *= Math.exp(-7 * dt); break; } // limp: no swing left
+          g.ang = Math.sin(e.walk + g.phase) * g.amp * Math.min(1, moving * 1.6 + 0.04); break;
+        }
         case "wing": g.ang = Math.sin(this.t * (e.spd.flying ? 24 : 7) + g.phase) * g.amp * g.sign * (e.spd.flying ? Math.max(0.3, e.mobility) : 0.2); break;
         case "sway": g.ang = Math.sin(this.t * 2 + g.phase) * g.amp; break;
         case "arm": case "mandible": case "tail":

@@ -1,5 +1,5 @@
 WOF GUE — STAT COMPENDIUM
-Build 2.1.0 · 21 November 2026
+Build 2.1.2 · 21 November 2026
 
 HOW TO READ THIS
 C / U / R / E / L / M = Common, Uncommon, Rare, Epic, Legendary, Mythic.
@@ -10,7 +10,7 @@ CORE FORMULAS
 • Base cannon damage: 10 × 1.2^Cannon Damage level.
 • Base cannon fire rate: 4 + 0.7 × Fire Rate level shots/s.
 • Base cannon shots per trigger: 1 + Extra Barrels level.
-• Base cannon range: 760 × 1.08^Rail Coils level; projectile speed 900 × 1.10^Rail Coils level.
+• Base cannon range: 760u; projectile speed 900u/s.
 • Crafted weapon cooldown: base cooldown ÷ (0.7 + 0.3 × efficiency). At 30% efficiency the cooldown is 1.27× longer.
 • Player hull: 100 × 1.22^Hull level.
 • Enemy damage: 16 × tier multiplier. Common 16 · Uncommon 48 · Rare 144 · Epic 432 · Legendary 1,296 · Mythic 3,888.
@@ -42,12 +42,13 @@ DAMAGE TYPES
 
 ENEMY DEFENCE RULES
 Energy shield: each Shield Generator projects a hex bubble 1.9 × body size that only covers that generator, not the whole body. Energy, shock and thermal damage passes through it. Every other projectile or beam is stopped at the edge and does nothing to the bubble: it has no charge to strip, so it never drops or re-arms and only disappears when the generator part is destroyed.
-Hull shells (armour plating): tier 2 and above carry solid layers holding 60% of the enemy hull each, drawn as steel slabs over the body. A hit is swallowed by the outer layer and only part of it is lost: bullets 30%, missiles and flak 40%, beams 22%, area blasts 40%, shock 15%; Plate Breaker boosts this up to 2.5×. Breaking a layer releases a damaging shockwave. A mythical tier-5 layer is 60% of its hull, e.g. 943,872 HP on a 1,573,120 hull (four layers).
+Hull shells (armour plating): tier 2 and above carry solid layers holding 60% of the enemy hull each, drawn as steel slabs over the body. A hit is swallowed by the outer layer and only part of it is lost: bullets 30%, missiles and flak 40%, beams 22%, area blasts 40%, shock 15%; Legendary legs carry 1 plating layer of their own, mythical legs 2. Breaking a layer releases a damaging shockwave. A mythical tier-5 layer is 60% of its hull, e.g. 943,872 HP on a 1,573,120 hull (four layers).
 
 ════════════════════════════════════════
 ENEMIES — 32 SPECIES
 ════════════════════════════════════════
-Turn speed: common through epic share the species rate; legendary ×0.9, mythical ×0.8. Destroyed legs scale turning down in proportion to the legs still attached, and a legless body cannot turn at all.
+Turn speed: common through epic share the species rate; legendary ×0.9, mythical ×0.8. Turning and walking scale with the share of healthy limbs, so broken or crippled legs slow both, and a body with no working legs cannot turn at all.
+Legs cripple before they snap: a limb that falls below 35% health stops carrying weight or steering and stops swinging, even though it is still attached. At 50% it still works.
 
 ENEMY TURRETS (mounts appear at epic and up: one pair at epic, two at legendary, three at mythical)
 • Gun Turret (gun): 900u range · 1.35s cooldown · 0.40× contact damage · 560u/s

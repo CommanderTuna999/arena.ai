@@ -8,7 +8,7 @@
  *   CHANGELOG and mirror the details in docs/CHANGELOG.md.
  */
 
-export const VERSION = "2.1.1";
+export const VERSION = "2.1.2";
 
 export interface ChangeEntry {
   version: string;
@@ -19,6 +19,16 @@ export interface ChangeEntry {
 }
 
 export const CHANGELOG: ChangeEntry[] = [
+  {
+    version: "2.1.2",
+    date: "21 Nov 2026",
+    title: "Crippled legs and plated limbs",
+    points: [
+      "Legs now cripple before they snap: a limb that falls below 35% of its health stops carrying weight or steering, and its walk cycle freezes. It is still attached and still shootable, it just does nothing. At 50% it behaves normally.",
+      "Walking speed and turn rate both scale with the share of healthy limbs, so a body shot up to its knees limps and turns slowly, and a body with no working limbs cannot move or turn at all.",
+      "Legendary enemies now carry 1 plating layer on their legs and mythical enemies 2. The slabs are drawn around the legs, and shots that land on a plated limb are swallowed by the hull plating instead of the leg.",
+    ],
+  },
   {
     version: "2.1.1",
     date: "21 Nov 2026",

@@ -1,6 +1,6 @@
 import { TAU, clamp, fmtNum } from "./math";
 import { BASE, CAT_NAME, KIND_CAT, RARITIES, SHIP_R, W_SLOTS, WEAPON_RANGE, WEAPON_TINT, WORLD_R, ZONE_EDGES } from "./data";
-import { N_ROPE, plateGrow, type Enemy, type Game, type LComp } from "./engine";
+import { N_ROPE, legHealthy, plateGrow, type Enemy, type Game, type LComp } from "./engine";
 
 function bend(e: Enemy, p: { seg: number }) {
   if (!e.bend || p.seg < 0) return 0;
@@ -1284,10 +1284,14 @@ function drawEnemy(g: Game, ctx: CanvasRenderingContext2D, e: Enemy, z: number, 
       }
       ctx.closePath();
     };
+    const legPlate = e.legPlate;
     for (const idx of drawOrder) {
       const p = e.parts[idx];
-      if (!p.alive || p.r <= plateMin || !PLATE_KINDS.has(p.kind)) continue;
-      const grow = plateGrow(p.r, shellN);
+      if (!p.alive || p.r <= plateMin) continue;
+      /* legendary legs get 1 slab layer, mythical legs 2; the body keeps its own count */
+      const layersHere = p.kind === "leg" ? legPlate : shellN;
+      if (!layersHere || (!PLATE_KINDS.has(p.kind) && p.kind !== "leg")) continue;
+      const grow = plateGrow(p.r, layersHere);
       const grp = p.g >= 0 ? e.groups[p.g] : null;
       const gs = !!(grp && grp.ang !== 0);
       if (grp && gs) { ctx.save(); ctx.translate(grp.px, grp.py); ctx.rotate(grp.ang); ctx.translate(-grp.px, -grp.py); }
@@ -1306,10 +1310,10 @@ function drawEnemy(g: Game, ctx: CanvasRenderingContext2D, e: Enemy, z: number, 
       /* bright outer rim */
       ctx.strokeStyle = rim; ctx.lineWidth = rimW; ctx.stroke();
       /* one ridge per extra layer, so four bolted layers read as four */
-      if (shellN > 1) {
-        for (let i = 1; i < shellN; i++) {
+      if (layersHere > 1) {
+        for (let i = 1; i < layersHere; i++) {
           ctx.globalAlpha = 0.65;
-          platePath(p, grow * (1 - i / (shellN + 0.4)));
+          platePath(p, grow * (1 - i / (layersHere + 0.4)));
           ctx.strokeStyle = lip; ctx.lineWidth = Math.max(1.2, grow * 0.1) / z; ctx.stroke();
         }
         ctx.globalAlpha = 1;
@@ -1328,7 +1332,9 @@ function drawEnemy(g: Game, ctx: CanvasRenderingContext2D, e: Enemy, z: number, 
     polyPath(ctx, p.poly);
     const hf = p.hp / p.maxHp;
     const hurt = p.hurt > 0;
-    ctx.globalAlpha = 0.62 + 0.38 * hf;
+    /* a crippled leg is dead weight: dim, desaturated and no longer swinging */
+    const crippled = p.kind === "leg" && !legHealthy(p);
+    ctx.globalAlpha = (0.62 + 0.38 * hf) * (crippled ? 0.5 : 1);
     ctx.fillStyle = hurt ? "rgba(255,255,255,0.85)" : p.fill;
     ctx.fill();
     /* Canvas blur cost explodes with the area it covers. Keep the glow only
@@ -1339,7 +1345,7 @@ function drawEnemy(g: Game, ctx: CanvasRenderingContext2D, e: Enemy, z: number, 
       ctx.shadowBlur = p.kind === "core" ? 22 : 12;
     }
     else if (big && p.r * z > 14) { ctx.save(); ctx.globalAlpha = 0.12; ctx.strokeStyle = p.stroke; ctx.lineWidth = lw * 3.2; ctx.stroke(); ctx.restore(); }
-    ctx.strokeStyle = hurt ? "#ffffff" : p.stroke;
+    ctx.strokeStyle = hurt ? "#ffffff" : crippled ? "#6a5d4d" : p.stroke;
     ctx.lineWidth = lw * (p.kind === "core" ? 1.6 : 1);
     ctx.stroke();
     ctx.shadowBlur = 0;

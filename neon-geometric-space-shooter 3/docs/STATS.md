@@ -1,6 +1,6 @@
 # wof gue — complete stat compendium
 
-Build 2.1.0 · generated 21 Nov 2026 · every figure is a live simulation constant, not a design target.
+Build 2.1.2 · generated 21 Nov 2026 · every figure is a live simulation constant, not a design target.
 
 How to read it: enemy health is the sum of every part at that rarity tier. Enemy damage is listed as a multiplier of the tier damage (eDmg), because every bite, bolt, blast and contact hit scales from that one number. Weapon damage is a multiplier of the player cannon damage (st.dmg = 10 x 1.2^Cannon Damage level). Efficiency (eff) is the crafted item quality: 0.30 minimum, 1.00 typical; the raw formula can reach 2.25 on an unrestricted tier-5 core build and 1.80 on a 7-part difficulty-5 recipe.
 
@@ -8,7 +8,7 @@ How to read it: enemy health is the sum of every part at that rarity tier. Enemy
 1. CORE FORMULAS
 ============================================================
 
-Player base cannon: damage = st.dmg per shot; rate = 4 + 0.7 x Fire Rate level shots/s; shots per trigger = 1 + Extra Barrels level; range = 760u x (1 + 0.08 x Rail Coils level); projectile speed = 900u/s x (1 + 0.10 x Rail Coils level).
+Player base cannon: damage = st.dmg per shot; rate = 4 + 0.7 x Fire Rate level shots/s; shots per trigger = 1 + Extra Barrels level; range 760u; projectile speed 900u/s. Cannon upgrades are damage, rate, barrels and crit only.
 Crafted weapon: damage per hit = st.dmg x wpn.dmg x eff (then x2.5 on a crit, x2.2 during Overdrive). Cooldown = wpn.cd / (0.7 + 0.3 x eff), so 100% efficiency is the listed cooldown and 30% efficiency is 1.27x slower (cd / 0.79).
 Enemy damage: eDmg = 16 x DMG_MUL[tier] = 16 / 48 / 144 / 432 / 1,296 / 3,888. Every ability, gun, missile and contact hit is a multiplier of that eDmg.
 Enemy hull: every part HP is generated from HP_MUL[tier] = 1 / 4 / 18 / 80 / 360 / 1,600, with part size and shape adding their own multipliers. The tables below give the resulting totals.
@@ -45,7 +45,7 @@ Thermal | cutter | passes through | beam: 22% | crafting label: every player shi
 Physical | collisions, knockback, shockwave abilities | collisions are not projectiles; physical rounds stopped | no shell check on collisions | armour label: every armour blocks physical
 
 Enemy energy-shield bubble: a Shield Generator part projects a hex bubble of 1.9 x body size that covers only that generator, not the whole body; a shot outside the hex reaches the hull normally. Energy, shock and thermal projectiles and beams pass straight through and hit the generator inside. Every other projectile is stopped dead at the hex edge with no effect on the bubble or the hull: the bubble has no charge to strip, so it never collapses, re-arms or regenerates, and only disappears when its Shield Generator part is destroyed. The Shield-Bypass Laser still ignores bubbles; the Rail Sniper no longer does, and hull shells still stop the rail. Direct area effects (EMP, chain lightning, sonic, gravity, mines, explosions, collisions) do not run the bubble check.
-Enemy hull shells (plating): tier 2+ enemies get tier-1 solid armour layers, each holding 60% of the enemy total hull, bolted over the body as steel slabs. A hit is swallowed by the outermost layer and only a share of it is lost: bullets 30%, missile/flak rounds 40%, beams 22%, area blasts 40%, shockwaves 15% (EMP, chain lightning and sonic skip shelled enemies entirely). Plate Breaker multiplies the plate loss by up to 2.5x. A layer shatters into a damaging shockwave when destroyed. Tier 5 mythical: 4 layers of 60% hull each, e.g. 943,872 HP per layer (3.8M total) on a 1,573,120 hull.
+Enemy hull shells (plating): tier 2+ enemies get tier-1 solid armour layers, each holding 60% of the enemy total hull, bolted over the body as steel slabs. A hit is swallowed by the outermost layer and only a share of it is lost: bullets 30%, missile/flak rounds 40%, beams 22%, area blasts 40%, shockwaves 15% (EMP, chain lightning and sonic skip shelled enemies entirely). Legendary legs carry 1 plating layer of their own and mythical legs 2, so shots that land on a plated limb are swallowed by the hull slabs instead of the leg. A layer shatters into a damaging shockwave when destroyed. Tier 5 mythical: 4 layers of 60% hull each, e.g. 943,872 HP per layer (3.8M total) on a 1,573,120 hull.
 Player defence labels: the Blocks column comes from damageProfile, which the crafting UI displays. Actual player mitigation is type-agnostic: armour reduces every incoming hit, then shield absorbs the remainder, then hull takes the rest. Kinetic Barrier adds another multiplier while shield holds; dodge is checked before all of it.
 
 ============================================================
@@ -798,11 +798,12 @@ Melt: acid adds 0.32 per hit, caps at 0.90; every later hit on that enemy deals 
 Poison/venom: damage-over-time, refreshed to 4s; Venom Guard reduces it by up to 90%.
 Slow: enemy slow fields multiply speed; Inertial Dampers reduce both strength and duration.
 Stun: enemy stops moving, turning and firing; EMP and Sonic apply it.
-Turning: common, uncommon, rare and epic all use the species turn rate; legendary turns at 0.9x and mythical at 0.8x of it. Turn rate is multiplied by the share of legs still attached, so half the legs means half the turn rate and a legless body cannot turn at all.
+Turning: common, uncommon, rare and epic all use the species turn rate; legendary turns at 0.9x and mythical at 0.8x of it. Turn rate is multiplied by the share of healthy limbs, so half the legs mean half the turn rate and a body with no working legs cannot turn at all.
+Legs cripple before they snap: a limb (one leg chain) that has lost 65% of its health, i.e. drops below 35%, stops pushing and steering and its walk cycle freezes - the leg is still attached and still shootable, it just does nothing. A leg at 50% health still works normally.
 Enemy turrets: gun 900u/1.35s/0.4x contact dmg/560u/s; rotary gun 700u/0.16s/0.05x/720u/s with a 0.16 rad spray; scatter cannon 700u/2.6s, 7 pellets of 0.2x at 420u/s across 0.5 rad; heavy cannon 1200u/5.0s/1.8x as an instant hitscan line (no travel time, so it cannot be outrun) with a 260u/s recoil shove on the hull and a heavy screen shake when it connects; laser emitter 1000u/2.4s/1.0x at 1,500u/s and energy damage (kinetic shields do not reduce it). Turret mounts appear at epic+ (one pair per tier above rare).
 Every body can turn up armed: species with no natural gun roll one with 12% + 6%/tier and species with no natural shield generator roll one with 10% + 5%/tier, so 30%/25% at epic and 42%/35% at mythical. Rolled guns draw from rotary, scatter, laser and heavy patterns, weighted toward heavier gear at high tiers.
 Energy shields: a bubble has no charge to strip, so it never collapses, re-arms or regenerates. Destroying its Shield Generator part removes it.
 Destroyed parts: each dead part can drop a component; weapons and shield generators detonate for 1.8x eDmg to the player (other parts 1.3x) and damage enemies in the blast.
 Boss: the Snake is the only boss (217 parts, body wave, 294u radius at T0; no reflective shield). At most one is alive; it spawns in the mythical core and never counts as a normal resident. SNAKE_ENABLED is false in this build, so the dedicated core pass is dormant even though the encounter code exists.
 
-End of compendium · build 2.1.0
+End of compendium · build 2.1.2

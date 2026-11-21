@@ -3,6 +3,19 @@
 Everything below is implemented in the current build. Numbers are the actual constants used by
 the simulation, not design targets.
 
+## 0. v2.1.2 — legs cripple, legendary and mythical legs get plating
+
+### Crippling
+- `LEG_CRIPPLE_FRAC = 0.35` and `legHealthy(p)`: a leg part below 35% of its max HP no longer counts. `damagePart` recomputes mobility whenever a leg takes damage, so the penalty applies the moment a limb crosses the threshold — no need to destroy it.
+- `refreshMobility` now works per **limb** (`roleGroups.leg`, one group per leg chain): a limb is crippled when its surviving parts hold ≤35% of the limb's max HP. Crippled limbs drop out of `mobility` and `turnFrac`; with every limb crippled the body can neither walk (`mobility 0`) nor turn (`turnFrac 0`).
+- `Enemy.crippledLegs[group]` freezes the walk cycle for that limb (`g.ang *= exp(-7·dt)`) while healthy limbs keep stepping. Species with ungrouped leg parts fall back to per-part counting.
+
+### Leg plating
+- `Enemy.legPlate` = `tier - 3` from legendary up (0 below), i.e. 1 slab layer at legendary, 2 at mythical.
+- `plateAt` treats leg parts as plated when `legPlate > 0` and grows their slabs with `plateGrow(p.r, legPlate)`, so shots on a plated limb are swallowed by the hull shell stack rather than hitting the leg directly.
+- The shell envelope (`shellR`) now includes the plated limbs, so beams and blasts respect them too.
+- `render.ts` draws the leg slabs with their own layer count (body keeps `e.shells.length`) and dims/desaturates crippled limbs.
+
 ## 0. v2.1.1 — heavy cannons are hitscan, legs steer again
 
 ### Heavy Cannon is hitscan
