@@ -47,13 +47,13 @@ Hull shells (armour plating): tier 2 and above carry solid layers holding 60% of
 ════════════════════════════════════════
 ENEMIES — 32 SPECIES
 ════════════════════════════════════════
-Turn speed: common through epic share the species rate; legendary ×0.9, mythical ×0.8. Legs drive walking speed only — losing them never slows or stops turning.
+Turn speed: common through epic share the species rate; legendary ×0.9, mythical ×0.8. Destroyed legs scale turning down in proportion to the legs still attached, and a legless body cannot turn at all.
 
 ENEMY TURRETS (mounts appear at epic and up: one pair at epic, two at legendary, three at mythical)
 • Gun Turret (gun): 900u range · 1.35s cooldown · 0.40× contact damage · 560u/s
 • Rotary Gun (minigun): 700u range · 0.16s cooldown · 0.05× contact damage · 720u/s · 0.16 rad spread
 • Scatter Cannon (scatter): 700u range · 2.60s cooldown · 7 pellets × 0.20× contact damage · 420u/s · 0.50 rad spread
-• Heavy Cannon (heavy): 1050u range · 5.00s cooldown · 1.80× contact damage · 950u/s · homing 0.90 · 260u/s recoil
+• Heavy Cannon (heavy): 1200u range · 5.00s cooldown · 1.80× contact damage · instant line (no travel time) · hitscan · 260u/s recoil
 • Laser Emitter (laser): 1000u range · 2.40s cooldown · 1.00× contact damage · 1,500u/s · energy — ignores the kinetic shield archetype
 Any species that does not carry a gun or shield generator by design still rolls for one from epic up: gun chance 12% + 6%/tier, shield chance 10% + 5%/tier, so 30%/25% at epic and 42%/35% at mythical. Rolled guns pick rotary, scatter, laser or heavy gear instead of the plain turret, weighted towards the bigger weapons at high tiers.
 

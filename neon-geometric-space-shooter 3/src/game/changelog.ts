@@ -8,7 +8,7 @@
  *   CHANGELOG and mirror the details in docs/CHANGELOG.md.
  */
 
-export const VERSION = "2.1.0";
+export const VERSION = "2.1.1";
 
 export interface ChangeEntry {
   version: string;
@@ -19,6 +19,16 @@ export interface ChangeEntry {
 }
 
 export const CHANGELOG: ChangeEntry[] = [
+  {
+    version: "2.1.1",
+    date: "21 Nov 2026",
+    title: "Heavy cannons and broken legs",
+    points: [
+      "The Heavy Cannon is now hitscan: a 1,200u instant line instead of a travelling slug, so there is nothing to outrun. It still kicks the shooter backwards and still hits for 1.8x contact damage.",
+      "Heavy Cannon impacts on the ship kick the camera hard on top of the usual hit shake, and get a bigger blast ring and spark burst.",
+      "Destroyed legs drag the turn rate down again: turn speed is multiplied by the share of legs still attached, so half the legs means half the turn rate, and a legless body cannot turn at all. Rarity still only bends turning for legendary (0.9x) and mythical (0.8x).",
+    ],
+  },
   {
     version: "2.1.0",
     date: "21 Nov 2026",

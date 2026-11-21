@@ -100,6 +100,8 @@ export interface Enemy {
   S: number; radius: number; parts: Part[]; groups: Group[]; order: number[]; coreId: number;
   chunk: string; home: { x: number; y: number }; aggro: boolean; barT: number;
   speed: number; turn: number; mobility: number; legCount: number; wingCount: number;
+  /** share of the legs still attached; 0 means the body cannot turn at all */
+  turnFrac: number;
   abil: AbilityDef[]; abilCd: number[]; gap: number; act: Act | null; stun: number;
   wander: { x: number; y: number; t: number }; roleGroups: Record<string, number[]>;
   walk: number; dead: boolean; eDmg: number; keep: number; strafe: number; strafeT: number;
@@ -1169,7 +1171,7 @@ export class Game {
     return {
       id: this.idc++, sp: spi, spd, tier, x, y, a: Math.random() * TAU, vx: 0, vy: 0, S: b.size, radius: b.radius,
       parts: b.parts, groups: b.groups, order: b.order, coreId: b.coreId, chunk: key, home: { x, y }, aggro: false, barT: 0,
-      speed: spd.speed * (1 + 0.04 * tier), turn: (spd.turn * TIER_TURN[clamp(tier, 0, 5)]) / (1 + b.radius / (b.size * 6)), mobility: 1, legCount: b.legCount, wingCount: b.wingCount,
+      speed: spd.speed * (1 + 0.04 * tier), turn: (spd.turn * TIER_TURN[clamp(tier, 0, 5)]) / (1 + b.radius / (b.size * 6)), mobility: 1, legCount: b.legCount, wingCount: b.wingCount, turnFrac: 1,
       abil, abilCd: abil.map(() => 1 + Math.random() * 3), gap: 1, act: null, stun: 0, wander: { x, y, t: 0 }, roleGroups,
       walk: Math.random() * 6, dead: false, eDmg: 16 * DMG_MUL[tier], keep: spd.keep + b.radius * 0.9, strafe: Math.random() < 0.5 ? 1 : -1, strafeT: 2,
       tags, shields: [], weaponParts, shieldParts, dist: 9999, bdist: 9999, contactCd: 0, hasChange: false, gen: 0,
@@ -1373,7 +1375,7 @@ export class Game {
     if (p.hp <= 0 && p.alive) this.breakPart(e, p, !fromBase, fromBase);
   }
   private refreshMobility(e: Enemy) {
-    if (e.spd.id === "serpent") { e.mobility = 1; return; } // snakes have no legs to lose
+    if (e.spd.id === "serpent") { e.mobility = 1; e.turnFrac = 1; return; } // snakes have no legs to lose
     let legs = 0, wings = 0;
     for (const p of e.parts) { if (!p.alive) continue; if (p.kind === "leg") legs++; else if (p.kind === "wing") wings++; }
     if (e.spd.flying) {
@@ -1384,6 +1386,9 @@ export class Game {
       const lf = e.legCount ? legs / e.legCount : 0;
       e.mobility = lf > 0 ? Math.max(0.2, lf) : 0;
     }
+    /* Losing legs costs steering: a half-legged insect turns at half rate and a
+     * legless one cannot turn at all. */
+    e.turnFrac = e.legCount ? clamp(legs / e.legCount, 0, 1) : 1;
   }
   private breakPart(e: Enemy, p: Part, byPlayer: boolean, byBase = false) {
     if (!p.alive) return;
@@ -1807,7 +1812,7 @@ export class Game {
     const a = e.act!, d = a.def, p = this.player;
     a.t += dt;
     const S = e.S;
-    const turnTo = (rate: number) => { e.a += clamp(angDiff(e.a, toP), -e.turn * rate * dt, e.turn * rate * dt); };
+    const turnTo = (rate: number) => { const tr = e.turn * e.turnFrac * rate; e.a += clamp(angDiff(e.a, toP), -tr * dt, tr * dt); };
     const damp = (k: number) => { const f = Math.exp(-k * dt); e.vx *= f; e.vy *= f; };
     const done = () => { e.act = null; e.gap = 0.4 + Math.random() * 0.6; };
     const mx = e.x + Math.cos(e.a) * e.spd.muzzle * S, my = e.y + Math.sin(e.a) * e.spd.muzzle * S;
@@ -2139,6 +2144,7 @@ export class Game {
           } else {
             const sp2 = spec!;
             q.cd = (sp2.cd * (0.85 + Math.random() * 0.3)) / (1 + 0.04 * e.tier);
+            if (sp2.hitscan) { this.heavyShot(e, mx, my, dir, sp2); continue; }
             const shots = sp2.pellets ?? 1;
             for (let k = 0; k < shots; k++) {
               /* multi-shot weapons fan evenly across their spread, single shots jitter */
@@ -2167,7 +2173,7 @@ export class Game {
     // ---- behaviour / movement ----
     let tvx = 0, tvy = 0;
     let faceTo = e.a;
-    const turnMul = 1;
+    const turnMul = e.turnFrac;
     if (e.stun > 0) { e.stun -= dt; e.vx *= Math.exp(-4 * dt); e.vy *= Math.exp(-4 * dt); }
     else if (e.act) {
       this.runAct(e, dt, toP, dist);
@@ -2440,6 +2446,50 @@ export class Game {
       }
     }
     this.beams.push({ x1: x, y1: y, x2: x + cos * endLen, y2: y + sin * endLen, life: 0.12, color });
+  }
+
+  /** Heavy cannon: an instant line to the first thing it meets, not a slug. */
+  private heavyShot(e: Enemy, mx: number, my: number, dir: number, spec: { range: number; dmg: number; recoil?: number; hue: number }) {
+    const cos = Math.cos(dir), sin = Math.sin(dir);
+    const dmg = e.eDmg * spec.dmg;
+    let len = spec.range;
+    const p = this.player;
+    /* the nest is solid: a line that crosses it slams the structure instead */
+    if (!this.baseLost) {
+      const bx = BASE.x - mx, by = BASE.y - my;
+      const along = bx * cos + by * sin;
+      const perp = Math.abs(-bx * sin + by * cos);
+      if (along > 0 && along < len && perp < BASE.r * 0.82) {
+        len = along;
+        this.hurtBase(dmg * 0.5, e);
+        this.burst(mx + cos * len, my + sin * len, "#ffb04d", 16, 7, 420);
+        this.ringFx(mx + cos * len, my + sin * len, 140, "#ffb04d", 700);
+      }
+    }
+    /* ship: closest approach of the line to the hull centre */
+    if (!p.dead && len === spec.range) {
+      const px = p.x - mx, py = p.y - my;
+      const along = px * cos + py * sin;
+      const perp = Math.abs(-px * sin + py * cos);
+      if (along > 0 && along < len && perp < SHIP_R + 10) {
+        const before = p.hp + p.shield + p.barrier;
+        this.hurtPlayer(dmg, { kb: 250, kbx: cos, kby: sin });
+        len = Math.max(20, along - SHIP_R * 0.5);
+        const ix = mx + cos * along, iy = my + sin * along;
+        this.ringFx(ix, iy, 150, "#ffd0b0", 900);
+        this.burst(ix, iy, "#ffb04d", 22, 8, 520);
+        this.burst(ix, iy, "#fff1d6", 10, 5, 300);
+        /* this one is meant to be felt, not read */
+        if (p.hp + p.shield + p.barrier < before) this.shake = Math.max(this.shake, 34);
+      }
+    }
+    this.beams.push({ x1: mx, y1: my, x2: mx + cos * len, y2: my + sin * len, life: 0.18, color: "#ffd9c2" });
+    this.burst(mx, my, "#ffb04d", 14, 6, 380);
+    this.ringFx(mx, my, 80, "#ffb04d", 600);
+    if (spec.recoil) {
+      e.vx -= cos * spec.recoil;
+      e.vy -= sin * spec.recoil;
+    }
   }
 
   private firePlayer(dt: number) {

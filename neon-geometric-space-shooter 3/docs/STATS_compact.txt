@@ -246,8 +246,8 @@ Time Warp: 24s base cd; 4s slow within 900u to max(0.10,0.25-0.05f) speed. D5, 7
 Shockwave: 16s base cd; 520u, 5f x st.dmg, 900u/s knockback, 0.5s stun. D4, 6 parts (1x Plate/Body + 1x Dung/Scarab).
 All active cooldowns = base / (0.7 + 0.30 x f).
 
-Turning: common through epic share the species turn rate (legendary x0.9, mythical x0.8). Legs affect walking speed only, never turning.
-Enemy turrets (epic+): gun 900u 1.35s 0.4x 560u/s; rotary 700u 0.16s 0.05x 720u/s 0.16 rad; scatter 700u 2.6s 7x0.2x 420u/s 0.5 rad; heavy 1050u 5.0s 1.8x 950u/s homing 0.9 + 260u/s recoil; laser 1000u 2.4s 1.0x 1500u/s energy (ignores kinetic shields). Bodies without a natural gun/shield roll one: 12%+6%/tier and 10%+5%/tier (30%/25% epic, 42%/35% mythical); rolled guns pick from rotary/scatter/laser/heavy.
+Turning: common through epic share the species turn rate (legendary x0.9, mythical x0.8). Turn rate scales with the share of legs still attached; a legless body cannot turn.
+Enemy turrets (epic+): gun 900u 1.35s 0.4x 560u/s; rotary 700u 0.16s 0.05x 720u/s 0.16 rad; scatter 700u 2.6s 7x0.2x 420u/s 0.5 rad; heavy 1200u 5.0s 1.8x instant hitscan + 260u/s recoil and heavy screenshake on hit; laser 1000u 2.4s 1.0x 1500u/s energy (ignores kinetic shields). Bodies without a natural gun/shield roll one: 12%+6%/tier and 10%+5%/tier (30%/25% epic, 42%/35% mythical); rolled guns pick from rotary/scatter/laser/heavy.
 9. BASE CANNON AND UPGRADES
 Cannon Damage max 30: 10 x 1.2^L per shot. Fire Rate max 12: 4+0.7L shots/s. Extra Barrels max 4: 1+L shots. Targeting Matrix max 10: 5+4L% crit for 2.5x. Base-cannon pierce, plate, core and splash upgrades are gone; only weapon recipes add those now.
 Hull Plating max 30: 100 x 1.22^L HP. Nano Repair max 10: 0.5L%/s. Reactive Armour max 14: -3.5L% damage. Energy Shield Core max 25: 60 x 1.28^(L-1) at L1+. Inertial Dampers max 6: 12L% slow/pull resist. Thrusters max 12: 450+40L. Handling max 10: 1,500+200L accel. Afterburner max 8: x(1.7+0.1(L-1)) burst at L1+.

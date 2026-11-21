@@ -3,6 +3,18 @@
 Everything below is implemented in the current build. Numbers are the actual constants used by
 the simulation, not design targets.
 
+## 0. v2.1.1 — heavy cannons are hitscan, legs steer again
+
+### Heavy Cannon is hitscan
+- `GUN_SPECS.heavy` sets `hitscan: true`, range 1200u, and drops the 0.9 homing (there is nothing left to home with).
+- `engine.heavyShot()` draws a line from the muzzle to the first thing it meets (nest or ship), applies `1.8 × eDmg` without travel time, paints a tracer in `this.beams`, and still applies the 260u/s recoil shove on the shooter.
+- A ship hit adds a 150u impact ring, two spark bursts, knockback along the line, and raises `this.shake` to at least 34 — the heaviest shake in the game (normal hits cap around 14). A miss produces no damage and no shake.
+
+### Legs steer again
+- Restored `Enemy.turnFrac` (`clamp(aliveLegs / legCount, 0, 1)`, serpentine rigs pinned to 1), recomputed in `refreshMobility`.
+- `updateEnemies` uses `turnMul = e.turnFrac` and `runAct`'s `turnTo` scales by it, so charges and swings respect broken legs too. Zero legs means no turning at all.
+- Rarity scaling from 2.0.8 is unchanged.
+
 ## 0. v2.1.0 — enemy weapon overhaul
 
 ### Cannon upgrades retired

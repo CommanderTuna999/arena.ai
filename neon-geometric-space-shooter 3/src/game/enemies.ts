@@ -84,6 +84,8 @@ export interface GunSpec {
   homing?: number;
   /** energy damage: ignores the kinetic shield archetype */
   energy?: boolean;
+  /** fires an instant line instead of a travelling projectile */
+  hitscan?: boolean;
   type: ProjType;
   /** firing shove backwards, in u/s */
   recoil?: number;
@@ -93,7 +95,7 @@ export const GUN_SPECS: Record<GunKind, GunSpec> = {
   gun:     { name: "Gun Turret",     range: 900,  cd: 1.35, dmg: 0.4,  speed: 560,  r: 5,  life: 1.9,  hue: 8,   type: "bolt" },
   minigun: { name: "Rotary Gun",     range: 700,  cd: 0.16, dmg: 0.05, speed: 720,  r: 3,  life: 0.9,  hue: 48,  spread: 0.16, type: "bolt" },
   scatter: { name: "Scatter Cannon", range: 700,  cd: 2.6,  dmg: 0.2,  speed: 420,  r: 9,  life: 1.4,  hue: 32,  pellets: 7, spread: 0.5, type: "pellet" },
-  heavy:   { name: "Heavy Cannon",   range: 1050, cd: 5.0,  dmg: 1.8,  speed: 950,  r: 12, life: 1.7,  hue: 356, homing: 0.9, type: "slug", recoil: 260 },
+  heavy:   { name: "Heavy Cannon",   range: 1200, cd: 5.0,  dmg: 1.8,  speed: 950,  r: 12, life: 1.7,  hue: 356, type: "slug", recoil: 260, hitscan: true },
   laser:   { name: "Laser Emitter",  range: 1000, cd: 2.4,  dmg: 1.0,  speed: 1500, r: 6,  life: 0.45, hue: 188, energy: true, type: "laser" },
 };
 
