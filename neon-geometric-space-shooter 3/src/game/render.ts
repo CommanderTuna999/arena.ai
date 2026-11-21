@@ -282,6 +282,33 @@ export function render(g: Game, ctx: CanvasRenderingContext2D) {
         const s = pr.r * (1 + 0.15 * Math.sin(t * 18));
         ctx.beginPath(); ctx.arc(pr.x, pr.y, s, 0, TAU); ctx.globalAlpha = 0.7; ctx.fill(); ctx.globalAlpha = 1; break;
       }
+      case "pellet": {
+        /* shotgun slug: fat, soft-edged, visibly slow */
+        ctx.beginPath(); ctx.arc(pr.x, pr.y, pr.r, 0, TAU); ctx.globalAlpha = 0.45; ctx.fill(); ctx.globalAlpha = 1;
+        ctx.beginPath(); ctx.arc(pr.x, pr.y, pr.r * 0.6, 0, TAU); ctx.fillStyle = "#fff6e0"; ctx.fill(); break;
+      }
+      case "slug": {
+        /* heavy cannon shell: long forged dart with a hot core */
+        ctx.save(); ctx.translate(pr.x, pr.y); ctx.rotate(ang);
+        ctx.beginPath();
+        ctx.moveTo(pr.r * 2.2, 0); ctx.lineTo(pr.r * 0.4, -pr.r * 0.85); ctx.lineTo(-pr.r * 1.6, -pr.r * 0.5);
+        ctx.lineTo(-pr.r * 1.9, 0); ctx.lineTo(-pr.r * 1.6, pr.r * 0.5); ctx.lineTo(pr.r * 0.4, pr.r * 0.85);
+        ctx.closePath(); ctx.fill();
+        ctx.fillStyle = "#fff1d6";
+        ctx.beginPath(); ctx.moveTo(pr.r * 1.7, 0); ctx.lineTo(pr.r * 0.2, -pr.r * 0.32); ctx.lineTo(-pr.r * 1.1, 0); ctx.lineTo(pr.r * 0.2, pr.r * 0.32); ctx.closePath(); ctx.fill();
+        ctx.restore(); break;
+      }
+      case "laser": {
+        /* energy lance: a stretched bar of light trailing the shot */
+        ctx.save(); ctx.translate(pr.x, pr.y); ctx.rotate(ang);
+        const L = Math.max(26, pr.r * 7);
+        ctx.lineWidth = Math.max(2, pr.r * 1.1);
+        ctx.globalAlpha = 0.55; ctx.beginPath(); ctx.moveTo(-L, 0); ctx.lineTo(0, 0); ctx.stroke();
+        ctx.globalAlpha = 1; ctx.strokeStyle = "#e8ffff"; ctx.lineWidth = Math.max(1, pr.r * 0.5);
+        ctx.beginPath(); ctx.moveTo(-L * 0.9, 0); ctx.lineTo(0, 0); ctx.stroke();
+        ctx.beginPath(); ctx.arc(0, 0, pr.r * 0.7, 0, TAU); ctx.fillStyle = "#ffffff"; ctx.fill();
+        ctx.restore(); break;
+      }
     }
     ctx.shadowBlur = 0;
   }

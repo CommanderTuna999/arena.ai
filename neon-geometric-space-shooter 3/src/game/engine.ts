@@ -3,7 +3,7 @@ import {
   ABILITY_BY_ID, BASE, BASE_MAX_HP, BASE_RING, BASE_TAKE, DMG_MUL, KIND_CAT, RARITIES, RECIPE_BY_ID, SHIP_R, UPGRADES, WORLD_R, W_SLOTS, compMass, compValue, computeStats, craftEfficiency,
   recipeProblem, upgradeCost, zoneTier, WEAPON_DMG, WEAPON_RANGE, type Comp, type DmgKind, type PartKind, type SaveData, type Slot, type Stats,
 } from "./data";
-import { SPECIES_LIST, buildEnemy, type AbilityDef, type Group, type Part, type ProjType, type SpeciesDef } from "./enemies";
+import { GUN_SPECS, SPECIES_LIST, buildEnemy, type AbilityDef, type Group, type GunKind, type Part, type ProjType, type SpeciesDef } from "./enemies";
 
 /* ---------------------------------------------------------------------------
  * COMBAT & WORLD REFERENCE (live constants)
@@ -136,6 +136,8 @@ export interface Bullet {
 export interface EProj {
   x: number; y: number; vx: number; vy: number; life: number; dmg: number; r: number; hue: number; type: ProjType;
   homing: number; slow: number; slowT: number; poison: number; pierce: boolean; hp: number; speed: number; src: Enemy | null; puddle: { r: number; dps: number; slow: number } | null;
+  /** energy damage: bypasses the kinetic-shield archetype */
+  energy?: boolean;
 }
 export interface Particle { x: number; y: number; vx: number; vy: number; rot: number; vr: number; life: number; max: number; size: number; shape: number; color: string; fill: boolean }
 export interface Puddle { x: number; y: number; r: number; life: number; max: number; arm: number; dps: number; slow: number; hue: number }
@@ -1113,7 +1115,7 @@ export class Game {
       this.ringFx(ix, iy, 26, "#ffe9b8", 620);
     }
     /* Plate Breaker buys extra bite against the slabs, not just the armour parts */
-    const dealt = dmg * (SHELL_TAKE[src] ?? 0.3) * (fromBase ? 1 : this.stats.breaker);
+    const dealt = dmg * (SHELL_TAKE[src] ?? 0.3);
     const before = layer.hp;
     this.trackDamage(e, Math.min(dealt, Math.max(0, before)), fromBase);
     layer.hp -= dealt;
@@ -1615,7 +1617,7 @@ export class Game {
   }
 
   /* ---------------- player damage ---------------- */
-  hurtPlayer(dmg: number, o: { poison?: number; kb?: number; kbx?: number; kby?: number; dot?: boolean } = {}) {
+  hurtPlayer(dmg: number, o: { poison?: number; kb?: number; kbx?: number; kby?: number; dot?: boolean; energy?: boolean } = {}) {
     const p = this.player, st = this.stats;
     if (p.dead || this.inSafe()) return;
     if (this.admin.on && this.admin.health) { p.hp = st.hull; p.shield = st.shieldMax; return; }
@@ -1624,7 +1626,7 @@ export class Game {
       return;
     }
     let d = dmg * (1 - st.armor) * (1 - st.reactive);
-    if (st.kinetic > 0 && p.shield > 0) d *= 1 - st.kinetic;
+    if (st.kinetic > 0 && p.shield > 0 && !o.energy) d *= 1 - st.kinetic;
     p.hitT = 0; p.shieldT = st.shieldDelay;
     if (p.barrier > 0) { const a = Math.min(p.barrier, d); p.barrier -= a; d -= a; }
     const shieldBefore = p.shield;
@@ -1736,9 +1738,10 @@ export class Game {
             this.hurtPlayer(pr.dmg);
             dead = true;
           } else {
-            this.hurtPlayer(pr.dmg, { poison: pr.poison, kb: pr.type === "missile" ? 250 : 0, kbx: pr.vx / (pr.speed || 1), kby: pr.vy / (pr.speed || 1) });
+            this.hurtPlayer(pr.dmg, { poison: pr.poison, energy: pr.energy, kb: pr.type === "missile" || pr.type === "slug" ? 250 : 0, kbx: pr.vx / (pr.speed || 1), kby: pr.vy / (pr.speed || 1) });
             if (pr.slow > 0) this.applySlow(pr.slow, pr.slowT);
             if (pr.type === "missile") { this.ringFx(pr.x, pr.y, 90, "#ffb04d", 500); this.burst(pr.x, pr.y, "#ffb04d", 10, 5, 260); }
+            else if (pr.type === "laser") { this.burst(pr.x, pr.y, "#7df9ff", 8, 4, 220); this.ringFx(pr.x, pr.y, 46, "#7df9ff", 400); }
             else this.burst(pr.x, pr.y, `hsl(${pr.hue},100%,65%)`, 4, 3, 160);
             if (!pr.pierce || pr.type === "missile") dead = true;
           }
@@ -2124,18 +2127,39 @@ export class Game {
         g.ang += clamp(angDiff(g.ang, rel), -2.2 * dt, 2.2 * dt);
         q.cd -= dt;
         const dd = Math.hypot(aimX - wx, aimY - wy);
-        const range = q.wpn === "gun" ? 900 : 1150;
+        const spec = q.wpn === "missile" ? null : GUN_SPECS[q.wpn as GunKind];
+        const range = q.wpn === "missile" ? 1150 : spec!.range;
         if (q.cd <= 0 && dd < range && Math.abs(angDiff(g.ang, rel)) < 0.22 && e.stun <= 0) {
           const dir = e.a + g.ang;
           const mx = wx + Math.cos(dir) * q.muzzle, my = wy + Math.sin(dir) * q.muzzle;
-          if (q.wpn === "gun") {
-            q.cd = (1.1 + Math.random() * 0.6) / (1 + 0.04 * e.tier);
-            this.eprojs.push({ x: mx, y: my, vx: Math.cos(dir) * 560, vy: Math.sin(dir) * 560, life: 1.9, dmg: e.eDmg * 0.4, r: 5 + e.tier, hue: 8, type: "bolt", homing: 0, slow: 0, slowT: 0, poison: 0, pierce: false, hp: 1, speed: 560, src: e, puddle: null });
-          } else {
+          if (q.wpn === "missile") {
             q.cd = 4.5 + Math.random() * 1.5;
             this.eprojs.push({ x: mx, y: my, vx: Math.cos(dir) * 200, vy: Math.sin(dir) * 200, life: 5, dmg: e.eDmg * 1.1, r: 8 + e.tier * 1.5, hue: 25, type: "missile", homing: 2.0, slow: 0, slowT: 0, poison: 0, pierce: false, hp: 1, speed: 330, src: e, puddle: null });
+            this.burst(mx, my, "#ff9d4d", 3, 3, 140);
+          } else {
+            const sp2 = spec!;
+            q.cd = (sp2.cd * (0.85 + Math.random() * 0.3)) / (1 + 0.04 * e.tier);
+            const shots = sp2.pellets ?? 1;
+            for (let k = 0; k < shots; k++) {
+              /* multi-shot weapons fan evenly across their spread, single shots jitter */
+              const off = shots > 1 ? ((k + 0.5) / shots - 0.5) * (sp2.spread ?? 0) : (Math.random() - 0.5) * (sp2.spread ?? 0);
+              const a2 = dir + off;
+              this.eprojs.push({
+                x: mx, y: my, vx: Math.cos(a2) * sp2.speed, vy: Math.sin(a2) * sp2.speed,
+                life: sp2.life * (0.9 + Math.random() * 0.2), dmg: e.eDmg * sp2.dmg,
+                r: sp2.r * (1 + 0.1 * e.tier), hue: sp2.hue, type: sp2.type,
+                homing: sp2.homing ?? 0, slow: 0, slowT: 0, poison: 0, pierce: false, hp: 1,
+                speed: sp2.speed, src: e, puddle: null, energy: sp2.energy,
+              });
+            }
+            if (sp2.recoil) {
+              /* heavy cannon: the hull gets shoved back along the shot */
+              e.vx -= Math.cos(dir) * sp2.recoil;
+              e.vy -= Math.sin(dir) * sp2.recoil;
+              this.burst(mx, my, "#ffb04d", 10, 5, 300);
+              this.ringFx(mx, my, 70, "#ffb04d", 500);
+            } else this.burst(mx, my, `hsl(${sp2.hue},100%,68%)`, sp2.pellets ? 6 : 3, 3, 140);
           }
-          this.burst(mx, my, "#ff9d4d", 3, 3, 140);
         }
       } else g.ang *= Math.exp(-2 * dt);
     }
@@ -2305,17 +2329,9 @@ export class Game {
       if (b.hit.includes(key)) continue;
       b.hit.push(key);
       let dmg = b.dmg * (1 + e.melt);
-      if (p.kind === "armor" || p.kind === "shield" || p.kind === "spike") dmg *= st.breaker;
-      if (p.kind === "core") dmg *= st.coreMul;
       if (b.dot) { e.dot = Math.max(e.dot, b.dot); e.dotT = Math.max(e.dotT, 2.5); }
       if (b.melt) e.melt = Math.min(0.9, e.melt + b.melt);
       this.damagePart(e, p, dmg, b.x, b.y);
-      if (st.frag > 0 && b.kind !== 1) {
-        for (const q of e.parts) {
-          if (!q.alive || q === p) continue;
-          if (Math.hypot(q.cx - p.cx, q.cy - p.cy) < st.frag + q.r * 0.5) this.damagePart(e, q, dmg * 0.35, 0, 0);
-        }
-      }
       if (b.kind === 1) { this.areaDamage(b.x, b.y, 95, b.dmg * 0.6, null); this.ringFx(b.x, b.y, 95, "#ffb04d", 500); this.burst(b.x, b.y, "#ffb04d", 8, 4, 220); b.life = 0; return true; }
       if (b.kind === 3) { this.areaDamage(b.x, b.y, 120, b.dmg * 0.7, null); this.ringFx(b.x, b.y, 120, "#ffd24d", 600); this.burst(b.x, b.y, "#ffd24d", 12, 5, 300); return true; }
       if (b.pierce > 0) { b.pierce--; b.dmg *= 0.8; return false; }
@@ -2418,8 +2434,6 @@ export class Game {
         if (hits.has(key)) continue;
         hits.add(key);
         let dm = dmg * (1 + e.melt);
-        if (p.kind === "armor" || p.kind === "shield" || p.kind === "spike") dm *= st.breaker;
-        if (p.kind === "core") dm *= st.coreMul;
         this.damagePart(e, p, dm, bx, by);
         pierced++;
         if (pierced > pierce) { endLen = d; break outer; }
@@ -2440,7 +2454,7 @@ export class Game {
       for (let i = 0; i < n; i++) {
         const ang = base + (i - (n - 1) / 2) * 0.09;
         const crit = Math.random() < st.crit;
-        this.bullets.push({ x: p.x + Math.cos(ang) * 12, y: p.y + Math.sin(ang) * 12, vx: Math.cos(ang) * st.bulletSpeed + p.vx * 0.3, vy: Math.sin(ang) * st.bulletSpeed + p.vy * 0.3, life: st.bulletRange / st.bulletSpeed, dmg: st.dmg * (crit ? 2.5 : 1) * (p.overT > 0 ? 2.2 : 1) * this.dmgMul(), pierce: st.pierce, hit: [], kind: 0, target: null, crit, elem: "kinetic" });
+        this.bullets.push({ x: p.x + Math.cos(ang) * 12, y: p.y + Math.sin(ang) * 12, vx: Math.cos(ang) * st.bulletSpeed + p.vx * 0.3, vy: Math.sin(ang) * st.bulletSpeed + p.vy * 0.3, life: st.bulletRange / st.bulletSpeed, dmg: st.dmg * (crit ? 2.5 : 1) * (p.overT > 0 ? 2.2 : 1) * this.dmgMul(), pierce: 0, hit: [], kind: 0, target: null, crit, elem: "kinetic" });
       }
       p.vx -= Math.cos(base) * 6; p.vy -= Math.sin(base) * 6;
     }

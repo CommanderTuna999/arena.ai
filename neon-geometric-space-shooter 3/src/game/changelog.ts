@@ -8,7 +8,7 @@
  *   CHANGELOG and mirror the details in docs/CHANGELOG.md.
  */
 
-export const VERSION = "2.0.9";
+export const VERSION = "2.1.0";
 
 export interface ChangeEntry {
   version: string;
@@ -19,6 +19,17 @@ export interface ChangeEntry {
 }
 
 export const CHANGELOG: ChangeEntry[] = [
+  {
+    version: "2.1.0",
+    date: "21 Nov 2026",
+    title: "Enemy weapon overhaul",
+    points: [
+      "Retired five cannon upgrades: Piercing Rounds, Plate Breaker, Core Seeker, Fragmentation Rounds and Rail Coils. Old saves drop those levels; the main cannon now has damage, rate, barrels and crit only and is due a rework.",
+      "Every enemy can now turn up armed. Bodies that never carry a gun or a shield generator by design roll for one from epic upward: gun chance 12% + 6%/tier, shield chance 10% + 5%/tier (30%/25% at epic, 42%/35% at mythical).",
+      "Four new turrets: Scatter Cannon (7 large, slow kinetic pellets), Heavy Cannon (5s reload, 1.8x contact damage, 950u/s homing slug, kicks the hull backwards), Laser Emitter (1,500u/s energy lance that ignores kinetic shields) and Rotary Gun (fast, weak kinetic spray with a short engagement range).",
+      "Signature guns: Hornets, Soldier Ants, Yellowjackets and Locusts carry rotary guns; Scorpions, Scarabs and Bombardiers mount scatter cannons; Rhinos, Dung Beetles and Weevils get heavy cannons; Dragonflies, Fireflies, Jewel Beetles and the Serpent use lasers.",
+    ],
+  },
   {
     version: "2.0.9",
     date: "21 Nov 2026",

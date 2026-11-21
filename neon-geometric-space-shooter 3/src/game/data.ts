@@ -91,12 +91,7 @@ export const UPGRADES: UpgradeDef[] = [
   { id: "dmg", name: "Cannon Damage", cat: "weapons", desc: "Raw damage per shot.", max: 30, base: 20, growth: 1.45, fmt: (l) => `${fmtNum(10 * Math.pow(1.2, l))} dmg` },
   { id: "rate", name: "Fire Rate", cat: "weapons", desc: "Shots per second.", max: 12, base: 40, growth: 1.5, fmt: (l) => `${(4 + 0.7 * l).toFixed(1)}/s` },
   { id: "barrels", name: "Extra Barrels", cat: "weapons", desc: "Fire a fan of additional shots.", max: 4, base: 150, growth: 2.6, fmt: (l) => `${1 + l} barrel${l ? "s" : ""}` },
-  { id: "pierce", name: "Piercing Rounds", cat: "weapons", desc: "Shots punch through extra pieces (-20% damage each).", max: 5, base: 120, growth: 2.2, fmt: (l) => `+${l} pierce` },
   { id: "crit", name: "Targeting Matrix", cat: "weapons", desc: "Chance for 2.5x critical hits.", max: 10, base: 60, growth: 1.55, fmt: (l) => `${5 + 4 * l}% crit` },
-  { id: "breaker", name: "Plate Breaker", cat: "weapons", desc: "Bonus damage to armour plates & shield generators.", max: 10, base: 80, growth: 1.6, fmt: (l) => `+${15 * l}% vs plates` },
-  { id: "coreseek", name: "Core Seeker", cat: "weapons", desc: "Bonus damage to enemy cores.", max: 8, base: 90, growth: 1.7, fmt: (l) => `+${20 * l}% vs cores` },
-  { id: "frag", name: "Fragmentation Rounds", cat: "weapons", desc: "Hits splash into neighbouring pieces.", max: 6, base: 200, growth: 1.9, fmt: (l) => (l ? `${18 + 9 * l}px splash` : "none") },
-  { id: "velocity", name: "Rail Coils", cat: "weapons", desc: "Faster, longer-ranged shots.", max: 8, base: 50, growth: 1.5, fmt: (l) => `+${l * 10}% speed` },
 
   { id: "hull", name: "Hull Plating", cat: "hull", desc: "Maximum hull integrity.", max: 30, base: 25, growth: 1.5, fmt: (l) => `${fmtNum(100 * Math.pow(1.22, l))} HP` },
   { id: "regen", name: "Nano Repair", cat: "hull", desc: "Hull regenerates every second.", max: 10, base: 70, growth: 1.6, fmt: (l) => `${(0.5 * l).toFixed(1)}%/s` },
@@ -119,6 +114,8 @@ export const UPGRADES: UpgradeDef[] = [
   { id: "luck", name: "Rarity Scanner", cat: "salvage", desc: "Better rarity rolls on dropped components.", max: 8, base: 100, growth: 1.7, fmt: (l) => `+${l * 5}% luck` },
   { id: "cargo", name: "Cargo Bay", cat: "salvage", desc: "Storage capacity for components.", max: 8, base: 80, growth: 1.7, fmt: (l) => `${24 + 12 * l} slots` },
 ];
+
+export const UPGRADE_BY_ID: Record<string, UpgradeDef> = Object.fromEntries(UPGRADES.map((u) => [u.id, u]));
 
 export const UP_CATS: { id: UpCat; name: string; color: string }[] = [
   { id: "weapons", name: "Weapons", color: "#ff4d6d" },
@@ -444,7 +441,7 @@ export function migrate(raw: unknown): SaveData {
     ...d,
     ...r,
     v: 2,
-    upgrades: { ...(r.upgrades ?? {}) },
+    upgrades: Object.fromEntries(Object.entries(r.upgrades ?? {}).filter(([k]) => UPGRADE_BY_ID[k])),
     inventory: Array.isArray(r.inventory)
       ? r.inventory.map((c) => (c && c.species === "World Serpent" ? { ...c, species: "Snake" } : c))
       : [],
@@ -503,7 +500,8 @@ export function decodeSave(code: string): SaveData | null {
 
 /* ---------- derived stats ---------- */
 export interface Stats {
-  dmg: number; rate: number; barrels: number; pierce: number; crit: number; breaker: number; coreMul: number; frag: number;
+  dmg: number; rate: number; barrels: number; crit: number;
+  /** main-cannon ballistics; fixed for now, the cannon system gets reworked next */
   bulletSpeed: number; bulletRange: number;
   hull: number; regen: number; armor: number; reactive: number; thorn: number; poisonResist: number;
   shieldMax: number; shieldRegen: number; shieldDelay: number; reflect: boolean; dampers: number;
@@ -594,13 +592,9 @@ export function computeStats(s: SaveData): Stats {
     dmg: baseDmg,
     rate: 4 + 0.7 * L("rate"),
     barrels: 1 + L("barrels"),
-    pierce: L("pierce"),
     crit: 0.05 + 0.04 * L("crit"),
-    breaker: 1 + 0.15 * L("breaker"),
-    coreMul: 1 + 0.2 * L("coreseek"),
-    frag: L("frag") ? 18 + 9 * L("frag") : 0,
-    bulletSpeed: 900 * (1 + 0.1 * L("velocity")),
-    bulletRange: 760 * (1 + 0.08 * L("velocity")),
+    bulletSpeed: 900,
+    bulletRange: 760,
     hull,
     regen,
     armor,

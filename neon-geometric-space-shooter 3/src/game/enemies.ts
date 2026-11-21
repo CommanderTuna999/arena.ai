@@ -41,7 +41,7 @@ export interface Part {
   stroke: string;
   fill: string;
   glow: boolean;
-  wpn: "" | "gun" | "missile";
+  wpn: "" | GunKind | "missile";
   muzzle: number;
   shieldR: number;
   shieldHp: number;
@@ -62,8 +62,43 @@ export interface Group {
   amp: number;
 }
 
+/** enemy turret kinds; "''" on every part that is not a weapon */
+export type GunKind = "gun" | "scatter" | "heavy" | "laser" | "minigun";
+
+export interface GunSpec {
+  name: string;
+  /** firing range in world units */
+  range: number;
+  /** base cooldown before the 4%-per-tier rate bonus */
+  cd: number;
+  /** damage as a multiple of the enemy's contact damage */
+  dmg: number;
+  speed: number;
+  /** projectile radius at tier 0 */
+  r: number;
+  life: number;
+  hue: number;
+  pellets?: number;
+  /** total spread in radians */
+  spread?: number;
+  homing?: number;
+  /** energy damage: ignores the kinetic shield archetype */
+  energy?: boolean;
+  type: ProjType;
+  /** firing shove backwards, in u/s */
+  recoil?: number;
+}
+
+export const GUN_SPECS: Record<GunKind, GunSpec> = {
+  gun:     { name: "Gun Turret",     range: 900,  cd: 1.35, dmg: 0.4,  speed: 560,  r: 5,  life: 1.9,  hue: 8,   type: "bolt" },
+  minigun: { name: "Rotary Gun",     range: 700,  cd: 0.16, dmg: 0.05, speed: 720,  r: 3,  life: 0.9,  hue: 48,  spread: 0.16, type: "bolt" },
+  scatter: { name: "Scatter Cannon", range: 700,  cd: 2.6,  dmg: 0.2,  speed: 420,  r: 9,  life: 1.4,  hue: 32,  pellets: 7, spread: 0.5, type: "pellet" },
+  heavy:   { name: "Heavy Cannon",   range: 1050, cd: 5.0,  dmg: 1.8,  speed: 950,  r: 12, life: 1.7,  hue: 356, homing: 0.9, type: "slug", recoil: 260 },
+  laser:   { name: "Laser Emitter",  range: 1000, cd: 2.4,  dmg: 1.0,  speed: 1500, r: 6,  life: 0.45, hue: 188, energy: true, type: "laser" },
+};
+
 export type AbilityType = "swing" | "charge" | "shoot" | "nova" | "ring" | "pull" | "spit" | "cloud" | "summon" | "blink" | "drain";
-export type ProjType = "bolt" | "missile" | "web" | "orb" | "wave" | "hook" | "glob";
+export type ProjType = "bolt" | "missile" | "web" | "orb" | "wave" | "hook" | "glob" | "pellet" | "slug" | "laser";
 export interface AbilityDef {
   type: AbilityType;
   name: string;
@@ -110,6 +145,8 @@ export interface SpeciesDef {
   keep: number;
   muzzle: number;
   armed: { gun: boolean; missile: boolean; shield: boolean };
+  /** signature turret this species mounts; defaults to the plain gun */
+  gunType?: GunKind;
   pack: number[];
   abilities: AbilityDef[];
   build: (b: Builder, tier: number) => Mount[];
@@ -335,12 +372,36 @@ function wingSub(b: Builder, wingId: number, host: number, ax: number, ay: numbe
 }
 
 /* ---------------- loadout: guns / missiles / shield generators ---------------- */
-function loadout(b: Builder, mounts: Mount[], armed: SpeciesDef["armed"]) {
+const GUN_ROLL: { kind: GunKind; w: number[] }[] = [
+  { kind: "gun", w: [0.45, 0.3, 0.2] },
+  { kind: "minigun", w: [0.2, 0.2, 0.2] },
+  { kind: "scatter", w: [0.2, 0.2, 0.2] },
+  { kind: "laser", w: [0.1, 0.15, 0.2] },
+  { kind: "heavy", w: [0.05, 0.15, 0.2] },
+];
+/** weapon picked for a body that normally carries no gun; heavier gear shows up deeper in */
+function randomGunKind(roll: number, tier: number): GunKind {
+  const col = tier >= 5 ? 2 : tier >= 4 ? 1 : 0;
+  let sum = 0;
+  for (const g of GUN_ROLL) sum += g.w[col];
+  let x = roll * sum;
+  for (const g of GUN_ROLL) { x -= g.w[col]; if (x <= 0) return g.kind; }
+  return "gun";
+}
+
+function loadout(b: Builder, mounts: Mount[], sp: SpeciesDef) {
   const t = b.tier;
-  const nGun = armed.gun && t >= 3 ? t - 2 : 0;
+  const armed = sp.armed;
+  /* Guns and shield generators used to be hard-coded per species. Now every body
+   * that does not carry one by design still rolls for it once the mounts exist
+   * (epic and up), so a Mantis can turn up with a rotary gun and a bubble. */
+  const chanceGun = t >= 3 && !armed.gun && b.rng() < 0.12 + 0.06 * t;
+  const chanceShield = t >= 3 && !armed.shield && b.rng() < 0.1 + 0.05 * t;
+  const nGun = (armed.gun || chanceGun) && t >= 3 ? t - 2 : 0;
   const nMis = armed.missile && t >= 4 ? t - 3 : 0;
-  const nSh = armed.shield && t >= 3 ? t - 2 : 0;
+  const nSh = (armed.shield || chanceShield) && t >= 3 ? t - 2 : 0;
   if (!nGun && !nMis && !nSh) return;
+  const kind: GunKind = sp.gunType ?? (chanceGun ? randomGunKind(b.rng(), t) : "gun");
 
   type Cand = { x: number; y: number; host: number; r: number };
   const pairs: Cand[] = [];
@@ -355,15 +416,23 @@ function loadout(b: Builder, mounts: Mount[], armed: SpeciesDef["armed"]) {
   pairs.sort((a, b2) => b2.r - a.r);
   let pi = 0;
   const turret = (c: Cand, side: number, missile: boolean) => {
-    const r = c.r * (missile ? 1.15 : 1);
-    const len = missile ? r * 1.5 : r * 2.0;
-    const bw = missile ? r * 0.5 : r * 0.18;
+    const spec = missile ? null : GUN_SPECS[kind];
+    const bulky = kind === "heavy" || kind === "scatter";
+    const r = c.r * (missile ? 1.15 : bulky ? 1.25 : 1);
+    const len = missile ? r * 1.5 : r * (kind === "laser" ? 2.5 : kind === "heavy" ? 2.4 : 2.0);
+    const bw = missile ? r * 0.5 : r * (kind === "laser" ? 0.14 : kind === "heavy" ? 0.28 : 0.18);
     const gi = b.group(c.x, c.y * side, "turret", side, 0, 0);
     const poly = turretPoly(c.x, c.y, r, len, bw);
-    const id = b.add("weapon", missile ? "Missile Pod" : "Gun Turret", side > 0 ? poly : mirror(poly), { layer: 8, g: gi, links: [c.host] });
+    const id = b.add("weapon", missile ? "Missile Pod" : spec!.name, side > 0 ? poly : mirror(poly), { layer: 8, g: gi, links: [c.host] });
     const p = b.parts[id];
-    p.wpn = missile ? "missile" : "gun";
+    p.wpn = missile ? "missile" : kind;
     p.muzzle = len * b.S;
+    if (spec) {
+      /* tint the barrel so the weapon reads at a glance */
+      p.stroke = `hsl(${spec.hue},100%,${spec.energy ? 74 : 66}%)`;
+      p.fill = `hsla(${spec.hue},90%,${spec.energy ? 40 : 28}%,0.95)`;
+      p.glow = true;
+    }
   };
   for (let i = 0; i < nGun && pi < pairs.length; i++, pi++) { turret(pairs[pi], 1, false); turret(pairs[pi], -1, false); }
   for (let i = 0; i < nMis && pi < pairs.length; i++, pi++) { turret(pairs[pi], 1, true); turret(pairs[pi], -1, true); }
@@ -383,7 +452,7 @@ const P = Math.PI;
 const SPECIES: SpeciesDef[] = [
   /* 0 ─ DRAGONFLY */
   {
-    id: "dragonfly", name: "Dragonfly", hue: 188, flying: true, speed: 210, turn: 3.4, ranged: true, keep: 330, muzzle: 2.2,
+    id: "dragonfly", gunType: "laser", name: "Dragonfly", hue: 188, flying: true, speed: 210, turn: 3.4, ranged: true, keep: 330, muzzle: 2.2,
     armed: { gun: true, missile: false, shield: true }, pack: [1, 1, 1, 1, 1, 1],
     abilities: [
       { type: "shoot", name: "Ion Bolt", minTier: 0, cd: 1.8, wind: 0.3, dmg: 0.7, n: 1, ns: 0.3, spread: 0.15, speed: 700, life: 1.4, size: 6, slow: 0.75, slowT: 1.2, kind: "bolt", maxP: 950 },
@@ -448,7 +517,7 @@ const SPECIES: SpeciesDef[] = [
 
   /* 1 ─ SCORPION */
   {
-    id: "scorpion", name: "Scorpion", hue: 2, flying: false, speed: 115, turn: 2.4, ranged: false, keep: 0, muzzle: 2.6,
+    id: "scorpion", gunType: "scatter", name: "Scorpion", hue: 2, flying: false, speed: 115, turn: 2.4, ranged: false, keep: 0, muzzle: 2.6,
     armed: { gun: true, missile: false, shield: false }, pack: [1, 1, 1, 1, 1, 1],
     abilities: [
       { type: "swing", name: "Pincer Clamp", minTier: 0, cd: 2.6, wind: 0.5, dmg: 2, maxS: 3.5, role: "arm", needs: "Pincer" },
@@ -678,7 +747,7 @@ const SPECIES: SpeciesDef[] = [
 
   /* 6 ─ HORNET */
   {
-    id: "wasp", name: "Hornet", hue: 52, flying: true, speed: 190, turn: 3.6, ranged: false, keep: 0, muzzle: 1.8,
+    id: "wasp", gunType: "minigun", name: "Hornet", hue: 52, flying: true, speed: 190, turn: 3.6, ranged: false, keep: 0, muzzle: 1.8,
     armed: { gun: true, missile: true, shield: false }, pack: [2, 2, 1, 1, 1, 1],
     abilities: [
       { type: "swing", name: "Mandible Snap", minTier: 0, cd: 2, wind: 0.35, dmg: 1.2, maxS: 2.2, role: "mandible", needs: "Mandible" },
@@ -733,7 +802,7 @@ const SPECIES: SpeciesDef[] = [
 
   /* 7 ─ SCARAB BEETLE */
   {
-    id: "beetle", name: "Scarab", hue: 140, flying: false, speed: 110, turn: 2.8, ranged: false, keep: 0, muzzle: 2.8,
+    id: "beetle", gunType: "scatter", name: "Scarab", hue: 140, flying: false, speed: 110, turn: 2.8, ranged: false, keep: 0, muzzle: 2.8,
     armed: { gun: true, missile: true, shield: true }, pack: [1, 1, 1, 1, 1, 1],
     abilities: [
       { type: "swing", name: "Mandible Crush", minTier: 0, cd: 2.4, wind: 0.45, dmg: 1.8, maxS: 2.7, role: "mandible", needs: "Mandible" },
@@ -766,7 +835,7 @@ const SPECIES: SpeciesDef[] = [
 
   /* 8 ─ SOLDIER ANT */
   {
-    id: "ant", name: "Soldier Ant", hue: 28, flying: false, speed: 150, turn: 3.4, ranged: false, keep: 0, muzzle: 3.0,
+    id: "ant", gunType: "minigun", name: "Soldier Ant", hue: 28, flying: false, speed: 150, turn: 3.4, ranged: false, keep: 0, muzzle: 3.0,
     armed: { gun: true, missile: false, shield: false }, pack: [4, 3, 2, 1, 1, 1],
     abilities: [
       { type: "swing", name: "Mandible Crush", minTier: 0, cd: 2, wind: 0.4, dmg: 1.6, maxS: 3.1, role: "mandible", needs: "Mandible" },
@@ -805,7 +874,7 @@ const SPECIES: SpeciesDef[] = [
 
   /* 9 ─ FIREFLY */
   {
-    id: "firefly", name: "Firefly", hue: 305, flying: true, speed: 125, turn: 2.8, ranged: true, keep: 340, muzzle: 1.7,
+    id: "firefly", gunType: "laser", name: "Firefly", hue: 305, flying: true, speed: 125, turn: 2.8, ranged: true, keep: 340, muzzle: 1.7,
     armed: { gun: true, missile: false, shield: true }, pack: [1, 1, 1, 1, 1, 1],
     abilities: [
       { type: "shoot", name: "Glow Orb", minTier: 0, cd: 3, wind: 0.4, dmg: 0.8, n: 1, ns: 0.4, spread: 0.5, speed: 300, life: 4.5, size: 9, homing: 1.2, slow: 0.8, slowT: 1, kind: "orb", maxP: 850 },
@@ -921,7 +990,7 @@ const SPECIES: SpeciesDef[] = [
 
   /* 15 ─ BOMBARDIER BEETLE */
   {
-    id: "bombardier", name: "Bombardier Beetle", hue: 28, flying: false, speed: 120, turn: 2.9, ranged: true, keep: 300, muzzle: 2.8,
+    id: "bombardier", gunType: "scatter", name: "Bombardier Beetle", hue: 28, flying: false, speed: 120, turn: 2.9, ranged: true, keep: 300, muzzle: 2.8,
     armed: { gun: true, missile: true, shield: false }, pack: [1, 1, 1, 1, 1, 1], minZone: 1, maxZone: 3,
     abilities: [
       { type: "spit", name: "Chemical Spray", minTier: 1, cd: 5, wind: 0.45, dmg: 0.7, speed: 520, size: 1.7, maxP: 640 },
@@ -936,7 +1005,7 @@ const SPECIES: SpeciesDef[] = [
 
   /* 16 ─ RHINOCEROS BEETLE */
   {
-    id: "rhino", name: "Rhinoceros Beetle", hue: 210, flying: false, speed: 105, turn: 2.2, ranged: false, keep: 0, muzzle: 2.9,
+    id: "rhino", gunType: "heavy", name: "Rhinoceros Beetle", hue: 210, flying: false, speed: 105, turn: 2.2, ranged: false, keep: 0, muzzle: 2.9,
     armed: { gun: true, missile: false, shield: true }, pack: [1, 1, 1, 1, 1, 1], minZone: 1, maxZone: 3,
     abilities: [
       { type: "charge", name: "Horn Charge", minTier: 1, cd: 7, wind: 0.9, dmg: 3.2, speed: 620, dur: 0.6, minP: 200, maxP: 800 },
@@ -951,7 +1020,7 @@ const SPECIES: SpeciesDef[] = [
 
   /* 17 ─ YELLOWJACKET */
   {
-    id: "yellowjacket", name: "Yellowjacket", hue: 50, flying: true, speed: 200, turn: 3.9, ranged: true, keep: 300, muzzle: 2.0,
+    id: "yellowjacket", gunType: "minigun", name: "Yellowjacket", hue: 50, flying: true, speed: 200, turn: 3.9, ranged: true, keep: 300, muzzle: 2.0,
     armed: { gun: true, missile: false, shield: false }, pack: [2, 2, 2, 1, 1, 1], minZone: 1, maxZone: 3,
     abilities: [
       { type: "shoot", name: "Venom Darts", minTier: 1, cd: 4, wind: 0.4, dmg: 0.65, n: 3, ns: 0.5, spread: 0.35, speed: 600, life: 1.4, size: 5, slow: 0.7, slowT: 1.2, poison: 0.2, kind: "bolt", minP: 180, maxP: 800 },
@@ -1082,7 +1151,7 @@ const SPECIES: SpeciesDef[] = [
 
   /* 26 ─ DUNG BEETLE */
   {
-    id: "dung", name: "Dung Beetle", hue: 32, flying: false, speed: 92, turn: 2.0, ranged: false, keep: 0, muzzle: 3.2,
+    id: "dung", gunType: "heavy", name: "Dung Beetle", hue: 32, flying: false, speed: 92, turn: 2.0, ranged: false, keep: 0, muzzle: 3.2,
     armed: { gun: true, missile: false, shield: true }, pack: [1, 1, 1, 1, 1, 1], minZone: 3, maxZone: 5,
     abilities: [
       { type: "charge", name: "Rolling Slam", minTier: 1, cd: 8, wind: 1, dmg: 3.4, speed: 560, dur: 0.7, minP: 220, maxP: 900 },
@@ -1111,7 +1180,7 @@ const SPECIES: SpeciesDef[] = [
 
   /* 28 ─ WEEVIL */
   {
-    id: "weevil", name: "Weevil", hue: 196, flying: false, speed: 110, turn: 2.8, ranged: false, keep: 0, muzzle: 3.4,
+    id: "weevil", gunType: "heavy", name: "Weevil", hue: 196, flying: false, speed: 110, turn: 2.8, ranged: false, keep: 0, muzzle: 3.4,
     armed: { gun: true, missile: false, shield: true }, pack: [1, 1, 1, 1, 1, 1], minZone: 3, maxZone: 5,
     abilities: [
       { type: "swing", name: "Drill Strike", minTier: 1, cd: 3, wind: 0.55, dmg: 2.6, maxS: 3.4, role: "mandible", needs: "Snout" },
@@ -1126,7 +1195,7 @@ const SPECIES: SpeciesDef[] = [
 
   /* 29 ─ LOCUST */
   {
-    id: "locust", name: "Locust", hue: 72, flying: true, speed: 205, turn: 3.4, ranged: false, keep: 0, muzzle: 2.6,
+    id: "locust", gunType: "minigun", name: "Locust", hue: 72, flying: true, speed: 205, turn: 3.4, ranged: false, keep: 0, muzzle: 2.6,
     armed: { gun: true, missile: true, shield: false }, pack: [2, 2, 2, 2, 1, 1], minZone: 3, maxZone: 5,
     abilities: [
       { type: "charge", name: "Swarm Rush", minTier: 1, cd: 5, wind: 0.4, dmg: 1.5, speed: 950, dur: 0.4, minP: 180, maxP: 850 },
@@ -1140,7 +1209,7 @@ const SPECIES: SpeciesDef[] = [
 
   /* 30 ─ JEWEL BEETLE */
   {
-    id: "jewel", name: "Jewel Beetle", hue: 152, flying: true, speed: 170, turn: 3.2, ranged: true, keep: 360, muzzle: 2.4,
+    id: "jewel", gunType: "laser", name: "Jewel Beetle", hue: 152, flying: true, speed: 170, turn: 3.2, ranged: true, keep: 360, muzzle: 2.4,
     armed: { gun: true, missile: true, shield: true }, pack: [1, 1, 1, 1, 1, 1], minZone: 4, maxZone: 5,
     reflectShell: true,
     abilities: [
@@ -1156,7 +1225,7 @@ const SPECIES: SpeciesDef[] = [
 
   /* 31 ─ WORLD SERPENT (boss) */
   {
-    id: "serpent", name: "Snake", hue: 285, flying: false, speed: 430, turn: 3.6, ranged: false, keep: 0, muzzle: 3.0,
+    id: "serpent", gunType: "laser", name: "Snake", hue: 285, flying: false, speed: 430, turn: 3.6, ranged: false, keep: 0, muzzle: 3.0,
     armed: { gun: true, missile: true, shield: true }, pack: [1, 1, 1, 1, 1, 1], minZone: 5, maxZone: 5, boss: true,
     bodyWave: { amp: 0.5, k: 0.42, speed: 2.4 },
     abilities: [
@@ -1471,7 +1540,7 @@ export function buildEnemy(speciesIdx: number, tier: number, seed: number): Buil
   const rng = mulberry32(seed);
   const b = new Builder(tier, sp.hue, rng);
   const mounts = sp.build(b, tier);
-  loadout(b, mounts, sp.armed);
+  loadout(b, mounts, sp);
   const order = b.parts.map((_, i) => i).sort((a, c) => b.parts[a].layer - b.parts[c].layer || a - c);
   let radius = 0;
   let legCount = 0, wingCount = 0;

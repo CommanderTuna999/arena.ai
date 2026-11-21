@@ -3,6 +3,29 @@
 Everything below is implemented in the current build. Numbers are the actual constants used by
 the simulation, not design targets.
 
+## 0. v2.1.0 — enemy weapon overhaul
+
+### Cannon upgrades retired
+- `pierce`, `breaker`, `coreseek`, `frag` and `velocity` are gone from `UPGRADES`, from `Stats` (`pierce`, `breaker`, `coreMul`, `frag`, plus the velocity-scaled bullet speed/range, now the flat 900 u/s / 760 u) and from the damage path in `hitEnemy`.
+- `migrate` filters unknown upgrade ids through the new `UPGRADE_BY_ID`, so a save carrying the old levels loads without them.
+- Left as-is for the coming cannon rework: damage, rate, barrels, crit.
+
+### Everyone can roll guns and shields
+- `loadout` no longer takes the species' `armed` flags as gospel: if a body has no gun it rolls `b.rng() < 0.12 + 0.06 * tier`, and if it has no shield generator it rolls `b.rng() < 0.10 + 0.05 * tier`, gated on the epic+ mounts existing (`nGun`/`nSh` still scale as `tier - 2`).
+- Rolled guns pick a kind from `randomGunKind()` (weights shift toward the heavy weapons at legendary/mythical).
+
+### Four new turret kinds (`GUN_SPECS`)
+- `gun` — unchanged baseline (900u, 1.35s, 0.4×, 560u/s).
+- `minigun` — "Rotary Gun": 700u, 0.16s, 0.05×, 720u/s, 0.16 rad spray.
+- `scatter` — "Scatter Cannon": 700u, 2.6s, 7 pellets of 0.2× at 420u/s across 0.5 rad, 9u+ pellets.
+- `heavy` — "Heavy Cannon": 1050u, 5.0s, 1.8×, 950u/s slug with 0.9 homing that shoves the enemy 260u/s backwards.
+- `laser` — "Laser Emitter": 1000u, 2.4s, 1.0×, 1,500u/s, `energy` damage.
+- Turret barrels are tinted per kind, and `render.ts` draws `pellet`, `slug` and `laser` projectile shapes.
+- `hurtPlayer` takes `energy`, which skips the kinetic-shield archetype's reduction; `EProj.energy` carries the flag.
+
+### Signature guns
+- `SpeciesDef.gunType` — Dragonfly/Firefly/Jewel/Serpent use lasers, Scorpion/Scarab/Bombardier scatter cannons, Rhino/Dung/Weevil heavy cannons, Hornet/Ant/Yellowjacket/Locust rotary guns.
+
 ## 0. v2.0.9 — legs no longer drag the turn rate
 
 ### Turning is a pure species stat
