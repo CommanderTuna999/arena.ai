@@ -15,9 +15,13 @@ import { GUN_SPECS, SPECIES_LIST, buildEnemy, type AbilityDef, type Group, type 
  *                      damages the hull is instantly destroyed. One turret dies per
  *                      1/6 nest integrity; repair starts after 120s without damage.
  *                      Player vision is 1.3x wider than the raw camera everywhere (optics stack).
- *   Credits          : every part broken by the player shakes loose 1-4 credit motes
- *                      worth ~4% of the part's component value (x salvage multiplier).
- *                      Motes home in from 260u and are collected on contact.
+ *   Credits          : every part broken by the player throws 1-5 credit coins worth
+ *                      ~4% of the part's component value (x salvage multiplier). They
+ *                      fly straight into the HUD counter and pay out when they land —
+ *                      there is nothing to pick up.
+ *   Loose cargo      : light parts (mass <= 14) are scooped straight into storage the
+ *                      moment the ship touches them. Heavier pieces still need the
+ *                      harpoon and a tow back to the nest dock.
  *   Crafted weapons  : fully automatic; damage = st.dmg * multiplier * efficiency.
  *                      B / AUTO pill toggles the rack (persisted in save.autoFire).
  *                      Each weapon has its own range (data.ts WEAPON_RANGE); auto-fire
@@ -190,8 +194,8 @@ export interface Harpoon {
 export interface Other { id: string; name: string; x: number; y: number; a: number; tx: number; ty: number; ta: number; seen: number }
 export interface Toast { id: number; msg: string; color: string; t: number }
 export interface Mine { x: number; y: number; vx: number; vy: number; arm: number; life: number; dmg: number; r: number }
-/** a credit mote shaken loose when an enemy part breaks; auto-collected near the player */
-export interface CreditDrop { x: number; y: number; vx: number; vy: number; life: number; max: number; value: number; spin: number; srcId: number }
+/** a credit coin thrown by a broken part; it is pure HUD animation that pays out on landing */
+export interface CreditDrop { x: number; y: number; life: number; max: number; value: number; spin: number; delay: number; dur: number; srcId: number }
 export interface Drone { a: number; r: number; cd: number }
 export interface Well { x: number; y: number; life: number; max: number; dmg: number; r: number }
 export interface LockOn { e: Enemy; part: Part; t: number }
@@ -246,6 +250,8 @@ export interface Player {
 
 export interface Hud {
   hp: number; maxHp: number; shield: number; maxShield: number; boost: number; hasBoost: boolean; credits: number;
+  /** increments every time a credit flight lands, so the HUD can pulse the counter */
+  creditTick: number;
   harp: { state: number; load: number; hp: number }[]; toasts: Toast[]; nearBase: boolean;
   tp: { has: boolean; ch: number; cd: number; max: number }; dead: boolean; respawn: number; x: number; y: number;
   online: number; zoomOn: boolean; inv: number; cargo: number; hold: number; rev: number; zoom: number; fps: number;
@@ -321,6 +327,9 @@ export class Game {
   beams: Beam[] = [];
   comps: LComp[] = [];
   creditDrops: CreditDrop[] = [];
+  /** screen position of the HUD credit counter; credit coins fly here */
+  creditHud = { x: 40, y: 210 };
+  creditTick = 0;
   harpoons: Harpoon[] = [];
   others: Other[] = [];
   toasts: Toast[] = [];
@@ -618,6 +627,8 @@ export class Game {
   setName(n: string) { this.save.name = n.slice(0, 16); this.markDirty(); }
   setAutoFire(v: boolean) { this.autoFire = v; this.save.autoFire = v; this.markDirty(); this.rev++; }
   setShowCompInfo(v: boolean) { this.save.showCompInfo = v; this.markDirty(); this.rev++; }
+  /** GameClient measures the credit counter and hands its screen position over. */
+  setCreditHud(x: number, y: number) { this.creditHud.x = x; this.creditHud.y = y; }
   setShowRanges(v: boolean) { this.save.showRanges = v; this.markDirty(); this.rev++; }
   /** loose component under the mouse (for the hover tooltip) */
   compUnderCursor(): LComp | null {
@@ -1020,6 +1031,13 @@ export class Game {
         const damp = Math.exp(-1.3 * dt);
         c.vx *= damp; c.vy *= damp;
         c.stress = 0;
+        /* Light salvage is scooped up on contact: no harpoon, no tow. Heavy
+         * pieces still need a cable and the nest dock. */
+        if (c.c.mass <= 14 && Math.hypot(p.x - c.x, p.y - c.y) < SHIP_R + c.r + 12) {
+          this.comps.splice(i, 1);
+          this.dockComp(c);
+          continue;
+        }
       }
       // docking
       if (Math.hypot(c.x - BASE.x, c.y - BASE.y) < BASE.dock) {
@@ -1608,50 +1626,39 @@ export class Game {
     while (r > 0 && Math.random() < q) r--;
     return r;
   }
-  /** Shake loose spendable credits when a player breaks a part. The motes are
-   *  physical pickups: they drift, home in and are collected on contact. */
+  /** Throw spendable credits when a player breaks a part. The coins are a HUD
+   *  flourish: they home at the counter and the money lands when they arrive. */
   private dropCreditValue(e: Enemy, x: number, y: number, area: number, kind: PartKind) {
     if (this.baseMajority(e)) return;
     const cr = Math.max(1, Math.round(compValue(area, Math.min(5, e.tier), kind) * 0.04 * this.stats.sellMul));
-    const n = cr >= 90 ? 4 : cr >= 24 ? 3 : cr >= 6 ? 2 : 1;
+    const n = cr >= 90 ? 5 : cr >= 24 ? 3 : cr >= 6 ? 2 : 1;
     const each = Math.max(1, Math.round(cr / n));
     for (let k = 0; k < n; k++) {
-      const a = Math.random() * TAU, sp = 50 + Math.random() * 110;
+      const delay = k * 0.055 + Math.random() * 0.05;
+      const dur = 0.5 + Math.random() * 0.3;
       this.creditDrops.push({
-        x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp,
-        life: 18, max: 18, value: each, spin: Math.random() * TAU, srcId: e.id,
+        x, y, life: delay + dur, max: delay + dur, value: each,
+        spin: Math.random() * TAU, delay, dur, srcId: e.id,
       });
     }
-    if (this.creditDrops.length > 140) this.creditDrops.splice(0, this.creditDrops.length - 140);
+    if (this.creditDrops.length > 160) this.creditDrops.splice(0, this.creditDrops.length - 160);
   }
   private dropCredits(e: Enemy, p: Part, x: number, y: number) {
     this.dropCreditValue(e, x, y, p.area, p.kind);
   }
   private updateCreditDrops(dt: number) {
-    const p = this.player;
-    const magnet = 260 + (this.stats.magnet ? this.stats.magnetRange * 0.45 : 0);
     for (let i = this.creditDrops.length - 1; i >= 0; i--) {
       const c = this.creditDrops[i];
       c.life -= dt;
-      const dx = p.x - c.x, dy = p.y - c.y;
-      const d = Math.hypot(dx, dy);
-      if (!p.dead && d < magnet) {
-        const pull = 900 + 1600 * (1 - d / magnet);
-        c.vx += (dx / (d || 1)) * pull * dt;
-        c.vy += (dy / (d || 1)) * pull * dt;
-      }
-      c.vx *= Math.exp(-1.6 * dt); c.vy *= Math.exp(-1.6 * dt);
-      c.x += c.vx * dt; c.y += c.vy * dt;
-      c.spin += dt * 4;
-      if (!p.dead && d < 30) {
+      c.spin += dt * 6;
+      if (c.life <= 0) {
+        /* the coin reached the counter: pay it out and let the HUD pulse */
         this.save.credits += c.value;
         this.save.earned += c.value;
         this.dirty = true;
-        this.burst(c.x, c.y, "#ffd24d", 4, 2, 120);
+        this.creditTick++;
         this.creditDrops.splice(i, 1);
-        continue;
       }
-      if (c.life <= 0) this.creditDrops.splice(i, 1);
     }
   }
   private maybeDrop(e: Enemy, p: Part, x: number, y: number, mul = 1) {
@@ -3478,7 +3485,7 @@ export class Game {
   hud(): Hud {
     const p = this.player, st = this.stats;
     return {
-      hp: p.hp, maxHp: st.hull, shield: p.shield, maxShield: st.shieldMax, boost: p.boost, hasBoost: st.hasBoost, credits: this.save.credits,
+      hp: p.hp, maxHp: st.hull, shield: p.shield, maxShield: st.shieldMax, boost: p.boost, hasBoost: st.hasBoost, credits: this.save.credits, creditTick: this.creditTick,
       harp: this.harpoons.map((h) => ({ state: h.state, load: h.comp ? h.comp.c.mass / (h.comp.hooks.length * st.hStr) : 0, hp: h.hp / h.maxHp })),
       toasts: [...this.toasts], nearBase: this.nearBase(),
       tp: { has: st.tpTime > 0, ch: p.tpT > 0 ? 1 - p.tpT / st.tpTime : 0, cd: p.tpCd, max: st.tpCd },

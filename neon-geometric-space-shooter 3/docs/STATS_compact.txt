@@ -1,4 +1,4 @@
-WOF GUE — COMPLETE STAT COMPENDIUM (build 2.2.1)
+WOF GUE — COMPLETE STAT COMPENDIUM (build 2.3.0)
 Generated 21 Nov 2026. Every number below is a simulation constant. Health is the sum of all parts at that tier; enemy damage is a multiple of eDmg; weapon damage is a multiple of the player cannon damage st.dmg.
 
 1. FORMULAS

@@ -161,35 +161,7 @@ export function render(g: Game, ctx: CanvasRenderingContext2D) {
     }
   }
 
-  /* ---- credit motes ---- */
-  for (const c of g.creditDrops) {
-    if (c.x < vx0 - 10 || c.x > vx1 + 10 || c.y < vy0 - 10 || c.y > vy1 + 10) continue;
-    const fade = clamp(c.life / 2.5, 0, 1);
-    const bob = Math.sin(t * 4 + c.spin) * 1.4;
-    if (z < 0.1) {
-      const px = Math.max(1.2, 3.2 * z / 0.1);
-      const w = px / z;
-      ctx.globalAlpha = fade;
-      ctx.fillStyle = "#ffd24d";
-      ctx.fillRect(c.x - w / 2, c.y + bob - w / 2, w, w);
-      continue;
-    }
-    ctx.save(); ctx.translate(c.x, c.y + bob); ctx.rotate(c.spin);
-    ctx.globalAlpha = fade;
-    ctx.fillStyle = "#ffd24d"; ctx.shadowColor = "#ffd24d"; ctx.shadowBlur = 8;
-    ctx.beginPath(); ctx.moveTo(0, -4.8); ctx.lineTo(3.7, 0); ctx.lineTo(0, 4.8); ctx.lineTo(-3.7, 0); ctx.closePath(); ctx.fill();
-    ctx.shadowBlur = 0;
-    ctx.fillStyle = "#3b2704";
-    ctx.beginPath(); ctx.moveTo(0, -2.4); ctx.lineTo(1.8, 0); ctx.lineTo(0, 2.4); ctx.lineTo(-1.8, 0); ctx.closePath(); ctx.fill();
-    ctx.strokeStyle = "rgba(255,245,190,0.85)"; ctx.lineWidth = 0.7;
-    ctx.beginPath(); ctx.moveTo(0, -4.8); ctx.lineTo(0, 4.8); ctx.stroke();
-    if (c.value >= 24) {
-      ctx.strokeStyle = "rgba(255,225,120,0.45)"; ctx.lineWidth = 0.8;
-      ctx.beginPath(); ctx.arc(0, 0, 6.2, 0, TAU); ctx.stroke();
-    }
-    ctx.restore();
-  }
-  ctx.globalAlpha = 1;
+  /* credit coins are HUD animation; see drawCreditFlights() */
 
   /* ---- magnet field ---- */
   if (g.stats.magnet > 0) {
@@ -502,9 +474,56 @@ export function render(g: Game, ctx: CanvasRenderingContext2D) {
 
   /* ---- screen space HUD in canvas ---- */
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  drawCreditFlights(g, ctx);
   drawMinimap(g, ctx);
   drawBaseArrow(g, ctx);
   if (hoveredComp) drawCompTooltip(g, ctx, hoveredComp);
+}
+
+/* Credit coins: each one is thrown from the broken part in world space and then
+ * arcs across the screen into the HUD counter, paying out when it lands. Drawn
+ * in screen space so the coin keeps a constant, crisp size at any zoom. */
+function drawCreditFlights(g: Game, ctx: CanvasRenderingContext2D) {
+  if (!g.creditDrops.length) return;
+  const z = g.cam.z;
+  const hx = g.creditHud.x, hy = g.creditHud.y;
+  ctx.save();
+  for (const c of g.creditDrops) {
+    const age = c.max - c.life;
+    const p = clamp((age - c.delay) / c.dur, 0, 1);
+    const e = p * p * (3 - 2 * p);
+    const sx = (c.x - g.cam.x) * z + g.w / 2;
+    const sy = (c.y - g.cam.y) * z + g.h / 2;
+    const lift = Math.sin(Math.PI * e) * (60 + 40 * Math.min(1, Math.hypot(hx - sx, hy - sy) / 600));
+    const x = sx + (hx - sx) * e;
+    const y = sy + (hy - sy) * e - lift;
+    const s = 1.05 - 0.25 * e;
+    ctx.globalAlpha = p < 0.1 ? p / 0.1 : 1 - Math.max(0, (p - 0.88) / 0.12) * 0.7;
+    /* speed streak behind the coin */
+    if (e > 0.12) {
+      const e0 = e - 0.07;
+      const bx = sx + (hx - sx) * e0;
+      const by = sy + (hy - sy) * e0 - Math.sin(Math.PI * e0) * lift;
+      ctx.strokeStyle = "rgba(255,210,77,0.28)";
+      ctx.lineWidth = 1.4 * s;
+      ctx.beginPath(); ctx.moveTo(bx, by); ctx.lineTo(x, y); ctx.stroke();
+    }
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.scale(s, s);
+    ctx.rotate(c.spin * 0.35);
+    ctx.fillStyle = "#ffd24d";
+    ctx.shadowColor = "#ffd24d"; ctx.shadowBlur = 9;
+    ctx.beginPath(); ctx.arc(0, 0, 5, 0, TAU); ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.strokeStyle = "rgba(255,246,200,0.9)"; ctx.lineWidth = 0.8;
+    ctx.beginPath(); ctx.arc(0, 0, 3.4, 0, TAU); ctx.stroke();
+    ctx.fillStyle = "#3b2704";
+    ctx.fillRect(-1.5, -1.5, 3, 3);
+    ctx.restore();
+  }
+  ctx.globalAlpha = 1;
+  ctx.restore();
 }
 
 /* Hover card for loose components: name, rarity/category, value and mass.

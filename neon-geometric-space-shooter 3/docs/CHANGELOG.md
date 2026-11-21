@@ -3,6 +3,24 @@
 Everything below is implemented in the current build. Numbers are the actual constants used by
 the simulation, not design targets.
 
+## 0. v2.3.0 — salvage on contact, cash on the counter
+
+### Light parts are scooped on touch
+- A loose component with `mass <= 14` (`compMass = area / 900`, so parts up to ~63u radius) is collected the instant `|ship - part| < SHIP_R + partRadius + 12`: no tether, no tow, no dock trip.
+- `updateComps` only does this for unhooked pieces, so a part already on a cable is never vacuumed out of the tether mid-pull. Heavier pieces behave exactly as before.
+- The scoop runs through `dockComp`, so it respects the cargo cap and `autoSell`: with the bay full the piece is sold for its value instead of being stored.
+
+### Credits fly into the counter
+- `dropCreditValue` no longer spills collectible motes: it throws `1-5` coins with `delay = k * 0.055` and `dur = 0.5-0.8s`. Nothing is picked up.
+- `updateCreditDrops` only ages the coins; when one lands it adds `value` to `save.credits` / `save.earned` and increments `creditTick`, which the HUD uses to pulse the counter.
+- `render.ts` draws the flights in **screen space**: the coin starts at the part's world position (projected through the camera), arcs toward `game.creditHud` with a smoothstep and a `sin` lift, shrinks slightly, leaves a short gold streak, then pops into the counter. `GameClient` measures the counter element every 100ms and hands its position to `game.setCreditHud(x, y)`.
+- The counter icon is now a struck cash coin: radial gold gradient, dark rim, inner ring, rim ticks and a real square hole cut with an SVG mask. It replays a `creditPop` keyframe on each landing.
+
+### HUD declutter
+- Removed: the bottom-left toast stack, the `● online · fps · wheel = zoom` readout, the `CANNON ONLINE/OFFLINE` label and the `HOSTILES IN NEST RANGE` banner.
+- The discovery banner is now one short line (`NEW · <name>`); the AUTO/OVERDRIVE/ADMIN pills stay because they are interactive state.
+- Help text updated to match: light parts scoop on contact, credits fly straight in.
+
 ## 0. v2.2.1 — shield panels ride outside the armour
 
 - Panels were sized off body scale alone, which put them *inside* the plating on anything above rare (a mythical dragonfly's plates reach ~1,167u while the panel ring sat at ~497u).

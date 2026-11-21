@@ -52,6 +52,7 @@ export default function GameClient() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const gameRef = useRef<Game | null>(null);
   const [hud, setHud] = useState<Hud | null>(null);
+  const creditRef = useRef<HTMLDivElement | null>(null);
   const [game, setGame] = useState<Game | null>(null);
   const gameRef2 = useRef<Game | null>(null);
   useEffect(() => { gameRef2.current = game; }, [game]);
@@ -104,12 +105,19 @@ export default function GameClient() {
       setGame(game);
       if (!localStorage.getItem("neon-hive-help")) setHelp(true);
 
+      /* the credit counter lives in the DOM, so the engine needs its screen
+       * position to aim the coin flights at it */
+      const measureCredit = () => {
+        const r = creditRef.current?.getBoundingClientRect();
+        if (r && r.width > 0) game.setCreditHud(r.left + 12, r.top + r.height / 2);
+      };
       const resize = () => {
         const dpr = Math.min(2, window.devicePixelRatio || 1);
         const w = window.innerWidth, h = window.innerHeight;
         canvas.width = Math.floor(w * dpr); canvas.height = Math.floor(h * dpr);
         canvas.style.width = w + "px"; canvas.style.height = h + "px";
         game.resize(w, h, dpr);
+        measureCredit();
       };
       resize();
       window.addEventListener("resize", resize);
@@ -167,7 +175,7 @@ export default function GameClient() {
       };
       raf = requestAnimationFrame(loop);
       setHud(game.hud());
-      hudTimer = setInterval(() => setHud(game.hud()), 100);
+      hudTimer = setInterval(() => { setHud(game.hud()); measureCredit(); }, 100);
       void game.pushServer();
     })();
 
@@ -186,7 +194,7 @@ export default function GameClient() {
       <canvas ref={canvasRef} className="block cursor-crosshair" />
       <div className="pointer-events-none fixed inset-0" style={{ background: "radial-gradient(ellipse at center, transparent 55%, rgba(0,0,10,0.65) 100%)" }} />
       {!hud && <div className="absolute inset-0 grid place-items-center text-xl tracking-[0.4em] text-cyan-300">LOADING SAVE…</div>}
-      {hud && game && <Hud_ hud={hud} onOpen={() => { game.blur(); setAdminOpen(false); setMenu(true); }} onHelp={() => setHelp(true)} onAdmin={() => { game.blur(); setMenu(false); setAdminOpen(true); }} onToggleAuto={() => game.toggleAutoFire()} onSettings={() => { game.blur(); setSettingsOpen(true); }} onBestiary={() => { game.blur(); setBestiaryOpen(true); }} onHome={goHome} />}
+      {hud && game && <Hud_ hud={hud} creditRef={creditRef} onOpen={() => { game.blur(); setAdminOpen(false); setMenu(true); }} onHelp={() => setHelp(true)} onAdmin={() => { game.blur(); setMenu(false); setAdminOpen(true); }} onToggleAuto={() => game.toggleAutoFire()} onSettings={() => { game.blur(); setSettingsOpen(true); }} onBestiary={() => { game.blur(); setBestiaryOpen(true); }} onHome={goHome} />}
       {hud && game && adminOpen && <AdminPanel game={game} hud={hud} onClose={() => setAdminOpen(false)} />}
       {hud && game && menu && <Hangar game={game} hud={hud} onClose={() => setMenu(false)} />}
       {game && bestiaryOpen && <Bestiary bestiary={game.save.bestiary ?? {}} onClose={() => { setBestiaryOpen(false); game.blur(); }} />}
@@ -216,6 +224,33 @@ function Bar({ v, max, color, h = 10 }: { v: number; max: number; color: string;
   );
 }
 
+/** An ancient cash coin: struck gold with a square hole through the middle. */
+function CreditCoin({ size = 18 }: { size?: number }) {
+  return (
+    <svg viewBox="0 0 32 32" width={size} height={size} className="block">
+      <defs>
+        <radialGradient id="coinGold" cx="34%" cy="28%" r="78%">
+          <stop offset="0%" stopColor="#fff6c2" />
+          <stop offset="42%" stopColor="#ffd24d" />
+          <stop offset="82%" stopColor="#e0a728" />
+          <stop offset="100%" stopColor="#a87a12" />
+        </radialGradient>
+        <mask id="coinHole">
+          <rect width="32" height="32" fill="#fff" />
+          <rect x="11.7" y="11.7" width="8.6" height="8.6" rx="0.7" fill="#000" />
+        </mask>
+      </defs>
+      <circle cx="16" cy="16" r="13.4" fill="url(#coinGold)" mask="url(#coinHole)" />
+      <circle cx="16" cy="16" r="13.4" fill="none" stroke="#8a6410" strokeWidth="1.1" />
+      <circle cx="16" cy="16" r="11.1" fill="none" stroke="#8a6410" strokeWidth="0.8" opacity="0.8" />
+      <rect x="11.7" y="11.7" width="8.6" height="8.6" rx="0.7" fill="none" stroke="#7d5a0c" strokeWidth="1.1" />
+      <path d="M16 3.4v1.9M16 26.7v1.9M3.4 16h1.9M26.7 16h1.9" stroke="#7d5a0c" strokeWidth="1" strokeLinecap="round" opacity="0.85" />
+      <path d="M16 3.4v1.2M16 27.4v1.2M3.4 16h1.2M27.4 16h1.2" stroke="#fff4c0" strokeWidth="0.7" strokeLinecap="round" opacity="0.7" />
+      <ellipse cx="11.4" cy="10.6" rx="3.1" ry="2" fill="#fffbe0" opacity="0.45" transform="rotate(-32 11.4 10.6)" />
+    </svg>
+  );
+}
+
 /** Harpoon state as a bare glyph: colour carries the status, no words. */
 function HarpoonGlyph({ state, load, hp }: { state: number; load: number; hp: number }) {
   const col = state === 0 ? "#2f6f66" : state === 1 ? "#7df9ff" : state === 2 ? (load > 0.9 ? "#ff4d6d" : "#ffd24d") : "#ff9d6e";
@@ -234,7 +269,7 @@ function HarpoonGlyph({ state, load, hp }: { state: number; load: number; hp: nu
   );
 }
 
-function Hud_({ hud, onOpen, onHelp, onAdmin, onSettings, onBestiary, onHome, onToggleAuto }: { hud: Hud; onOpen: () => void; onHelp: () => void; onAdmin: () => void; onSettings: () => void; onBestiary: () => void; onHome: () => void; onToggleAuto: () => void }) {
+function Hud_({ hud, creditRef, onOpen, onHelp, onAdmin, onSettings, onBestiary, onHome, onToggleAuto }: { hud: Hud; creditRef: React.RefObject<HTMLDivElement | null>; onOpen: () => void; onHelp: () => void; onAdmin: () => void; onSettings: () => void; onBestiary: () => void; onHome: () => void; onToggleAuto: () => void }) {
   const hpCol = hud.hp / hud.maxHp > 0.5 ? "#2dffa0" : hud.hp / hud.maxHp > 0.25 ? "#ffd24d" : "#ff4d6d";
   const [selAb, setSelAb] = useState<number | null>(null);
   return (
@@ -268,13 +303,9 @@ function Hud_({ hud, onOpen, onHelp, onAdmin, onSettings, onBestiary, onHome, on
             </span>
           </div>
         )}
-        {hud.baseNear && !hud.baseLost && (
-          <div className="flex items-center gap-2 text-[9px] font-bold tracking-[0.14em]">
-            <span className={hud.basePowered ? "text-orange-300" : "text-slate-500"}>{hud.basePowered ? "CANNON ONLINE" : "CANNON OFFLINE"}</span>
-          </div>
-        )}
-        <div className="mt-1 flex items-center gap-2 text-sm font-bold text-yellow-300 drop-shadow-[0_0_8px_rgba(255,225,77,0.7)]">
-          <span className="inline-block h-3 w-3 rotate-45 border border-yellow-300 bg-yellow-300/30" /> {fmtNum(hud.credits)} CR
+        <div ref={creditRef} className="mt-1 flex items-center gap-1.5 text-sm font-bold text-yellow-300 drop-shadow-[0_0_8px_rgba(255,225,77,0.7)]">
+          <span key={hud.creditTick} className="credit-pop inline-flex drop-shadow-[0_0_6px_rgba(255,210,77,0.8)]"><CreditCoin size={17} /></span>
+          <span>{fmtNum(hud.credits)}</span>
         </div>
         <div className="flex gap-1.5">
           {hud.harp.map((h, i) => <HarpoonGlyph key={i} state={h.state} load={h.load} hp={h.hp} />)}
@@ -289,8 +320,7 @@ function Hud_({ hud, onOpen, onHelp, onAdmin, onSettings, onBestiary, onHome, on
         )}
       </div>
 
-      <div className="pointer-events-none absolute left-1/2 top-2 flex -translate-x-1/2 items-center gap-2 text-[11px] text-cyan-300/70">
-        <span>● {hud.online} · {hud.fps} fps{hud.zoomOn ? " · wheel = zoom" : ""}</span>
+      <div className="pointer-events-none absolute left-1/2 top-2 flex -translate-x-1/2 items-center gap-2 text-[11px]">
         <button
           onClick={onToggleAuto}
           className="pointer-events-auto rounded-sm border px-1.5 py-0.5 text-[10px] font-bold tracking-wider"
@@ -304,13 +334,8 @@ function Hud_({ hud, onOpen, onHelp, onAdmin, onSettings, onBestiary, onHome, on
       </div>
 
       {hud.discovery && (
-        <div className="pointer-events-none absolute left-1/2 top-12 z-20 -translate-x-1/2 rounded-sm border border-yellow-300/70 bg-black/80 px-4 py-1.5 text-center text-sm font-black tracking-wide text-yellow-200 shadow-[0_0_24px_rgba(255,225,77,0.35)]">
-          New enemy discovered: {hud.discovery.name}!
-        </div>
-      )}
-      {hud.baseUnderAttack && !hud.baseLost && (
-        <div className="pointer-events-none absolute left-1/2 top-[4.5rem] z-20 -translate-x-1/2 animate-pulse rounded-sm border border-orange-400/80 bg-black/80 px-4 py-1 text-center text-[11px] font-black tracking-[0.22em] text-orange-300 shadow-[0_0_22px_rgba(255,140,80,0.4)]">
-          ⬢ HOSTILES IN NEST RANGE
+        <div className="pointer-events-none absolute left-1/2 top-12 z-20 -translate-x-1/2 rounded-sm border border-yellow-300/60 bg-black/70 px-3 py-1 text-center text-[11px] font-bold tracking-[0.18em] text-yellow-200">
+          NEW · <span className="text-yellow-100">{hud.discovery.name}</span>
         </div>
       )}
 
@@ -340,12 +365,6 @@ function Hud_({ hud, onOpen, onHelp, onAdmin, onSettings, onBestiary, onHome, on
             <div className="text-white/60">[{hud.abilities[selAb].key}] {hud.abilities[selAb].ready ? "ready" : `recharging ${Math.ceil(hud.abilities[selAb].cd)}s`}</div>
           </div>
         )}
-      </div>
-
-      <div className="pointer-events-none absolute bottom-3 left-3 flex flex-col gap-1">
-        {hud.toasts.map((t) => (
-          <div key={t.id} className="rounded-sm border border-white/10 bg-black/60 px-2 py-1 text-xs" style={{ color: t.color, textShadow: `0 0 8px ${t.color}` }}>{t.msg}</div>
-        ))}
       </div>
 
       <div className="absolute bottom-3 right-3 flex items-center gap-2">
@@ -400,7 +419,7 @@ function Help({ onClose }: { onClose: () => void }) {
     ["Nest cannon", "Dormant until the nest is hit, then online for 120s; only tracks rare+ targets and one-shots legendaries"],
     ["Nest retaliation", "Any insect that damages the nest is instantly destroyed — no swarming the hull"],
     ["Nest targeting", "Insects hunt your ship, never the nest — they will follow you straight through turret range, and stray fire can still scar the hull"],
-    ["Credits", "Broken enemy parts shake loose credit motes; fly close to collect them automatically"],
+    ["Credits", "Broken enemy parts throw credit coins straight into your counter — nothing to pick up"],
     ["Hex turrets", "Six fast, weak point-defence turrets; one dies for every 1/6 of nest integrity lost"],
     ["Mouse wheel", "Zoom out (craftable optics)"],
     ["Z X C V F", "Fire equipped active abilities"],
@@ -416,7 +435,8 @@ function Help({ onClose }: { onClose: () => void }) {
           {rows.map(([k, v]) => (<><div key={k} className="text-yellow-300">{k}</div><div key={v}>{v}</div></>))}
         </div>
         <ul className="mt-4 list-disc space-y-1 pl-5 text-xs text-cyan-100/80">
-          <li>Destroyed pieces drop components. Tether them and tow them into the <b className="text-yellow-300">yellow hex</b> at the nest.</li>
+          <li>Destroyed pieces drop components. Light parts (mass 14 or less) are scooped into storage the moment you touch them.</li>
+          <li>Heavy pieces need the tether: tow them into the <b className="text-yellow-300">yellow hex</b> at the nest.</li>
           <li>Too heavy? Stronger cables, more harpoons on one part, or a better winch help. Overloaded cables snap.</li>
           <li>Sell components for credits or store them to craft weapons, shields, armour, optics, utilities and active abilities.</li>
           <li>Rare and above enemies wear grey armour layers around their parts; the deeper the zone, the more layers. Energy shields (blue hexes) swallow lasers and shock completely, but solid rounds pass through them.</li>

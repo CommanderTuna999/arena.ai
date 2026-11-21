@@ -8,7 +8,7 @@
  *   CHANGELOG and mirror the details in docs/CHANGELOG.md.
  */
 
-export const VERSION = "2.2.1";
+export const VERSION = "2.3.0";
 
 export interface ChangeEntry {
   version: string;
@@ -19,6 +19,17 @@ export interface ChangeEntry {
 }
 
 export const CHANGELOG: ChangeEntry[] = [
+  {
+    version: "2.3.0",
+    date: "21 Nov 2026",
+    title: "Salvage on contact, cash on the counter",
+    points: [
+      "Light salvage is picked up by touch: any loose part of mass 14 or less drops straight into storage the moment your ship touches it. Heavier pieces still need the tether and a tow back to the nest dock.",
+      "Credits no longer need collecting at all. Every broken part throws coins that arc across the screen into the credit counter, and the money is banked as each coin lands, with the counter popping on every arrival.",
+      "The counter now carries a struck gold cash coin - a rimmed disc with a square hole through the middle, an inner ring and a highlight - instead of a flat diamond.",
+      "The HUD was decluttered: the toast stack in the bottom-left is gone, along with the online/fps/zoom readout, the CANNON ONLINE label and the hostiles banner. The discovery message is now a single short line.",
+    ],
+  },
   {
     version: "2.2.1",
     date: "21 Nov 2026",

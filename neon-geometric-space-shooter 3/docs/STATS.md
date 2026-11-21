@@ -1,6 +1,6 @@
 # wof gue — complete stat compendium
 
-Build 2.2.1 · generated 21 Nov 2026 · every figure is a live simulation constant, not a design target.
+Build 2.3.0 · generated 21 Nov 2026 · every figure is a live simulation constant, not a design target.
 
 How to read it: enemy health is the sum of every part at that rarity tier. Enemy damage is listed as a multiplier of the tier damage (eDmg), because every bite, bolt, blast and contact hit scales from that one number. Weapon damage is a multiplier of the player cannon damage (st.dmg = 10 x 1.2^Cannon Damage level). Efficiency (eff) is the crafted item quality: 0.30 minimum, 1.00 typical; the raw formula can reach 2.25 on an unrestricted tier-5 core build and 1.80 on a 7-part difficulty-5 recipe.
 
@@ -748,7 +748,7 @@ Scale Mail (scalemail): +0.03 x eff armour; +18% x eff hull. Blocks: kinetic, ph
 
 Wide-Field Optics (lens): minimum zoom = clamp(1 / (1 + 1.96 x eff), 0.056, 1). At eff 1.00 that is 0.34x zoom; at eff 0.30, 0.63x. Craft: difficulty 2, 4 components; 1x Wing/Core.
 Recall Beacon (recall): channel time = clamp(6 / (0.6 + 0.5 x eff), 2, 6)s; cooldown = clamp(100 / (0.5 + 0.5 x eff), 20, 100)s. Craft: difficulty 4, 6 components; 1x Core.
-Component Magnet (magnet): passive pickup radius 420 + 320 x eff (also extends credit-mote pull). Craft: difficulty 3, 5 components; 1x Core/Body + 1x Worker Ant / Honeybee part.
+Component Magnet (magnet): passive pickup radius 420 + 320 x eff for loose components under mass 14 (those are also scooped up on touch, no magnet needed). Craft: difficulty 3, 5 components; 1x Core/Body + 1x Worker Ant / Honeybee part.
 
 EMP Burst (ab_emp): 14s base cooldown. 760u radius: stun for 2.6 x (0.7 + 0.30 x eff)s and deal 1.5x st.dmg x eff to the enemy core (or first part). Enemies with hull shells take no damage but are still stunned. Cooldown = base / (0.7 + 0.30 x eff). Craft: difficulty 3, 5 components; 1x Core/Shield + 1x Cicada / Firefly part.
 Missile Salvo (ab_salvo): 12s base cooldown. Fires 10 homing missiles in a ring at up to 6 targets within 1,200u; each missile deals 1.8x st.dmg x eff, 3.4s life. Cooldown = base / (0.7 + 0.30 x eff). Craft: difficulty 4, 6 components; 1x Weapon.
@@ -807,4 +807,4 @@ Energy shields: a panel has no charge to strip, so it never collapses, re-arms o
 Destroyed parts: each dead part can drop a component; weapons and shield generators detonate for 1.8x eDmg to the player (other parts 1.3x) and damage enemies in the blast.
 Boss: the Snake is the only boss (217 parts, body wave, 294u radius at T0; no reflective shield). At most one is alive; it spawns in the mythical core and never counts as a normal resident. SNAKE_ENABLED is false in this build, so the dedicated core pass is dormant even though the encounter code exists.
 
-End of compendium · build 2.2.1
+End of compendium · build 2.3.0
