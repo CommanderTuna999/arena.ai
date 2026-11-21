@@ -8,7 +8,7 @@
  *   CHANGELOG and mirror the details in docs/CHANGELOG.md.
  */
 
-export const VERSION = "2.8.0";
+export const VERSION = "2.9.0";
 
 export interface ChangeEntry {
   version: string;
@@ -19,6 +19,19 @@ export interface ChangeEntry {
 }
 
 export const CHANGELOG: ChangeEntry[] = [
+  {
+    version: "2.9.0",
+    date: "21 Nov 2026",
+    title: "Balance sheet: enemy stats, cannon, hull",
+    points: [
+      "Aggro for rare and up is back out where it was: rare x3, epic x4, legendary x5, mythical x5 their old ranges (rare opens at ~1,000u, a mythical at ~3,900u). Commons and uncommons stay neutral and stay tight.",
+      "Enemy piece health now comes off the sheet: 19 for a dragonfly body up to 80 for the world serpent, with armour plates worth nine times a normal piece and the rarity ladder running 1 / 3.75x / 15x / 70.5x / 423x / 3,426x.",
+      "Enemy base damage is per species too (20 to 100 at common), and the attachments use the sheet's multipliers: basic 0.5x, scatter 1.2x, minigun 0.2x (10s burst, then it has to cool), laser 1.0x, heavy rail 17x, energy shield 25x.",
+      "The starting cannon is the sheet's tier 0: 20 damage on a 0.7s interval, free at the start. Cannon damage still climbs 1.2x a level.",
+      "Player hull is a flatter, cheaper curve: still 100 at the start, but 1.19x a level instead of 1.22x, with the shield core and the rest of the hull tree priced down to match.",
+      "Everything that used to be called the nest is called the base now.",
+    ],
+  },
   {
     version: "2.8.0",
     date: "21 Nov 2026",
@@ -82,7 +95,7 @@ export const CHANGELOG: ChangeEntry[] = [
     date: "21 Nov 2026",
     title: "Salvage on contact, cash on the counter",
     points: [
-      "Light salvage is picked up by touch: any loose part of mass 14 or less drops straight into storage the moment your ship touches it. Heavier pieces still need the tether and a tow back to the nest dock.",
+      "Light salvage is picked up by touch: any loose part of mass 14 or less drops straight into storage the moment your ship touches it. Heavier pieces still need the tether and a tow back to the base dock.",
       "Credits no longer need collecting at all. Every broken part throws coins that arc across the screen into the credit counter, and the money is banked as each coin lands, with the counter popping on every arrival.",
       "The counter now carries a struck gold cash coin - a rimmed disc with a square hole through the middle, an inner ring and a highlight - instead of a flat diamond.",
       "The HUD was decluttered: the toast stack in the bottom-left is gone, along with the online/fps/zoom readout, the CANNON ONLINE label and the hostiles banner. The discovery message is now a single short line.",
@@ -190,7 +203,7 @@ export const CHANGELOG: ChangeEntry[] = [
       "Enemy plating is now a genuine second health bar instead of a token outline. Every layer holds 60% of the enemy's total hull, and tier 2/3/4/5 carry 1/2/3/4 layers, so a mythical body brings 3.8M points of armour to the fight.",
       "Every damage type now wears the plates down: bullets 30% of their damage, missiles and flak 40%, beams 22%, area blasts 40% and shockwaves 15% (EMP, chain lightning and sonic still skip shelled enemies). Plate Breaker multiplies that by up to 2.5x, and a shattered layer's shockwave now scales with the enemy's own bite instead of its plate HP, so it cannot nuke a screen.",
       "Plating is drawn as solid steel slabs: a dark underlay for thickness, a filled top face tinted to the species, a bright rim, and one ridge per remaining layer. It sits under the whole body, darkens as it is chewed up, and no longer reads as a thin outline.",
-      "The nest's siege cannon is now proximity-fused: any enemy inside the nest's 1,760u alert band powers it, and it stays online for 120s after the band clears. Taking damage no longer powers it; the retaliation blast still erases whatever hit the hull.",
+      "The base's siege cannon is now proximity-fused: any enemy inside the base's 1,760u alert band powers it, and it stays online for 120s after the band clears. Taking damage no longer powers it; the retaliation blast still erases whatever hit the hull.",
     ],
   },
   {
@@ -198,8 +211,8 @@ export const CHANGELOG: ChangeEntry[] = [
     date: "21 Nov 2026",
     title: "Admin test range",
     points: [
-      "The admin panel gains a TEST RANGE section. TELEPORT TO EMPTY MAP drops the ship on a blank stretch of the outer ring, directly opposite the nest, and switches off every ambient spawn: world seeding, chunk top-up, the visibility floor and the boss pass all stay silent until you leave.",
-      "Enemies, hostile projectiles and mines are wiped on entry; LEAVING EMPTY MAP puts the ship back where it stood (or at the nest if the run never seeded) and normal spawning resumes.",
+      "The admin panel gains a TEST RANGE section. TELEPORT TO EMPTY MAP drops the ship on a blank stretch of the outer ring, directly opposite the base, and switches off every ambient spawn: world seeding, chunk top-up, the visibility floor and the boss pass all stay silent until you leave.",
+      "Enemies, hostile projectiles and mines are wiped on entry; LEAVING EMPTY MAP puts the ship back where it stood (or at the base if the run never seeded) and normal spawning resumes.",
       "A spawner picks any enemy species and any rarity from Common to Mythical, spawning one or five copies toward the cursor at 520–1,100u. Hand-spawned enemies are hostile immediately, and the world serpent can be summoned by hand even though its ambient boss pass stays disabled.",
       "CLEAR wipes the test range in one press. The test-range flag is session-only: a reload always returns to the live hive, and spawning is ignored unless admin mode is on.",
     ],
@@ -257,21 +270,21 @@ export const CHANGELOG: ChangeEntry[] = [
       "Upgrade cards have 1x / 5x / 10x / MAX buy buttons. MAX purchases as many levels as your credits allow, and every button shows the full price before you commit.",
       "Broken enemy weapons and shield parts now detonate in a visible shockwave. The expanding blast damages the breaking enemy's own hull, other enemies and the player as it sweeps past.",
       "Enemy plating layers also burst into a shockwave when their shield breaks, instead of vanishing silently.",
-      "The 1.3x vision increase is now the global baseline instead of only applying inside the nest's alert ring. Optics still zoom out from there.",
+      "The 1.3x vision increase is now the global baseline instead of only applying inside the base's alert ring. Optics still zoom out from there.",
       "Enemy damage is doubled at every rarity. The existing 3x step between rarity tiers is unchanged.",
     ],
   },
   {
     version: "1.9",
     date: "21 Nov 2026",
-    title: "Circular player construct, whole-map spawns, credit drops and a retaliating nest",
+    title: "Circular player construct, whole-map spawns, credit drops and a retaliating base",
     points: [
       "The player is no longer a ship. It is a circular construct with three pumping gimbal arms, counter-rotating armour rings, eight orbiting ring segments, three sensor motes and a forward iris — all visibly animated.",
       "Its three weapons sit on radial hardpoints at 120 degrees, rest pointing outward and rotate to track their firing direction.",
       "Every walkable chunk is populated at run start, so enemies exist across the whole map immediately and stay where they spawned. Rarity bands keep their density curve.",
       "Breaking an enemy part shakes loose 1-4 credit motes worth ~4% of the part's component value; they home in and are collected automatically.",
-      "Any enemy that damages the nest is instantly destroyed. Base damage powers the siege cannon for 120 seconds; it goes dormant again after two quiet minutes.",
-      "Inside the nest's 1,760u alert ring the camera pulls back for 1.3x player vision, and the HUD shows cannon status.",
+      "Any enemy that damages the base is instantly destroyed. Base damage powers the siege cannon for 120 seconds; it goes dormant again after two quiet minutes.",
+      "Inside the base's 1,760u alert ring the camera pulls back for 1.3x player vision, and the HUD shows cannon status.",
     ],
   },
   {
@@ -279,8 +292,8 @@ export const CHANGELOG: ChangeEntry[] = [
     date: "21 Nov 2026",
     title: "Turret-system rework, a far more detailed ship and rotating weapon mounts",
     points: [
-      "Enemies no longer target the nest: they will not charge it, aim at it or gnaw on its hull. They now chase the ship straight through the 1,760u defence ring, so the cannon and hex turrets engage them inside turret range.",
-      "The nest is still solid — stray rounds that cross its hull damage the structure, and the HUD now reads HOSTILES IN NEST RANGE instead of NEST UNDER ATTACK.",
+      "Enemies no longer target the base: they will not charge it, aim at it or gnaw on its hull. They now chase the ship straight through the 1,760u defence ring, so the cannon and hex turrets engage them inside turret range.",
+      "The base is still solid — stray rounds that cross its hull damage the structure, and the HUD now reads HOSTILES IN BASE RANGE instead of BASE UNDER ATTACK.",
       "The player ship is rebuilt from layered hull plates, swept wings with inset armour, a glass canopy, a fixed nose cannon, a reactor spine, engine block, tail fins, running lights, vents, rivets and panel seams.",
       "Every fitted weapon now sits on a rotating hex hardpoint and tracks the direction it fires, swinging smoothly back to the nose when it has no target.",
     ],
@@ -291,7 +304,7 @@ export const CHANGELOG: ChangeEntry[] = [
     title: "Hex turrets hit four times harder and stop granting bestiary credit",
     points: [
       "Point-defence tracers now deal 4x damage: 18 -> 72 per shot, with the same 0.24s cadence and 850u range.",
-      "Kills finished by the nest cannon or its hex turrets no longer unlock bestiary entries or show discovery banners; only player-credited kills count.",
+      "Kills finished by the base cannon or its hex turrets no longer unlock bestiary entries or show discovery banners; only player-credited kills count.",
     ],
   },
   {
@@ -299,12 +312,12 @@ export const CHANGELOG: ChangeEntry[] = [
     date: "20 Nov 2026",
     title: "Hex turrets, legendary siege shells and a 120s repair lockout",
     points: [
-      "Enemies now switch to the nest at 1,760u — just 10% past the cannon's 1,600u reach.",
-      "Six small turrets ride the nest's hex pylons, spinning to Track and firing weak, fast tracers at anything within 850u.",
+      "Enemies now switch to the base at 1,760u — just 10% past the cannon's 1,600u reach.",
+      "Six small turrets ride the base's hex pylons, spinning to Track and firing weak, fast tracers at anything within 850u.",
       "The siege cannon stays offline until a rare or better enters range. Its shell now one-shots legendaries; mythicals survive at 45% hull.",
-      "Enemies finished mostly by the nest or its turrets drop no components at all.",
-      "The nest only repairs after 120 seconds without taking damage.",
-      "One hex turret is destroyed for every sixth of the nest's integrity lost; the HUD shows the remaining turrets.",
+      "Enemies finished mostly by the base or its turrets drop no components at all.",
+      "The base only repairs after 120 seconds without taking damage.",
+      "One hex turret is destroyed for every sixth of the base's integrity lost; the HUD shows the remaining turrets.",
     ],
   },
   {
@@ -320,14 +333,14 @@ export const CHANGELOG: ChangeEntry[] = [
   {
     version: "1.6",
     date: "20 Nov 2026",
-    title: "Nest siege cannon and a destructible base",
+    title: "Base siege cannon and a destructible base",
     points: [
-      "The nest mounts a slow siege cannon: one shell incinerates any enemy up to epic tier.",
+      "The base mounts a slow siege cannon: one shell incinerates any enemy up to epic tier.",
       "Every shot kicks the barrel back hard, with a muzzle blast, plasma vent and camera shake.",
-      "Insects inside 1.4x the cannon's reach charge the nest and ignore your ship.",
-      "The nest has hull integrity; legendaries and mythicals tear through it in seconds.",
-      "If the nest dies, every stored component and half your credits are lost, the blast kills every insect and the run ends at the title screen.",
-      "The nest now appears in a different spot in the outer ring on every run.",
+      "Insects inside 1.4x the cannon's reach charge the base and ignore your ship.",
+      "The base has hull integrity; legendaries and mythicals tear through it in seconds.",
+      "If the base dies, every stored component and half your credits are lost, the blast kills every insect and the run ends at the title screen.",
+      "The base now appears in a different spot in the outer ring on every run.",
     ],
   },
   {

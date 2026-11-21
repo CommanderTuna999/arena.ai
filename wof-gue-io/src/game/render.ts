@@ -285,7 +285,7 @@ export function render(g: Game, ctx: CanvasRenderingContext2D) {
     ctx.shadowBlur = 0;
   }
 
-  /* ---- nest siege shells ---- */
+  /* ---- base siege shells ---- */
   for (const s of g.baseShots) {
     if (s.x < vx0 || s.x > vx1 || s.y < vy0 || s.y > vy1) continue;
     const ang = Math.atan2(s.vy, s.vx);
@@ -651,7 +651,7 @@ function drawBase(g: Game, ctx: CanvasRenderingContext2D, z: number, t: number) 
       ctx.restore();
     }
   }
-  // minimal nest sigil: a hex with three cells, no lettering
+  // minimal base sigil: a hex with three cells, no lettering
   hexPath(ctx, x, y, 30, 0);
   ctx.strokeStyle = "rgba(125,249,255,0.85)"; ctx.lineWidth = 3 / z; ctx.stroke();
   for (let i = 0; i < 3; i++) {
@@ -698,7 +698,7 @@ function drawBase(g: Game, ctx: CanvasRenderingContext2D, z: number, t: number) 
   void g;
 }
 
-/* Heavy siege cannon on the nest. The barrel physically kicks back on every
+/* Heavy siege cannon on the base. The barrel physically kicks back on every
  * shot, the mount glows hotter as it charges, and the muzzle flash is huge. */
 function drawTurret(g: Game, ctx: CanvasRenderingContext2D, z: number, t: number, x: number, y: number) {
   const T = g.turret;

@@ -64,7 +64,7 @@ export default function GameClient() {
     if (g) { g.persist(true); void g.pushServer(); }
     router.push("/");
   };
-  /* Losing the nest ends the run: the engine has already applied the penalties
+  /* Losing the base ends the run: the engine has already applied the penalties
    * and saved them, so all that is left is the ride back to the title screen. */
   useEffect(() => {
     if (!hud?.baseLost) return;
@@ -322,7 +322,7 @@ function Hud_({ hud, creditRef, onOpen, onHelp, onAdmin, onSettings, onBestiary,
         {hud.maxShield > 0 && <Bar v={hud.shield} max={hud.maxShield} color="#4dd2ff" h={8} />}
         {hud.hasBoost && <Bar v={hud.boost} max={100} color="#ff9d4d" h={6} />}
         {(hud.baseNear || hud.baseHp < hud.baseMaxHp) && !hud.baseLost && (
-          <div className="flex items-center gap-1.5" title={`Nest integrity · ${hud.baseTurrets.filter(Boolean).length}/6 defence turrets`}>
+          <div className="flex items-center gap-1.5" title={`Base integrity · ${hud.baseTurrets.filter(Boolean).length}/6 defence turrets`}>
             <span className="text-[11px] leading-none text-emerald-300 drop-shadow-[0_0_6px_#4dffd2]">⬢</span>
             <Bar v={hud.baseHp} max={hud.baseMaxHp} color={hud.baseHp / hud.baseMaxHp > 0.5 ? "#4dffd2" : hud.baseHp / hud.baseMaxHp > 0.25 ? "#ffd24d" : "#ff4d6d"} h={7} />
             <span className="flex gap-0.5">
@@ -421,7 +421,7 @@ function Hud_({ hud, creditRef, onOpen, onHelp, onAdmin, onSettings, onBestiary,
       </div>
 
       {hud.nearBase && !hud.dead && (
-        <button onClick={onOpen} title="Open nest (E)" className="absolute bottom-16 left-1/2 grid h-11 w-11 -translate-x-1/2 animate-pulse place-items-center rounded-full border-2 border-cyan-300 bg-cyan-400/15 text-cyan-100 shadow-[0_0_24px_rgba(77,255,210,0.5)] hover:bg-cyan-400/30">
+        <button onClick={onOpen} title="Open base (E)" className="absolute bottom-16 left-1/2 grid h-11 w-11 -translate-x-1/2 animate-pulse place-items-center rounded-full border-2 border-cyan-300 bg-cyan-400/15 text-cyan-100 shadow-[0_0_24px_rgba(77,255,210,0.5)] hover:bg-cyan-400/30">
           <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.6">
             <path d="M12 2.5l8 4.6v9.8l-8 4.6-8-4.6V7.1z" />
             <path d="M12 8.2l4 2.3v4.6l-4 2.3-4-2.3v-4.6z" />
@@ -431,7 +431,7 @@ function Hud_({ hud, creditRef, onOpen, onHelp, onAdmin, onSettings, onBestiary,
       {hud.baseLost && (
         <div className="pointer-events-none absolute inset-0 z-40 grid place-items-center bg-[#180404]/85">
           <div className="max-w-[92vw] text-center">
-            <div className="text-4xl font-black tracking-[0.28em] text-red-400 drop-shadow-[0_0_26px_#ff2d55] sm:text-6xl">NEST DESTROYED</div>
+            <div className="text-4xl font-black tracking-[0.28em] text-red-400 drop-shadow-[0_0_26px_#ff2d55] sm:text-6xl">BASE DESTROYED</div>
             <div className="mt-4 text-sm font-bold text-orange-200 sm:text-base">ALL STORED COMPONENTS LOST · HALF YOUR CREDITS INCINERATED</div>
             <div className="mt-2 text-xs tracking-[0.18em] text-white/45">THE SWARM IS ASH · RETURNING TO TITLE {Math.max(1, Math.ceil(hud.baseLostT))}…</div>
           </div>
@@ -441,7 +441,7 @@ function Hud_({ hud, creditRef, onOpen, onHelp, onAdmin, onSettings, onBestiary,
         <div className="pointer-events-none absolute inset-0 grid place-items-center bg-red-950/40">
           <div className="text-center">
             <div className="text-4xl font-black tracking-[0.3em] text-red-400 drop-shadow-[0_0_20px_#ff2d55]">CORE DESTROYED</div>
-            <div className="mt-2 text-red-200">Reforming at the nest in {Math.ceil(hud.respawn)}…</div>
+            <div className="mt-2 text-red-200">Reforming at the base in {Math.ceil(hud.respawn)}…</div>
           </div>
         </div>
       )}
@@ -464,14 +464,14 @@ function Help({ onClose }: { onClose: () => void }) {
     ["Hold R over hooked part", "Release harpoon"],
     ["SHIFT", "Afterburner (upgrade)"],
     ["T", "Recall beacon (craftable)"],
-    ["E", "Open the nest at your base"],
+    ["E", "Open the base at your base"],
     ["ESC", "Settings: how the ship handles, the look, aim aids"],
-    ["Nest cannon", "Dormant until the nest is hit, then online for 120s; only tracks rare+ targets and one-shots legendaries"],
-    ["Nest retaliation", "Any insect that damages the nest is instantly destroyed — no swarming the hull"],
-    ["Nest targeting", "Insects hunt your ship, never the nest — they will follow you straight through turret range, and stray fire can still scar the hull"],
+    ["Base cannon", "Dormant until the base is hit, then online for 120s; only tracks rare+ targets and one-shots legendaries"],
+    ["Base retaliation", "Any insect that damages the base is instantly destroyed — no swarming the hull"],
+    ["Base targeting", "Insects hunt your ship, never the base — they will follow you straight through turret range, and stray fire can still scar the hull"],
     ["Credits", "Broken enemy parts throw credit coins straight into your counter — nothing to pick up. Coins land as one collection, so a fat break reads as +1.2k"],
     ["Energy shields", "A panel wall, packed across the front of most rare+ bodies. Fly around it: the tail is the way in. Touching one shocks the hull and throws you off it"],
-    ["Hex turrets", "Six fast, weak point-defence turrets; one dies for every 1/6 of nest integrity lost"],
+    ["Hex turrets", "Six fast, weak point-defence turrets; one dies for every 1/6 of base integrity lost"],
     ["Mouse wheel", "Zoom out (craftable optics)"],
     ["Z X C V F", "Fire equipped active abilities"],
     ["` (backtick)", "Admin panel (infinite resources)"],
@@ -487,11 +487,11 @@ function Help({ onClose }: { onClose: () => void }) {
         </div>
         <ul className="mt-4 list-disc space-y-1 pl-5 text-xs text-cyan-100/80">
           <li>Destroyed pieces drop components. Only light parts (mass 7 or less) can be dragged by the magnet or scooped up on contact.</li>
-          <li>Heavy pieces need the tether: tow them into the <b className="text-yellow-300">yellow hex</b> at the nest.</li>
+          <li>Heavy pieces need the tether: tow them into the <b className="text-yellow-300">yellow hex</b> at the base.</li>
           <li>Too heavy? Stronger cables, more harpoons on one part, or a better winch help. Overloaded cables snap.</li>
           <li>Sell components for credits or store them to craft weapons, shields, armour, optics, utilities and active abilities.</li>
           <li>Rare and above enemies wear grey armour layers around their parts; the deeper the zone, the more layers. Energy shield panels stop solid rounds dead but let energy, shock and thermal straight through — shoot the gaps between the panels.</li>
-          <li>The nest only repairs after <b className="text-cyan-200">120s</b> without damage. Enemies finished mostly by the nest or its hex turrets drop no components.</li>
+          <li>The base only repairs after <b className="text-cyan-200">120s</b> without damage. Enemies finished mostly by the base or its hex turrets drop no components.</li>
           <li>Hover a loose component to read its name, rarity, value and mass. Turn that off in ⚙ SETTINGS.</li>
           <li>Danger rises toward the centre of the map: bigger, deadlier, more layered enemies. Accounts autosave; a guest run is never written down.</li>
         </ul>
@@ -525,7 +525,7 @@ function Hangar({ game, hud, onClose }: { game: Game; hud: Hud; onClose: () => v
     <div className="absolute inset-0 z-40 grid place-items-center bg-black/60 p-2 sm:p-6">
       <div className="flex h-full max-h-[760px] w-full max-w-5xl flex-col rounded-md border border-cyan-300/60 bg-[#060a18]/97 shadow-[0_0_50px_rgba(77,255,210,0.2)]">
         <div className="flex items-center gap-2 border-b border-cyan-300/30 p-2">
-          <div className="px-2" title="Nest">
+          <div className="px-2" title="Base">
             <svg viewBox="0 0 24 24" className="h-5 w-5 text-cyan-200" fill="none" stroke="currentColor" strokeWidth="1.6">
               <path d="M12 2.5l8 4.6v9.8l-8 4.6-8-4.6V7.1z" />
               <path d="M12 8.2l4 2.3v4.6l-4 2.3-4-2.3v-4.6z" />

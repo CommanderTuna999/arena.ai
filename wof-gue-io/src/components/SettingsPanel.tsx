@@ -20,7 +20,7 @@ export interface SettingsPanelProps {
 
 /**
  * All player-facing settings in one place. Used by the title screen and by the
- * in-game gear / Nest → SYSTEM tab, so both always expose the same options.
+ * in-game gear / Base → SYSTEM tab, so both always expose the same options.
  */
 export default function SettingsPanel({ save, onAutoFire, onShowCompInfo, onShowRanges, onAutoSell, onName, onReset, onRestore, nameLocked = false }: SettingsPanelProps) {
   const [name, setName] = useState(save.name);
@@ -95,7 +95,7 @@ export default function SettingsPanel({ save, onAutoFire, onShowCompInfo, onShow
         />
         <Toggle
           label="Auto-sell docked components"
-          hint="Sell every component that reaches the nest instead of storing it."
+          hint="Sell every component that reaches the base instead of storing it."
           checked={save.autoSell}
           onChange={onAutoSell}
         />
@@ -117,7 +117,7 @@ export default function SettingsPanel({ save, onAutoFire, onShowCompInfo, onShow
           className="mt-2 h-20 w-full resize-y rounded-sm border border-white/15 bg-black/70 p-1.5 font-mono text-[10px] leading-tight text-cyan-100/90 outline-none focus:border-cyan-300/50"
         />
         <div className="text-[10px] leading-relaxed text-white/40">
-          Codes are self-contained and checksummed. Move one to another browser or device to carry your nest across.
+          Codes are self-contained and checksummed. Move one to another browser or device to carry your base across.
         </div>
       </section>
 

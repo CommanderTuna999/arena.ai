@@ -2,16 +2,16 @@ import { clamp, fmtNum } from "./math";
 
 /* ---------- world constants ---------- */
 export const WORLD_R = 16000;
-/* The nest drifts around the outer ring every run: the x/y below are only the
+/* The base drifts around the outer ring every run: the x/y below are only the
  * initial fallback, Game.placeBase() moves it before the player spawns. */
-/* turretR is the siege cannon's reach; aggroR (10% beyond it) is the nest's
+/* turretR is the siege cannon's reach; aggroR (10% beyond it) is the base's
  * defence-alert radius and the band enemies are retained in while chasing the
- * player through it. Enemies never target the nest itself. smallR is the
- * point-defence reach of the six hex turrets on the nest ring. */
+ * player through it. Enemies never target the base itself. smallR is the
+ * point-defence reach of the six hex turrets on the base ring. */
 export const BASE = { x: 0, y: 15000, r: 260, dock: 175, safe: 950, turretR: 1600, aggroR: 1760, smallR: 850 };
-/** radius band the nest may occupy — the outer (common) ring only */
+/** radius band the base may occupy — the outer (common) ring only */
 export const BASE_RING = { min: 13900, max: 15300 };
-/** structural integrity of the nest; high-tier enemies chew through this fast */
+/** structural integrity of the base; high-tier enemies chew through this fast */
 export const BASE_MAX_HP = 600;
 /** incoming damage multiplier by attacker tier (common … mythical) */
 export const BASE_TAKE = [0, 0.01, 0.4, 1, 1.6, 2.4];
@@ -41,7 +41,13 @@ export const RARITIES = [
 ] as const;
 
 export const SIZE_GROWTH = 1.65;
-export const HP_MUL = [1, 4, 18, 80, 360, 1600];
+/* Piece health by rarity, straight from the balance sheet: each step multiplies
+ * the one below it (x3.75, x4, x4.7, x6, x8.1). */
+export const HP_MUL = [1, 3.75, 15, 70.5, 423, 3426.3];
+/** the starting cannon from the sheet: 20 damage on a 0.7s interval, free */
+export const CANNON_DMG = 20;
+export const CANNON_INTERVAL = 0.7;
+export const CANNON_RATE = 1 / CANNON_INTERVAL;
 /* 2x baseline as of v2.0 — the 3x ratio between tiers is unchanged. */
 export const DMG_MUL = [1, 3, 9, 27, 81, 243];
 
@@ -88,16 +94,16 @@ export interface UpgradeDef {
 }
 
 export const UPGRADES: UpgradeDef[] = [
-  { id: "dmg", name: "Cannon Damage", cat: "weapons", desc: "Raw damage per shot.", max: 30, base: 20, growth: 1.45, fmt: (l) => `${fmtNum(10 * Math.pow(1.2, l))} dmg` },
-  { id: "rate", name: "Fire Rate", cat: "weapons", desc: "Shots per second.", max: 12, base: 40, growth: 1.5, fmt: (l) => `${(4 + 0.7 * l).toFixed(1)}/s` },
+  { id: "dmg", name: "Cannon Damage", cat: "weapons", desc: "Raw damage per shot.", max: 30, base: 20, growth: 1.45, fmt: (l) => `${fmtNum(20 * Math.pow(1.2, l))} dmg` },
+  { id: "rate", name: "Fire Rate", cat: "weapons", desc: "Shots per second.", max: 12, base: 40, growth: 1.5, fmt: (l) => `${(CANNON_RATE + 0.7 * l).toFixed(1)}/s` },
   { id: "barrels", name: "Extra Barrels", cat: "weapons", desc: "Fire a fan of additional shots.", max: 4, base: 150, growth: 2.6, fmt: (l) => `${1 + l} barrel${l ? "s" : ""}` },
   { id: "crit", name: "Targeting Matrix", cat: "weapons", desc: "Chance for 2.5x critical hits.", max: 10, base: 60, growth: 1.55, fmt: (l) => `${5 + 4 * l}% crit` },
 
-  { id: "hull", name: "Hull Plating", cat: "hull", desc: "Maximum hull integrity.", max: 30, base: 25, growth: 1.5, fmt: (l) => `${fmtNum(100 * Math.pow(1.22, l))} HP` },
-  { id: "regen", name: "Nano Repair", cat: "hull", desc: "Hull regenerates every second.", max: 10, base: 70, growth: 1.6, fmt: (l) => `${(0.5 * l).toFixed(1)}%/s` },
-  { id: "armor", name: "Reactive Armour", cat: "hull", desc: "Flat percentage damage reduction.", max: 14, base: 90, growth: 1.7, fmt: (l) => `-${(3.5 * l).toFixed(1)}% dmg` },
-  { id: "shield", name: "Energy Shield Core", cat: "hull", desc: "A recharging shield layer. Level 1 unlocks it.", max: 25, base: 120, growth: 1.55, fmt: (l) => (l ? `${fmtNum(60 * Math.pow(1.28, l - 1))} shield` : "locked") },
-  { id: "dampers", name: "Inertial Dampers", cat: "hull", desc: "Resist slows, snares and pulls from enemies.", max: 6, base: 100, growth: 1.8, fmt: (l) => `${12 * l}% resist` },
+  { id: "hull", name: "Hull Plating", cat: "hull", desc: "Maximum hull integrity.", max: 30, base: 18, growth: 1.4, fmt: (l) => `${fmtNum(100 * Math.pow(1.19, l))} HP` },
+  { id: "regen", name: "Nano Repair", cat: "hull", desc: "Hull regenerates every second.", max: 10, base: 55, growth: 1.5, fmt: (l) => `${(0.5 * l).toFixed(1)}%/s` },
+  { id: "armor", name: "Reactive Armour", cat: "hull", desc: "Flat percentage damage reduction.", max: 14, base: 70, growth: 1.55, fmt: (l) => `-${(3.5 * l).toFixed(1)}% dmg` },
+  { id: "shield", name: "Energy Shield Core", cat: "hull", desc: "A recharging shield layer. Level 1 unlocks it.", max: 25, base: 90, growth: 1.45, fmt: (l) => (l ? `${fmtNum(60 * Math.pow(1.22, l - 1))} shield` : "locked") },
+  { id: "dampers", name: "Inertial Dampers", cat: "hull", desc: "Resist slows, snares and pulls from enemies.", max: 6, base: 80, growth: 1.65, fmt: (l) => `${12 * l}% resist` },
 
   { id: "thrust", name: "Thrusters", cat: "mobility", desc: "Top speed.", max: 12, base: 40, growth: 1.5, fmt: (l) => `${450 + 40 * l} u/s` },
   { id: "handling", name: "Handling Jets", cat: "mobility", desc: "Acceleration and agility.", max: 10, base: 45, growth: 1.45, fmt: (l) => `${1500 + 200 * l} accel` },
@@ -392,7 +398,7 @@ export const ABILITY_LIST: AbilitySpec[] = [
 export const ABILITY_BY_ID: Record<string, AbilitySpec> = Object.fromEntries(ABILITY_LIST.map((a) => [a.id, a]));
 
 /* ---------- save ----------
- * Persistent player settings (see Nest / Settings panel):
+ * Persistent player settings (see Base / Settings panel):
  *   autoFire     — crafted weapons fire on their own when a target is in range (default true)
  *   showCompInfo — hover tooltip on loose components: name, rarity, value, mass (default true)
  *   showRanges   — translucent coloured circles showing each fitted weapon's range (default false)
@@ -518,9 +524,10 @@ export interface Stats {
 export function computeStats(s: SaveData): Stats {
   const L = (id: string) => s.upgrades[id] ?? 0;
   const find = (id: string | null) => (id ? s.crafted.find((c) => c.id === id) : undefined);
-  let hull = 100 * Math.pow(1.22, L("hull"));
-  const baseDmg = 10 * Math.pow(1.2, L("dmg"));
-  let shieldMax = L("shield") ? 60 * Math.pow(1.28, L("shield") - 1) : 0;
+  let hull = 100 * Math.pow(1.19, L("hull"));
+  /* the starting cannon from the balance sheet: 20 damage every 0.7s */
+  const baseDmg = CANNON_DMG * Math.pow(1.2, L("dmg"));
+  let shieldMax = L("shield") ? 60 * Math.pow(1.22, L("shield") - 1) : 0;
   let shieldRegen = 0.18;
   let shieldDelay = 4;
   let reflect = false;
@@ -590,7 +597,7 @@ export function computeStats(s: SaveData): Stats {
 
   return {
     dmg: baseDmg,
-    rate: 4 + 0.7 * L("rate"),
+    rate: CANNON_RATE + 0.7 * L("rate"),
     barrels: 1 + L("barrels"),
     crit: 0.05 + 0.04 * L("crit"),
     bulletSpeed: 900,

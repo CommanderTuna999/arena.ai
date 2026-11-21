@@ -27,7 +27,7 @@ const FLAVOUR: Record<string, string> = {
   honeybee: "Statistically a bee. Ethically a war crime.",
   yellowjacket: "Not a bee. Will not be accepting questions at this time.",
   wasp: "Flies like it pays rent here. Stings like it does not.",
-  carpenter: "Builds furniture, ruins yours. The nest is load-bearing and it knows it.",
+  carpenter: "Builds furniture, ruins yours. The base is load-bearing and it knows it.",
   beetle: "A classic. Shiny, stubborn, and unusually committed to ramming you.",
   bombardier: "Its defence mechanism is a chemistry experiment that went right.",
   rhino: "The horn is not compensation. The horn is the whole personality.",

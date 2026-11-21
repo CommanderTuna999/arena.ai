@@ -47,10 +47,13 @@ const ranges = [0, 1, 2, 3, 4, 5].map((t) => {
   console.log(`  tier ${t}: notices at ${r}u`);
   return r;
 });
-assert(ranges[2] > 0 && ranges[3] > ranges[2] && ranges[4] > ranges[3] && ranges[5] > ranges[4],
-  "rarer bodies see further, and every range is tight");
-assert(ranges[5] < 1000, "even a mythical notices you well under a screen and a half");
-assert(ranges[2] < 400, "a rare has to be close before it starts something");
+assert(ranges[2] > ranges[1] && ranges[3] > ranges[2] && ranges[4] > ranges[3] && ranges[5] > ranges[4],
+  "rarer bodies see further");
+/* sheet multipliers: rare x3, epic x4, legendary x5, mythical x5 on the tier base */
+assert(ranges[2] > 800 && ranges[2] < 1200, "a rare opens at roughly 3x its old range");
+assert(ranges[3] > 1600 && ranges[3] < 2100, "an epic opens at roughly 4x");
+assert(ranges[4] > 2700 && ranges[4] < 3300, "a legendary opens at roughly 5x");
+assert(ranges[5] > 3500 && ranges[5] < 4200, "a mythical opens at roughly 5x");
 
 /* commons and uncommons never open a fight */
 assert(!step(spawn(0, 120), 120), "a common nearby stays neutral (outside its swat reach)");

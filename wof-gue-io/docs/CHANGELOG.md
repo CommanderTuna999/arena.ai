@@ -3,6 +3,29 @@
 Everything below is implemented in the current build. Numbers are the actual constants used by
 the simulation, not design targets.
 
+## 0. v2.9.0 — the balance sheet lands
+
+Applied from the owner's design sheet; every value and where it lives is recorded in
+[`docs/BALANCE.md`](./BALANCE.md).
+
+- **Aggro** (`engine.ts`): `AGGRO_TIER_MUL = [1, 1, 3, 4, 5, 5]` on top of
+  `AGGRO_RANGE = [140, 200, 320, 450, 590, 760]`. Measured notice radius: 66 / 99 / 1004 / 1873 /
+  3062 / 3912u. Commons and uncommons are still neutral until hit.
+- **Piece health** (`data.ts` `HP_MUL`): `[1, 3.75, 15, 70.5, 423, 3426.3]`. `enemies.ts` gains
+  `SpeciesDef.hp` (one normal piece at common), `KIND_HP` replaces the flat `HP_BASE`, and armour
+  plates are `x9` a normal piece per the sheet.
+- **Enemy damage** (`enemies.ts` `SpeciesDef.dmg`, `engine.ts`): `e.eDmg = spd.dmg * DMG_MUL[tier]`.
+  `GUN_SPECS` now uses the sheet multipliers: gun 0.4→0.5, scatter 0.2→1.2, minigun 0.05→0.2,
+  heavy 1.8→**17**, laser unchanged. The minigun got its 10 s burst and 5 s cooldown
+  (`Enemy.mgHeat` / `mgCool`).
+- **Shield shock** (`engine.ts`): `SHIELD_SHOCK_MUL = 25`, capped at 85% of max hull so a body
+  charging a full-health ship cannot delete it outright.
+- **Player** (`data.ts`): starts at 100 hull; `hull = 100 * 1.19^level` (was 1.22), shield core
+  `60 * 1.22^(level-1)` (was 1.28); plating 25→18 base / 1.5→1.4 growth, shield core 120→90 / 1.45,
+  nano repair 70→55 / 1.5, reactive armour 90→70 / 1.55, dampers 100→80 / 1.65. Starting cannon is
+  `CANNON_DMG = 20` on `CANNON_INTERVAL = 0.7` (was 10 damage at 4/s).
+- **Rename**: every "nest" in code, UI copy and docs is now "base".
+
 ## 0. v2.8.0 — neutral commons, front-loaded shields, quieter FX and credits
 
 ### Aggro
@@ -39,7 +62,7 @@ the simulation, not design targets.
 - `killEnemy()` runs at most two `explode(..., cascade)` cascades; the rest of the body just sparks.
 
 ### Input / misc
-- Esc opens the settings panel when nothing else is up; it still closes settings, the nest menu, admin
+- Esc opens the settings panel when nothing else is up; it still closes settings, the base menu, admin
   or the bestiary first.
 - `src/app/icon.svg` geometry wrapped in `translate(32 32) scale(0.7) translate(-32 -32)` so the
   mantis fits the tab icon instead of being cropped.
@@ -160,7 +183,7 @@ the simulation, not design targets.
 - The counter icon is now a struck cash coin: radial gold gradient, dark rim, inner ring, rim ticks and a real square hole cut with an SVG mask. It replays a `creditPop` keyframe on each landing.
 
 ### HUD declutter
-- Removed: the bottom-left toast stack, the `● online · fps · wheel = zoom` readout, the `CANNON ONLINE/OFFLINE` label and the `HOSTILES IN NEST RANGE` banner.
+- Removed: the bottom-left toast stack, the `● online · fps · wheel = zoom` readout, the `CANNON ONLINE/OFFLINE` label and the `HOSTILES IN BASE RANGE` banner.
 - The discovery banner is now one short line (`NEW · <name>`); the AUTO/OVERDRIVE/ADMIN pills stay because they are interactive state.
 - Help text updated to match: light parts scoop on contact, credits fly straight in.
 
@@ -216,7 +239,7 @@ the simulation, not design targets.
 
 ### Heavy Cannon is hitscan
 - `GUN_SPECS.heavy` sets `hitscan: true`, range 1200u, and drops the 0.9 homing (there is nothing left to home with).
-- `engine.heavyShot()` draws a line from the muzzle to the first thing it meets (nest or ship), applies `1.8 × eDmg` without travel time, paints a tracer in `this.beams`, and still applies the 260u/s recoil shove on the shooter.
+- `engine.heavyShot()` draws a line from the muzzle to the first thing it meets (base or ship), applies `1.8 × eDmg` without travel time, paints a tracer in `this.beams`, and still applies the 260u/s recoil shove on the shooter.
 - A ship hit adds a 150u impact ring, two spark bursts, knockback along the line, and raises `this.shake` to at least 34 — the heaviest shake in the game (normal hits cap around 14). A miss produces no damage and no shake.
 
 ### Legs steer again
@@ -294,7 +317,7 @@ the simulation, not design targets.
 - `drawEnemy` draws plating in its own pass before the body: a dark underlay grown 2.4u past the slab, a solid filled top face (`hsla` steel tinted to the species hue, brightening as integrity drops), a bright rim, and one faint ridge per extra layer. Growth is `4 + 5 × (layers - 1)` capped at 0.9 × part radius.
 - Old code drew a single translucent 2px stroke per body part; that is gone.
 
-### Nest cannon
+### Base cannon
 - `updateTurret` sets `basePowerT = BASE_POWER_IDLE` whenever `nearestEnemy(BASE.x, BASE.y, BASE.aggroR)` finds anything, so the cannon powers up as soon as any enemy enters the 1,760u alert band and stays up 120s after the band clears.
 - `hurtBase` no longer touches `basePowerT`. The instant retaliation kill on the attacker is unchanged, as is the rare+ targeting rule.
 
@@ -302,7 +325,7 @@ the simulation, not design targets.
 
 ### Test range
 - `AdminState` gains a `sandbox` flag (session-only: `readAdminFlags` always returns `false` for it and `writeAdminFlags` leaves it out of `wof-admin-flags`).
-- `adminTestRange(true)` clears `enemies`, `eprojs` and `mines`, teleports the ship to the outer ring at `atan2(-BASE.y, -BASE.x) × (WORLD_R - 900)` — the point farthest from the nest — caps hull/shield, clears status effects and snaps the camera. It also forces admin mode on. `adminTestRange(false)` restores the saved pre-teleport position and lets the world resume.
+- `adminTestRange(true)` clears `enemies`, `eprojs` and `mines`, teleports the ship to the outer ring at `atan2(-BASE.y, -BASE.x) × (WORLD_R - 900)` — the point farthest from the base — caps hull/shield, clears status effects and snaps the camera. It also forces admin mode on. `adminTestRange(false)` restores the saved pre-teleport position and lets the world resume.
 - While `admin.sandbox` is set, the update loop skips `seedWorld()` and the `manageChunks()` tick entirely, `seedWorld()` early-returns, and the boss-spawn branch in `updateEnemies` is suppressed. Nothing spawns on its own.
 
 ### Spawner
@@ -423,7 +446,7 @@ the simulation, not design targets.
 - `eDmg` is now `16 × DMG_MUL[tier]` instead of `8 × DMG_MUL[tier]`, so every rarity deals 2x damage
   while the 3x step between tiers (1 / 3 / 9 / 27 / 81 / 243) is unchanged.
 
-## 0. v1.9 — construct player, whole-map spawns, credit drops and nest retaliation
+## 0. v1.9 — construct player, whole-map spawns, credit drops and base retaliation
 
 ### The player is a construct, not a ship
 - `drawShipShape` is now a circular machine: three animated gimbal arms with pumping piston
@@ -455,15 +478,15 @@ the simulation, not design targets.
   `save.credits` / `save.earned` on contact. Base-majority kills scrub the dead enemy's motes
   the same way they scrub loose components.
 
-### Nest retaliation and cannon power
+### Base retaliation and cannon power
 - `hurtBase` sets `basePowerT = 120` and instantly calls `killEnemy(src, ..., byBase=true)` on
   the attacker that damaged the hull. Such kills grant no bestiary credit and drop nothing.
 - `updateTurret` refuses to acquire targets while `basePowerT <= 0`; the barrel idles and the
   renderer dims the turret. Damage restarts the 120s window, so the cannon sleeps again after
   two quiet minutes.
-- HUD exposes `basePowered`; the nest panel shows CANNON ONLINE / OFFLINE.
+- HUD exposes `basePowered`; the base panel shows CANNON ONLINE / OFFLINE.
 - Any enemy projectile crossing `BASE.r × 0.82` still damages the hull, so stray fire can
-  trigger retaliation without enemies deliberately targeting the nest.
+  trigger retaliation without enemies deliberately targeting the base.
 
 ### Base vision (superseded in v2.0)
 - v1.9 applied a 1.3x camera pull-back only inside `BASE.aggroR` (1,760u) and exposed
@@ -472,16 +495,16 @@ the simulation, not design targets.
 
 ## 0. v1.8 — turret system rework, detailed ship, rotating mounts
 
-### Enemies hunt the ship, not the nest
-- Removed every base-targeting branch from `updateEnemy`: no `baseEngaged` aggro override, no nest-aimed
-  projectiles (`tgtBase`), no 2.6× nest charge, no docking-apron exemption, no hull gnawing and no
+### Enemies hunt the ship, not the base
+- Removed every base-targeting branch from `updateEnemy`: no `baseEngaged` aggro override, no base-aimed
+  projectiles (`tgtBase`), no 2.6× base charge, no docking-apron exemption, no hull gnawing and no
   forced 1.6 rad/s turn floor.
-- `BASE.aggroR` (1,760u) is now purely the nest's defence-alert radius and the retention zone for
+- `BASE.aggroR` (1,760u) is now purely the base's defence-alert radius and the retention zone for
   enemies chasing the player through it. Enemies follow the player normally at every distance, so they
-  can be drawn into turret range instead of switching to the nest.
-- The nest hull remains solid for stray fire: any enemy projectile that crosses `BASE.r × 0.82` now
+  can be drawn into turret range instead of switching to the base.
+- The base hull remains solid for stray fire: any enemy projectile that crosses `BASE.r × 0.82` now
   damages the structure, regardless of what it was aimed at. Base defences and the 120s repair
-  lockout are unchanged, and nest-owned kills still grant no bestiary credit.
+  lockout are unchanged, and base-owned kills still grant no bestiary credit.
 
 ### Detailed player hull
 - `drawShipShape` is a multi-layer build: dark-to-light hull gradient, flank chine plates, inset wing
@@ -525,7 +548,7 @@ the simulation, not design targets.
 - Cores stay on layer 0, underneath the body, so segments and plating draw over them and the core
   only shows through gaps.
 
-## 0. v1.7.1 — four-times turret damage, no bestiary credit for nest kills
+## 0. v1.7.1 — four-times turret damage, no bestiary credit for base kills
 
 ### Point-defence damage
 - `MINI_DMG` is now **72**, up from 18 (exactly 4×). Fire cadence stays **0.24s**, tracer speed
@@ -537,7 +560,7 @@ the simulation, not design targets.
 - `killEnemy(e, x, y, byBase)` now receives an explicit base-kill flag, propagated from
   `breakPart(..., byBase)` and from `damagePart(..., fromBase)`.
 - A kill never updates `save.bestiary` or sets the discovery banner when **either** the finishing
-  blow came from the nest defences **or** `baseDmg × 2 > dmgTaken`. This covers the siege cannon,
+  blow came from the base defences **or** `baseDmg × 2 > dmgTaken`. This covers the siege cannon,
   the six hex turrets and core breaks caused by either.
 - Player-credited kills still update the bestiary, best-rarity record and discovery banner.
   `save.kills` continues to count every kill.
@@ -546,8 +569,8 @@ the simulation, not design targets.
 
 ### Aggro leash
 - `BASE.aggroR` is now **1,760u**, exactly `turretR × 1.1` (1,600 × 1.1). Mobs switch from the
-  player to the nest only when they are already inside the siege cannon's envelope, instead of the
-  old 2,240u (×1.4). The orange leash ring and the "NEST UNDER ATTACK" check both use the new value.
+  player to the base only when they are already inside the siege cannon's envelope, instead of the
+  old 2,240u (×1.4). The orange leash ring and the "BASE UNDER ATTACK" check both use the new value.
 
 ### Six hex point-defence turrets
 - Six small turrets sit on the existing hex pylons at `BASE.r` (260u), one every 60°.
@@ -556,10 +579,10 @@ the simulation, not design targets.
   (`BASE.smallR`). Tracers lead moving targets, last 0.85s and hit plating before hull.
 - Point-turret damage is physical/kinetic: armour shells absorb 30%, shields still ignore it.
 - They do **not** wake the siege cannon; the cannon only reacts to rare+ enemies.
-- Every sixth of the nest's **maximum** integrity lost destroys one turret (`baseDamageTaken`
+- Every sixth of the base's **maximum** integrity lost destroys one turret (`baseDamageTaken`
   divided by `baseMaxHp / 6`). A 100-damage chunk kills one, three 100-damage chunks kill three,
-  and all six are gone when the nest dies. Damage is cumulative, so repairs never bring a turret
-  back. The HUD draws six teal pips beside the nest bar.
+  and all six are gone when the base dies. Damage is cumulative, so repairs never bring a turret
+  back. The HUD draws six teal pips beside the base bar.
 
 ### Siege cannon: rare+ gate and legendary kills
 - The cannon now acquires only `tier >= 2` (rare, epic, legendary, mythical) targets. Common and
@@ -573,7 +596,7 @@ the simulation, not design targets.
 
 ### No salvage from base kills
 - Every enemy tracks `dmgTaken` and `baseDmg`. Base cannon damage (full hull value for one-shots,
-  actual hull removed for mythical chunks) and point-turret damage are attributed to the nest.
+  actual hull removed for mythical chunks) and point-turret damage are attributed to the base.
 - `maybeDrop` returns immediately when `baseDmg × 2 > dmgTaken` (strict majority). Loose parts that
   already broke off that enemy are scrubbed from the world when it dies, so a base-majority kill
   leaves nothing behind. Player-majority kills still drop normally.
@@ -582,39 +605,39 @@ the simulation, not design targets.
 - Any hit that deals integrity damage sets `baseHitT = 120`; the 2%/s repair only starts once that
   timer reaches zero. Low-tier hits that deal 0 damage do not reset it.
 
-## 0. v1.6 — nest siege cannon and a destructible base
+## 0. v1.6 — base siege cannon and a destructible base
 
 ### Siege cannon
-- The nest now carries a permanently fitted cannon. Stats: **range 1,600u**, shell speed 650,
+- The base now carries a permanently fitted cannon. Stats: **range 1,600u**, shell speed 650,
   **7-second reload**, 1.8 rad/s traverse. It picks the nearest enemy in range and holds that
   target until it dies or leaves the leash.
 - One shell **incinerates any enemy of epic tier or below** outright, burning through plating and
   energy shields (it is a physical incendiary shell, not an energy weapon).
 - Legendary and mythical enemies only lose a proportional chunk of hull (120,000 damage spread over
-  their remaining parts), so they cannot be held off — one legendary reaches the nest in a few
+  their remaining parts), so they cannot be held off — one legendary reaches the base in a few
   seconds and ends the run.
 - Recoil is deliberately huge: the barrel slides back 36u, a hot muzzle flash and six spikes
-  appear, a shock ring leaves the nest, the mount ring expands, plasma vents behind the barrel and
+  appear, a shock ring leaves the base, the mount ring expands, plasma vents behind the barrel and
   the camera kicks 26 (scaled down when the player is far away).
 - Only one shell is in flight at a time because the 7s reload is longer than the ~2.5s flight.
 
 ### Base aggro and destruction
-- Enemies whose centre is within `turretR × 1.4 = 2,240u` of the nest switch their target to the
-  nest and ignore the ship completely (their shots carry a `tgtBase` flag and only collide with the
-  nest). They charge at **2.6× normal speed**, then ram and fire at the hull.
-- The nest has **600 integrity**. Incoming damage scales by attacker tier:
+- Enemies whose centre is within `turretR × 1.4 = 2,240u` of the base switch their target to the
+  base and ignore the ship completely (their shots carry a `tgtBase` flag and only collide with the
+  base). They charge at **2.6× normal speed**, then ram and fire at the hull.
+- The base has **600 integrity**. Incoming damage scales by attacker tier:
   common ×0, uncommon ×0.01, rare ×0.4, epic ×1, legendary ×1.6, mythical ×2.4. Ambient trash
   therefore cannot erode it; one epic that reaches the hull does ~140 dps, two epics overwhelm the
   cannon's one-target-at-a-time 7s cycle, and a legendary/mythical kills it in about 2 seconds.
 - Integrity regenerates 2%/s after 7 seconds without a hit. A slim teal `⬢` bar joins the player
-  bars while the nest is nearby or damaged, and `⬢ NEST UNDER ATTACK` appears when rare+ enemies
+  bars while the base is nearby or damaged, and `⬢ BASE UNDER ATTACK` appears when rare+ enemies
   are inside the leash.
 - At zero integrity: every enemy in the world is vaporised, all loose and stored components are
   lost (`save.inventory = []`), half the credits are removed, the penalties are saved immediately,
-  and after a 3-second `NEST DESTROYED` overlay the client routes back to the title screen. The
-  next run places the nest elsewhere.
+  and after a 3-second `BASE DESTROYED` overlay the client routes back to the title screen. The
+  next run places the base elsewhere.
 
-### Nest placement
+### Base placement
 - `BASE_RING` is 13,900–15,300u — the same outer (common) ring, never an inner zone and never near
   the world edge. A module-level last position guarantees consecutive runs are at least 3,000u
   apart. The camera, player spawn, docking, recall, safe zone, spawning exclusion and minimap dot
@@ -792,7 +815,7 @@ the simulation, not design targets.
 - **Play requires a callsign.** An empty name focuses the field and shows "Enter a callsign to play."
   The name is stored in the local save and pushed to the shared map as before.
 - **Real settings panel** (`src/components/SettingsPanel.tsx`), shared by the title screen and the
-  in-game gear button (`⚙`, bottom right) and the Nest → SYSTEM tab. It contains every setting:
+  in-game gear button (`⚙`, bottom right) and the Base → SYSTEM tab. It contains every setting:
 
   | Setting | Key | Default | Effect |
   | --- | --- | --- | --- |
@@ -908,9 +931,9 @@ floor may place one at the edge of the screen).
 - Removed all text from the health/shield/boost bars (both player HUD and enemy bars).
 - Tether indicators are now bare harpoon glyphs; colour alone encodes ready / flying / hooked /
   reel-in, with load and cable-integrity slices.
-- The nest panel title is an icon; the base prompt is a hex button; `SHIP DESTROYED` is now
-  `CORE DESTROYED` and "rebuilding at hangar" is "reforming at the nest".
-- Copy switched away from ship language ("craft", "nest", "integrity", "callsign").
+- The base panel title is an icon; the base prompt is a hex button; `SHIP DESTROYED` is now
+  `CORE DESTROYED` and "rebuilding at hangar" is "reforming at the base".
+- Copy switched away from ship language ("craft", "base", "integrity", "callsign").
 
 ## 7. Website and save codes
 
@@ -919,7 +942,7 @@ floor may place one at the edge of the screen).
 - The game moved to **`/play`**; the in-game `⌂` button returns to it.
 - **Save code format:** `NH1-<checksum base36>-<base64 JSON>`; checksum is a 31× rolling hash mod
   1,000,003. Invalid or truncated codes fail closed.
-- Export copies the code to the clipboard from **SETTINGS** (title screen, gear button or Nest →
+- Export copies the code to the clipboard from **SETTINGS** (title screen, gear button or Base →
   SYSTEM); paste a code there to restore.
 - Restoring validates and checksums the code, writes it to the local save and updates the title
   screen immediately.

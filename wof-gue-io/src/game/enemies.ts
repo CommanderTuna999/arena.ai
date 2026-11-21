@@ -97,13 +97,18 @@ export interface GunSpec {
   type: ProjType;
   /** firing shove backwards, in u/s */
   recoil?: number;
+  /** seconds it can hold the trigger before it has to cool down (minigun) */
+  burst?: number;
+  /** seconds spent cooling once the burst runs dry */
+  cool?: number;
 }
 
 export const GUN_SPECS: Record<GunKind, GunSpec> = {
-  gun:     { name: "Gun Turret",     range: 900,  cd: 1.35, dmg: 0.4,  speed: 560,  r: 5,  life: 1.9,  hue: 8,   type: "bolt" },
-  minigun: { name: "Rotary Gun",     range: 700,  cd: 0.16, dmg: 0.05, speed: 720,  r: 3,  life: 0.9,  hue: 48,  spread: 0.16, type: "bolt" },
-  scatter: { name: "Scatter Cannon", range: 700,  cd: 2.6,  dmg: 0.2,  speed: 420,  r: 9,  life: 1.4,  hue: 32,  pellets: 7, spread: 0.5, type: "pellet" },
-  heavy:   { name: "Heavy Cannon",   range: 1200, cd: 5.0,  dmg: 1.8,  speed: 950,  r: 12, life: 1.7,  hue: 356, type: "slug", recoil: 260, hitscan: true },
+  /* damage multiples of the species' base hit, per the balance sheet */
+  gun:     { name: "Gun Turret",     range: 900,  cd: 1.35, dmg: 0.5,  speed: 560,  r: 5,  life: 1.9,  hue: 8,   type: "bolt" },
+  minigun: { name: "Rotary Gun",     range: 700,  cd: 0.16, dmg: 0.2,  speed: 720,  r: 3,  life: 0.9,  hue: 48,  spread: 0.16, type: "bolt", burst: 10, cool: 5 },
+  scatter: { name: "Scatter Cannon", range: 700,  cd: 2.6,  dmg: 1.2,  speed: 420,  r: 9,  life: 1.4,  hue: 32,  pellets: 7, spread: 0.5, type: "pellet" },
+  heavy:   { name: "Heavy Rail Cannon", range: 1200, cd: 5.0, dmg: 17, speed: 950, r: 12, life: 1.7,  hue: 356, type: "slug", recoil: 260, hitscan: true },
   laser:   { name: "Laser Emitter",  range: 1000, cd: 2.4,  dmg: 1.0,  speed: 1500, r: 6,  life: 0.45, hue: 188, energy: true, type: "laser" },
 };
 
@@ -157,6 +162,10 @@ export interface SpeciesDef {
   armed: { gun: boolean; missile: boolean; shield: boolean };
   /** signature turret this species mounts; defaults to the plain gun */
   gunType?: GunKind;
+  /** hit points of one normal (body) piece at common rarity; the sheet in docs/BALANCE.md */
+  hp: number;
+  /** damage of one common-rarity hit before attachment multipliers */
+  dmg: number;
   pack: number[];
   abilities: AbilityDef[];
   build: (b: Builder, tier: number) => Mount[];
@@ -253,7 +262,10 @@ function colorsFor(kind: PartKind, hue: number, style: number) {
   }
 }
 
-const HP_BASE: Record<PartKind, number> = { core: 30, segment: 12, armor: 16, leg: 6, arm: 16, wing: 6, weapon: 22, shield: 26, spike: 5 };
+/** How each kind of piece compares to the species' normal piece. Armour is the
+ *  sheet's "9x the average piece"; everything else keeps its old ratio, just
+ *  measured against the species line instead of one global number. */
+const KIND_HP: Record<PartKind, number> = { core: 2.5, segment: 1, armor: 9, leg: 0.5, arm: 1.33, wing: 0.5, weapon: 1.83, shield: 2.17, spike: 0.42 };
 
 /* ---------------- builder ---------------- */
 export class Builder {
@@ -261,7 +273,7 @@ export class Builder {
   groups: Group[] = [];
   coreId = 0;
   readonly S: number;
-  constructor(public tier: number, public hue: number, public rng: () => number) {
+  constructor(public tier: number, public hue: number, public rng: () => number, public baseHp = 12) {
     this.S = BASE_SIZE * Math.pow(SIZE_GROWTH, tier);
   }
 
@@ -273,7 +285,7 @@ export class Builder {
     for (let i = 0; i < p.length; i += 2) r = Math.max(r, Math.hypot(p[i] - cx, p[i + 1] - cy));
     const style = o.style ?? 0;
     const col = colorsFor(kind, this.hue, style);
-    const hp = HP_BASE[kind] * HP_MUL[this.tier] * (o.hpM ?? 1);
+    const hp = this.baseHp * KIND_HP[kind] * HP_MUL[this.tier] * (o.hpM ?? 1);
     const id = this.parts.length;
     this.parts.push({
       id, kind, name, poly: p, cx, cy, r, area: polyArea(p), hp, maxHp: hp,
@@ -494,7 +506,7 @@ const P = Math.PI;
 const SPECIES: SpeciesDef[] = [
   /* 0 ─ DRAGONFLY */
   {
-    id: "dragonfly", gunType: "laser", name: "Dragonfly", hue: 188, flying: true, speed: 210, turn: 3.4, ranged: true, keep: 330, muzzle: 2.2,
+    id: "dragonfly", hp: 19, dmg: 30, gunType: "laser", name: "Dragonfly", hue: 188, flying: true, speed: 210, turn: 3.4, ranged: true, keep: 330, muzzle: 2.2,
     armed: { gun: true, missile: false, shield: true }, pack: [1, 1, 1, 1, 1, 1],
     abilities: [
       { type: "shoot", name: "Ion Bolt", minTier: 0, cd: 1.8, wind: 0.3, dmg: 0.7, n: 1, ns: 0.3, spread: 0.15, speed: 700, life: 1.4, size: 6, slow: 0.75, slowT: 1.2, kind: "bolt", maxP: 950 },
@@ -559,7 +571,7 @@ const SPECIES: SpeciesDef[] = [
 
   /* 1 ─ SCORPION */
   {
-    id: "scorpion", gunType: "scatter", name: "Scorpion", hue: 2, flying: false, speed: 115, turn: 2.4, ranged: false, keep: 0, muzzle: 2.6,
+    id: "scorpion", hp: 25, dmg: 34, gunType: "scatter", name: "Scorpion", hue: 2, flying: false, speed: 115, turn: 2.4, ranged: false, keep: 0, muzzle: 2.6,
     armed: { gun: true, missile: false, shield: false }, pack: [1, 1, 1, 1, 1, 1],
     abilities: [
       { type: "swing", name: "Pincer Clamp", minTier: 0, cd: 2.6, wind: 0.5, dmg: 2, maxS: 3.5, role: "arm", needs: "Pincer" },
@@ -618,7 +630,7 @@ const SPECIES: SpeciesDef[] = [
 
   /* 2 ─ SPIDER */
   {
-    id: "spider", name: "Widow Spider", hue: 272, flying: false, speed: 140, turn: 2.8, ranged: true, keep: 300, muzzle: 2.2,
+    id: "spider", hp: 19, dmg: 50, name: "Widow Spider", hue: 272, flying: false, speed: 140, turn: 2.8, ranged: true, keep: 300, muzzle: 2.2,
     armed: { gun: false, missile: true, shield: false }, pack: [1, 1, 1, 1, 1, 1],
     abilities: [
       { type: "shoot", name: "Web Shot", minTier: 0, cd: 6, wind: 0.5, dmg: 0.4, n: 1, speed: 460, life: 1.8, size: 12, slow: 0.5, slowT: 2.5, kind: "web", minP: 120, maxP: 800 },
@@ -656,7 +668,7 @@ const SPECIES: SpeciesDef[] = [
 
   /* 3 ─ LUNA MOTH */
   {
-    id: "moth", name: "Luna Moth", hue: 236, flying: true, speed: 130, turn: 2.6, ranged: true, keep: 380, muzzle: 1.4,
+    id: "moth", hp: 20, dmg: 20, name: "Luna Moth", hue: 236, flying: true, speed: 130, turn: 2.6, ranged: true, keep: 380, muzzle: 1.4,
     armed: { gun: false, missile: false, shield: true }, pack: [1, 1, 1, 1, 1, 1],
     abilities: [
       { type: "cloud", name: "Scale Dust", minTier: 0, cd: 8, wind: 0.6, dmg: 0.4, size: 2.8, slow: 0.55, atPlayer: true, maxP: 700 },
@@ -696,7 +708,7 @@ const SPECIES: SpeciesDef[] = [
 
   /* 4 ─ MANTIS */
   {
-    id: "mantis", name: "Mantis", hue: 92, flying: false, speed: 120, turn: 3.0, ranged: false, keep: 0, muzzle: 2.0,
+    id: "mantis", hp: 31, dmg: 29, name: "Mantis", hue: 92, flying: false, speed: 120, turn: 3.0, ranged: false, keep: 0, muzzle: 2.0,
     armed: { gun: false, missile: false, shield: true }, pack: [1, 1, 1, 1, 1, 1],
     abilities: [
       { type: "swing", name: "Scythe Strike", minTier: 0, cd: 2.2, wind: 0.5, dmg: 2.4, maxS: 3.2, role: "arm", needs: "Raptor Blade" },
@@ -746,7 +758,7 @@ const SPECIES: SpeciesDef[] = [
 
   /* 5 ─ CENTIPEDE */
   {
-    id: "centipede", name: "Centipede", hue: 335, flying: false, speed: 170, turn: 2.8, ranged: false, keep: 0, muzzle: 3.0,
+    id: "centipede", hp: 20, dmg: 35, name: "Centipede", hue: 335, flying: false, speed: 170, turn: 2.8, ranged: false, keep: 0, muzzle: 3.0,
     armed: { gun: false, missile: false, shield: false }, pack: [1, 1, 1, 1, 1, 1],
     bodyWave: { amp: 0.22, k: 0.8, speed: 6 },
     abilities: [
@@ -789,7 +801,7 @@ const SPECIES: SpeciesDef[] = [
 
   /* 6 ─ HORNET */
   {
-    id: "wasp", gunType: "minigun", name: "Hornet", hue: 52, flying: true, speed: 190, turn: 3.6, ranged: false, keep: 0, muzzle: 1.8,
+    id: "wasp", hp: 20, dmg: 37, gunType: "minigun", name: "Hornet", hue: 52, flying: true, speed: 190, turn: 3.6, ranged: false, keep: 0, muzzle: 1.8,
     armed: { gun: true, missile: true, shield: false }, pack: [2, 2, 1, 1, 1, 1],
     abilities: [
       { type: "swing", name: "Mandible Snap", minTier: 0, cd: 2, wind: 0.35, dmg: 1.2, maxS: 2.2, role: "mandible", needs: "Mandible" },
@@ -844,7 +856,7 @@ const SPECIES: SpeciesDef[] = [
 
   /* 7 ─ SCARAB BEETLE */
   {
-    id: "beetle", gunType: "scatter", name: "Scarab", hue: 140, flying: false, speed: 110, turn: 2.8, ranged: false, keep: 0, muzzle: 2.8,
+    id: "beetle", hp: 36, dmg: 20, gunType: "scatter", name: "Scarab", hue: 140, flying: false, speed: 110, turn: 2.8, ranged: false, keep: 0, muzzle: 2.8,
     armed: { gun: true, missile: true, shield: true }, pack: [1, 1, 1, 1, 1, 1],
     abilities: [
       { type: "swing", name: "Mandible Crush", minTier: 0, cd: 2.4, wind: 0.45, dmg: 1.8, maxS: 2.7, role: "mandible", needs: "Mandible" },
@@ -877,7 +889,7 @@ const SPECIES: SpeciesDef[] = [
 
   /* 8 ─ SOLDIER ANT */
   {
-    id: "ant", gunType: "minigun", name: "Soldier Ant", hue: 28, flying: false, speed: 150, turn: 3.4, ranged: false, keep: 0, muzzle: 3.0,
+    id: "ant", hp: 27, dmg: 25, gunType: "minigun", name: "Soldier Ant", hue: 28, flying: false, speed: 150, turn: 3.4, ranged: false, keep: 0, muzzle: 3.0,
     armed: { gun: true, missile: false, shield: false }, pack: [4, 3, 2, 1, 1, 1],
     abilities: [
       { type: "swing", name: "Mandible Crush", minTier: 0, cd: 2, wind: 0.4, dmg: 1.6, maxS: 3.1, role: "mandible", needs: "Mandible" },
@@ -916,7 +928,7 @@ const SPECIES: SpeciesDef[] = [
 
   /* 9 ─ FIREFLY */
   {
-    id: "firefly", gunType: "laser", name: "Firefly", hue: 305, flying: true, speed: 125, turn: 2.8, ranged: true, keep: 340, muzzle: 1.7,
+    id: "firefly", hp: 24, dmg: 21, gunType: "laser", name: "Firefly", hue: 305, flying: true, speed: 125, turn: 2.8, ranged: true, keep: 340, muzzle: 1.7,
     armed: { gun: true, missile: false, shield: true }, pack: [1, 1, 1, 1, 1, 1],
     abilities: [
       { type: "shoot", name: "Glow Orb", minTier: 0, cd: 3, wind: 0.4, dmg: 0.8, n: 1, ns: 0.4, spread: 0.5, speed: 300, life: 4.5, size: 9, homing: 1.2, slow: 0.8, slowT: 1, kind: "orb", maxP: 850 },
@@ -958,7 +970,7 @@ const SPECIES: SpeciesDef[] = [
 
   /* 10 ─ WORKER ANT */
   {
-    id: "workerant", name: "Worker Ant", hue: 22, flying: false, speed: 165, turn: 3.8, ranged: false, keep: 0, muzzle: 2.6,
+    id: "workerant", hp: 27, dmg: 25, name: "Worker Ant", hue: 22, flying: false, speed: 165, turn: 3.8, ranged: false, keep: 0, muzzle: 2.6,
     armed: { gun: false, missile: false, shield: false }, pack: [4, 4, 3, 2, 1, 1], minZone: 0, maxZone: 2,
     abilities: [
       { type: "swing", name: "Mandible Crush", minTier: 1, cd: 2.1, wind: 0.4, dmg: 1.4, maxS: 2.9, role: "mandible", needs: "Mandible" },
@@ -973,7 +985,7 @@ const SPECIES: SpeciesDef[] = [
 
   /* 11 ─ HONEYBEE */
   {
-    id: "honeybee", name: "Honeybee", hue: 44, flying: true, speed: 175, turn: 3.6, ranged: false, keep: 0, muzzle: 1.9,
+    id: "honeybee", hp: 25, dmg: 35, name: "Honeybee", hue: 44, flying: true, speed: 175, turn: 3.6, ranged: false, keep: 0, muzzle: 1.9,
     armed: { gun: false, missile: false, shield: false }, pack: [3, 3, 2, 1, 1, 1], minZone: 0, maxZone: 2,
     abilities: [
       { type: "spit", name: "Venom Sting", minTier: 1, cd: 4.5, wind: 0.4, dmg: 0.8, speed: 520, size: 1.2, poison: 0.3, maxP: 520 },
@@ -988,7 +1000,7 @@ const SPECIES: SpeciesDef[] = [
 
   /* 12 ─ GRASSHOPPER */
   {
-    id: "grasshopper", name: "Grasshopper", hue: 104, flying: false, speed: 155, turn: 3.2, ranged: false, keep: 0, muzzle: 2.4,
+    id: "grasshopper", hp: 27, dmg: 27, name: "Grasshopper", hue: 104, flying: false, speed: 155, turn: 3.2, ranged: false, keep: 0, muzzle: 2.4,
     armed: { gun: false, missile: false, shield: false }, pack: [2, 2, 2, 1, 1, 1], minZone: 0, maxZone: 2,
     abilities: [
       { type: "charge", name: "Leaping Charge", minTier: 1, cd: 5.5, wind: 0.6, dmg: 1.8, speed: 980, dur: 0.45, minP: 180, maxP: 900 },
@@ -1003,7 +1015,7 @@ const SPECIES: SpeciesDef[] = [
 
   /* 13 ─ COCKROACH */
   {
-    id: "cockroach", name: "Cockroach", hue: 12, flying: false, speed: 190, turn: 3.5, ranged: false, keep: 0, muzzle: 2.4,
+    id: "cockroach", hp: 27, dmg: 27, name: "Cockroach", hue: 12, flying: false, speed: 190, turn: 3.5, ranged: false, keep: 0, muzzle: 2.4,
     armed: { gun: false, missile: false, shield: false }, pack: [3, 3, 2, 2, 1, 1], minZone: 0, maxZone: 2,
     abilities: [
       { type: "charge", name: "Shell Bash", minTier: 1, cd: 4.5, wind: 0.5, dmg: 1.6, speed: 760, dur: 0.5, minP: 160, maxP: 700 },
@@ -1018,7 +1030,7 @@ const SPECIES: SpeciesDef[] = [
 
   /* 14 ─ MOSQUITO */
   {
-    id: "mosquito", name: "Mosquito", hue: 330, flying: true, speed: 220, turn: 4.2, ranged: false, keep: 0, muzzle: 2.2,
+    id: "mosquito", hp: 20, dmg: 28, name: "Mosquito", hue: 330, flying: true, speed: 220, turn: 4.2, ranged: false, keep: 0, muzzle: 2.2,
     armed: { gun: false, missile: false, shield: false }, pack: [3, 3, 2, 2, 1, 1], minZone: 0, maxZone: 2,
     abilities: [
       { type: "drain", name: "Blood Drain", minTier: 1, cd: 5, wind: 0.5, dmg: 0.55, dur: 1.6, maxS: 2.4, maxP: 380 },
@@ -1032,7 +1044,7 @@ const SPECIES: SpeciesDef[] = [
 
   /* 15 ─ BOMBARDIER BEETLE */
   {
-    id: "bombardier", gunType: "scatter", name: "Bombardier Beetle", hue: 28, flying: false, speed: 120, turn: 2.9, ranged: true, keep: 300, muzzle: 2.8,
+    id: "bombardier", hp: 37, dmg: 20, gunType: "scatter", name: "Bombardier Beetle", hue: 28, flying: false, speed: 120, turn: 2.9, ranged: true, keep: 300, muzzle: 2.8,
     armed: { gun: true, missile: true, shield: false }, pack: [1, 1, 1, 1, 1, 1], minZone: 1, maxZone: 3,
     abilities: [
       { type: "spit", name: "Chemical Spray", minTier: 1, cd: 5, wind: 0.45, dmg: 0.7, speed: 520, size: 1.7, maxP: 640 },
@@ -1047,7 +1059,7 @@ const SPECIES: SpeciesDef[] = [
 
   /* 16 ─ RHINOCEROS BEETLE */
   {
-    id: "rhino", gunType: "heavy", name: "Rhinoceros Beetle", hue: 210, flying: false, speed: 105, turn: 2.2, ranged: false, keep: 0, muzzle: 2.9,
+    id: "rhino", hp: 40, dmg: 20, gunType: "heavy", name: "Rhinoceros Beetle", hue: 210, flying: false, speed: 105, turn: 2.2, ranged: false, keep: 0, muzzle: 2.9,
     armed: { gun: true, missile: false, shield: true }, pack: [1, 1, 1, 1, 1, 1], minZone: 1, maxZone: 3,
     abilities: [
       { type: "charge", name: "Horn Charge", minTier: 1, cd: 7, wind: 0.9, dmg: 3.2, speed: 620, dur: 0.6, minP: 200, maxP: 800 },
@@ -1062,7 +1074,7 @@ const SPECIES: SpeciesDef[] = [
 
   /* 17 ─ YELLOWJACKET */
   {
-    id: "yellowjacket", gunType: "minigun", name: "Yellowjacket", hue: 50, flying: true, speed: 200, turn: 3.9, ranged: true, keep: 300, muzzle: 2.0,
+    id: "yellowjacket", hp: 25, dmg: 38, gunType: "minigun", name: "Yellowjacket", hue: 50, flying: true, speed: 200, turn: 3.9, ranged: true, keep: 300, muzzle: 2.0,
     armed: { gun: true, missile: false, shield: false }, pack: [2, 2, 2, 1, 1, 1], minZone: 1, maxZone: 3,
     abilities: [
       { type: "shoot", name: "Venom Darts", minTier: 1, cd: 4, wind: 0.4, dmg: 0.65, n: 3, ns: 0.5, spread: 0.35, speed: 600, life: 1.4, size: 5, slow: 0.7, slowT: 1.2, poison: 0.2, kind: "bolt", minP: 180, maxP: 800 },
@@ -1076,7 +1088,7 @@ const SPECIES: SpeciesDef[] = [
 
   /* 18 ─ LADYBUG */
   {
-    id: "ladybug", name: "Ladybug", hue: 355, flying: true, speed: 135, turn: 3.0, ranged: true, keep: 280, muzzle: 2.0,
+    id: "ladybug", hp: 25, dmg: 25, name: "Ladybug", hue: 355, flying: true, speed: 135, turn: 3.0, ranged: true, keep: 280, muzzle: 2.0,
     armed: { gun: false, missile: false, shield: true }, pack: [1, 1, 1, 1, 1, 1], minZone: 1, maxZone: 3,
     abilities: [
       { type: "cloud", name: "Spore Cloud", minTier: 1, cd: 8, wind: 0.6, dmg: 0.45, size: 2.9, slow: 0.6, maxS: 3.2 },
@@ -1091,7 +1103,7 @@ const SPECIES: SpeciesDef[] = [
 
   /* 19 ─ STAG BEETLE */
   {
-    id: "stag", name: "Stag Beetle", hue: 20, flying: false, speed: 120, turn: 2.6, ranged: false, keep: 0, muzzle: 2.8,
+    id: "stag", hp: 37, dmg: 23, name: "Stag Beetle", hue: 20, flying: false, speed: 120, turn: 2.6, ranged: false, keep: 0, muzzle: 2.8,
     armed: { gun: false, missile: false, shield: true }, pack: [1, 1, 1, 1, 1, 1], minZone: 1, maxZone: 3,
     abilities: [
       { type: "swing", name: "Pincer Grab", minTier: 1, cd: 2.8, wind: 0.5, dmg: 2.4, maxS: 3.2, role: "mandible", needs: "Pincer" },
@@ -1106,7 +1118,7 @@ const SPECIES: SpeciesDef[] = [
 
   /* 20 ─ CARPENTER ANT */
   {
-    id: "carpenter", name: "Carpenter Ant", hue: 16, flying: false, speed: 135, turn: 3.0, ranged: false, keep: 0, muzzle: 2.8,
+    id: "carpenter", hp: 28, dmg: 22, name: "Carpenter Ant", hue: 16, flying: false, speed: 135, turn: 3.0, ranged: false, keep: 0, muzzle: 2.8,
     armed: { gun: true, missile: false, shield: true }, pack: [2, 2, 2, 1, 1, 1], minZone: 2, maxZone: 4,
     abilities: [
       { type: "swing", name: "Crushing Bite", minTier: 1, cd: 2.2, wind: 0.45, dmg: 2.2, maxS: 3, role: "mandible", needs: "Mandible" },
@@ -1121,7 +1133,7 @@ const SPECIES: SpeciesDef[] = [
 
   /* 21 ─ CICADA */
   {
-    id: "cicada", name: "Cicada", hue: 168, flying: true, speed: 140, turn: 3.0, ranged: true, keep: 340, muzzle: 1.8,
+    id: "cicada", hp: 25, dmg: 20, name: "Cicada", hue: 168, flying: true, speed: 140, turn: 3.0, ranged: true, keep: 340, muzzle: 1.8,
     armed: { gun: false, missile: false, shield: true }, pack: [1, 1, 1, 1, 1, 1], minZone: 2, maxZone: 4,
     abilities: [
       { type: "ring", name: "Sonic Screech", minTier: 1, cd: 8, wind: 0.75, dmg: 1.4, size: 6, speed: 520, maxS: 4.2 },
@@ -1135,7 +1147,7 @@ const SPECIES: SpeciesDef[] = [
 
   /* 22 ─ ASSASSIN BUG */
   {
-    id: "assassin", name: "Assassin Bug", hue: 340, flying: false, speed: 185, turn: 3.4, ranged: false, keep: 0, muzzle: 2.6,
+    id: "assassin", hp: 23, dmg: 47, name: "Assassin Bug", hue: 340, flying: false, speed: 185, turn: 3.4, ranged: false, keep: 0, muzzle: 2.6,
     armed: { gun: false, missile: false, shield: false }, pack: [1, 1, 1, 1, 1, 1], minZone: 2, maxZone: 4,
     abilities: [
       { type: "drain", name: "Piercing Proboscis", minTier: 1, cd: 5, wind: 0.45, dmg: 0.7, dur: 1.8, maxS: 2.6, maxP: 460 },
@@ -1150,7 +1162,7 @@ const SPECIES: SpeciesDef[] = [
 
   /* 23 ─ TIGER BEETLE */
   {
-    id: "tiger", name: "Tiger Beetle", hue: 86, flying: false, speed: 230, turn: 4.0, ranged: false, keep: 0, muzzle: 2.7,
+    id: "tiger", hp: 34, dmg: 25, name: "Tiger Beetle", hue: 86, flying: false, speed: 230, turn: 4.0, ranged: false, keep: 0, muzzle: 2.7,
     armed: { gun: false, missile: true, shield: false }, pack: [1, 1, 1, 1, 1, 1], minZone: 2, maxZone: 4,
     abilities: [
       { type: "charge", name: "Dash", minTier: 1, cd: 3.5, wind: 0.3, dmg: 1.4, speed: 1000, dur: 0.32, minP: 200, maxP: 900 },
@@ -1165,7 +1177,7 @@ const SPECIES: SpeciesDef[] = [
 
   /* 24 ─ MOLE CRICKET */
   {
-    id: "molecricket", name: "Mole Cricket", hue: 34, flying: false, speed: 130, turn: 3.0, ranged: false, keep: 0, muzzle: 2.8,
+    id: "molecricket", hp: 25, dmg: 28, name: "Mole Cricket", hue: 34, flying: false, speed: 130, turn: 3.0, ranged: false, keep: 0, muzzle: 2.8,
     armed: { gun: false, missile: false, shield: true }, pack: [1, 1, 1, 1, 1, 1], minZone: 2, maxZone: 4,
     abilities: [
       { type: "blink", name: "Burrow Ambush", minTier: 1, cd: 8, wind: 0.6, dmg: 1.2, maxP: 700 },
@@ -1179,7 +1191,7 @@ const SPECIES: SpeciesDef[] = [
 
   /* 25 ─ KATYDID */
   {
-    id: "katydid", name: "Katydid", hue: 118, flying: true, speed: 165, turn: 3.3, ranged: true, keep: 320, muzzle: 2.2,
+    id: "katydid", hp: 25, dmg: 25, name: "Katydid", hue: 118, flying: true, speed: 165, turn: 3.3, ranged: true, keep: 320, muzzle: 2.2,
     armed: { gun: false, missile: false, shield: false }, pack: [1, 1, 1, 1, 1, 1], minZone: 2, maxZone: 5,
     abilities: [
       { type: "shoot", name: "Leaf Shards", minTier: 1, cd: 4.5, wind: 0.4, dmg: 0.7, n: 3, ns: 0.5, spread: 0.4, speed: 540, life: 1.5, size: 7, pierce: true, kind: "wave", minP: 180, maxP: 800 },
@@ -1193,7 +1205,7 @@ const SPECIES: SpeciesDef[] = [
 
   /* 26 ─ DUNG BEETLE */
   {
-    id: "dung", gunType: "heavy", name: "Dung Beetle", hue: 32, flying: false, speed: 92, turn: 2.0, ranged: false, keep: 0, muzzle: 3.2,
+    id: "dung", hp: 35, dmg: 20, gunType: "heavy", name: "Dung Beetle", hue: 32, flying: false, speed: 92, turn: 2.0, ranged: false, keep: 0, muzzle: 3.2,
     armed: { gun: true, missile: false, shield: true }, pack: [1, 1, 1, 1, 1, 1], minZone: 3, maxZone: 5,
     abilities: [
       { type: "charge", name: "Rolling Slam", minTier: 1, cd: 8, wind: 1, dmg: 3.4, speed: 560, dur: 0.7, minP: 220, maxP: 900 },
@@ -1208,7 +1220,7 @@ const SPECIES: SpeciesDef[] = [
 
   /* 27 ─ ATLAS MOTH */
   {
-    id: "atlas", name: "Atlas Moth", hue: 266, flying: true, speed: 115, turn: 2.4, ranged: true, keep: 420, muzzle: 1.6,
+    id: "atlas", hp: 30, dmg: 30, name: "Atlas Moth", hue: 266, flying: true, speed: 115, turn: 2.4, ranged: true, keep: 420, muzzle: 1.6,
     armed: { gun: false, missile: false, shield: true }, pack: [1, 1, 1, 1, 1, 1], minZone: 3, maxZone: 5,
     abilities: [
       { type: "ring", name: "Wind Gust", minTier: 1, cd: 8, wind: 0.8, dmg: 1.3, size: 7, speed: 480, maxS: 4.6 },
@@ -1222,7 +1234,7 @@ const SPECIES: SpeciesDef[] = [
 
   /* 28 ─ WEEVIL */
   {
-    id: "weevil", gunType: "heavy", name: "Weevil", hue: 196, flying: false, speed: 110, turn: 2.8, ranged: false, keep: 0, muzzle: 3.4,
+    id: "weevil", hp: 25, dmg: 25, gunType: "heavy", name: "Weevil", hue: 196, flying: false, speed: 110, turn: 2.8, ranged: false, keep: 0, muzzle: 3.4,
     armed: { gun: true, missile: false, shield: true }, pack: [1, 1, 1, 1, 1, 1], minZone: 3, maxZone: 5,
     abilities: [
       { type: "swing", name: "Drill Strike", minTier: 1, cd: 3, wind: 0.55, dmg: 2.6, maxS: 3.4, role: "mandible", needs: "Snout" },
@@ -1237,7 +1249,7 @@ const SPECIES: SpeciesDef[] = [
 
   /* 29 ─ LOCUST */
   {
-    id: "locust", gunType: "minigun", name: "Locust", hue: 72, flying: true, speed: 205, turn: 3.4, ranged: false, keep: 0, muzzle: 2.6,
+    id: "locust", hp: 16, dmg: 29, gunType: "minigun", name: "Locust", hue: 72, flying: true, speed: 205, turn: 3.4, ranged: false, keep: 0, muzzle: 2.6,
     armed: { gun: true, missile: true, shield: false }, pack: [2, 2, 2, 2, 1, 1], minZone: 3, maxZone: 5,
     abilities: [
       { type: "charge", name: "Swarm Rush", minTier: 1, cd: 5, wind: 0.4, dmg: 1.5, speed: 950, dur: 0.4, minP: 180, maxP: 850 },
@@ -1251,7 +1263,7 @@ const SPECIES: SpeciesDef[] = [
 
   /* 30 ─ JEWEL BEETLE */
   {
-    id: "jewel", gunType: "laser", name: "Jewel Beetle", hue: 152, flying: true, speed: 170, turn: 3.2, ranged: true, keep: 360, muzzle: 2.4,
+    id: "jewel", hp: 40, dmg: 25, gunType: "laser", name: "Jewel Beetle", hue: 152, flying: true, speed: 170, turn: 3.2, ranged: true, keep: 360, muzzle: 2.4,
     armed: { gun: true, missile: true, shield: true }, pack: [1, 1, 1, 1, 1, 1], minZone: 4, maxZone: 5,
     reflectShell: true,
     abilities: [
@@ -1267,7 +1279,7 @@ const SPECIES: SpeciesDef[] = [
 
   /* 31 ─ WORLD SERPENT (boss) */
   {
-    id: "serpent", gunType: "laser", name: "Snake", hue: 285, flying: false, speed: 430, turn: 3.6, ranged: false, keep: 0, muzzle: 3.0,
+    id: "serpent", hp: 80, dmg: 100, gunType: "laser", name: "Snake", hue: 285, flying: false, speed: 430, turn: 3.6, ranged: false, keep: 0, muzzle: 3.0,
     armed: { gun: true, missile: true, shield: true }, pack: [1, 1, 1, 1, 1, 1], minZone: 5, maxZone: 5, boss: true,
     bodyWave: { amp: 0.5, k: 0.42, speed: 2.4 },
     abilities: [
@@ -1580,7 +1592,7 @@ export interface BuiltEnemy {
 export function buildEnemy(speciesIdx: number, tier: number, seed: number): BuiltEnemy {
   const sp = SPECIES[speciesIdx];
   const rng = mulberry32(seed);
-  const b = new Builder(tier, sp.hue, rng);
+  const b = new Builder(tier, sp.hue, rng, sp.hp);
   const mounts = sp.build(b, tier);
   loadout(b, mounts, sp);
   const order = b.parts.map((_, i) => i).sort((a, c) => b.parts[a].layer - b.parts[c].layer || a - c);

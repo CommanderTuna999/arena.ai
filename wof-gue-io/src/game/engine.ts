@@ -8,12 +8,12 @@ import { GUN_SPECS, SPECIES_LIST, buildEnemy, type AbilityDef, type Group, type 
 /* ---------------------------------------------------------------------------
  * COMBAT & WORLD REFERENCE (live constants)
  *   Base cannon      : st.dmg per shot, rate 4 + 0.7/level, 1 + barrels shots.
- *   Nest defences    : the siege cannon powers up whenever any enemy enters the
- *                      nest's 1,760u alert band and stays online 120s after the last
+ *   Base defences    : the siege cannon powers up whenever any enemy enters the
+ *                      base's 1,760u alert band and stays online 120s after the last
  *                      intruder leaves; it one-shots up to legendary; six hex
  *                      turrets fire fast weak tracers to 850u. Any enemy whose shot
  *                      damages the hull is instantly destroyed. One turret dies per
- *                      1/6 nest integrity; repair starts after 120s without damage.
+ *                      1/6 base integrity; repair starts after 120s without damage.
  *                      Player vision is 1.3x wider than the raw camera everywhere (optics stack).
  *   Credits          : every part broken by the player throws 1-5 credit coins worth
  *                      ~4% of the part's component value (x salvage multiplier). They
@@ -21,7 +21,7 @@ import { GUN_SPECS, SPECIES_LIST, buildEnemy, type AbilityDef, type Group, type 
  *                      there is nothing to pick up.
  *   Loose cargo      : only light parts (mass <= 7) can be handled without machinery —
  *                      the magnet drags them and the ship scoops them up on contact.
- *                      Anything heavier needs the harpoon and a tow back to the nest
+ *                      Anything heavier needs the harpoon and a tow back to the base
  *                      dock, and refuses both the magnet and the scoop.
  *   Crafted weapons  : fully automatic; damage = st.dmg * multiplier * efficiency.
  *                      B / AUTO pill toggles the rack (persisted in save.autoFire).
@@ -90,7 +90,7 @@ export const SHELL_GROW_FRAC = 0.26;
 export const SHELL_GROW_CAP = 1.9;
 export const plateGrow = (r: number, layers: number) =>
   Math.min(r * SHELL_GROW_CAP, SHELL_BASE_GROW + (layers - 1) * SHELL_GROW_PER_LAYER + r * SHELL_GROW_FRAC);
-/* Nest defence tuning. The siege shell one-shots up to legendary; mythicals lose
+/* Base defence tuning. The siege shell one-shots up to legendary; mythicals lose
  * a fixed chunk so they stay a genuine end-game threat. */
 const SHELL_DMG = 2_500_000;
 const MYTHIC_SHELL_FRAC = 0.55;
@@ -100,6 +100,8 @@ const PICKUP_MASS = 7;
  * adds a little reach on top; the leash is only a hair longer than the notice
  * range, so stepping out of it ends the chase. */
 const AGGRO_RANGE = [140, 200, 320, 450, 590, 760];
+/** rare x3, epic x4, legendary x5, mythical x5 on top of the base range */
+const AGGRO_TIER_MUL = [1, 1, 3, 4, 5, 5];
 const AGGRO_SIZE = 0.16;
 const AGGRO_LEASH = 1.15;
 /** bodies at or below this tier never start a fight - they only fight back */
@@ -113,6 +115,8 @@ const BOSS_LEASH = 2.1;
 const CREDIT_DROP_CAP = 24;
 /** coins landing inside this window count as one collection */
 const CREDIT_BATCH_T = 0.5;
+/** energy shield contact: 25x a base enemy hit (see docs/BALANCE.md) */
+const SHIELD_SHOCK_MUL = 25;
 /** ceiling on decorative ring effects in flight */
 const RING_FX_CAP = 22;
 const BASE_REPAIR_IDLE = 120;
@@ -131,7 +135,7 @@ const MINI_SPEED = 1450;
 const SNAKE_ENABLED = false;
 const BOSS_SP = SNAKE_ENABLED ? SPECIES_LIST.findIndex((s) => s.boss) : -1;
 const KIND_DROP: Record<PartKind, number> = { core: 1, segment: 1, armor: 0.8, leg: 0.6, arm: 1, wing: 0.6, weapon: 1.4, shield: 1.4, spike: 0.35 };
-/** last nest position this browser session, so consecutive runs never overlap */
+/** last base position this browser session, so consecutive runs never overlap */
 let lastBasePos: { x: number; y: number } | null = null;
 
 /* ---------------- entity types ---------------- */
@@ -167,6 +171,8 @@ export interface Enemy {
   walk: number; dead: boolean; eDmg: number; keep: number; strafe: number; strafeT: number;
   /** seconds left of "you hit me first" aggression (neutral bodies only) */
   provoked: number;
+  /** rotary gun heat: seconds fired this burst, and seconds left cooling */
+  mgHeat: number; mgCool: number;
   tags: Record<string, number>; shields: ShieldInfo[]; weaponParts: number[]; shieldParts: number[];
   dist: number; contactCd: number; /** cooldown on the "get off my hull" swat */ swatCd: number; hasChange: boolean;
   dot: number; dotT: number; melt: number; slowT: number; slowF: number;
@@ -180,7 +186,7 @@ export interface Enemy {
   shellR: number;
   /** serpentine body wave (null for ordinary species) */
   bend: { amp: number; k: number; speed: number } | null;
-  /** distance to the nest (recomputed every frame for base defence) */
+  /** distance to the base (recomputed every frame for base defence) */
   bdist: number;
   /** running damage totals, used to deny drops to base-only kills */
   dmgTaken: number;
@@ -223,14 +229,14 @@ export interface CreditDrop { x: number; y: number; life: number; max: number; v
 export interface Drone { a: number; r: number; cd: number }
 export interface Well { x: number; y: number; life: number; max: number; dmg: number; r: number }
 export interface LockOn { e: Enemy; part: Part; t: number }
-/** slow heavy shell lobbed by the nest's defence cannon */
+/** slow heavy shell lobbed by the base's defence cannon */
 export interface BaseShot {
   x: number; y: number; vx: number; vy: number; life: number; target: Enemy | null; trail: number; dmg: number;
 }
 export interface TurretState {
   a: number; cd: number; recoil: number; flash: number; target: Enemy | null;
 }
-/** one of the six small point-defence turrets riding the nest's hex ring */
+/** one of the six small point-defence turrets riding the base's hex ring */
 export interface MiniTurret {
   a: number; cd: number; alive: boolean; target: Enemy | null; recoil: number; flash: number;
 }
@@ -376,7 +382,7 @@ export class Game {
   mines: Mine[] = [];
   drones: Drone[] = [];
   wells: Well[] = [];
-  /** nest defence: the slow siege cannon and the shells it throws */
+  /** base defence: the slow siege cannon and the shells it throws */
   turret: TurretState = { a: -Math.PI / 2, cd: 1.5, recoil: 0, flash: 0, target: null };
   baseShots: BaseShot[] = [];
   miniTurrets: MiniTurret[] = Array.from({ length: MINI_COUNT }, (_, i) => ({
@@ -431,7 +437,7 @@ export class Game {
     this.cam.y = this.player.y;
   }
 
-  /** Move the nest to a fresh spot in the outer ring before the run starts.
+  /** Move the base to a fresh spot in the outer ring before the run starts.
    *  It never lands in an inner zone (that would put the shop next to mythicals)
    *  and always stays clear of the world edge. */
   private placeBase() {
@@ -491,7 +497,7 @@ export class Game {
       this.enemies.length = 0;
       this.eprojs.length = 0;
       this.mines.length = 0;
-      /* the far side of the outer ring, directly opposite the nest */
+      /* the far side of the outer ring, directly opposite the base */
       const a = Math.atan2(-BASE.y, -BASE.x) || 0;
       const [tx, ty] = clampWorld(Math.cos(a) * (WORLD_R - 900), Math.sin(a) * (WORLD_R - 900));
       p.x = tx; p.y = ty; p.vx = p.vy = 0;
@@ -1075,7 +1081,7 @@ export class Game {
         c.vx *= damp; c.vy *= damp;
         c.stress = 0;
         /* Light salvage is scooped up on contact: no harpoon, no tow. Heavy
-         * pieces still need a cable and the nest dock. */
+         * pieces still need a cable and the base dock. */
         if (c.c.mass <= PICKUP_MASS && Math.hypot(p.x - c.x, p.y - c.y) < SHIP_R + c.r + 12) {
           this.comps.splice(i, 1);
           this.dockComp(c);
@@ -1322,8 +1328,8 @@ export class Game {
       parts: b.parts, groups: b.groups, order: b.order, coreId: b.coreId, chunk: key, home: { x, y }, aggro: false, barT: 0,
       speed: spd.speed * (1 + 0.04 * tier), turn: (spd.turn * TIER_TURN[clamp(tier, 0, 5)]) / (1 + b.radius / (b.size * 6)), mobility: 1, legCount: b.legCount, wingCount: b.wingCount, turnFrac: 1, legPlate: tier >= 4 ? tier - 3 : 0, crippledLegs: [], shieldReach: shieldParts.reduce((m, id) => Math.max(m, b.parts[id].shieldR), 0),
       abil, abilCd: abil.map(() => 1 + Math.random() * 3), gap: 1, act: null, stun: 0, wander: { x, y, t: 0 }, roleGroups,
-      walk: Math.random() * 6, dead: false, eDmg: 16 * DMG_MUL[tier], keep: spd.keep + b.radius * 0.9, strafe: Math.random() < 0.5 ? 1 : -1, strafeT: 2,
-      provoked: 0, tags, shields: [], weaponParts, shieldParts, dist: 9999, bdist: 9999, contactCd: 0, swatCd: 0, hasChange: false, gen: 0,
+      walk: Math.random() * 6, dead: false, eDmg: spd.dmg * DMG_MUL[tier], keep: spd.keep + b.radius * 0.9, strafe: Math.random() < 0.5 ? 1 : -1, strafeT: 2,
+      provoked: 0, mgHeat: 0, mgCool: 0, tags, shields: [], weaponParts, shieldParts, dist: 9999, bdist: 9999, contactCd: 0, swatCd: 0, hasChange: false, gen: 0,
       dmgTaken: 0, baseDmg: 0,
       dot: 0, dotT: 0, melt: 0, slowT: 0, slowF: 1,
       shells: Array.from({ length: shellN }, () => ({ hp: shellMax, max: shellMax })),
@@ -1513,7 +1519,7 @@ export class Game {
     e.dmgTaken += d;
     if (fromBase) e.baseDmg += d;
   }
-  /** true when the nest's defences (cannon or point turrets) did most of the work */
+  /** true when the base's defences (cannon or point turrets) did most of the work */
   private baseMajority(e: Enemy) {
     return e.baseDmg > 0 && e.baseDmg * 2 > e.dmgTaken;
   }
@@ -1646,7 +1652,7 @@ export class Game {
       this.shake = Math.max(this.shake, 24);
     }
     this.save.kills++;
-    /* Bestiary credit belongs to the player. A kill finished by the nest or its
+    /* Bestiary credit belongs to the player. A kill finished by the base or its
      * hex turrets never unlocks a species or announces a discovery. */
     const credit = !byBase && !this.baseMajority(e);
     if (credit) {
@@ -1726,7 +1732,7 @@ export class Game {
     }
   }
   private maybeDrop(e: Enemy, p: Part, x: number, y: number, mul = 1) {
-    /* No salvage when the nest did most of the damage. */
+    /* No salvage when the base did most of the damage. */
     if (this.baseMajority(e)) return;
     const isCore = p.kind === "core";
     const boss = !!e.spd.boss;
@@ -1807,9 +1813,10 @@ export class Game {
       const out = dd > 1 ? Math.atan2(dy, dx) : e.a;
       const zx = p.x, zy = p.y;
       sp.shieldHit = 0.3;
-      /* a shock, not a guillotine: capped so brushing a panel is never a
-       * one-shot even on a mythical body */
-      const zap = Math.min(e.eDmg * 0.9, this.stats.hull * 0.18);
+      /* The sheet prices an unshielded contact at 25x a base hit: a panel is a
+       * lethal wall, not a fence. It is still capped below a full hull so an
+       * enemy charging you cannot delete a healthy ship outright. */
+      const zap = Math.min(e.eDmg * SHIELD_SHOCK_MUL, this.stats.hull * 0.85);
       this.hurtPlayer(zap, { kb: 780 + e.tier * 70, kbx: Math.cos(out), kby: Math.sin(out), energy: true });
       this.ringFx(zx, zy, clamp(110 + e.tier * 16, 110, 220), "#7de9ff", 1500);
       this.burst(zx, zy, "#9df1ff", 12, 6.5, 420);
@@ -1861,7 +1868,7 @@ export class Game {
     this.ringFx(p.x, p.y, 380, "#7df9ff", 800);
     this.shake = 20;
     for (const h of this.harpoons) if (h.state !== 0) { this.retract(h); }
-    this.toast("Core destroyed — reforming at the nest...", "#ff6b81");
+    this.toast("Core destroyed — reforming at the base...", "#ff6b81");
   }
   private respawnPlayer() {
     const p = this.player;
@@ -1909,7 +1916,7 @@ export class Game {
       }
       pr.x += pr.vx * dt; pr.y += pr.vy * dt;
       let dead = pr.life <= 0;
-      /* Enemies aim at the ship, but the nest is solid: stray fire that crosses
+      /* Enemies aim at the ship, but the base is solid: stray fire that crosses
        * its hull still damages the structure. */
       if (!dead && !this.baseLost) {
         const db = Math.hypot(pr.x - BASE.x, pr.y - BASE.y);
@@ -2308,7 +2315,8 @@ export class Game {
     /* a provoked body is wide awake and will follow you further than it would
      * ever have noticed you on its own */
     const rage = angry && e.tier <= NEUTRAL_TIER ? 2.1 : 1;
-    const noticeR = (AGGRO_RANGE[clamp(e.tier, 0, 5)] + Math.min(e.radius, 700) * AGGRO_SIZE) * (boss ? BOSS_AGGRO_MUL : 1) * rage;
+    const tier = clamp(e.tier, 0, 5) | 0;
+    const noticeR = (AGGRO_RANGE[tier] * AGGRO_TIER_MUL[tier] + Math.min(e.radius, 700) * AGGRO_SIZE) * (boss ? BOSS_AGGRO_MUL : 1) * rage;
     const leashR = noticeR * (boss ? BOSS_LEASH : AGGRO_LEASH);
     if (!e.aggro) {
       if (!safe && !neutral && dist < noticeR) e.aggro = true;
@@ -2382,7 +2390,15 @@ export class Game {
         const dd = Math.hypot(aimX - wx, aimY - wy);
         const spec = q.wpn === "missile" ? null : GUN_SPECS[q.wpn as GunKind];
         const range = q.wpn === "missile" ? 1150 : spec!.range;
-        if (q.cd <= 0 && dd < range && Math.abs(angDiff(g.ang, rel)) < 0.22 && e.stun <= 0) {
+        /* a rotary gun holds the trigger for its burst, then has to cool */
+        const hot = spec?.burst ? e.mgCool > 0 : false;
+        if (hot) e.mgCool -= dt;
+        else if (spec?.burst) {
+          e.mgHeat += dt;
+          if (e.mgHeat >= spec.burst) { e.mgHeat = 0; e.mgCool = spec.cool ?? 5; }
+          else if (dd >= range || Math.abs(angDiff(g.ang, rel)) >= 0.22) e.mgHeat = Math.max(0, e.mgHeat - dt * 1.5);
+        }
+        if (!hot && q.cd <= 0 && dd < range && Math.abs(angDiff(g.ang, rel)) < 0.22 && e.stun <= 0) {
           const dir = e.a + g.ang;
           const mx = wx + Math.cos(dir) * q.muzzle, my = wy + Math.sin(dir) * q.muzzle;
           if (q.wpn === "missile") {
@@ -2703,7 +2719,7 @@ export class Game {
     const dmg = e.eDmg * spec.dmg;
     let len = spec.range;
     const p = this.player;
-    /* the nest is solid: a line that crosses it slams the structure instead */
+    /* the base is solid: a line that crosses it slams the structure instead */
     if (!this.baseLost) {
       const bx = BASE.x - mx, by = BASE.y - my;
       const along = bx * cos + by * sin;
@@ -3087,8 +3103,8 @@ export class Game {
     }
   }
 
-  /* ---------------- nest defence ---------------- */
-  /** Apply damage to the nest. Low tiers barely scratch the hull; epics and up
+  /* ---------------- base defence ---------------- */
+  /** Apply damage to the base. Low tiers barely scratch the hull; epics and up
    *  tear through it, which is why one legendary can end a run. */
   hurtBase(dmg: number, src: Enemy | null) {
     if (this.baseLost) return;
@@ -3098,17 +3114,17 @@ export class Game {
     this.baseHp -= dealt;
     this.baseDamageTaken += dealt;
     this.baseFlash = 0.22;
-    /* the nest only starts repairing after two full minutes without a hit */
+    /* the base only starts repairing after two full minutes without a hit */
     this.baseHitT = BASE_REPAIR_IDLE;
     /* damage no longer wakes the cannon: proximity does, in updateTurret */
     this.syncMiniLoss();
     this.shake = Math.max(this.shake, Math.min(12, 2 + tier * 2));
     if (this.baseAlarmCd <= 0 && tier >= 2) {
       this.baseAlarmCd = 20;
-      this.toast("The nest is under attack!", "#ff9d6e");
+      this.toast("The base is under attack!", "#ff9d6e");
     }
     if (this.baseHp <= 0) { this.destroyBase(); return; }
-    /* The nest answers structural damage immediately: whatever hit it is
+    /* The base answers structural damage immediately: whatever hit it is
      * erased, so ranged mobs cannot park outside and swarm the hull. */
     if (src && !src.dead) {
       const px = src.x, py = src.y;
@@ -3128,7 +3144,7 @@ export class Game {
     T.recoil = Math.max(0, T.recoil - dt * 2.2);
     T.flash = Math.max(0, T.flash - dt);
     if (this.baseLost) { T.target = null; return; }
-    /* Proximity fuse: any enemy inside the nest's alert band powers the cannon
+    /* Proximity fuse: any enemy inside the base's alert band powers the cannon
      * and refreshes its two-minute window. Nothing has to hit the hull first. */
     if (this.nearestEnemy(BASE.x, BASE.y, BASE.aggroR)) this.basePowerT = BASE_POWER_IDLE;
     if (this.basePowerT <= 0) {
@@ -3148,13 +3164,13 @@ export class Game {
     this.fireTurret(target, want);
   }
 
-  /** World position of hex turret i on the nest ring. */
+  /** World position of hex turret i on the base ring. */
   private miniPos(i: number): [number, number] {
     const a = Math.PI / 6 + (i / MINI_COUNT) * TAU;
     return [BASE.x + Math.cos(a) * BASE.r, BASE.y + Math.sin(a) * BASE.r];
   }
 
-  /** Kill one point-defence turret; called as the nest crosses each 1/6 HP mark. */
+  /** Kill one point-defence turret; called as the base crosses each 1/6 HP mark. */
   private breakMini(i: number) {
     const T = this.miniTurrets[i];
     if (!T || !T.alive) return;
@@ -3344,7 +3360,7 @@ export class Game {
     e.barT = 4;
   }
 
-  /** The nest is gone: burn the swarm, lose the cargo, lose half the credits. */
+  /** The base is gone: burn the swarm, lose the cargo, lose half the credits. */
   private destroyBase() {
     if (this.baseLost) return;
     this.baseLost = true;
@@ -3378,7 +3394,7 @@ export class Game {
     this.burst(BASE.x, BASE.y, "#ffd24d", 90, 14, 1200);
     this.burst(BASE.x, BASE.y, "#ff6b3d", 60, 18, 900);
     for (let i = 0; i < 5; i++) this.ringFx(BASE.x, BASE.y, BASE.r * (2.2 + i * 1.8), i % 2 ? "#ffd24d" : "#ff7a5c", 1200);
-    this.toast(`NEST DESTROYED — ${lostInv} stored component${lostInv === 1 ? "" : "s"} lost`, "#ff6b81");
+    this.toast(`BASE DESTROYED — ${lostInv} stored component${lostInv === 1 ? "" : "s"} lost`, "#ff6b81");
     this.toast(`Half your credits went up with it (-${lostCr.toLocaleString()} CR)`, "#ffd24d");
     this.markDirty();
     this.persist(true);
@@ -3472,7 +3488,7 @@ export class Game {
       this.firePlayer(dt);
     }
 
-    // nest timers, repair and the siege cannon
+    // base timers, repair and the siege cannon
     if (this.baseLostT > 0) this.baseLostT = Math.max(0, this.baseLostT - dt);
     if (this.baseFlash > 0) this.baseFlash -= dt;
     if (this.baseHitT > 0) this.baseHitT -= dt;
