@@ -30,7 +30,10 @@ let clientRaw: string | null = null;
 const listeners = new Set<() => void>();
 
 function guestSave(): SaveData {
-  if (!guestFallback) guestFallback = readGuestSave() ?? newSave();
+  /* The engine owns the guest run while it is running, so prefer its copy. */
+  const live = readGuestSave();
+  if (live) guestFallback = live;
+  else if (!guestFallback) guestFallback = newSave();
   return guestFallback;
 }
 
