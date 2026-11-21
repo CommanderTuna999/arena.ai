@@ -277,8 +277,9 @@ export interface Player {
   slowF: number; slowT: number; poison: number; poisonT: number;
   pull: { e: Enemy; t: number } | null; dead: boolean; respawn: number;
   fireCd: number; wCd: number[]; hitT: number; shieldT: number; flash: number; thornCd: number;
-  /** fitted cannon: recoil spring, barrel heat, the barrel that fires next and its flash */
-  recoil: number; heat: number; muzzle: number; muzzleFlash: number;
+  /** fitted cannon: recoil spring, barrel heat, the barrel that fires next, its
+   *  flash, and a per-barrel recoil so a twin visibly alternates */
+  recoil: number; heat: number; muzzle: number; muzzleFlash: number; barrelRec: number[];
   /** per-mount aim angle, relative to the hull (set by the auto-targeting pass) */
   wAim: number[];
   tpT: number; tpCd: number; tow: number; thrust: number;
@@ -435,7 +436,7 @@ export class Game {
     this.player = {
       x: BASE.x, y: BASE.y - 200, vx: 0, vy: 0, a: -Math.PI / 2, hp: this.stats.hull, shield: this.stats.shieldMax, boost: 100, boosting: false,
       slowF: 1, slowT: 0, poison: 0, poisonT: 0, pull: null, dead: false, respawn: 0, fireCd: 0, wCd: [0, 0, 0], wAim: W_SLOTS.map((s) => s.rest), hitT: 99, shieldT: 0,
-      recoil: 0, heat: 0, muzzle: 0, muzzleFlash: 0,
+      recoil: 0, heat: 0, muzzle: 0, muzzleFlash: 0, barrelRec: [],
       flash: 0, thornCd: 0, tpT: 0, tpCd: 0, tow: 1, thrust: 0,
       barrier: 0, barrierMax: 0, barrierT: 0, overT: 0, nullCd: 0,
     };
@@ -510,7 +511,7 @@ export class Game {
       const [tx, ty] = clampWorld(Math.cos(a) * (WORLD_R - 900), Math.sin(a) * (WORLD_R - 900));
       p.x = tx; p.y = ty; p.vx = p.vy = 0;
       p.dead = false; p.respawn = 0; p.hp = this.stats.hull; p.shield = this.stats.shieldMax;
-      p.recoil = 0; p.heat = 0; p.muzzle = 0; p.muzzleFlash = 0;
+      p.recoil = 0; p.heat = 0; p.muzzle = 0; p.muzzleFlash = 0; p.barrelRec.length = 0;
       p.slowF = 1; p.slowT = 0; p.poison = 0; p.poisonT = 0; p.pull = null;
       this.cam.x = tx; this.cam.y = ty;
       this.toast("TEST RANGE — NO SPAWNS", "#ff7ad9");
@@ -651,7 +652,7 @@ export class Game {
     if (cannonOwned(this.save, id)) { this.selectCannon(id); return null; }
     /* admin mode's infinite components skip the bill, never the credit price */
     const free = this.admin.on && this.admin.components;
-    const prob = cannonBillProblem(this.save, c, free);
+    const prob = cannonBillProblem(this.save, c, free, this.admin.on);
     if (prob) return prob;
     const picks = free ? [] : cannonBillPicks(this.save, c);
     if (!free && picks.length !== c.parts.reduce((n, b) => n + b.count, 0)) return "Missing components";
@@ -2977,6 +2978,8 @@ export class Game {
           this.burst(m.x, m.y, crit ? "#fff3b0" : `hsl(${CANNON_BY_ID[st.cannonId]?.look.hue ?? 40} 100% 76%)`, 3, 3.4, 190);
         }
       }
+      /* each barrel carries its own kick: a twin recoils one barrel at a time */
+      for (let i = 0; i < n; i++) p.barrelRec[(first + i) % mz.length] = 1;
       p.muzzle = (first + n) % mz.length;
       p.recoil = 1;
       p.muzzleFlash = 1;
@@ -3682,6 +3685,7 @@ export class Game {
       if (p.thornCd > 0) p.thornCd -= dt;
       /* recoil spring, muzzle flash and barrel heat */
       if (p.recoil > 0) p.recoil = Math.max(0, p.recoil - dt * 5.5);
+      for (let i = 0; i < p.barrelRec.length; i++) if (p.barrelRec[i] > 0) p.barrelRec[i] = Math.max(0, p.barrelRec[i] - dt * 6.5);
       if (p.muzzleFlash > 0) p.muzzleFlash = Math.max(0, p.muzzleFlash - dt * 16);
       if (p.heat > 0) p.heat = Math.max(0, p.heat - dt * 0.34);
       if (p.poisonT > 0) { p.poisonT -= dt; this.hurtPlayer(p.poison * dt, { dot: true }); if (p.poisonT <= 0) p.poison = 0; }

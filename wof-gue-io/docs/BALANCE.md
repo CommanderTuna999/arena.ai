@@ -65,6 +65,10 @@ the same base, so a ranged attack scales with the body that fired it.
 With the sheet applied as written, a whole enemy body carries tens of pieces (a Dragonfly is ~65),
 so the piece values multiply out. Effective HP includes the `SHELL_HP_FRAC = 0.6` plating bar.
 
+*Note (v2.13.1)*: armour is no longer a flat 9x the species line — each plate is priced off the
+body's own average piece at 4/5.5/7/9x from rare to mythic (2.5x common, 3.25x uncommon), so the
+totals below are pre-change. Regenerate with `armour.test.mts`'s build loop before quoting TTK.
+
 | rarity    | Dragonfly body HP (all pieces) | + plating | time to kill, starting cannon (29 dps) | time to kill, maxed cannon (~46.7k dps) |
 | --------- | ------------------------------ | --------- | -------------------------------------- | --------------------------------------- |
 | common    | 1,628                          | 2,605     | 91 s                                   | instant                                 |
@@ -76,4 +80,4 @@ so the piece values multiply out. Effective HP includes the `SHELL_HP_FRAC = 0.6
 
 Player side: 100 hull at level 0, 18,468 hull + ~7,080 shield fully plated; a mythical body hits for
 `30 * 243 = 7,290` per laser tick. Knobs if the ladder needs flattening: `HP_MUL` in `data.ts`,
-`KIND_HP.armor` (the 9x rule), and `DMG_MUL` (currently 3x a tier).
+`ARMOUR_HP_MUL` (armour is 4/5.5/7/9x the body's average piece from rare to mythic), and `DMG_MUL` (currently 3x a tier).

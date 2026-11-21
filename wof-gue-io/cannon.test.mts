@@ -82,6 +82,21 @@ assert(left === "c2,l3,s1,sp1", `exactly the bill is consumed (left: ${left})`);
 assert(g.save.credits === 700, `300 credits were spent (left ${g.save.credits})`);
 assert(cannonOwned(g.save, "skewer") && g.save.cannon.id === "skewer", "the new chassis is owned and fitted");
 
+/* --- one gun per tier (and admin mode is the only way around it) --- */
+const gt = new Game(newSave(), "t") as any;
+gt.save.credits = 100000;
+gt.save.inventory = [
+  comp("leg", 0, "t1"), comp("leg", 0, "t2"), comp("leg", 0, "t3"), comp("leg", 0, "t4"),
+  comp("core", 0, "t5"), comp("core", 0, "t6"), comp("core", 1, "t7"), comp("core", 1, "t8"),
+  comp("segment", 0, "t9", "Mantis Head"),
+];
+assert(gt.buyCannonChassis("peashooter") === null, "the Peashooter can be bought while tier 1 is empty");
+const second = gt.buyCannonChassis("workhorse");
+assert(!!second && /one gun per tier/i.test(second), `a second tier 1 chassis is refused outside admin mode (${second})`);
+assert(!gt.save.cannon.owned.includes("workhorse"), "and nothing was charged for it");
+gt.admin = { ...gt.admin, on: true };
+assert(gt.buyCannonChassis("workhorse") === null, "admin mode may buy the whole row");
+
 /* --- admin mode's infinite components skips the bill, not the price --- */
 const ga = new Game(newSave(), "t") as any;
 ga.admin = { ...ga.admin, on: true, components: true, credits: false };
@@ -132,11 +147,15 @@ gf.save.cannon.owned.push("workhorse");
 gf.selectCannon("workhorse");
 gf.input.lmb = true;
 const fire = () => { gf.player.fireCd = 0; gf.bullets = []; (gf as any).firePlayer(1 / 60); return gf.bullets as { x: number; y: number }[]; };
+gf.player.barrelRec = [0, 0];
 let shots = fire();
 assert(shots.length === 1, `one round per trigger before the barrel upgrade (got ${shots.length})`);
 assert(gf.player.muzzle === 1, "the second barrel is up next: a twin alternates");
+assert(gf.player.barrelRec[0] === 1 && gf.player.barrelRec[1] === 0, "only the barrel that fired kicks back");
+gf.player.barrelRec = [0, 0];
 shots = fire();
 assert(shots.length === 1 && gf.player.muzzle === 0, "the next trigger comes out of the other barrel");
+assert(gf.player.barrelRec[1] === 1 && gf.player.barrelRec[0] === 0, "and it is the other barrel that kicks");
 assert(gf.player.recoil === 1 && gf.player.muzzleFlash === 1, "firing kicks the gun back and lights the muzzle");
 assert(gf.player.heat > 0, "firing heats the barrel");
 const hot = gf.player.heat;
@@ -147,6 +166,7 @@ gf.buyCannon("barrels", 1);
 shots = fire();
 assert(shots.length === 2, `the barrel upgrade throws two rounds (got ${shots.length})`);
 assert(Math.hypot(shots[0].x - shots[1].x, shots[0].y - shots[1].y) > 5, "and they leave from two different muzzles");
+assert(gf.player.barrelRec[0] === 1 && gf.player.barrelRec[1] === 1, "both barrels kick when both fire");
 
 /* --- accuracy and speed tracks only move what they should --- */
 assert(cannonSpread(pea, { acc: 0 }) > cannonSpread(pea, { acc: 10 }), "accuracy tightens the Peashooter's spray");

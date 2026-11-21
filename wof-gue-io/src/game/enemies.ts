@@ -262,10 +262,16 @@ function colorsFor(kind: PartKind, hue: number, style: number) {
   }
 }
 
-/** How each kind of piece compares to the species' normal piece. Armour is the
- *  sheet's "9x the average piece"; everything else keeps its old ratio, just
- *  measured against the species line instead of one global number. */
-const KIND_HP: Record<PartKind, number> = { core: 2.5, segment: 1, armor: 9, leg: 0.5, arm: 1.33, wing: 0.5, weapon: 1.83, shield: 2.17, spike: 0.42 };
+/** How each kind of piece compares to the species' normal piece. Armour's weight
+ *  here is only a starting point: once the body is built, every armour piece is
+ *  re-priced against the body's own average piece health (see scaleArmour), so
+ *  its real ratio is the rarity figure below. */
+const KIND_HP: Record<PartKind, number> = { core: 2.5, segment: 1, armor: 1, leg: 0.5, arm: 1.33, wing: 0.5, weapon: 1.83, shield: 2.17, spike: 0.42 };
+
+/** Armour is worth this multiple of the body's average piece, by rarity:
+ *  common, uncommon, rare, epic, legendary, mythical. The sheet fixes rare to
+ *  mythic at 4 / 5.5 / 7 / 9; common and uncommon continue the ramp below. */
+export const ARMOUR_HP_MUL = [2.5, 3.25, 4, 5.5, 7, 9];
 
 /* ---------------- builder ---------------- */
 export class Builder {
@@ -1589,12 +1595,30 @@ export interface BuiltEnemy {
   wingCount: number;
 }
 
+/** Re-price the plating: every armour piece becomes `factor x` the average of the
+ *  body's other pieces, so a rare body's plates are 4x its normal pieces and a
+ *  mythical one's are 9x. The spread inside the armour (Core Guard layers, the
+ *  hpM variants) is kept by scaling every plate by the same ratio. */
+function scaleArmour(parts: Part[], tier: number, baseHp: number) {
+  const t = Math.max(0, Math.min(ARMOUR_HP_MUL.length - 1, tier));
+  let sum = 0, n = 0, plates = 0;
+  for (const p of parts) {
+    if (p.kind === "armor") { plates++; continue; }
+    sum += p.maxHp; n++;
+  }
+  if (!plates || !n) return;
+  const want = ARMOUR_HP_MUL[t] * (sum / n);
+  const ratio = want / (baseHp * KIND_HP.armor * HP_MUL[t]);
+  for (const p of parts) if (p.kind === "armor") p.hp = p.maxHp = p.maxHp * ratio;
+}
+
 export function buildEnemy(speciesIdx: number, tier: number, seed: number): BuiltEnemy {
   const sp = SPECIES[speciesIdx];
   const rng = mulberry32(seed);
   const b = new Builder(tier, sp.hue, rng, sp.hp);
   const mounts = sp.build(b, tier);
   loadout(b, mounts, sp);
+  scaleArmour(b.parts, tier, sp.hp);
   const order = b.parts.map((_, i) => i).sort((a, c) => b.parts[a].layer - b.parts[c].layer || a - c);
   let radius = 0;
   let legCount = 0, wingCount = 0;

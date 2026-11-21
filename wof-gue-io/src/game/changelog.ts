@@ -8,7 +8,7 @@
  *   CHANGELOG and mirror the details in docs/CHANGELOG.md.
  */
 
-export const VERSION = "2.13.0";
+export const VERSION = "2.13.1";
 
 export interface ChangeEntry {
   version: string;
@@ -19,6 +19,16 @@ export interface ChangeEntry {
 }
 
 export const CHANGELOG: ChangeEntry[] = [
+  {
+    version: "2.13.1",
+    date: "20 Nov 2026",
+    title: "Plating that fits the body, and a proper twin",
+    points: [
+      "Armour is priced off the body it is bolted to now: every plate is a multiple of the average piece on that insect, climbing with rarity - 4x at rare, 5.5x epic, 7x legendary, 9x mythical, with common and uncommon continuing the ramp at 2.5x and 3.25x.",
+      "The Workhorse properly alternates barrels: each barrel has its own recoil spring, so one kicks back per trigger and the other stays put. The muzzle flash was lighting the wrong barrel - it now flashes the one that actually fired.",
+      "One gun per tier. Once you buy a tier 1 chassis the other two lock with 'One gun per tier', exactly as the sheet says. Admin mode can still buy the whole row.",
+    ],
+  },
   {
     version: "2.13.0",
     date: "20 Nov 2026",
