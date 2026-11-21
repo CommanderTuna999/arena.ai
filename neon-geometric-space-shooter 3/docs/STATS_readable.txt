@@ -1,0 +1,1744 @@
+WOF GUE — STAT COMPENDIUM
+Build 2.0.3 · 21 November 2026
+
+HOW TO READ THIS
+C / U / R / E / L / M = Common, Uncommon, Rare, Epic, Legendary, Mythic.
+Enemy "body damage" is the contact hit: 0.25 × enemy damage, once every 0.7s. Total body health is the sum of every part at that tier. Core health is the central part only. Turn speed is radians per second; lower is slower. Speeds are world units per second.
+Player weapon damage is shown at 100% craft efficiency and a base cannon damage of 10. Multiply by efficiency and by st.dmg for your actual build. Every crafted weapon has a 2.5× critical hit and a 2.2× Overdrive multiplier.
+
+CORE FORMULAS
+• Base cannon damage: 10 × 1.2^Cannon Damage level.
+• Base cannon fire rate: 4 + 0.7 × Fire Rate level shots/s.
+• Base cannon shots per trigger: 1 + Extra Barrels level.
+• Base cannon range: 760 × 1.08^Rail Coils level; projectile speed 900 × 1.10^Rail Coils level.
+• Crafted weapon cooldown: base cooldown ÷ (0.7 + 0.3 × efficiency). At 30% efficiency the cooldown is 1.27× longer.
+• Player hull: 100 × 1.22^Hull level.
+• Enemy damage: 16 × tier multiplier. Common 16 · Uncommon 48 · Rare 144 · Epic 432 · Legendary 1,296 · Mythic 3,888.
+• Enemy health: part health × tier multiplier. Common ×1 · Uncommon ×4 · Rare ×18 · Epic ×80 · Legendary ×360 · Mythic ×1,600.
+
+ZONE PRESSURE
+COMMON — OUTER RING
+Radius 13,200–16,000u · health ×1 · damage ×1 · contact 4 · density 2.6/chunk · local cap 56
+UNCOMMON — RING 1
+Radius 10,600–13,200u · health ×4 · damage ×3 · contact 12 · density 2.2/chunk · local cap 48
+RARE — RING 2
+Radius 7,800–10,600u · health ×18 · damage ×9 · contact 36 · density 1.8/chunk · local cap 40
+EPIC — RING 3
+Radius 4,800–7,800u · health ×80 · damage ×27 · contact 108 · density 0.32/chunk · local cap 14
+LEGENDARY — RING 4
+Radius 2,200–4,800u · health ×360 · damage ×81 · contact 324 · density 0.16/chunk · local cap 8
+MYTHIC — CORE
+Radius 0–2,200u · health ×1600 · damage ×243 · contact 972 · density 0.075/chunk · local cap 4
+Chunk seed pass rate: Common 100% · Uncommon 84.6% · Rare 69.2% · Epic 12.3% · Legendary 6.2% · Mythic 2.9%. Each seeded chunk gets one enemy. Top-up target is 85% of the local cap within 2,700u. The visibility floor is four enemies in view through Rare and two in Legendary–Mythic, capped at Rare tier. The Snake boss pass is disabled in this build.
+
+DAMAGE TYPES
+• Kinetic — base cannon, scatter driver, heavy machine gun, swarm drones. Enemy energy shields stop kinetic rounds inside their hex and lose 8% of shield maximum per hit. Rail sniper ignores shield bubbles but hull shells still stop it.
+• Energy — pulse turret, arc lance, shield-bypass laser. Enemy energy shields stop pulse and lance inside a hex without draining the shield. Bypass ignores bubbles.
+• Explosive — seeker pod, homing missile launcher, flak cannon, mine layer, cluster rockets. Passes through energy-shield bubbles.
+• Shock — EMP cannon, chain lightning, gravity bomb, sonic disruptor. Projectiles are stopped by bubbles; direct area effects skip the bubble check. EMP, chain and sonic skip hull shells.
+• Corrosive — acid sprayer, venom injector. Passes through energy-shield bubbles.
+• Thermal — plasma cutter. Energy shields stop it inside a hex without shield drain.
+• Physical — contact, knockback and direct impulses. Bypasses energy bubbles.
+
+ENEMY DEFENCE RULES
+Energy shield: each Shield Generator has shield maximum = 3 × its own part health. Its hex bubble is 1.9 × body size and only covers that generator, not the whole body. At 0 shield the bubble drops for 4s, re-arms at 40%, and regenerates 15%/s after 3s without a hit.
+Hull shells: tier 2 and above can carry layers of 5 × tier health. Bullets deal 30% of their damage to a shell layer; beams deal 0; area effects deal 30%. Breaking a layer releases a damaging shockwave. T5 layers have 8,000 HP each.
+
+════════════════════════════════════════
+ENEMIES — 32 SPECIES
+════════════════════════════════════════
+
+────────────────────────────────────────
+1. DRAGONFLY
+Flying · Ranged, keeps 330u · Spawns Common–Legendary
+Contact type: Physical · Pack size: C 1 · U 1 · R 1 · E 1 · L 1 · M 1
+
+BODY DAMAGE (contact hit)
+C 4 · U 12 · R 36 · E 108 · L 324 · M 972
+
+TOTAL BODY HEALTH
+C 310 · U 1,405 · R 9,792 · E 62,496 · L 328,608 · M 1,573,120
+
+CORE HEALTH
+C 30 · U 120 · R 540 · E 2,400 · L 10,800 · M 48,000
+
+TURN SPEED
+C 2.12 · U 1.03 · R 0.68 · E 0.51 · L 0.41 · M 0.34
+
+MOVE SPEED
+C 210 · U 218 · R 227 · E 235 · L 244 · M 252
+
+PARTS AT MYTHIC
+73 parts · 1,239u radius · C 30 · U 33 · R 44 · E 63 · L 69 · M 73 parts by tier
+
+DEFENCES
+Shells: Rare 1 layer (90 HP each) · Epic 2 layers (400 HP each) · Legendary 3 layers (1,800 HP each) · Mythic 4 layers (8,000 HP each)
+Energy shields: Epic 1 (6,240 HP, 239u) · Legendary 2 (56,160 HP; 394–434u) · Mythic 2 (249,600 HP; 651–716u)
+
+MOUNTS AT MYTHIC
+6 gun mounts · 0 missile pods · gun 0.4× enemy damage at 1.1–1.7s cadence; missiles 1.1× at 4.5–6s
+
+ABILITIES
+• Ion Bolt — projectile · Uncommon+
+  cooldown 1.80s · wind-up 0.30s · damage 0.70× enemy damage (2,722 at Mythic)
+  2 projectiles at Mythic · spread 0.15 rad · 700u/s · 1.40s life · size 6.00 · range 0–950u · slows to 0.75× for 1.20s · bolt
+• Strafe Run — charge · Rare+
+  cooldown 7.00s · wind-up 0.50s · damage 1.50× enemy damage (5,832 at Mythic)
+  880u/s · range 220–750u · 0.50s duration
+• Fan Burst — projectile · Epic+
+  cooldown 6.00s · wind-up 0.50s · damage 0.60× enemy damage (2,333 at Mythic)
+  8 projectiles at Mythic · spread 0.90 rad · 600u/s · 1.20s life · size 6.00 · range 0–800u · bolt
+• Wing Shear — projectile burst · Legendary+
+  cooldown 10.00s · wind-up 0.80s · damage 0.70× enemy damage (2,722 at Mythic)
+  17 projectiles at Mythic · 420u/s · 1.60s life · size 7.00 · range 0–600u · wave
+
+────────────────────────────────────────
+2. SCORPION
+Ground · Melee · Spawns Common–Epic
+Contact type: Physical · Pack size: C 1 · U 1 · R 1 · E 1 · L 1 · M 1
+
+BODY DAMAGE (contact hit)
+C 4 · U 12 · R 36 · E 108 · L 324 · M 972
+
+TOTAL BODY HEALTH
+C 486 · U 1,987 · R 12,262 · E 85,760 · L 498,960 · M 2,288,000
+
+CORE HEALTH
+C 30 · U 120 · R 540 · E 2,400 · L 10,800 · M 48,000
+
+TURN SPEED
+C 1.46 · U 0.71 · R 0.47 · E 0.35 · L 0.28 · M 0.23
+
+MOVE SPEED
+C 115 · U 120 · R 124 · E 129 · L 133 · M 138
+
+PARTS AT MYTHIC
+105 parts · 1,321u radius · C 41 · U 42 · R 56 · E 89 · L 103 · M 105 parts by tier
+
+DEFENCES
+Shells: Rare 1 layer (90 HP each) · Epic 2 layers (400 HP each) · Legendary 3 layers (1,800 HP each) · Mythic 4 layers (8,000 HP each)
+
+MOUNTS AT MYTHIC
+6 gun mounts · 0 missile pods · gun 0.4× enemy damage at 1.1–1.7s cadence; missiles 1.1× at 4.5–6s
+
+ABILITIES
+• Pincer Clamp — melee · Uncommon+
+  cooldown 2.60s · wind-up 0.50s · damage 2.00× enemy damage (7,776 at Mythic)
+  reach 0.0–3.5 body units · needs arm
+• Tail Lash — melee · Rare+
+  cooldown 4.20s · wind-up 0.60s · damage 2.60× enemy damage (10,109 at Mythic)
+  reach 0.0–3.9 body units · poison 0.30× · needs tail
+• Venom Bolt — projectile · Epic+
+  cooldown 4.50s · wind-up 0.40s · damage 0.90× enemy damage (3,499 at Mythic)
+  3 projectiles at Mythic · spread 0.30 rad · 560u/s · 1.50s life · size 7.00 · range 200–800u · poison 0.25× · bolt
+• Claw Grapple — pull · Legendary+
+  cooldown 11.00s · wind-up 0.50s · damage 0.50× enemy damage (1,944 at Mythic)
+  760u/s · range 260–800u
+
+────────────────────────────────────────
+3. WIDOW SPIDER
+Ground · Ranged, keeps 300u · Spawns Common–Legendary
+Contact type: Physical · Pack size: C 1 · U 1 · R 1 · E 1 · L 1 · M 1
+
+BODY DAMAGE (contact hit)
+C 4 · U 12 · R 36 · E 108 · L 324 · M 972
+
+TOTAL BODY HEALTH
+C 406 · U 1,644 · R 9,947 · E 74,928 · L 446,328 · M 2,054,080
+
+CORE HEALTH
+C 30 · U 120 · R 540 · E 2,400 · L 10,800 · M 48,000
+
+TURN SPEED
+C 1.69 · U 0.82 · R 0.55 · E 0.41 · L 0.32 · M 0.27
+
+MOVE SPEED
+C 140 · U 146 · R 151 · E 157 · L 162 · M 168
+
+PARTS AT MYTHIC
+105 parts · 1,350u radius · C 40 · U 41 · R 52 · E 90 · L 103 · M 105 parts by tier
+
+DEFENCES
+Shells: Rare 1 layer (90 HP each) · Epic 2 layers (400 HP each) · Legendary 3 layers (1,800 HP each) · Mythic 4 layers (8,000 HP each)
+
+MOUNTS AT MYTHIC
+0 gun mounts · 4 missile pods · gun 0.4× enemy damage at 1.1–1.7s cadence; missiles 1.1× at 4.5–6s
+
+ABILITIES
+• Web Shot — projectile · Uncommon+
+  cooldown 6.00s · wind-up 0.50s · damage 0.40× enemy damage (1,555 at Mythic)
+  1 projectile at Mythic · 460u/s · 1.80s life · size 12.00 · range 120–800u · slows to 0.50× for 2.50s · web
+• Fang Strike — melee · Rare+
+  cooldown 2.00s · wind-up 0.40s · damage 1.70× enemy damage (6,610 at Mythic)
+  reach 0.0–2.3 body units · needs mandible
+• Acid Glob — corrosive glob · Epic+
+  cooldown 7.00s · wind-up 0.50s · damage 0.60× enemy damage (2,333 at Mythic)
+  480u/s · size 1.50 · range 0–800u
+• Silk Line — pull · Legendary+
+  cooldown 12.00s · wind-up 0.50s · damage 0.50× enemy damage (1,944 at Mythic)
+  760u/s · range 250–850u
+
+────────────────────────────────────────
+4. LUNA MOTH
+Flying · Ranged, keeps 380u · Spawns Common–Legendary
+Contact type: Physical · Pack size: C 1 · U 1 · R 1 · E 1 · L 1 · M 1
+
+BODY DAMAGE (contact hit)
+C 4 · U 12 · R 36 · E 108 · L 324 · M 972
+
+TOTAL BODY HEALTH
+C 350 · U 1,683 · R 8,957 · E 67,232 · L 337,248 · M 1,540,480
+
+CORE HEALTH
+C 30 · U 120 · R 540 · E 2,400 · L 10,800 · M 48,000
+
+TURN SPEED
+C 1.83 · U 0.89 · R 0.59 · E 0.44 · L 0.35 · M 0.29
+
+MOVE SPEED
+C 130 · U 135 · R 140 · E 146 · L 151 · M 156
+
+PARTS AT MYTHIC
+69 parts · 862u radius · C 34 · U 38 · R 45 · E 64 · L 68 · M 69 parts by tier
+
+DEFENCES
+Shells: Rare 1 layer (90 HP each) · Epic 2 layers (400 HP each) · Legendary 3 layers (1,800 HP each) · Mythic 4 layers (8,000 HP each)
+Energy shields: Epic 1 (6,240 HP, 239u) · Legendary 2 (56,160 HP; 394–434u) · Mythic 3 (374,400 HP; 651–781u)
+
+MOUNTS AT MYTHIC
+0 gun mounts · 0 missile pods · gun 0.4× enemy damage at 1.1–1.7s cadence; missiles 1.1× at 4.5–6s
+
+ABILITIES
+• Scale Dust — corrosive cloud · Uncommon+
+  cooldown 8.00s · wind-up 0.60s · damage 0.40× enemy damage (1,555 at Mythic)
+  cloud size 2.80 × body · range 0–700u · slows to 0.55× for 1.50s · lands at the player
+• Spore Orbs — projectile · Rare+
+  cooldown 5.00s · wind-up 0.50s · damage 0.80× enemy damage (3,110 at Mythic)
+  4 projectiles at Mythic · spread 0.70 rad · 260u/s · 4.00s life · size 9.00 · range 0–800u · slows to 0.80× for 1.00s · homing 1.60 · orb
+• Lunar Lure — pull · Epic+
+  cooldown 12.00s · wind-up 0.60s · damage 0.50× enemy damage (1,944 at Mythic)
+  700u/s · range 250–800u
+• Gust Pulse — area ring · Legendary+
+  cooldown 9.00s · wind-up 0.90s · damage 1.20× enemy damage (4,666 at Mythic)
+  460u/s · ring reaches 6.00 × body · reach 0.0–4.0 body units
+
+────────────────────────────────────────
+5. MANTIS
+Ground · Melee · Spawns Common–Legendary
+Contact type: Physical · Pack size: C 1 · U 1 · R 1 · E 1 · L 1 · M 1
+
+BODY DAMAGE (contact hit)
+C 4 · U 12 · R 36 · E 108 · L 324 · M 972
+
+TOTAL BODY HEALTH
+C 428 · U 1,710 · R 9,022 · E 70,464 · L 350,640 · M 1,886,720
+
+CORE HEALTH
+C 30 · U 120 · R 540 · E 2,400 · L 10,800 · M 48,000
+
+TURN SPEED
+C 1.94 · U 0.95 · R 0.62 · E 0.47 · L 0.37 · M 0.31
+
+MOVE SPEED
+C 120 · U 125 · R 130 · E 134 · L 139 · M 144
+
+PARTS AT MYTHIC
+85 parts · 1,127u radius · C 36 · U 36 · R 43 · E 72 · L 76 · M 85 parts by tier
+
+DEFENCES
+Shells: Rare 1 layer (90 HP each) · Epic 2 layers (400 HP each) · Legendary 3 layers (1,800 HP each) · Mythic 4 layers (8,000 HP each)
+Energy shields: Epic 1 (6,240 HP, 239u) · Legendary 2 (56,160 HP; 394–434u) · Mythic 3 (374,400 HP; 651–781u)
+
+MOUNTS AT MYTHIC
+0 gun mounts · 0 missile pods · gun 0.4× enemy damage at 1.1–1.7s cadence; missiles 1.1× at 4.5–6s
+
+ABILITIES
+• Scythe Strike — melee · Uncommon+
+  cooldown 2.20s · wind-up 0.50s · damage 2.40× enemy damage (9,331 at Mythic)
+  reach 0.0–3.2 body units · needs arm
+• Lunge — charge · Rare+
+  cooldown 6.00s · wind-up 0.50s · damage 2.00× enemy damage (7,776 at Mythic)
+  820u/s · range 150–600u · 0.35s duration
+• Blade Wave — projectile · Epic+
+  cooldown 5.00s · wind-up 0.50s · damage 1.50× enemy damage (5,832 at Mythic)
+  3 projectiles at Mythic · spread 0.30 rad · 520u/s · 1.50s life · size 14.00 · range 150–800u · pierces · wave
+• Whirling Blades — projectile burst · Legendary+
+  cooldown 10.00s · wind-up 0.80s · damage 1.00× enemy damage (3,888 at Mythic)
+  15 projectiles at Mythic · 380u/s · 1.60s life · size 9.00 · range 0–600u · wave
+
+────────────────────────────────────────
+6. CENTIPEDE
+Ground · Melee · Spawns Common–Epic · Serpentine body
+Contact type: Physical · Pack size: C 1 · U 1 · R 1 · E 1 · L 1 · M 1
+
+BODY DAMAGE (contact hit)
+C 4 · U 12 · R 36 · E 108 · L 324 · M 972
+
+TOTAL BODY HEALTH
+C 899 · U 4,411 · R 23,983 · E 224,288 · L 1,162,800 · M 5,793,920
+
+CORE HEALTH
+C 30 · U 120 · R 540 · E 2,400 · L 10,800 · M 48,000
+
+TURN SPEED
+C 1.43 · U 0.68 · R 0.43 · E 0.31 · L 0.24 · M 0.20
+
+MOVE SPEED
+C 170 · U 177 · R 184 · E 190 · L 197 · M 204
+
+PARTS AT MYTHIC
+352 parts · 2,618u radius · C 88 · U 109 · R 131 · E 273 · L 313 · M 352 parts by tier
+
+DEFENCES
+Shells: none — the body takes hits directly.
+
+MOUNTS AT MYTHIC
+0 gun mounts · 0 missile pods · gun 0.4× enemy damage at 1.1–1.7s cadence; missiles 1.1× at 4.5–6s
+
+ABILITIES
+• Forcipule Bite — melee · Uncommon+
+  cooldown 2.00s · wind-up 0.40s · damage 1.80× enemy damage (6,998 at Mythic)
+  reach 0.0–3.6 body units · needs mandible
+• Rush — charge · Rare+
+  cooldown 5.00s · wind-up 0.40s · damage 1.50× enemy damage (5,832 at Mythic)
+  540u/s · range 220–900u · 0.90s duration
+• Venom Spray — projectile · Epic+
+  cooldown 5.00s · wind-up 0.40s · damage 0.50× enemy damage (1,944 at Mythic)
+  9 projectiles at Mythic · spread 0.90 rad · 500u/s · 0.90s life · size 6.00 · range 0–520u · poison 0.15× · bolt
+• Venom Ring — projectile burst · Legendary+
+  cooldown 10.00s · wind-up 0.80s · damage 0.60× enemy damage (2,333 at Mythic)
+  24 projectiles at Mythic · 380u/s · 1.50s life · size 7.00 · range 0–600u · poison 0.15× · bolt
+
+────────────────────────────────────────
+7. HORNET
+Flying · Melee · Spawns Common–Legendary
+Contact type: Physical · Pack size: C 2 · U 2 · R 1 · E 1 · L 1 · M 1
+
+BODY DAMAGE (contact hit)
+C 4 · U 12 · R 36 · E 108 · L 324 · M 972
+
+TOTAL BODY HEALTH
+C 403 · U 1,682 · R 8,978 · E 56,992 · L 307,152 · M 1,393,280
+
+CORE HEALTH
+C 30 · U 120 · R 540 · E 2,400 · L 10,800 · M 48,000
+
+TURN SPEED
+C 2.26 · U 1.10 · R 0.73 · E 0.55 · L 0.43 · M 0.36
+
+MOVE SPEED
+C 190 · U 198 · R 205 · E 213 · L 220 · M 228
+
+PARTS AT MYTHIC
+73 parts · 1,216u radius · C 38 · U 39 · R 43 · E 66 · L 72 · M 73 parts by tier
+
+DEFENCES
+Shells: Rare 1 layer (90 HP each) · Epic 2 layers (400 HP each) · Legendary 3 layers (1,800 HP each) · Mythic 4 layers (8,000 HP each)
+
+MOUNTS AT MYTHIC
+6 gun mounts · 0 missile pods · gun 0.4× enemy damage at 1.1–1.7s cadence; missiles 1.1× at 4.5–6s
+
+ABILITIES
+• Mandible Snap — melee · Uncommon+
+  cooldown 2.00s · wind-up 0.35s · damage 1.20× enemy damage (4,666 at Mythic)
+  reach 0.0–2.2 body units · needs mandible
+• Hornet Dive — charge · Rare+
+  cooldown 5.00s · wind-up 0.50s · damage 1.60× enemy damage (6,221 at Mythic)
+  900u/s · range 150–800u · 0.45s duration · poison 0.25×
+• Stinger Volley — projectile · Epic+
+  cooldown 4.00s · wind-up 0.35s · damage 0.70× enemy damage (2,722 at Mythic)
+  5 projectiles at Mythic · spread 0.35 rad · 620u/s · 1.30s life · size 5.00 · range 150–750u · poison 0.20× · bolt
+• Stinger Burst — projectile burst · Legendary+
+  cooldown 10.00s · wind-up 0.80s · damage 0.60× enemy damage (2,333 at Mythic)
+  19 projectiles at Mythic · 440u/s · 1.40s life · size 5.00 · range 0–600u · bolt
+
+────────────────────────────────────────
+8. SCARAB
+Ground · Melee · Spawns Common–Mythic
+Contact type: Physical · Pack size: C 1 · U 1 · R 1 · E 1 · L 1 · M 1
+
+BODY DAMAGE (contact hit)
+C 4 · U 12 · R 36 · E 108 · L 324 · M 972
+
+TOTAL BODY HEALTH
+C 362 · U 1,448 · R 8,768 · E 71,448 · L 406,908 · M 2,307,680
+
+CORE HEALTH
+C 30 · U 120 · R 540 · E 2,400 · L 10,800 · M 48,000
+
+TURN SPEED
+C 1.86 · U 0.91 · R 0.60 · E 0.45 · L 0.36 · M 0.30
+
+MOVE SPEED
+C 110 · U 114 · R 119 · E 123 · L 128 · M 132
+
+PARTS AT MYTHIC
+106 parts · 1,032u radius · C 29 · U 29 · R 48 · E 70 · L 92 · M 106 parts by tier
+
+DEFENCES
+Shells: Rare 1 layer (90 HP each) · Epic 2 layers (400 HP each) · Legendary 3 layers (1,800 HP each) · Mythic 4 layers (8,000 HP each)
+Energy shields: Epic 1 (6,240 HP, 239u) · Legendary 2 (56,160 HP; 394–434u) · Mythic 2 (249,600 HP; 651–716u)
+
+MOUNTS AT MYTHIC
+6 gun mounts · 4 missile pods · gun 0.4× enemy damage at 1.1–1.7s cadence; missiles 1.1× at 4.5–6s
+
+ABILITIES
+• Mandible Crush — melee · Uncommon+
+  cooldown 2.40s · wind-up 0.45s · damage 1.80× enemy damage (6,998 at Mythic)
+  reach 0.0–2.7 body units · needs mandible
+• Ram — charge · Rare+
+  cooldown 7.00s · wind-up 0.80s · damage 2.60× enemy damage (10,109 at Mythic)
+  560u/s · range 200–750u · 0.60s duration
+• Quake Stomp — area ring · Epic+
+  cooldown 9.00s · wind-up 0.90s · damage 1.60× enemy damage (6,221 at Mythic)
+  420u/s · ring reaches 6.00 × body · reach 0.0–3.8 body units
+
+────────────────────────────────────────
+9. SOLDIER ANT
+Ground · Melee · Spawns Common–Legendary
+Contact type: Physical · Pack size: C 4 · U 3 · R 2 · E 1 · L 1 · M 1
+
+BODY DAMAGE (contact hit)
+C 4 · U 12 · R 36 · E 108 · L 324 · M 972
+
+TOTAL BODY HEALTH
+C 390 · U 1,562 · R 9,144 · E 71,040 · L 374,112 · M 1,733,120
+
+CORE HEALTH
+C 30 · U 120 · R 540 · E 2,400 · L 10,800 · M 48,000
+
+TURN SPEED
+C 2.19 · U 1.07 · R 0.71 · E 0.53 · L 0.42 · M 0.35
+
+MOVE SPEED
+C 150 · U 156 · R 162 · E 168 · L 174 · M 180
+
+PARTS AT MYTHIC
+90 parts · 1,137u radius · C 34 · U 34 · R 52 · E 73 · L 88 · M 90 parts by tier
+
+DEFENCES
+Shells: Rare 1 layer (90 HP each) · Epic 2 layers (400 HP each) · Legendary 3 layers (1,800 HP each) · Mythic 4 layers (8,000 HP each)
+
+MOUNTS AT MYTHIC
+6 gun mounts · 0 missile pods · gun 0.4× enemy damage at 1.1–1.7s cadence; missiles 1.1× at 4.5–6s
+
+ABILITIES
+• Mandible Crush — melee · Uncommon+
+  cooldown 2.00s · wind-up 0.40s · damage 1.60× enemy damage (6,221 at Mythic)
+  reach 0.0–3.1 body units · needs mandible
+• Formic Acid — corrosive glob · Rare+
+  cooldown 5.00s · wind-up 0.45s · damage 0.70× enemy damage (2,722 at Mythic)
+  500u/s · size 1.30 · range 150–750u
+• Formic Haze — corrosive cloud · Epic+
+  cooldown 9.00s · wind-up 0.60s · damage 0.50× enemy damage (1,944 at Mythic)
+  cloud size 3.20 × body · reach 0.0–3.2 body units · slows to 0.60× for 1.50s
+• Acid Burst — projectile burst · Legendary+
+  cooldown 10.00s · wind-up 0.80s · damage 0.70× enemy damage (2,722 at Mythic)
+  19 projectiles at Mythic · 380u/s · 1.50s life · size 8.00 · range 0–600u · bolt
+
+────────────────────────────────────────
+10. FIREFLY
+Flying · Ranged, keeps 340u · Spawns Uncommon–Mythic
+Contact type: Physical · Pack size: C 1 · U 1 · R 1 · E 1 · L 1 · M 1
+
+BODY DAMAGE (contact hit)
+C 4 · U 12 · R 36 · E 108 · L 324 · M 972
+
+TOTAL BODY HEALTH
+C 352 · U 1,522 · R 7,308 · E 67,648 · L 342,288 · M 1,633,280
+
+CORE HEALTH
+C 30 · U 120 · R 540 · E 2,400 · L 10,800 · M 48,000
+
+TURN SPEED
+C 1.81 · U 0.89 · R 0.59 · E 0.44 · L 0.35 · M 0.29
+
+MOVE SPEED
+C 125 · U 130 · R 135 · E 140 · L 145 · M 150
+
+PARTS AT MYTHIC
+78 parts · 1,115u radius · C 33 · U 35 · R 36 · E 71 · L 75 · M 78 parts by tier
+
+DEFENCES
+Shells: Rare 1 layer (90 HP each) · Epic 2 layers (400 HP each) · Legendary 3 layers (1,800 HP each) · Mythic 4 layers (8,000 HP each)
+Energy shields: Epic 1 (6,240 HP, 239u) · Legendary 2 (56,160 HP; 394–434u) · Mythic 3 (374,400 HP; 651–781u)
+
+MOUNTS AT MYTHIC
+6 gun mounts · 0 missile pods · gun 0.4× enemy damage at 1.1–1.7s cadence; missiles 1.1× at 4.5–6s
+
+ABILITIES
+• Glow Orb — projectile · Uncommon+
+  cooldown 3.00s · wind-up 0.40s · damage 0.80× enemy damage (3,110 at Mythic)
+  3 projectiles at Mythic · spread 0.50 rad · 300u/s · 4.50s life · size 9.00 · range 0–850u · slows to 0.80× for 1.00s · homing 1.20 · orb
+• Flash Pulse — area ring · Rare+
+  cooldown 8.00s · wind-up 0.80s · damage 1.40× enemy damage (5,443 at Mythic)
+  480u/s · ring reaches 5.00 × body · reach 0.0–4.0 body units
+• Flash Dive — charge · Epic+
+  cooldown 7.00s · wind-up 0.60s · damage 1.60× enemy damage (6,221 at Mythic)
+  780u/s · range 200–700u · 0.50s duration
+• Firework — projectile burst · Legendary+
+  cooldown 10.00s · wind-up 0.80s · damage 0.70× enemy damage (2,722 at Mythic)
+  24 projectiles at Mythic · 360u/s · 1.80s life · size 8.00 · range 0–600u · homing 0.40 · orb
+
+────────────────────────────────────────
+11. WORKER ANT
+Ground · Melee · Spawns Common–Rare
+Contact type: Physical · Pack size: C 4 · U 4 · R 3 · E 2 · L 1 · M 1
+
+BODY DAMAGE (contact hit)
+C 4 · U 12 · R 36 · E 108 · L 324 · M 972
+
+TOTAL BODY HEALTH
+C 394 · U 1,574 · R 9,202 · E 73,536 · L 343,584 · M 1,527,040
+
+CORE HEALTH
+C 30 · U 120 · R 540 · E 2,400 · L 10,800 · M 48,000
+
+TURN SPEED
+C 2.42 · U 1.18 · R 0.78 · E 0.58 · L 0.46 · M 0.39
+
+MOVE SPEED
+C 165 · U 172 · R 178 · E 185 · L 191 · M 198
+
+PARTS AT MYTHIC
+84 parts · 1,175u radius · C 34 · U 34 · R 52 · E 83 · L 84 · M 84 parts by tier
+
+DEFENCES
+Shells: Rare 1 layer (90 HP each) · Epic 2 layers (400 HP each) · Legendary 3 layers (1,800 HP each) · Mythic 4 layers (8,000 HP each)
+
+MOUNTS AT MYTHIC
+0 gun mounts · 0 missile pods · gun 0.4× enemy damage at 1.1–1.7s cadence; missiles 1.1× at 4.5–6s
+
+ABILITIES
+• Mandible Crush — melee · Uncommon+
+  cooldown 2.10s · wind-up 0.40s · damage 1.40× enemy damage (5,443 at Mythic)
+  reach 0.0–2.9 body units · needs mandible
+• Call Swarm — summon · Rare+
+  cooldown 15.00s · wind-up 0.70s · no direct damage
+  summons 2 at Mythic · reach 0.0–2.0 body units
+• Formic Haze — corrosive cloud · Epic+
+  cooldown 10.00s · wind-up 0.60s · damage 0.40× enemy damage (1,555 at Mythic)
+  cloud size 2.60 × body · reach 0.0–2.8 body units · slows to 0.60× for 1.50s
+
+────────────────────────────────────────
+12. HONEYBEE
+Flying · Melee · Spawns Common–Rare
+Contact type: Physical · Pack size: C 3 · U 3 · R 2 · E 1 · L 1 · M 1
+
+BODY DAMAGE (contact hit)
+C 4 · U 12 · R 36 · E 108 · L 324 · M 972
+
+TOTAL BODY HEALTH
+C 451 · U 1,872 · R 10,787 · E 69,576 · L 332,100 · M 1,504,160
+
+CORE HEALTH
+C 30 · U 120 · R 540 · E 2,400 · L 10,800 · M 48,000
+
+TURN SPEED
+C 2.31 · U 1.13 · R 0.74 · E 0.56 · L 0.44 · M 0.37
+
+MOVE SPEED
+C 175 · U 182 · R 189 · E 196 · L 203 · M 210
+
+PARTS AT MYTHIC
+76 parts · 1,149u radius · C 39 · U 40 · R 58 · E 73 · L 75 · M 76 parts by tier
+
+DEFENCES
+Shells: Rare 1 layer (90 HP each) · Epic 2 layers (400 HP each) · Legendary 3 layers (1,800 HP each) · Mythic 4 layers (8,000 HP each)
+
+MOUNTS AT MYTHIC
+0 gun mounts · 0 missile pods · gun 0.4× enemy damage at 1.1–1.7s cadence; missiles 1.1× at 4.5–6s
+
+ABILITIES
+• Venom Sting — corrosive glob · Uncommon+
+  cooldown 4.50s · wind-up 0.40s · damage 0.80× enemy damage (3,110 at Mythic)
+  520u/s · size 1.20 · range 0–520u · poison 0.30×
+• Sting Dive — charge · Rare+
+  cooldown 6.00s · wind-up 0.50s · damage 1.50× enemy damage (5,832 at Mythic)
+  850u/s · range 150–750u · 0.40s duration · poison 0.25×
+• Pollen Burst — projectile burst · Epic+
+  cooldown 11.00s · wind-up 0.80s · damage 0.50× enemy damage (1,944 at Mythic)
+  17 projectiles at Mythic · 420u/s · 1.40s life · size 5.00 · range 0–600u · poison 0.18× · bolt
+
+────────────────────────────────────────
+13. GRASSHOPPER
+Ground · Melee · Spawns Common–Rare
+Contact type: Physical · Pack size: C 2 · U 2 · R 2 · E 1 · L 1 · M 1
+
+BODY DAMAGE (contact hit)
+C 4 · U 12 · R 36 · E 108 · L 324 · M 972
+
+TOTAL BODY HEALTH
+C 326 · U 1,306 · R 7,920 · E 45,440 · L 217,152 · M 965,120
+
+CORE HEALTH
+C 30 · U 120 · R 540 · E 2,400 · L 10,800 · M 48,000
+
+TURN SPEED
+C 1.88 · U 0.92 · R 0.61 · E 0.45 · L 0.36 · M 0.30
+
+MOVE SPEED
+C 155 · U 161 · R 167 · E 174 · L 180 · M 186
+
+PARTS AT MYTHIC
+56 parts · 1,445u radius · C 30 · U 30 · R 47 · E 55 · L 56 · M 56 parts by tier
+
+DEFENCES
+Shells: Rare 1 layer (90 HP each) · Epic 2 layers (400 HP each) · Legendary 3 layers (1,800 HP each) · Mythic 4 layers (8,000 HP each)
+
+MOUNTS AT MYTHIC
+0 gun mounts · 0 missile pods · gun 0.4× enemy damage at 1.1–1.7s cadence; missiles 1.1× at 4.5–6s
+
+ABILITIES
+• Leaping Charge — charge · Uncommon+
+  cooldown 5.50s · wind-up 0.60s · damage 1.80× enemy damage (6,998 at Mythic)
+  980u/s · range 180–900u · 0.45s duration
+• Kick — melee · Rare+
+  cooldown 3.40s · wind-up 0.35s · damage 1.50× enemy damage (5,832 at Mythic)
+  reach 0.0–3.1 body units · needs leg
+• Spit Seeds — projectile · Epic+
+  cooldown 5.00s · wind-up 0.40s · damage 0.50× enemy damage (1,944 at Mythic)
+  5 projectiles at Mythic · spread 0.40 rad · 480u/s · 1.30s life · size 5.00 · range 200–800u · bolt
+
+────────────────────────────────────────
+14. COCKROACH
+Ground · Melee · Spawns Common–Rare
+Contact type: Physical · Pack size: C 3 · U 3 · R 2 · E 2 · L 1 · M 1
+
+BODY DAMAGE (contact hit)
+C 4 · U 12 · R 36 · E 108 · L 324 · M 972
+
+TOTAL BODY HEALTH
+C 497 · U 1,989 · R 11,066 · E 86,304 · L 426,960 · M 1,897,600
+
+CORE HEALTH
+C 30 · U 120 · R 540 · E 2,400 · L 10,800 · M 48,000
+
+TURN SPEED
+C 2.36 · U 1.15 · R 0.76 · E 0.57 · L 0.45 · M 0.38
+
+MOVE SPEED
+C 190 · U 198 · R 205 · E 213 · L 220 · M 228
+
+PARTS AT MYTHIC
+95 parts · 988u radius · C 40 · U 40 · R 58 · E 82 · L 95 · M 95 parts by tier
+
+DEFENCES
+Shells: Rare 1 layer (90 HP each) · Epic 2 layers (400 HP each) · Legendary 3 layers (1,800 HP each) · Mythic 4 layers (8,000 HP each)
+
+MOUNTS AT MYTHIC
+0 gun mounts · 0 missile pods · gun 0.4× enemy damage at 1.1–1.7s cadence; missiles 1.1× at 4.5–6s
+
+ABILITIES
+• Shell Bash — charge · Uncommon+
+  cooldown 4.50s · wind-up 0.50s · damage 1.60× enemy damage (6,221 at Mythic)
+  760u/s · range 160–700u · 0.50s duration
+• Wing Flare — area ring · Rare+
+  cooldown 9.00s · wind-up 0.70s · damage 1.00× enemy damage (3,888 at Mythic)
+  460u/s · ring reaches 4.50 × body · reach 0.0–3.4 body units
+• Scuttle Acid — corrosive glob · Epic+
+  cooldown 6.00s · wind-up 0.40s · damage 0.50× enemy damage (1,944 at Mythic)
+  460u/s · size 1.40 · range 0–700u
+
+────────────────────────────────────────
+15. MOSQUITO
+Flying · Melee · Spawns Common–Rare
+Contact type: Physical · Pack size: C 3 · U 3 · R 2 · E 2 · L 1 · M 1
+
+BODY DAMAGE (contact hit)
+C 4 · U 12 · R 36 · E 108 · L 324 · M 972
+
+TOTAL BODY HEALTH
+C 343 · U 1,374 · R 6,930 · E 39,376 · L 189,864 · M 843,840
+
+CORE HEALTH
+C 30 · U 120 · R 540 · E 2,400 · L 10,800 · M 48,000
+
+TURN SPEED
+C 2.98 · U 1.46 · R 0.96 · E 0.72 · L 0.57 · M 0.48
+
+MOVE SPEED
+C 220 · U 229 · R 238 · E 246 · L 255 · M 264
+
+PARTS AT MYTHIC
+53 parts · 838u radius · C 33 · U 33 · R 38 · E 52 · L 53 · M 53 parts by tier
+
+DEFENCES
+Shells: Rare 1 layer (90 HP each) · Epic 2 layers (400 HP each) · Legendary 3 layers (1,800 HP each) · Mythic 4 layers (8,000 HP each)
+
+MOUNTS AT MYTHIC
+0 gun mounts · 0 missile pods · gun 0.4× enemy damage at 1.1–1.7s cadence; missiles 1.1× at 4.5–6s
+
+ABILITIES
+• Blood Drain — drain · Uncommon+
+  cooldown 5.00s · wind-up 0.50s · damage 0.55× enemy damage (2,138 at Mythic)
+  range 0–380u · reach 0.0–2.4 body units · 1.60s duration
+• Dive — charge · Rare+
+  cooldown 6.00s · wind-up 0.40s · damage 1.20× enemy damage (4,666 at Mythic)
+  880u/s · range 150–700u · 0.35s duration · poison 0.30×
+• Swarm Bite — projectile burst · Epic+
+  cooldown 9.00s · wind-up 0.70s · damage 0.40× enemy damage (1,555 at Mythic)
+  14 projectiles at Mythic · 440u/s · 1.30s life · size 4.00 · range 0–520u · poison 0.20× · bolt
+
+────────────────────────────────────────
+16. BOMBARDIER BEETLE
+Ground · Ranged, keeps 300u · Spawns Uncommon–Epic
+Contact type: Physical · Pack size: C 1 · U 1 · R 1 · E 1 · L 1 · M 1
+
+BODY DAMAGE (contact hit)
+C 4 · U 12 · R 36 · E 108 · L 324 · M 972
+
+TOTAL BODY HEALTH
+C 411 · U 1,645 · R 9,518 · E 72,704 · L 371,520 · M 1,792,000
+
+CORE HEALTH
+C 30 · U 120 · R 540 · E 2,400 · L 10,800 · M 48,000
+
+TURN SPEED
+C 1.96 · U 0.96 · R 0.63 · E 0.47 · L 0.38 · M 0.31
+
+MOVE SPEED
+C 120 · U 125 · R 130 · E 134 · L 139 · M 144
+
+PARTS AT MYTHIC
+85 parts · 984u radius · C 37 · U 37 · R 55 · E 76 · L 81 · M 85 parts by tier
+
+DEFENCES
+Shells: Rare 1 layer (90 HP each) · Epic 2 layers (400 HP each) · Legendary 3 layers (1,800 HP each) · Mythic 4 layers (8,000 HP each)
+
+MOUNTS AT MYTHIC
+6 gun mounts · 4 missile pods · gun 0.4× enemy damage at 1.1–1.7s cadence; missiles 1.1× at 4.5–6s
+
+ABILITIES
+• Chemical Spray — corrosive glob · Uncommon+
+  cooldown 5.00s · wind-up 0.45s · damage 0.70× enemy damage (2,722 at Mythic)
+  520u/s · size 1.70 · range 0–640u
+• Acid Puddle — corrosive cloud · Rare+
+  cooldown 9.00s · wind-up 0.50s · damage 0.55× enemy damage (2,138 at Mythic)
+  cloud size 3.00 × body · range 0–720u · slows to 0.70× for 1.50s · lands at the player
+• Boiling Jet — projectile · Epic+
+  cooldown 6.00s · wind-up 0.50s · damage 0.55× enemy damage (2,138 at Mythic)
+  7 projectiles at Mythic · spread 0.70 rad · 500u/s · 1.30s life · size 6.00 · range 150–720u · poison 0.20× · bolt
+
+────────────────────────────────────────
+17. RHINOCEROS BEETLE
+Ground · Melee · Spawns Uncommon–Epic
+Contact type: Physical · Pack size: C 1 · U 1 · R 1 · E 1 · L 1 · M 1
+
+BODY DAMAGE (contact hit)
+C 4 · U 12 · R 36 · E 108 · L 324 · M 972
+
+TOTAL BODY HEALTH
+C 418 · U 1,673 · R 11,372 · E 75,344 · L 483,480 · M 2,260,800
+
+CORE HEALTH
+C 30 · U 120 · R 540 · E 2,400 · L 10,800 · M 48,000
+
+TURN SPEED
+C 1.43 · U 0.68 · R 0.44 · E 0.32 · L 0.25 · M 0.21
+
+MOVE SPEED
+C 105 · U 109 · R 113 · E 118 · L 122 · M 126
+
+PARTS AT MYTHIC
+106 parts · 1,457u radius · C 37 · U 37 · R 60 · E 77 · L 103 · M 106 parts by tier
+
+DEFENCES
+Shells: Rare 1 layer (90 HP each) · Epic 2 layers (400 HP each) · Legendary 3 layers (1,800 HP each) · Mythic 4 layers (8,000 HP each)
+Energy shields: Epic 1 (6,240 HP, 239u) · Legendary 2 (56,160 HP; 394–434u) · Mythic 3 (374,400 HP; 651–781u)
+
+MOUNTS AT MYTHIC
+6 gun mounts · 0 missile pods · gun 0.4× enemy damage at 1.1–1.7s cadence; missiles 1.1× at 4.5–6s
+
+ABILITIES
+• Horn Charge — charge · Uncommon+
+  cooldown 7.00s · wind-up 0.90s · damage 3.20× enemy damage (12,442 at Mythic)
+  620u/s · range 200–800u · 0.60s duration
+• Horn Toss — melee · Rare+
+  cooldown 3.00s · wind-up 0.50s · damage 2.20× enemy damage (8,554 at Mythic)
+  reach 0.0–3.4 body units · needs mandible
+• Ground Slam — area ring · Epic+
+  cooldown 10.00s · wind-up 0.90s · damage 2.00× enemy damage (7,776 at Mythic)
+  420u/s · ring reaches 5.50 × body · reach 0.0–4.0 body units
+
+────────────────────────────────────────
+18. YELLOWJACKET
+Flying · Ranged, keeps 300u · Spawns Uncommon–Epic
+Contact type: Physical · Pack size: C 2 · U 2 · R 2 · E 1 · L 1 · M 1
+
+BODY DAMAGE (contact hit)
+C 4 · U 12 · R 36 · E 108 · L 324 · M 972
+
+TOTAL BODY HEALTH
+C 468 · U 1,943 · R 9,808 · E 74,504 · L 370,116 · M 1,743,520
+
+CORE HEALTH
+C 30 · U 120 · R 540 · E 2,400 · L 10,800 · M 48,000
+
+TURN SPEED
+C 2.40 · U 1.17 · R 0.77 · E 0.58 · L 0.46 · M 0.38
+
+MOVE SPEED
+C 200 · U 208 · R 216 · E 224 · L 232 · M 240
+
+PARTS AT MYTHIC
+83 parts · 1,288u radius · C 40 · U 41 · R 47 · E 76 · L 80 · M 83 parts by tier
+
+DEFENCES
+Shells: Rare 1 layer (90 HP each) · Epic 2 layers (400 HP each) · Legendary 3 layers (1,800 HP each) · Mythic 4 layers (8,000 HP each)
+
+MOUNTS AT MYTHIC
+6 gun mounts · 0 missile pods · gun 0.4× enemy damage at 1.1–1.7s cadence; missiles 1.1× at 4.5–6s
+
+ABILITIES
+• Venom Darts — projectile · Uncommon+
+  cooldown 4.00s · wind-up 0.40s · damage 0.65× enemy damage (2,527 at Mythic)
+  5 projectiles at Mythic · spread 0.35 rad · 600u/s · 1.40s life · size 5.00 · range 180–800u · slows to 0.70× for 1.20s · poison 0.20× · bolt
+• Stinger Thrust — melee · Rare+
+  cooldown 2.60s · wind-up 0.35s · damage 1.80× enemy damage (6,998 at Mythic)
+  reach 0.0–2.6 body units · needs tail
+• Dive Bomb — charge · Epic+
+  cooldown 7.00s · wind-up 0.50s · damage 1.80× enemy damage (6,998 at Mythic)
+  900u/s · range 150–800u · 0.45s duration · poison 0.25×
+
+────────────────────────────────────────
+19. LADYBUG
+Flying · Ranged, keeps 280u · Spawns Uncommon–Epic
+Contact type: Physical · Pack size: C 1 · U 1 · R 1 · E 1 · L 1 · M 1
+
+BODY DAMAGE (contact hit)
+C 4 · U 12 · R 36 · E 108 · L 324 · M 972
+
+TOTAL BODY HEALTH
+C 440 · U 1,758 · R 11,758 · E 73,536 · L 352,944 · M 1,610,240
+
+CORE HEALTH
+C 30 · U 120 · R 540 · E 2,400 · L 10,800 · M 48,000
+
+TURN SPEED
+C 2.03 · U 0.99 · R 0.65 · E 0.49 · L 0.39 · M 0.32
+
+MOVE SPEED
+C 135 · U 140 · R 146 · E 151 · L 157 · M 162
+
+PARTS AT MYTHIC
+78 parts · 988u radius · C 37 · U 37 · R 60 · E 75 · L 77 · M 78 parts by tier
+
+DEFENCES
+Shells: Rare 1 layer (90 HP each) · Epic 2 layers (400 HP each) · Legendary 3 layers (1,800 HP each) · Mythic 4 layers (8,000 HP each)
+Energy shields: Epic 1 (6,240 HP, 239u) · Legendary 2 (56,160 HP; 394–434u) · Mythic 3 (374,400 HP; 651–781u)
+
+MOUNTS AT MYTHIC
+0 gun mounts · 0 missile pods · gun 0.4× enemy damage at 1.1–1.7s cadence; missiles 1.1× at 4.5–6s
+
+ABILITIES
+• Spore Cloud — corrosive cloud · Uncommon+
+  cooldown 8.00s · wind-up 0.60s · damage 0.45× enemy damage (1,750 at Mythic)
+  cloud size 2.90 × body · reach 0.0–3.2 body units · slows to 0.60× for 1.50s
+• Repel Pulse — area ring · Rare+
+  cooldown 8.00s · wind-up 0.70s · damage 1.10× enemy damage (4,277 at Mythic)
+  440u/s · ring reaches 5.00 × body · reach 0.0–3.6 body units
+• Spore Burst — projectile burst · Epic+
+  cooldown 10.00s · wind-up 0.80s · damage 0.40× enemy damage (1,555 at Mythic)
+  19 projectiles at Mythic · 360u/s · 1.60s life · size 6.00 · range 0–620u · poison 0.15× · homing 0.60 · orb
+
+────────────────────────────────────────
+20. STAG BEETLE
+Ground · Melee · Spawns Uncommon–Epic
+Contact type: Physical · Pack size: C 1 · U 1 · R 1 · E 1 · L 1 · M 1
+
+BODY DAMAGE (contact hit)
+C 4 · U 12 · R 36 · E 108 · L 324 · M 972
+
+TOTAL BODY HEALTH
+C 419 · U 1,675 · R 9,655 · E 71,872 · L 371,376 · M 1,692,160
+
+CORE HEALTH
+C 30 · U 120 · R 540 · E 2,400 · L 10,800 · M 48,000
+
+TURN SPEED
+C 1.68 · U 0.81 · R 0.53 · E 0.39 · L 0.30 · M 0.25
+
+MOVE SPEED
+C 120 · U 125 · R 130 · E 134 · L 139 · M 144
+
+PARTS AT MYTHIC
+89 parts · 1,379u radius · C 36 · U 36 · R 54 · E 74 · L 88 · M 89 parts by tier
+
+DEFENCES
+Shells: Rare 1 layer (90 HP each) · Epic 2 layers (400 HP each) · Legendary 3 layers (1,800 HP each) · Mythic 4 layers (8,000 HP each)
+Energy shields: Epic 1 (6,240 HP, 239u) · Legendary 2 (56,160 HP; 394–434u) · Mythic 3 (374,400 HP; 651–781u)
+
+MOUNTS AT MYTHIC
+0 gun mounts · 0 missile pods · gun 0.4× enemy damage at 1.1–1.7s cadence; missiles 1.1× at 4.5–6s
+
+ABILITIES
+• Pincer Grab — melee · Uncommon+
+  cooldown 2.80s · wind-up 0.50s · damage 2.40× enemy damage (9,331 at Mythic)
+  reach 0.0–3.2 body units · needs mandible
+• Toss — pull · Rare+
+  cooldown 10.00s · wind-up 0.60s · damage 0.70× enemy damage (2,722 at Mythic)
+  780u/s · range 220–800u
+• Goring Rush — charge · Epic+
+  cooldown 7.00s · wind-up 0.70s · damage 2.60× enemy damage (10,109 at Mythic)
+  700u/s · range 200–800u · 0.55s duration
+
+────────────────────────────────────────
+21. CARPENTER ANT
+Ground · Melee · Spawns Rare–Legendary
+Contact type: Physical · Pack size: C 2 · U 2 · R 2 · E 1 · L 1 · M 1
+
+BODY DAMAGE (contact hit)
+C 4 · U 12 · R 36 · E 108 · L 324 · M 972
+
+TOTAL BODY HEALTH
+C 490 · U 1,958 · R 9,634 · E 73,376 · L 448,704 · M 2,023,040
+
+CORE HEALTH
+C 30 · U 120 · R 540 · E 2,400 · L 10,800 · M 48,000
+
+TURN SPEED
+C 1.89 · U 0.92 · R 0.61 · E 0.45 · L 0.36 · M 0.30
+
+MOVE SPEED
+C 135 · U 140 · R 146 · E 151 · L 157 · M 162
+
+PARTS AT MYTHIC
+89 parts · 1,212u radius · C 39 · U 39 · R 45 · E 74 · L 88 · M 89 parts by tier
+
+DEFENCES
+Shells: Rare 1 layer (90 HP each) · Epic 2 layers (400 HP each) · Legendary 3 layers (1,800 HP each) · Mythic 4 layers (8,000 HP each)
+Energy shields: Epic 1 (6,240 HP, 239u) · Legendary 2 (56,160 HP; 394–434u) · Mythic 1 (124,800 HP, 651u)
+
+MOUNTS AT MYTHIC
+6 gun mounts · 0 missile pods · gun 0.4× enemy damage at 1.1–1.7s cadence; missiles 1.1× at 4.5–6s
+
+ABILITIES
+• Crushing Bite — melee · Uncommon+
+  cooldown 2.20s · wind-up 0.45s · damage 2.20× enemy damage (8,554 at Mythic)
+  reach 0.0–3.0 body units · needs mandible
+• Quake Stomp — area ring · Rare+
+  cooldown 9.00s · wind-up 0.80s · damage 1.60× enemy damage (6,221 at Mythic)
+  440u/s · ring reaches 5.00 × body · reach 0.0–3.6 body units
+• Call Colony — summon · Epic+
+  cooldown 16.00s · wind-up 0.80s · no direct damage
+  summons 3 at Mythic · reach 0.0–2.5 body units
+
+────────────────────────────────────────
+22. CICADA
+Flying · Ranged, keeps 340u · Spawns Rare–Legendary
+Contact type: Physical · Pack size: C 1 · U 1 · R 1 · E 1 · L 1 · M 1
+
+BODY DAMAGE (contact hit)
+C 4 · U 12 · R 36 · E 108 · L 324 · M 972
+
+TOTAL BODY HEALTH
+C 338 · U 1,354 · R 8,222 · E 63,584 · L 308,160 · M 1,411,200
+
+CORE HEALTH
+C 30 · U 120 · R 540 · E 2,400 · L 10,800 · M 48,000
+
+TURN SPEED
+C 1.93 · U 0.94 · R 0.62 · E 0.46 · L 0.37 · M 0.31
+
+MOVE SPEED
+C 140 · U 146 · R 151 · E 157 · L 162 · M 168
+
+PARTS AT MYTHIC
+71 parts · 1,145u radius · C 32 · U 32 · R 41 · E 68 · L 70 · M 71 parts by tier
+
+DEFENCES
+Shells: Rare 1 layer (90 HP each) · Epic 2 layers (400 HP each) · Legendary 3 layers (1,800 HP each) · Mythic 4 layers (8,000 HP each)
+Energy shields: Epic 1 (6,240 HP, 239u) · Legendary 2 (56,160 HP; 394–434u) · Mythic 3 (374,400 HP; 651–781u)
+
+MOUNTS AT MYTHIC
+0 gun mounts · 0 missile pods · gun 0.4× enemy damage at 1.1–1.7s cadence; missiles 1.1× at 4.5–6s
+
+ABILITIES
+• Sonic Screech — area ring · Uncommon+
+  cooldown 8.00s · wind-up 0.75s · damage 1.40× enemy damage (5,443 at Mythic)
+  520u/s · ring reaches 6.00 × body · reach 0.0–4.2 body units
+• Resonance — projectile burst · Rare+
+  cooldown 10.00s · wind-up 0.80s · damage 0.60× enemy damage (2,333 at Mythic)
+  22 projectiles at Mythic · 380u/s · 1.50s life · size 7.00 · range 0–600u · wave
+• Chorus Field — corrosive cloud · Epic+
+  cooldown 11.00s · wind-up 0.70s · damage 0.50× enemy damage (1,944 at Mythic)
+  cloud size 3.40 × body · range 0–800u · slows to 0.70× for 1.50s · lands at the player
+
+────────────────────────────────────────
+23. ASSASSIN BUG
+Ground · Melee · Spawns Rare–Legendary
+Contact type: Physical · Pack size: C 1 · U 1 · R 1 · E 1 · L 1 · M 1
+
+BODY DAMAGE (contact hit)
+C 4 · U 12 · R 36 · E 108 · L 324 · M 972
+
+TOTAL BODY HEALTH
+C 417 · U 1,667 · R 9,619 · E 69,632 · L 326,016 · M 1,448,960
+
+CORE HEALTH
+C 30 · U 120 · R 540 · E 2,400 · L 10,800 · M 48,000
+
+TURN SPEED
+C 2.31 · U 1.13 · R 0.75 · E 0.56 · L 0.44 · M 0.37
+
+MOVE SPEED
+C 185 · U 192 · R 200 · E 207 · L 215 · M 222
+
+PARTS AT MYTHIC
+74 parts · 969u radius · C 36 · U 36 · R 54 · E 73 · L 74 · M 74 parts by tier
+
+DEFENCES
+Shells: Rare 1 layer (90 HP each) · Epic 2 layers (400 HP each) · Legendary 3 layers (1,800 HP each) · Mythic 4 layers (8,000 HP each)
+
+MOUNTS AT MYTHIC
+0 gun mounts · 0 missile pods · gun 0.4× enemy damage at 1.1–1.7s cadence; missiles 1.1× at 4.5–6s
+
+ABILITIES
+• Piercing Proboscis — drain · Uncommon+
+  cooldown 5.00s · wind-up 0.45s · damage 0.70× enemy damage (2,722 at Mythic)
+  range 0–460u · reach 0.0–2.6 body units · 1.80s duration
+• Fang Slash — melee · Rare+
+  cooldown 2.40s · wind-up 0.40s · damage 2.00× enemy damage (7,776 at Mythic)
+  reach 0.0–2.8 body units · needs mandible
+• Ambush Lunge — charge · Epic+
+  cooldown 6.00s · wind-up 0.50s · damage 2.20× enemy damage (8,554 at Mythic)
+  900u/s · range 180–700u · 0.40s duration
+
+────────────────────────────────────────
+24. TIGER BEETLE
+Ground · Melee · Spawns Rare–Legendary
+Contact type: Physical · Pack size: C 1 · U 1 · R 1 · E 1 · L 1 · M 1
+
+BODY DAMAGE (contact hit)
+C 4 · U 12 · R 36 · E 108 · L 324 · M 972
+
+TOTAL BODY HEALTH
+C 401 · U 1,605 · R 8,978 · E 68,384 · L 362,160 · M 1,680,000
+
+CORE HEALTH
+C 30 · U 120 · R 540 · E 2,400 · L 10,800 · M 48,000
+
+TURN SPEED
+C 2.69 · U 1.31 · R 0.87 · E 0.65 · L 0.52 · M 0.43
+
+MOVE SPEED
+C 230 · U 239 · R 248 · E 258 · L 267 · M 276
+
+PARTS AT MYTHIC
+89 parts · 1,004u radius · C 35 · U 35 · R 48 · E 72 · L 87 · M 89 parts by tier
+
+DEFENCES
+Shells: Rare 1 layer (90 HP each) · Epic 2 layers (400 HP each) · Legendary 3 layers (1,800 HP each) · Mythic 4 layers (8,000 HP each)
+
+MOUNTS AT MYTHIC
+0 gun mounts · 4 missile pods · gun 0.4× enemy damage at 1.1–1.7s cadence; missiles 1.1× at 4.5–6s
+
+ABILITIES
+• Dash — charge · Uncommon+
+  cooldown 3.50s · wind-up 0.30s · damage 1.40× enemy damage (5,443 at Mythic)
+  1,000u/s · range 200–900u · 0.32s duration
+• Second Dash — charge · Rare+
+  cooldown 4.00s · wind-up 0.30s · damage 1.50× enemy damage (5,832 at Mythic)
+  1,000u/s · range 200–900u · 0.32s duration
+• Sickle Jaws — melee · Epic+
+  cooldown 2.20s · wind-up 0.35s · damage 2.10× enemy damage (8,165 at Mythic)
+  reach 0.0–2.8 body units · needs mandible
+
+────────────────────────────────────────
+25. MOLE CRICKET
+Ground · Melee · Spawns Rare–Legendary
+Contact type: Physical · Pack size: C 1 · U 1 · R 1 · E 1 · L 1 · M 1
+
+BODY DAMAGE (contact hit)
+C 4 · U 12 · R 36 · E 108 · L 324 · M 972
+
+TOTAL BODY HEALTH
+C 383 · U 1,533 · R 8,942 · E 58,208 · L 283,968 · M 1,303,680
+
+CORE HEALTH
+C 30 · U 120 · R 540 · E 2,400 · L 10,800 · M 48,000
+
+TURN SPEED
+C 1.74 · U 0.85 · R 0.56 · E 0.42 · L 0.33 · M 0.28
+
+MOVE SPEED
+C 130 · U 135 · R 140 · E 146 · L 151 · M 156
+
+PARTS AT MYTHIC
+63 parts · 1,494u radius · C 30 · U 30 · R 47 · E 60 · L 62 · M 63 parts by tier
+
+DEFENCES
+Shells: Rare 1 layer (90 HP each) · Epic 2 layers (400 HP each) · Legendary 3 layers (1,800 HP each) · Mythic 4 layers (8,000 HP each)
+Energy shields: Epic 1 (6,240 HP, 239u) · Legendary 2 (56,160 HP; 394–434u) · Mythic 3 (374,400 HP; 651–781u)
+
+MOUNTS AT MYTHIC
+0 gun mounts · 0 missile pods · gun 0.4× enemy damage at 1.1–1.7s cadence; missiles 1.1× at 4.5–6s
+
+ABILITIES
+• Burrow Ambush — blink · Uncommon+
+  cooldown 8.00s · wind-up 0.60s · damage 1.20× enemy damage (4,666 at Mythic)
+  range 0–700u
+• Digger Claws — melee · Rare+
+  cooldown 2.60s · wind-up 0.45s · damage 2.00× enemy damage (7,776 at Mythic)
+  reach 0.0–3.0 body units · needs leg
+• Earth Shock — area ring · Epic+
+  cooldown 10.00s · wind-up 0.90s · damage 1.80× enemy damage (6,998 at Mythic)
+  420u/s · ring reaches 6.00 × body · reach 0.0–4.0 body units
+
+────────────────────────────────────────
+26. KATYDID
+Flying · Ranged, keeps 320u · Spawns Rare–Mythic
+Contact type: Physical · Pack size: C 1 · U 1 · R 1 · E 1 · L 1 · M 1
+
+BODY DAMAGE (contact hit)
+C 4 · U 12 · R 36 · E 108 · L 324 · M 972
+
+TOTAL BODY HEALTH
+C 350 · U 1,402 · R 7,056 · E 42,752 · L 205,056 · M 911,360
+
+CORE HEALTH
+C 30 · U 120 · R 540 · E 2,400 · L 10,800 · M 48,000
+
+TURN SPEED
+C 1.98 · U 0.97 · R 0.64 · E 0.48 · L 0.38 · M 0.32
+
+MOVE SPEED
+C 165 · U 172 · R 178 · E 185 · L 191 · M 198
+
+PARTS AT MYTHIC
+56 parts · 1,364u radius · C 34 · U 34 · R 39 · E 55 · L 56 · M 56 parts by tier
+
+DEFENCES
+Shells: Rare 1 layer (90 HP each) · Epic 2 layers (400 HP each) · Legendary 3 layers (1,800 HP each) · Mythic 4 layers (8,000 HP each)
+
+MOUNTS AT MYTHIC
+0 gun mounts · 0 missile pods · gun 0.4× enemy damage at 1.1–1.7s cadence; missiles 1.1× at 4.5–6s
+
+ABILITIES
+• Leaf Shards — projectile · Uncommon+
+  cooldown 4.50s · wind-up 0.40s · damage 0.70× enemy damage (2,722 at Mythic)
+  5 projectiles at Mythic · spread 0.40 rad · 540u/s · 1.50s life · size 7.00 · range 180–800u · pierces · wave
+• Camo Shift — blink · Rare+
+  cooldown 9.00s · wind-up 0.40s · damage 0.60× enemy damage (2,333 at Mythic)
+  range 0–600u
+• Shard Storm — projectile burst · Epic+
+  cooldown 10.00s · wind-up 0.80s · damage 0.50× enemy damage (1,944 at Mythic)
+  19 projectiles at Mythic · 460u/s · 1.30s life · size 7.00 · range 0–600u · wave
+
+────────────────────────────────────────
+27. DUNG BEETLE
+Ground · Melee · Spawns Epic–Mythic
+Contact type: Physical · Pack size: C 1 · U 1 · R 1 · E 1 · L 1 · M 1
+
+BODY DAMAGE (contact hit)
+C 4 · U 12 · R 36 · E 108 · L 324 · M 972
+
+TOTAL BODY HEALTH
+C 505 · U 2,021 · R 11,210 · E 80,384 · L 480,240 · M 2,246,400
+
+CORE HEALTH
+C 30 · U 120 · R 540 · E 2,400 · L 10,800 · M 48,000
+
+TURN SPEED
+C 1.28 · U 0.63 · R 0.41 · E 0.31 · L 0.25 · M 0.21
+
+MOVE SPEED
+C 92 · U 96 · R 99 · E 103 · L 107 · M 110
+
+PARTS AT MYTHIC
+105 parts · 1,144u radius · C 41 · U 41 · R 59 · E 88 · L 102 · M 105 parts by tier
+
+DEFENCES
+Shells: Rare 1 layer (90 HP each) · Epic 2 layers (400 HP each) · Legendary 3 layers (1,800 HP each) · Mythic 4 layers (8,000 HP each)
+Energy shields: Epic 1 (6,240 HP, 239u) · Legendary 2 (56,160 HP; 394–434u) · Mythic 3 (374,400 HP; 651–781u)
+
+MOUNTS AT MYTHIC
+6 gun mounts · 0 missile pods · gun 0.4× enemy damage at 1.1–1.7s cadence; missiles 1.1× at 4.5–6s
+
+ABILITIES
+• Rolling Slam — charge · Uncommon+
+  cooldown 8.00s · wind-up 1.00s · damage 3.40× enemy damage (13,219 at Mythic)
+  560u/s · range 220–900u · 0.70s duration
+• Boulder Toss — corrosive glob · Rare+
+  cooldown 6.00s · wind-up 0.60s · damage 0.90× enemy damage (3,499 at Mythic)
+  420u/s · size 2.40 · range 0–800u
+• Impact Wave — area ring · Epic+
+  cooldown 11.00s · wind-up 1.00s · damage 2.40× enemy damage (9,331 at Mythic)
+  400u/s · ring reaches 7.00 × body · reach 0.0–4.4 body units
+
+────────────────────────────────────────
+28. ATLAS MOTH
+Flying · Ranged, keeps 420u · Spawns Epic–Mythic
+Contact type: Physical · Pack size: C 1 · U 1 · R 1 · E 1 · L 1 · M 1
+
+BODY DAMAGE (contact hit)
+C 4 · U 12 · R 36 · E 108 · L 324 · M 972
+
+TOTAL BODY HEALTH
+C 350 · U 1,542 · R 7,690 · E 53,792 · L 264,096 · M 1,215,360
+
+CORE HEALTH
+C 30 · U 120 · R 540 · E 2,400 · L 10,800 · M 48,000
+
+TURN SPEED
+C 1.32 · U 0.64 · R 0.43 · E 0.32 · L 0.25 · M 0.21
+
+MOVE SPEED
+C 115 · U 120 · R 124 · E 129 · L 133 · M 138
+
+PARTS AT MYTHIC
+65 parts · 1,677u radius · C 34 · U 36 · R 41 · E 62 · L 64 · M 65 parts by tier
+
+DEFENCES
+Shells: Rare 1 layer (90 HP each) · Epic 2 layers (400 HP each) · Legendary 3 layers (1,800 HP each) · Mythic 4 layers (8,000 HP each)
+Energy shields: Epic 1 (6,240 HP, 239u) · Legendary 2 (56,160 HP; 394–434u) · Mythic 3 (374,400 HP; 651–781u)
+
+MOUNTS AT MYTHIC
+0 gun mounts · 0 missile pods · gun 0.4× enemy damage at 1.1–1.7s cadence; missiles 1.1× at 4.5–6s
+
+ABILITIES
+• Wind Gust — area ring · Uncommon+
+  cooldown 8.00s · wind-up 0.80s · damage 1.30× enemy damage (5,054 at Mythic)
+  480u/s · ring reaches 7.00 × body · reach 0.0–4.6 body units
+• Slow Powder — corrosive cloud · Rare+
+  cooldown 10.00s · wind-up 0.70s · damage 0.50× enemy damage (1,944 at Mythic)
+  cloud size 4.00 × body · range 0–900u · slows to 0.80× for 1.50s · lands at the player
+• Downdraft — pull · Epic+
+  cooldown 13.00s · wind-up 0.70s · damage 0.80× enemy damage (3,110 at Mythic)
+  700u/s · range 300–900u
+
+────────────────────────────────────────
+29. WEEVIL
+Ground · Melee · Spawns Epic–Mythic
+Contact type: Physical · Pack size: C 1 · U 1 · R 1 · E 1 · L 1 · M 1
+
+BODY DAMAGE (contact hit)
+C 4 · U 12 · R 36 · E 108 · L 324 · M 972
+
+TOTAL BODY HEALTH
+C 390 · U 1,558 · R 7,834 · E 73,056 · L 366,624 · M 1,741,440
+
+CORE HEALTH
+C 30 · U 120 · R 540 · E 2,400 · L 10,800 · M 48,000
+
+TURN SPEED
+C 1.78 · U 0.87 · R 0.57 · E 0.43 · L 0.34 · M 0.28
+
+MOVE SPEED
+C 110 · U 114 · R 119 · E 123 · L 128 · M 132
+
+PARTS AT MYTHIC
+82 parts · 1,182u radius · C 35 · U 35 · R 41 · E 75 · L 79 · M 82 parts by tier
+
+DEFENCES
+Shells: Rare 1 layer (90 HP each) · Epic 2 layers (400 HP each) · Legendary 3 layers (1,800 HP each) · Mythic 4 layers (8,000 HP each)
+Energy shields: Epic 1 (6,240 HP, 239u) · Legendary 2 (56,160 HP; 394–434u) · Mythic 3 (374,400 HP; 651–781u)
+
+MOUNTS AT MYTHIC
+6 gun mounts · 0 missile pods · gun 0.4× enemy damage at 1.1–1.7s cadence; missiles 1.1× at 4.5–6s
+
+ABILITIES
+• Drill Strike — melee · Uncommon+
+  cooldown 3.00s · wind-up 0.55s · damage 2.60× enemy damage (10,109 at Mythic)
+  reach 0.0–3.4 body units · needs mandible
+• Boring Charge — charge · Rare+
+  cooldown 8.00s · wind-up 0.80s · damage 2.80× enemy damage (10,886 at Mythic)
+  640u/s · range 200–800u · 0.60s duration
+• Drill Shock — area ring · Epic+
+  cooldown 10.00s · wind-up 0.90s · damage 1.80× enemy damage (6,998 at Mythic)
+  440u/s · ring reaches 6.00 × body · reach 0.0–4.0 body units
+
+────────────────────────────────────────
+30. LOCUST
+Flying · Melee · Spawns Epic–Mythic
+Contact type: Physical · Pack size: C 2 · U 2 · R 2 · E 2 · L 1 · M 1
+
+BODY DAMAGE (contact hit)
+C 4 · U 12 · R 36 · E 108 · L 324 · M 972
+
+TOTAL BODY HEALTH
+C 386 · U 1,542 · R 9,936 · E 53,312 · L 284,256 · M 1,263,360
+
+CORE HEALTH
+C 30 · U 120 · R 540 · E 2,400 · L 10,800 · M 48,000
+
+TURN SPEED
+C 2.02 · U 0.99 · R 0.65 · E 0.49 · L 0.39 · M 0.32
+
+MOVE SPEED
+C 205 · U 213 · R 221 · E 230 · L 238 · M 246
+
+PARTS AT MYTHIC
+67 parts · 1,400u radius · C 36 · U 36 · R 56 · E 62 · L 67 · M 67 parts by tier
+
+DEFENCES
+Shells: Rare 1 layer (90 HP each) · Epic 2 layers (400 HP each) · Legendary 3 layers (1,800 HP each) · Mythic 4 layers (8,000 HP each)
+
+MOUNTS AT MYTHIC
+6 gun mounts · 0 missile pods · gun 0.4× enemy damage at 1.1–1.7s cadence; missiles 1.1× at 4.5–6s
+
+ABILITIES
+• Swarm Rush — charge · Uncommon+
+  cooldown 5.00s · wind-up 0.40s · damage 1.50× enemy damage (5,832 at Mythic)
+  950u/s · range 180–850u · 0.40s duration
+• Summon Swarm — summon · Rare+
+  cooldown 14.00s · wind-up 0.60s · no direct damage
+  summons 3 at Mythic · reach 0.0–2.5 body units
+• Wing Storm — projectile burst · Epic+
+  cooldown 10.00s · wind-up 0.70s · damage 0.50× enemy damage (1,944 at Mythic)
+  22 projectiles at Mythic · 480u/s · 1.40s life · size 6.00 · range 0–640u · wave
+
+────────────────────────────────────────
+31. JEWEL BEETLE
+Flying · Ranged, keeps 360u · Spawns Legendary–Mythic · Reflective bubbles
+Contact type: Physical · Pack size: C 1 · U 1 · R 1 · E 1 · L 1 · M 1
+
+BODY DAMAGE (contact hit)
+C 4 · U 12 · R 36 · E 108 · L 324 · M 972
+
+TOTAL BODY HEALTH
+C 553 · U 2,210 · R 12,064 · E 78,416 · L 487,224 · M 2,306,240
+
+CORE HEALTH
+C 30 · U 120 · R 540 · E 2,400 · L 10,800 · M 48,000
+
+TURN SPEED
+C 2.15 · U 1.05 · R 0.69 · E 0.52 · L 0.41 · M 0.34
+
+MOVE SPEED
+C 170 · U 177 · R 184 · E 190 · L 197 · M 204
+
+PARTS AT MYTHIC
+99 parts · 1,008u radius · C 44 · U 44 · R 62 · E 79 · L 95 · M 99 parts by tier
+
+DEFENCES
+Shells: Rare 1 layer (90 HP each) · Epic 2 layers (400 HP each) · Legendary 3 layers (1,800 HP each) · Mythic 4 layers (8,000 HP each)
+Energy shields: Epic 1 (6,240 HP, 239u) · Legendary 2 (56,160 HP; 394–434u) · Mythic 2 (249,600 HP; 651–716u)
+
+MOUNTS AT MYTHIC
+6 gun mounts · 4 missile pods · gun 0.4× enemy damage at 1.1–1.7s cadence; missiles 1.1× at 4.5–6s
+
+ABILITIES
+• Prismatic Beam — projectile · Uncommon+
+  cooldown 5.00s · wind-up 0.50s · damage 1.10× enemy damage (4,277 at Mythic)
+  2 projectiles at Mythic · spread 0.10 rad · 760u/s · 1.50s life · size 8.00 · range 200–950u · pierces · wave
+• Refraction — projectile burst · Rare+
+  cooldown 9.00s · wind-up 0.70s · damage 0.70× enemy damage (2,722 at Mythic)
+  24 projectiles at Mythic · 420u/s · 1.70s life · size 7.00 · range 0–700u · wave
+• Prism Pulse — area ring · Epic+
+  cooldown 11.00s · wind-up 0.80s · damage 2.00× enemy damage (7,776 at Mythic)
+  480u/s · ring reaches 6.00 × body · reach 0.0–4.0 body units
+
+────────────────────────────────────────
+32. SNAKE
+Ground · Melee · Spawns Mythic · BOSS, one alive · Serpentine body
+Contact type: Physical · Pack size: C 1 · U 1 · R 1 · E 1 · L 1 · M 1
+
+BODY DAMAGE (contact hit)
+C 4 · U 12 · R 36 · E 108 · L 324 · M 972
+
+TOTAL BODY HEALTH
+C 2,607 · U 11,669 · R 58,984 · E 459,016 · L 2,274,804 · M 10,913,440
+
+CORE HEALTH
+C 30 · U 120 · R 540 · E 2,400 · L 10,800 · M 48,000
+
+TURN SPEED
+C 1.31 · U 0.61 · R 0.39 · E 0.28 · L 0.21 · M 0.17
+
+MOVE SPEED
+C 430 · U 447 · R 464 · E 482 · L 499 · M 516
+
+PARTS AT MYTHIC
+491 parts · 4,827u radius · C 217 · U 244 · R 278 · E 414 · L 454 · M 491 parts by tier
+
+DEFENCES
+Shells: none — the body takes hits directly.
+Energy shields: Epic 1 (6,240 HP, 239u) · Legendary 1 (28,080 HP, 394u) · Mythic 1 (124,800 HP, 651u)
+
+MOUNTS AT MYTHIC
+4 gun mounts · 0 missile pods · gun 0.4× enemy damage at 1.1–1.7s cadence; missiles 1.1× at 4.5–6s
+
+ABILITIES
+• Tail Sweep — melee · Uncommon+
+  cooldown 4.00s · wind-up 0.80s · damage 4.50× enemy damage (17,496 at Mythic)
+  reach 0.0–5.0 body units · needs tail
+• Venom Ring — projectile burst · Rare+
+  cooldown 9.00s · wind-up 0.90s · damage 0.90× enemy damage (3,499 at Mythic)
+  24 projectiles at Mythic · 460u/s · 1.80s life · size 9.00 · range 0–900u · poison 0.30× · bolt
+• Serpent Rush — charge · Epic+
+  cooldown 10.00s · wind-up 1.00s · damage 4.00× enemy damage (15,552 at Mythic)
+  760u/s · range 400–1,400u · 0.90s duration
+• Venom Glob — corrosive glob · Legendary+
+  cooldown 7.00s · wind-up 0.60s · damage 1.40× enemy damage (5,443 at Mythic)
+  520u/s · size 3.00 · range 0–1,000u
+
+════════════════════════════════════════
+WEAPONS — 19 CRAFTED
+════════════════════════════════════════
+
+Damage values are per hit at 100% efficiency and st.dmg 10. "Per trigger" adds every projectile or beam part that can hit one target. DPS is nominal before enemy armour and plating.
+
+────────────────────────────────────────
+PULSE TURRET — ENERGY
+Per hit: 0.60× base (6.0 damage) · Per trigger: 0.60× (6.0)
+DPS: 13.3 · Cooldown: 0.450s · Range: 560u
+Craft: Difficulty 1 · 3 parts
+Behaviour: One auto-target projectile.
+
+────────────────────────────────────────
+SCATTER DRIVER — KINETIC
+Per hit: 0.55× base (5.5 damage) · Per trigger: 3.30× (33.0)
+DPS: 44.0 · Cooldown: 0.750s · Range: 420u
+Craft: Difficulty 2 · 4 parts · 1× Limb/Plate
+Behaviour: Six pellets in a 0.42 rad spread.
+
+────────────────────────────────────────
+SEEKER POD — EXPLOSIVE
+Per hit: 2.20× base (22.0 damage) · Per trigger: 4.40× (44.0)
+DPS: 29.3 · Cooldown: 1.500s · Range: 850u
+Craft: Difficulty 3 · 5 parts · 1× Weapon/Shield
+Behaviour: Two homing missiles; 74u splash for 35% of impact damage.
+
+────────────────────────────────────────
+ARC LANCE — ENERGY
+Per hit: 0.22× base (2.2 damage) · Per trigger: 0.22× (2.2)
+DPS: 18.3 · Cooldown: 0.120s · Range: 330u
+Craft: Difficulty 4 · 6 parts · 1× Core
+Behaviour: Continuous beam; pierces 2 + floor(efficiency) parts; hull shells stop it.
+
+────────────────────────────────────────
+HOMING MISSILE LAUNCHER — EXPLOSIVE
+Per hit: 3.10× base (31.0 damage) · Per trigger: 3.10× (31.0)
+DPS: 18.2 · Cooldown: 1.700s · Range: 900u
+Craft: Difficulty 3 · 5 parts · 1× Weapon + 1× Bombardier Beetle/Yellowjacket part
+Behaviour: Right-click locks one exact part; missiles ignore everything en route; 74u splash for 35%.
+
+────────────────────────────────────────
+SHIELD-BYPASS LASER — ENERGY
+Per hit: 0.16× base (1.6 damage) · Per trigger: 0.16× (1.6)
+DPS: 16.0 · Cooldown: 0.100s · Range: 700u
+Craft: Difficulty 5 · 7 parts · 1× Core/Weapon + 1× Jewel Beetle/Firefly part
+Behaviour: Beam ignores enemy shield bubbles; pierces 3 parts; hull shells stop it.
+
+────────────────────────────────────────
+HEAVY MACHINE GUN — KINETIC
+Per hit: 0.10× base (1.0 damage) · Per trigger: 0.10× (1.0)
+DPS: 13.3 · Cooldown: 0.075s · Range: 650u
+Craft: Difficulty 2 · 4 parts · 1× Weapon/Limb
+Behaviour: One tracer with a 0.13 rad spray.
+
+────────────────────────────────────────
+EMP CANNON — SHOCK
+Per hit: 1.40× base (14.0 damage) · Per trigger: 1.40× (14.0)
+DPS: 5.4 · Cooldown: 2.600s · Range: 560u
+Craft: Difficulty 4 · 6 parts · 1× Core/Shield + 1× Cicada/Firefly part
+Behaviour: 620u area burst; 1.8s stun; shelled enemies take no damage but are stunned.
+
+────────────────────────────────────────
+PLASMA CUTTER — THERMAL
+Per hit: 1.10× base (11.0 damage) · Per trigger: 1.10× (11.0)
+DPS: 61.1 · Cooldown: 0.180s · Range: 190u
+Craft: Difficulty 3 · 5 parts · 1× Plate/Weapon
+Behaviour: Short beam; pierces 1 + floor(efficiency) parts; 175–195u reach.
+
+────────────────────────────────────────
+ACID SPRAYER — CORROSIVE
+Per hit: 0.30× base (3.0 damage) · Per trigger: 0.90× (9.0)
+DPS: 56.3 · Cooldown: 0.160s · Range: 400u
+Craft: Difficulty 3 · 5 parts · 1× Body/Limb + 1× Soldier Ant/Worker Ant/Bombardier Beetle part
+Behaviour: Three globs; each hit adds 0.32 melt and a 1.6 × efficiency damage-over-time; ignores energy bubbles.
+
+────────────────────────────────────────
+CHAIN LIGHTNING — SHOCK
+Per hit: 1.60× base (16.0 damage) · Per trigger: 1.60× (16.0)
+DPS: 20.0 · Cooldown: 0.800s · Range: 780u
+Craft: Difficulty 4 · 6 parts · 1× Core/Wing + 1× Firefly/Jewel Beetle part
+Behaviour: Five jumps up to 520u apart; each jump is 25% weaker; skips shelled enemies.
+
+────────────────────────────────────────
+FLAK CANNON — EXPLOSIVE
+Per hit: 1.30× base (13.0 damage) · Per trigger: 2.00× (20.0)
+DPS: 22.2 · Cooldown: 0.900s · Range: 800u
+Craft: Difficulty 3 · 5 parts · 1× Plate/Body
+Behaviour: 1.3× direct impact plus a 0.7× airburst in 125u.
+
+────────────────────────────────────────
+RAIL SNIPER — KINETIC
+Per hit: 2.40× base (24.0 damage) · Per trigger: 2.40× (24.0)
+DPS: 13.2 · Cooldown: 1.820s · Range: 1,150u
+Craft: Difficulty 5 · 7 parts · 1× Core/Weapon + 1× Tiger Beetle/Assassin Bug part
+Behaviour: 1500u beam; pierces 12 parts; ignores shield bubbles; hull shells stop it.
+
+────────────────────────────────────────
+GRAVITY BOMB — SHOCK
+Per hit: 2.80× base (28.0 damage) · Per trigger: 2.80× (28.0)
+DPS: 8.8 · Cooldown: 3.200s · Range: 800u
+Craft: Difficulty 5 · 7 parts · 1× Core/Body + 1× Dung Beetle/Atlas Moth part
+Behaviour: 230u well for 1.15s, then 2.8× damage in a 270u blast.
+
+────────────────────────────────────────
+MINE LAYER — EXPLOSIVE
+Per hit: 2.50× base (25.0 damage) · Per trigger: 2.50× (25.0)
+DPS: 22.7 · Cooldown: 1.100s · Range: 800u
+Craft: Difficulty 2 · 4 parts · 1× Plate/Weapon + 1× Weevil/Scarab part
+Behaviour: Drops a 150u mine; 0.7s arming time; 26s life.
+
+────────────────────────────────────────
+SWARM DRONES — KINETIC
+Per hit: 0.40× base (4.0 damage) · Per trigger: 0.80× (8.0)
+DPS: 14.5 · Cooldown: 0.550s · Range: 720u
+Craft: Difficulty 4 · 6 parts · 1× Wing/Core + 1× Honeybee/Yellowjacket/Hornet part
+Behaviour: Two orbiters, each firing 0.4× every 0.55s at up to 720u.
+
+────────────────────────────────────────
+VENOM INJECTOR — CORROSIVE
+Per hit: 0.45× base (4.5 damage) · Per trigger: 0.90× (9.0)
+DPS: 25.7 · Cooldown: 0.350s · Range: 560u
+Craft: Difficulty 3 · 5 parts · 1× Limb/Weapon + 1× Assassin Bug/Wasp/Mosquito part
+Behaviour: Two darts; each applies a stacking 3.2 × efficiency damage-over-time.
+
+────────────────────────────────────────
+SONIC DISRUPTOR — SHOCK
+Per hit: 0.60× base (6.0 damage) · Per trigger: 0.60× (6.0)
+DPS: 3.8 · Cooldown: 1.600s · Range: 470u
+Craft: Difficulty 4 · 6 parts · 1× Wing/Core + 1× Cicada/Katydid/Locust part
+Behaviour: Cone of ±0.8 rad and 540u; 1.5s stun; skips shelled enemies.
+
+────────────────────────────────────────
+CLUSTER ROCKETS — EXPLOSIVE
+Per hit: 1.70× base (17.0 damage) · Per trigger: 4.76× (47.6)
+DPS: 21.6 · Cooldown: 2.200s · Range: 950u
+Craft: Difficulty 5 · 7 parts · 1× Weapon/Shield + 1× Bombardier Beetle/Rhinoceros Beetle part
+Behaviour: One 1.7× rocket, then four 0.765× bomblets.
+
+════════════════════════════════════════
+PLAYER SHIELDS — 10
+════════════════════════════════════════
+
+All shield values scale with craft efficiency (f). Base recharge is 0.18/s after 4s unless the item overrides it. Hull bonus is a percentage of current hull.
+
+DEFLECTOR ARRAY
+Hull +45% · recharge 0.18/s · delay 4s · blocks energy/thermal
+Craft: D1 · 3 parts · no special ingredient
+
+ABSORBER CORE
+Hull +22% · recharge 0.50/s · delay 1.6s · blocks energy/thermal
+Craft: D2 · 4 parts · 1× Plate
+
+MIRROR BARRIER
+Hull +32% · reflects bolts/orbs/waves at 50% projectile damage · blocks energy/thermal/kinetic
+Craft: D3 · 5 parts · 1× Shield/Core/Wing
+
+KINETIC BARRIER
+Hull +38% · incoming damage ×(1 − clamp(0.30f, 0.10, 0.60)) while the shield holds · blocks energy/thermal/kinetic/explosive
+Craft: D2 · 4 parts · 1× Plate/Body
+
+PHASE SHIELD
+Hull +25% · dodge +clamp(0.12f, 0, 0.50) · blocks energy/thermal/kinetic
+Craft: D4 · 6 parts · 1× Wing/Core + 1× Cicada/Atlas Moth part
+
+REGENERATING WARD
+Hull +30% · recharge 0.90/s · delay 1.2s · blocks energy/thermal/kinetic
+Craft: D3 · 5 parts · 1× Body + 1× Ladybug/Firefly part
+
+REACTIVE SHELL
+Hull +20% · shield break creates a 300u blast for 4 × st.dmg × f · blocks energy/thermal/kinetic
+Craft: D4 · 6 parts · 1× Plate/Shield + 1× Rhinoceros Beetle/Cockroach part
+
+OVERCHARGE SHIELD
+Hull +70% · recharge 0.07/s · delay 8s · blocks energy/thermal/kinetic
+Craft: D5 · 7 parts · 1× Core/Shield + 1× Jewel Beetle/Firefly part
+
+NULL FIELD
+Hull +35% · (35 + 30f)% chance to swallow a projectile for 20% of its damage; 1.4/(0.5 + f)s cooldown · blocks energy/thermal/kinetic
+Craft: D5 · 7 parts · 1× Core/Wing + 1× Moth/Atlas Moth part
+
+PRISMATIC BARRIER
+Hull +40% · reflects bolts · dodge +clamp(0.05f, 0, 0.30) · blocks energy/thermal/kinetic/explosive
+Craft: D5 · 7 parts · 1× Wing/Shield/Core + 1× Jewel Beetle part
+
+════════════════════════════════════════
+ARMOUR — 11
+════════════════════════════════════════
+
+Armour blocks kinetic and physical by default. Reactive Lattice and Ablative Coating reduce all damage types; the other items list their extra blocked types.
+
+HULL PLATING
+Hull +35f%
+Craft: D1 · 3 parts · 1× Plate/Body
+
+REACTIVE LATTICE
+Damage reduction clamp(0.12f, 0, 0.60)
+Craft: D3 · 5 parts · 2× Plate
+
+THORN MESH
+Hull +10f% · when hit, 260u blast for 3 × st.dmg × f every 1.5s
+Craft: D2 · 4 parts · 1× Limb
+
+CHITIN PLATING
+Hull +25f% · armour +0.02f · blocks corrosive
+Craft: D2 · 4 parts · 1× Plate + 1× Cockroach/Worker Ant part
+
+CARAPACE SHELL
+Hull +55f% · thrust ×(1 − clamp(0.06f, 0, 0.35)) · blocks corrosive
+Craft: D3 · 5 parts · 1× Plate/Body + 1× Rhinoceros/Dung/Scarab part
+
+NANO-WEAVE MESH
+Hull +12f% · hull regen +0.004f/s · blocks explosive
+Craft: D4 · 6 parts · 1× Wing/Body + 1× Atlas Moth/Widow Spider part
+
+ABLATIVE COATING
+Additional reduction clamp(0.08f, 0, 0.50) · blocks explosive
+Craft: D3 · 5 parts · 1× Plate/Shield + 1× Cockroach/Weevil part
+
+TITAN FRAME
+Hull +90f% · thrust ×(1 − clamp(0.12f, 0, 0.50)) · blocks corrosive
+Craft: D5 · 7 parts · 2× Body/Plate + 1× Dung/Snake part
+
+EXOSKELETON RIG
+Thrust +12f% · acceleration +10f%
+Craft: D3 · 5 parts · 2× Limb + 1× Grasshopper/Tiger/Mole Cricket part
+
+VENOM GUARD
+Poison resistance clamp(0.20f, 0, 0.90) · hull +8f%
+Craft: D4 · 6 parts · 1× Plate/Limb + 1× Assassin/Yellowjacket/Centipede part
+
+SCALE MAIL
+Armour +0.03f · hull +18f% · blocks explosive
+Craft: D4 · 6 parts · 1× Plate/Wing + 1× Snake/Jewel/Ladybug part
+
+════════════════════════════════════════
+OPTICS, UTILITY AND ACTIVE ABILITIES
+════════════════════════════════════════
+
+WIDE-FIELD OPTICS
+Minimum zoom clamp(1/(1 + 1.96f), 0.056, 1) · 0.34× at f=1, 0.63× at f=0.30
+Craft: D2 · 4 parts · 1× Wing/Core
+
+RECALL BEACON
+Channel clamp(6/(0.6 + 0.5f), 2, 6)s · cooldown clamp(100/(0.5 + 0.5f), 20, 100)s
+Craft: D4 · 6 parts · 1× Core
+
+COMPONENT MAGNET
+Pickup radius 420 + 320f
+Craft: D3 · 5 parts · 1× Core/Body + 1× Worker Ant/Honeybee part
+
+EMP BURST
+14s base cooldown · 760u · stun 2.6 × (0.7 + 0.30f)s · 1.5f × st.dmg to the core/first part · shelled enemies are stunned but take no damage
+Craft: D3 · 5 parts · 1× Core/Shield + 1× Cicada/Firefly part
+
+MISSILE SALVO
+12s base cooldown · 10 homing missiles · up to 6 targets within 1,200u · 1.8f × st.dmg · 3.4s life
+Craft: D4 · 6 parts · 1× Weapon
+
+NANO REPAIR FIELD
+22s base cooldown · 35% × min(1.6, f) hull · 60% shield
+Craft: D3 · 5 parts · 1× Body/Core + 1× Worker/Carpenter Ant part
+
+PHASE BLINK
+9s base cooldown · teleport 520u forward
+Craft: D4 · 6 parts · 1× Wing/Core + 1× Cicada/Katydid/Mantis part
+
+AEGIS BARRIER
+18s base cooldown · 2.5s overshield = hull × (0.35 + 0.30f)
+Craft: D3 · 5 parts · 1× Shield
+
+OVERDRIVE
+26s base cooldown · 6s of 2.2× weapon damage and 1.8× fire rate
+Craft: D5 · 7 parts · 1× Core/Weapon + 1× Tiger/Hornet part
+
+TIME WARP
+24s base cooldown · 4s slow within 900u to max(0.10, 0.25 − 0.05f) speed
+Craft: D5 · 7 parts · 1× Core/Wing + 1× Atlas/Luna Moth part
+
+SHOCKWAVE
+16s base cooldown · 520u · 5f × st.dmg · 900u/s knockback · 0.5s stun
+Craft: D4 · 6 parts · 1× Plate/Body + 1× Dung/Scarab part
+
+All active cooldowns = base cooldown ÷ (0.7 + 0.30 × efficiency).
+
+════════════════════════════════════════
+BASE UPGRADES
+════════════════════════════════════════
+
+CANNON DAMAGE (max 30)
+10 × 1.2^L damage per shot
+
+FIRE RATE (max 12)
+4 + 0.7L shots/s
+
+EXTRA BARRELS (max 4)
+1 + L shots per trigger
+
+PIERCING ROUNDS (max 5)
++L pierce; each pierced hit deals 80%
+
+TARGETING MATRIX (max 10)
+5 + 4L% critical chance for 2.5×
+
+PLATE BREAKER (max 10)
++15L% damage vs armour, shields and spikes
+
+CORE SEEKER (max 8)
++20L% damage vs the core
+
+FRAGMENTATION (max 6)
+18 + 9L splash radius; 35% damage to neighbours
+
+RAIL COILS (max 8)
++10L% projectile speed; +8L% range
+
+HULL PLATING (max 30)
+100 × 1.22^L hull
+
+NANO REPAIR (max 10)
+0.5L% hull regeneration per second
+
+REACTIVE ARMOUR (max 14)
+−3.5L% incoming damage
+
+ENERGY SHIELD CORE (max 25)
+60 × 1.28^(L−1) shield at level 1+
+
+INERTIAL DAMPERS (max 6)
+12L% resistance to slows and pulls
+
+THRUSTERS (max 12)
+450 + 40L thrust
+
+HANDLING (max 10)
+1,500 + 200L acceleration
+
+AFTERBURNER (max 8)
+× (1.7 + 0.1(L−1)) burst at level 1+
+
+LAUNCHER BAYS (max 3)
+1 + L harpoons
+
+CABLE STRENGTH (max 16)
+5 × 1.42^L cable strength
+
+LAUNCHER RANGE (max 10)
+380 + 60L range
+
+CABLE ARMOURING (max 12)
+40 × 1.35^L cable health
+
+WINCH (max 8)
+1,000 + 140L winch speed
+
+SALVAGE CONTRACTS (max 20)
+× (1 + 0.25L) credits
+
+SCAVENGER DRONES (max 10)
+30 + 4L% drop chance
+
+RARITY SCANNER (max 8)
++5L% luck
+
+CARGO BAY (max 8)
+24 + 12L slots
+
+END OF COMPENDIUM
