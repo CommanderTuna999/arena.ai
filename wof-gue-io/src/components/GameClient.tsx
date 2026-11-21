@@ -591,7 +591,8 @@ function CannonTree({ game }: { game: Game }) {
                     const owned = cannonOwned(save, c.id);
                     const selected = fitted.id === c.id;
                     const cl = save.cannon?.lv?.[c.id] ?? {};
-                    const problem = cannonBillProblem(save, c);
+                    const adminFree = game.admin.on && game.admin.components;
+                    const problem = cannonBillProblem(save, c, adminFree);
                     return (
                       <div
                         key={c.id}

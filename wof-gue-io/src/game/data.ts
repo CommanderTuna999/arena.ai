@@ -139,11 +139,17 @@ export interface CannonTrack {
 }
 
 /** one line of a chassis bill: a kind of part, a rarity (tier index) and how many.
- *  No species is named — the sheet only asks for "an uncommon core". */
+ *  `name` narrows a kind that covers several parts (a "Head" is a body segment, an
+ *  "Antenna" is a spike), and `label` is what the tree prints. No species is ever
+ *  named — every one of these reads "Common leg", not "Worker Ant leg". */
 export interface PartBill {
   kind: PartKind;
   tier: number;
   count: number;
+  /** substring the component's own name must contain ("Head", "Antenna") */
+  name?: string;
+  /** how the tree names this line: "2× Common leg" */
+  label: string;
 }
 
 export interface CannonDef {
@@ -188,7 +194,12 @@ export const CANNONS: CannonDef[] = [
     desc: "Pretty accurate. A hitscan slug drawn as a hard white line from the muzzle to whatever it stops inside — and at 200 a shot, that is usually the core.",
     dmg: 200, interval: 1.5, speed: 0, range: 2400, hitscan: true,
     credits: 300,
-    parts: [{ kind: "armor", tier: 0, count: 2 }, { kind: "arm", tier: 0, count: 2 }, { kind: "core", tier: 1, count: 1 }],
+    parts: [
+      { kind: "leg", tier: 0, count: 2, label: "leg" },
+      { kind: "spike", tier: 0, count: 1, name: "Antenna", label: "antenna" },
+      { kind: "segment", tier: 0, count: 1, name: "Head", label: "head" },
+      { kind: "core", tier: 1, count: 1, label: "core" },
+    ],
     tracks: ["dmg", "crit", "critDmg", "pen"], costMul: 2.4, requires: "sting",
   },
   {
@@ -196,7 +207,11 @@ export const CANNONS: CannonDef[] = [
     desc: "Spray and pray, huh? A hose of weak little seeds at a ludicrous rate: light, fast-firing and hopeless past knife range until you buy the accuracy.",
     dmg: 15, interval: 0.1, speed: 430, range: 720, spread: 0.22,
     credits: 300,
-    parts: [{ kind: "armor", tier: 0, count: 1 }, { kind: "arm", tier: 0, count: 1 }, { kind: "wing", tier: 0, count: 1 }, { kind: "core", tier: 1, count: 1 }],
+    parts: [
+      { kind: "leg", tier: 0, count: 2, label: "leg" },
+      { kind: "core", tier: 0, count: 1, label: "core" },
+      { kind: "core", tier: 1, count: 1, label: "core" },
+    ],
     tracks: ["dmg", "acc", "speed"], costMul: 1, requires: "sting",
   },
   {
@@ -204,7 +219,12 @@ export const CANNONS: CannonDef[] = [
     desc: "Boring... and that is the point. Medium pace, medium accuracy, medium punch, and a barrel upgrade that doubles the whole thing if you can pay for it.",
     dmg: 45, interval: 0.55, speed: 720, range: 900, spread: 0.03,
     credits: 300,
-    parts: [{ kind: "armor", tier: 0, count: 2 }, { kind: "arm", tier: 0, count: 1 }, { kind: "segment", tier: 0, count: 1 }, { kind: "core", tier: 1, count: 1 }],
+    parts: [
+      { kind: "leg", tier: 0, count: 2, label: "leg" },
+      { kind: "segment", tier: 0, count: 1, name: "Head", label: "head" },
+      { kind: "core", tier: 0, count: 1, label: "core" },
+      { kind: "core", tier: 1, count: 1, label: "core" },
+    ],
     tracks: ["dmg", "rate", "pen", "barrels"], costMul: 1.6, requires: "sting",
   },
 ];
@@ -265,24 +285,26 @@ export function cannonTrackValue(c: CannonDef, id: CannonTrackId, level: number)
 }
 
 /* ---------- chassis bills ---------- */
-export const PART_KIND_NAME: Record<PartKind, string> = {
-  core: "core", segment: "body segment", armor: "carapace plate", leg: "leg", arm: "antenna arm",
-  wing: "wing", weapon: "weapon", shield: "shield generator", spike: "spike",
-};
-/** "2× Common carapace plate" — species deliberately not named */
+/** "2× Common leg" — a kind and a rarity, never a species */
 export const partBillText = (b: PartBill) =>
-  `${b.count}× ${RARITIES[clamp(b.tier, 0, RARITIES.length - 1)].name} ${PART_KIND_NAME[b.kind]}`;
+  `${b.count}× ${RARITIES[clamp(b.tier, 0, RARITIES.length - 1)].name} ${b.label}`;
+/** does this component satisfy that bill line? */
+export const partBillMatch = (x: Comp, b: PartBill) =>
+  x.kind === b.kind && x.tier === b.tier && (!b.name || x.name.toLowerCase().includes(b.name.toLowerCase()));
 
 export const cannonOwned = (s: SaveData, id: string) => id === CANNONS[0].id || !!s.cannon?.owned?.includes(id);
-/** what is standing between the pilot and this chassis (null = buildable) */
-export function cannonBillProblem(s: SaveData, c: CannonDef): string | null {
+/** what is standing between the pilot and this chassis (null = buildable).
+ *  `freeParts` is admin mode's infinite components: the bill is skipped, the
+ *  credit price is not (that is what the infinite-credits flag is for). */
+export function cannonBillProblem(s: SaveData, c: CannonDef, freeParts = false): string | null {
   if (cannonOwned(s, c.id)) return null;
   if (c.requires && !cannonOwned(s, c.requires)) {
     return `Requires the ${CANNON_BY_ID[c.requires]?.name ?? c.requires}`;
   }
   if (s.credits < c.credits) return `Needs ${fmtNum(c.credits)} credits`;
+  if (freeParts) return null;
   for (const b of c.parts) {
-    const have = s.inventory.filter((x) => x.kind === b.kind && x.tier === b.tier).length;
+    const have = s.inventory.filter((x) => partBillMatch(x, b)).length;
     if (have < b.count) return `Needs ${partBillText(b)}`;
   }
   return null;
@@ -292,7 +314,7 @@ export function cannonBillPicks(s: SaveData, c: CannonDef): string[] {
   const out: string[] = [];
   for (const b of c.parts) {
     const picks = s.inventory
-      .filter((x) => x.kind === b.kind && x.tier === b.tier && !out.includes(x.id))
+      .filter((x) => partBillMatch(x, b) && !out.includes(x.id))
       .sort((a, z) => a.value - z.value)
       .slice(0, b.count);
     for (const p of picks) out.push(p.id);

@@ -645,11 +645,10 @@ export class Game {
     const c = CANNON_BY_ID[id];
     if (!c) return "Unknown cannon";
     if (cannonOwned(this.save, id)) { this.selectCannon(id); return null; }
+    /* admin mode's infinite components skip the bill, never the credit price */
     const free = this.admin.on && this.admin.components;
-    if (!free) {
-      const prob = cannonBillProblem(this.save, c);
-      if (prob) return prob;
-    }
+    const prob = cannonBillProblem(this.save, c, free);
+    if (prob) return prob;
     const picks = free ? [] : cannonBillPicks(this.save, c);
     if (!free && picks.length !== c.parts.reduce((n, b) => n + b.count, 0)) return "Missing components";
     if (!(this.admin.on && this.admin.credits)) this.save.credits -= c.credits;

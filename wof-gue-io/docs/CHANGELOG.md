@@ -1,9 +1,21 @@
+## 0. v2.12.1 — legs, cores, heads and antennae
+
+- Chassis bills are now built from legs, common cores, heads and antennae, with legs the bulk of
+  every bill. Skewer: 2 legs + 1 antenna + 1 head + 1 uncommon core. Peashooter: 2 legs + 1 common
+  core + 1 uncommon core. Workhorse: 2 legs + 1 head + 1 common core + 1 uncommon core.
+- `PartBill` gained `name` and `label`: a head is a `segment` part whose name contains "Head" and an
+  antenna is a `spike` part whose name contains "Antenna", so `partBillMatch()` filters on the part's
+  own name as well as its kind. `PART_KIND_NAME` is gone; each bill line carries its own label.
+- **Admin mode fix**: `cannonBillProblem(save, cannon, freeParts)` now takes the infinite-components
+  flag. The CANNON tree passes `admin.on && admin.components`, so a gun can be built with an empty
+  hold while the 300 credits are still charged (`adminCredits` covers those).
+
 # Changelog — combat, plating and website pass
 
 Everything below is implemented in the current build. Numbers are the actual constants used by
 the simulation, not design targets.
 
-## 0. v2.12.0 — the cannon tree, chassis bills and solid shields
+## 1. v2.12.0 — the cannon tree, chassis bills and solid shields
 
 - **Three tier 1 cannons** (`data.ts`): `CANNONS` now holds the free tier-0 **Stinger** plus
   **Skewer** (200 dmg, 1.5s, hitscan line drawn by `beam()`), **Peashooter** (15 dmg, 0.1s, 0.22 rad
@@ -28,7 +40,7 @@ the simulation, not design targets.
 - `cannon.test.mts` rewritten: tree order, bills, consumption, per-chassis levels, the barrel cap,
   crit/accuracy maths, both migration paths, and the wall holding with `hitT = 0`.
 
-## 1. v2.11.0 — part-aware weapon targeting, weapons shop removed
+## 2. v2.11.0 — part-aware weapon targeting, weapons shop removed
 
 - **Targeting** (`engine.ts`): new `anyPartInRange()`, `priorityPart()`, `aimPoint()` and
   `combatTarget()`. A crafted weapon engages when *any* living piece is inside its range
@@ -44,7 +56,7 @@ the simulation, not design targets.
 - New `target.test.mts`: fires on a piece in range while the hull centre is out of range, holds fire
   when every piece is out, and asserts the core → support → closest order.
 
-## 0. v2.10.0 — the cannon tree
+## 1. v2.10.0 — the cannon tree
 
 Per the cannon section of the sheet.
 
@@ -66,7 +78,7 @@ Per the cannon section of the sheet.
   the hull back on the outside face (`r + thick + SHIP_R + 2`) after the shock, so nothing can pass
   through a live panel.
 
-## 0. v2.9.0 — the balance sheet lands
+## 1. v2.9.0 — the balance sheet lands
 
 Applied from the owner's design sheet; every value and where it lives is recorded in
 [`docs/BALANCE.md`](./BALANCE.md).
@@ -89,7 +101,7 @@ Applied from the owner's design sheet; every value and where it lives is recorde
   `CANNON_DMG = 20` on `CANNON_INTERVAL = 0.7` (was 10 damage at 4/s).
 - **Rename**: every "nest" in code, UI copy and docs is now "base".
 
-## 0. v2.8.0 — neutral commons, front-loaded shields, quieter FX and credits
+## 1. v2.8.0 — neutral commons, front-loaded shields, quieter FX and credits
 
 ### Aggro
 - `AGGRO_RANGE = [140, 200, 320, 450, 590, 760]`, `AGGRO_SIZE = 0.16` (was `[360 … 1060]` at 0.22).
@@ -130,7 +142,7 @@ Applied from the owner's design sheet; every value and where it lives is recorde
 - `src/app/icon.svg` geometry wrapped in `translate(32 32) scale(0.7) translate(-32 -32)` so the
   mantis fits the tab icon instead of being cropped.
 
-## 0. v2.7.0 — aggro ranges, deploy standby screen, transparent icon
+## 1. v2.7.0 — aggro ranges, deploy standby screen, transparent icon
 
 ### Aggro by rarity
 - `AGGRO_RANGE = [360, 460, 580, 720, 880, 1060]` for tiers 0-5, plus `min(radius, 700) * 0.22`;
@@ -161,7 +173,7 @@ Applied from the owner's design sheet; every value and where it lives is recorde
 - The `pg` pool is sized for serverless (`max: 5`, 30 s idle timeout, `allowExitOnIdle`) so a pooled
   Neon connection string is safe to attach.
 
-## 0. v2.6.0 — guest runs, mantis icon, magnet cap at mass 7
+## 1. v2.6.0 — guest runs, mantis icon, magnet cap at mass 7
 
 ### Guests are anonymous and non-persistent
 - The title screen no longer offers a name to guests: the field is greyed and reads
@@ -193,7 +205,7 @@ Applied from the owner's design sheet; every value and where it lives is recorde
   upsert all pass. Attaching `DATABASE_URL` to the Vercel project is the only step left for
   cross-device accounts and saves.
 
-## 0. v2.5.0 — accounts, neon ladybug, real name on the tab
+## 1. v2.5.0 — accounts, neon ladybug, real name on the tab
 
 ### Accounts
 - `src/server/auth.ts` + `/api/auth/{register,login,logout,me}`: callsigns are unique (case-insensitive
@@ -220,7 +232,7 @@ Applied from the owner's design sheet; every value and where it lives is recorde
 - `src/app/icon.svg` is a neon ladybug — crimson shell with a cyan rim and glow, dark head, cyan legs and
   antennae with lit tips — served by Next's icon convention at `/icon.svg` with `sizes="any"`.
 
-## 0. v2.4.0 — neon credit chip, bestiary by rarity
+## 1. v2.4.0 — neon credit chip, bestiary by rarity
 
 ### Credit chip
 - `CreditCoin` (HUD) and `drawCreditFlights` (canvas) now draw the same neon hexagon: gold radial face, `#7df9ff` rim, square hole punched through the middle, corner ticks and a drop-shadow glow. It reads as currency without breaking the neon palette.
@@ -232,7 +244,7 @@ Applied from the owner's design sheet; every value and where it lives is recorde
 - The detail card is now tier-specific: rarity banner, parts, hull, radius, hull-shell layers (`tier - 1` from rare), shield panels (`tier - 1` from epic), mounts, speed, turn, pack size and the drop rarities that tier actually yields.
 - The header counts both: species discovered and rarity entries filled in.
 
-## 0. v2.3.0 — salvage on contact, cash on the counter
+## 1. v2.3.0 — salvage on contact, cash on the counter
 
 ### Light parts are scooped on touch
 - A loose component with `mass <= 14` (`compMass = area / 900`, so parts up to ~63u radius) is collected the instant `|ship - part| < SHIP_R + partRadius + 12`: no tether, no tow, no dock trip.
@@ -250,14 +262,14 @@ Applied from the owner's design sheet; every value and where it lives is recorde
 - The discovery banner is now one short line (`NEW · <name>`); the AUTO/OVERDRIVE/ADMIN pills stay because they are interactive state.
 - Help text updated to match: light parts scoop on contact, credits fly straight in.
 
-## 0. v2.2.1 — shield panels ride outside the armour
+## 1. v2.2.1 — shield panels ride outside the armour
 
 - Panels were sized off body scale alone, which put them *inside* the plating on anything above rare (a mythical dragonfly's plates reach ~1,167u while the panel ring sat at ~497u).
 - `makeEnemy` now measures, per panel, how far the torso plates reach along that panel's own ray (ray/circle exit distance over every `segment` and `armor` part, including its `plateGrow` slab thickness) and pushes `shieldR` out past it with a `max(28u, 6%)` margin.
 - The result is a wall that hugs the hull instead of a single distant circle: a mythical dragonfly's four panels now sit at 497/858/1016/497u depending on the direction, and every one of them is outside the armour.
 - Legs and wings are deliberately excluded from the measurement — they stick far past the hull, and a ring out there would float in empty space. A plated limb can therefore poke through the shield line, which reads as an exposed weak point.
 
-## 0. v2.2.0 — shield projectors throw walls, not bubbles
+## 1. v2.2.0 — shield projectors throw walls, not bubbles
 
 ### One panel per generator
 - `Part` gained `shieldKind` (0 arc / 1 bar), `shieldSpan`, `shieldAng` and `shieldSpin`, and `shieldStyle(sp, S)` picks the panel for a generator: flyers and serpents (`flying || bodyWave`) get a curved arc with a **0.5 rad** half-angle (~57°, about 29% of the ring), walkers get a straight bar with a **1.25 × body size** half-length. Panel radius starts at `1.45 × body size` and is then pushed out so it sits at least `28u` (or 6%) beyond the outermost torso plate along that panel's ray, so the wall always stands outside the armour; thickness is `max(9, 0.07 × r)`.
@@ -274,7 +286,7 @@ Applied from the owner's design sheet; every value and where it lives is recorde
 - Energy, shock and thermal rounds still pass through a panel; everything else is stopped dead, deals nothing, and never drains the panel. A panel disappears only when its generator part dies (`shieldDown`), and `reflectShell` still reflects energy.
 - `Enemy.shieldReach` extends the broad-phase radius for bullets and beams to the furthest panel, so a wall standing outside the body silhouette still catches incoming fire.
 
-## 0. v2.1.3 — energy vs plating, and the overfly swat
+## 1. v2.1.3 — energy vs plating, and the overfly swat
 
 ### Energy only loses 20% to plating
 - `SHELL_TAKE.laser`: 0.22 → **0.8**. Beams (and the thermal cutter, which shares the `laser` source) now put 80% of their damage into the slabs; kinetic 0.3, missile 0.32, explosive 0.4, shock 0.15 and DoT 0.1 are unchanged.
@@ -285,7 +297,7 @@ Applied from the owner's design sheet; every value and where it lives is recorde
 - Effect: `2.2 × eDmg` with knockback of `1,500 + 90 × tier` u/s away from the core, `shake >= 30`, a 1300 u/s shock ring plus twin spark bursts. Cooldown-gated so it cannot chain-stun a player.
 - Suppressed in the safe zone and on stunned bodies.
 
-## 0. v2.1.2 — legs cripple, legendary and mythical legs get plating
+## 1. v2.1.2 — legs cripple, legendary and mythical legs get plating
 
 ### Crippling
 - `LEG_CRIPPLE_FRAC = 0.35` and `legHealthy(p)`: a leg part below 35% of its max HP no longer counts. `damagePart` recomputes mobility whenever a leg takes damage, so the penalty applies the moment a limb crosses the threshold — no need to destroy it.
@@ -298,7 +310,7 @@ Applied from the owner's design sheet; every value and where it lives is recorde
 - The shell envelope (`shellR`) now includes the plated limbs, so beams and blasts respect them too.
 - `render.ts` draws the leg slabs with their own layer count (body keeps `e.shells.length`) and dims/desaturates crippled limbs.
 
-## 0. v2.1.1 — heavy cannons are hitscan, legs steer again
+## 1. v2.1.1 — heavy cannons are hitscan, legs steer again
 
 ### Heavy Cannon is hitscan
 - `GUN_SPECS.heavy` sets `hitscan: true`, range 1200u, and drops the 0.9 homing (there is nothing left to home with).
@@ -310,7 +322,7 @@ Applied from the owner's design sheet; every value and where it lives is recorde
 - `updateEnemies` uses `turnMul = e.turnFrac` and `runAct`'s `turnTo` scales by it, so charges and swings respect broken legs too. Zero legs means no turning at all.
 - Rarity scaling from 2.0.8 is unchanged.
 
-## 0. v2.1.0 — enemy weapon overhaul
+## 1. v2.1.0 — enemy weapon overhaul
 
 ### Cannon upgrades retired
 - `pierce`, `breaker`, `coreseek`, `frag` and `velocity` are gone from `UPGRADES`, from `Stats` (`pierce`, `breaker`, `coreMul`, `frag`, plus the velocity-scaled bullet speed/range, now the flat 900 u/s / 760 u) and from the damage path in `hitEnemy`.
@@ -333,14 +345,14 @@ Applied from the owner's design sheet; every value and where it lives is recorde
 ### Signature guns
 - `SpeciesDef.gunType` — Dragonfly/Firefly/Jewel/Serpent use lasers, Scorpion/Scarab/Bombardier scatter cannons, Rhino/Dung/Weevil heavy cannons, Hornet/Ant/Yellowjacket/Locust rotary guns.
 
-## 0. v2.0.9 — legs no longer drag the turn rate
+## 1. v2.0.9 — legs no longer drag the turn rate
 
 ### Turning is a pure species stat
 - Removed `Enemy.turnFrac` and the leg-fraction logic added in 2.0.8. `updateEnemies` uses `turnMul = 1`, and `runAct`'s `turnTo` is back to `e.turn * rate` with no limb scaling.
 - `refreshMobility` still rebuilds `mobility` from surviving legs/wings, so a de-legged body still crawls (or stops, if it has no wings); it simply keeps its full turn rate.
 - Rarity scaling from 2.0.8 is unchanged: `TIER_TURN = [1, 1, 1, 1, 0.9, 0.8]`.
 
-## 0. v2.0.8 — enemies that can actually turn
+## 1. v2.0.8 — enemies that can actually turn
 
 ### Turn rate by rarity
 - `makeEnemy` built turn as `spd.turn / ((1 + tier * 1.05) * (1 + radius / (size * 6)))`. The size term is constant across tiers (radius scales with `b.size`), so the whole rarity penalty was the `1 + 1.05·tier` divisor: 4.2x at epic, 6.3x at mythical.
@@ -353,7 +365,7 @@ Applied from the owner's design sheet; every value and where it lives is recorde
 ### Admin spawner memory
 - `AdminPanel` seeds `spawn` state lazily from `localStorage["wof-admin-spawn"]` (`{ id, tier }`, matched back to the species by id) and writes it back whenever the selection changes, so the panel reopens on the last enemy and rarity picked.
 
-## 0. v2.0.7 — plating you can see and hit
+## 1. v2.0.7 — plating you can see and hit
 
 ### Thicker slabs
 - `plateGrow(r, layers)` (exported from `engine.ts`, used by both the renderer and hit detection) is now `min(1.9r, 20 + 10(layers - 1) + 0.26r)`, up from `min(1.5r, 12 + 8(layers - 1) + 0.18r)` and far above the original fixed 4–19u rim.
@@ -368,7 +380,7 @@ Applied from the owner's design sheet; every value and where it lives is recorde
 ### Ring sweep
 - `rings` update now tests the swept band `prev - 26 <= d <= r + 26` instead of `abs(d - r) < 26`. A shell-break shockwave at ~3,900u/s moves ~65u per frame and could previously skip past the ship entirely.
 
-## 0. v2.0.6 — real armour plating, proximity cannon
+## 1. v2.0.6 — real armour plating, proximity cannon
 
 ### Plating is an extra armour layer
 - Each `ShellLayer` now holds `SHELL_HP_FRAC` (0.6) of the enemy's total part hull instead of the old `5 * HP_MUL[tier]`, which was under 1% of hull. Layers remain `tier - 1`, so tier 2 = 1 layer, tier 5 = 4 layers. A 1,573,120 HP mythical now carries 4 × 943,872 HP of plating.
@@ -384,7 +396,7 @@ Applied from the owner's design sheet; every value and where it lives is recorde
 - `updateTurret` sets `basePowerT = BASE_POWER_IDLE` whenever `nearestEnemy(BASE.x, BASE.y, BASE.aggroR)` finds anything, so the cannon powers up as soon as any enemy enters the 1,760u alert band and stays up 120s after the band clears.
 - `hurtBase` no longer touches `basePowerT`. The instant retaliation kill on the attacker is unchanged, as is the rare+ targeting rule.
 
-## 0. v2.0.5 — admin test range
+## 1. v2.0.5 — admin test range
 
 ### Test range
 - `AdminState` gains a `sandbox` flag (session-only: `readAdminFlags` always returns `false` for it and `writeAdminFlags` leaves it out of `wof-admin-flags`).
@@ -396,7 +408,7 @@ Applied from the owner's design sheet; every value and where it lives is recorde
 - `adminClearEnemies()` empties enemies, hostile projectiles and mines in one call.
 - Both are gated on `admin.on`; species and rarity pickers live in the admin panel's new TEST RANGE section, with SPAWN, SPAWN ×5 and CLEAR buttons.
 
-## 0. v2.0.4 — energy shields are hard walls
+## 1. v2.0.4 — energy shields are hard walls
 
 ### Enemy energy shields
 - Shields no longer have a charge to drain. `SHIELD_STRIP` (0.08) is deleted; blocked hits change nothing about the bubble, so `shieldDown`, the 4s collapse, the 40% re-arm and the 15%/s regeneration never trigger. A bubble lives until its Shield Generator part is destroyed.
@@ -410,7 +422,7 @@ Applied from the owner's design sheet; every value and where it lives is recorde
 ### Documentation
 - `DMG_INFO` tooltips, `docs/STATS.md` damage-type table and the bubble rules paragraph all describe the new behaviour.
 
-## 0. v2.0.3 — particle budget pass
+## 1. v2.0.3 — particle budget pass
 
 ### Particle lifecycle
 - `pPool` recycles `Particle` records instead of allocating a fresh object for every spark.
@@ -424,7 +436,7 @@ Applied from the owner's design sheet; every value and where it lives is recorde
 - Particles whose remaining alpha is <= 0.05 are skipped.
 - Off-screen particles were already culled in the render loop; the spawn-side cull stops them from entering the array in the first place.
 
-## 0. v2.0.2 — kinetic shields, quieter inner rings and the stat compendium
+## 1. v2.0.2 — kinetic shields, quieter inner rings and the stat compendium
 
 ### Base cannon and kinetic shields
 - The base cannon bullet now carries `elem: "kinetic"` explicitly (it previously left `elem` undefined).
@@ -441,7 +453,7 @@ Applied from the owner's design sheet; every value and where it lives is recorde
 ### Documentation
 - Added `docs/STATS.md`: all 32 enemy species at every tier, all 19 crafted weapons, player shields, armour, optics, utility, active abilities, base cannon and upgrades, with formulas and live constants.
 
-## 0. v2.0.1 — max-zoom performance and the white mythical pile
+## 1. v2.0.1 — max-zoom performance and the white mythical pile
 
 ### Enemy level of detail
 - `drawEnemy` computes `sr = e.radius × cam.z`. Below 3px it draws one mote; below 9px it draws a
@@ -474,7 +486,7 @@ Applied from the owner's design sheet; every value and where it lives is recorde
 - Loose components use a single rarity-coloured pip below `z = 0.12`; particles become 1px
   rectangles and credit motes become small squares below `z = 0.1`.
 
-## 0. v2.0 — bulk upgrades, persistent admin, component shockwaves, global vision
+## 1. v2.0 — bulk upgrades, persistent admin, component shockwaves, global vision
 
 ### Admin mode lives for the tab, not the page
 - Admin flags are read from `sessionStorage["wof-admin-flags"]` when the `Game` is constructed, so
@@ -509,7 +521,7 @@ Applied from the owner's design sheet; every value and where it lives is recorde
 - `eDmg` is now `16 × DMG_MUL[tier]` instead of `8 × DMG_MUL[tier]`, so every rarity deals 2x damage
   while the 3x step between tiers (1 / 3 / 9 / 27 / 81 / 243) is unchanged.
 
-## 0. v1.9 — construct player, whole-map spawns, credit drops and base retaliation
+## 1. v1.9 — construct player, whole-map spawns, credit drops and base retaliation
 
 ### The player is a construct, not a ship
 - `drawShipShape` is now a circular machine: three animated gimbal arms with pumping piston
@@ -556,7 +568,7 @@ Applied from the owner's design sheet; every value and where it lives is recorde
   `baseVision` to the HUD. v2.0 makes the 1.3x baseline global and removes both the gate and the
   HUD chip.
 
-## 0. v1.8 — turret system rework, detailed ship, rotating mounts
+## 1. v1.8 — turret system rework, detailed ship, rotating mounts
 
 ### Enemies hunt the ship, not the base
 - Removed every base-targeting branch from `updateEnemy`: no `baseEngaged` aggro override, no base-aimed
@@ -585,7 +597,7 @@ Applied from the owner's design sheet; every value and where it lives is recorde
   start from the matching hardpoint plus a 7u muzzle offset, so tracers leave the barrel that is pointing
   at them.
 
-## 0. v1.6.1 — stable preview, solid bestiary cards, compact cores
+## 1. v1.6.1 — stable preview, solid bestiary cards, compact cores
 
 ### Preview cannot serve an old release
 - The live preview now runs a **production build** (`scripts/preview.sh`) instead of the dev server.
@@ -611,7 +623,7 @@ Applied from the owner's design sheet; every value and where it lives is recorde
 - Cores stay on layer 0, underneath the body, so segments and plating draw over them and the core
   only shows through gaps.
 
-## 0. v1.7.1 — four-times turret damage, no bestiary credit for base kills
+## 1. v1.7.1 — four-times turret damage, no bestiary credit for base kills
 
 ### Point-defence damage
 - `MINI_DMG` is now **72**, up from 18 (exactly 4×). Fire cadence stays **0.24s**, tracer speed
@@ -628,7 +640,7 @@ Applied from the owner's design sheet; every value and where it lives is recorde
 - Player-credited kills still update the bestiary, best-rarity record and discovery banner.
   `save.kills` continues to count every kill.
 
-## 0. v1.7 — hex point turrets, legendary siege shells, 120s repair lockout
+## 1. v1.7 — hex point turrets, legendary siege shells, 120s repair lockout
 
 ### Aggro leash
 - `BASE.aggroR` is now **1,760u**, exactly `turretR × 1.1` (1,600 × 1.1). Mobs switch from the
@@ -668,7 +680,7 @@ Applied from the owner's design sheet; every value and where it lives is recorde
 - Any hit that deals integrity damage sets `baseHitT = 120`; the 2%/s repair only starts once that
   timer reaches zero. Low-tier hits that deal 0 damage do not reset it.
 
-## 0. v1.6 — base siege cannon and a destructible base
+## 1. v1.6 — base siege cannon and a destructible base
 
 ### Siege cannon
 - The base now carries a permanently fitted cannon. Stats: **range 1,600u**, shell speed 650,
@@ -706,7 +718,7 @@ Applied from the owner's design sheet; every value and where it lives is recorde
   apart. The camera, player spawn, docking, recall, safe zone, spawning exclusion and minimap dot
   all read the mutated `BASE` position.
 
-## 0. v1.5 — moth lag, bestiary hover cards, visible loadout
+## 1. v1.5 — moth lag, bestiary hover cards, visible loadout
 
 ### White moth lag
 - The tier-5 moths (Luna Moth, Atlas Moth) carry three shield generators with projected radii of
@@ -735,7 +747,7 @@ Applied from the owner's design sheet; every value and where it lives is recorde
   - **Optics**: a small lens at the nose. **Utility**: a glowing pod at the tail.
 - Engine flame, overdrive ring and hit flash are unchanged; all fitted effects animate with `t`.
 
-## 0. v1.4 — bestiary, damage types and visible plating
+## 1. v1.4 — bestiary, damage types and visible plating
 
 ### Saving when leaving a run
 - The HUD home button now writes the local save and pushes the server save **before** routing to `/`.
@@ -788,7 +800,7 @@ Applied from the owner's design sheet; every value and where it lives is recorde
 - Unique bosses are excluded from the ordinary species lottery (they only spawn through the boss
   pass, which is still disabled while `SNAKE_ENABLED = false`).
 
-## 0. v1.3 — crowd, cores, plating and firing discipline
+## 1. v1.3 — crowd, cores, plating and firing discipline
 
 ### Title screen
 - SETTINGS and CHANGELOG are now **icon buttons** (gear, document) rather than text links, each
@@ -856,7 +868,7 @@ Applied from the owner's design sheet; every value and where it lives is recorde
 - `scripts/export-static.sh` produces a static `out/` and zips it with `serve.py` and `PLAY.txt`.
   The zip has no API routes: progress is localStorage + save codes, and the shared map is off.
 
-## 0. Title screen, settings, changelog and versioning (v1.2)
+## 1. Title screen, settings, changelog and versioning (v1.2)
 
 - **Title screen is the loading screen.** `WOFGUE.IO` is the whole design: a very large, tightly
   tracked wordmark (`clamp(2.9rem, 14.5vw, 10.5rem)`) with a neon glow, modelled on florr.io's
@@ -869,7 +881,7 @@ Applied from the owner's design sheet; every value and where it lives is recorde
 - The grid and insects are cosmetic only: `pointer-events: none`, `aria-hidden`, and no link to
   the simulation.
 
-## 0. Title screen, settings, changelog and versioning (v1.1)
+## 1. Title screen, settings, changelog and versioning (v1.1)
 
 - **Wofgue.io start screen** (`/`): the title, a callsign field on top (pre-filled when a name is
   already saved, empty on a fresh browser), a full-width **PLAY** button, **SETTINGS** and
@@ -903,7 +915,7 @@ Applied from the owner's design sheet; every value and where it lives is recorde
   24rem, panels at `min(94vw, 32rem)` / `max-height: 88dvh`, and the game canvas keeps its
   full-window sizing, so phones, tablets and desktop browsers all get the same screens.
 
-## 1. Missile targeting (Homing Missile Launcher)
+## 2. Missile targeting (Homing Missile Launcher)
 
 | Rule | Implementation |
 | --- | --- |
@@ -915,7 +927,7 @@ Applied from the owner's design sheet; every value and where it lives is recorde
 | Impact | Damage is applied directly to the marked piece (`3.1 × base cannon damage × efficiency`), plus a small 74u splash. |
 | Lost marks | If the marked piece is destroyed or dislocated (severed), or the enemy dies, the mark clears and `TARGET LOST` is shown. In-flight missiles revert to ordinary warheads. |
 
-## 2. Automatic crafted weapons
+## 3. Automatic crafted weapons
 
 - Crafted weapons no longer read the fire button. Every weapon acquires its own target and fires
   when something is inside its engagement range.
@@ -951,7 +963,7 @@ Spray weapons were cut hard: HMG `0.32 → 0.10`, bypass laser `0.50 → 0.16`, 
 All ability damage also multiplies `st.dmg` (Cannon Damage upgrade level), so every crafted weapon
 and every ability scales with base damage and overdrive.
 
-## 3. Armour plating (epic and above)
+## 4. Armour plating (epic and above)
 
 - Epic / legendary / mythical enemies gain **1 / 2 / 3** thin grey shell layers.
 - Each layer has `5 × HP_MUL[tier]` HP: **400** (epic), **1,800** (legendary), **8,000** (mythical) per layer.
@@ -962,7 +974,7 @@ and every ability scales with base damage and overdrive.
 - Layers break one at a time with a grey particle burst; the HUD shows a pip per remaining layer.
 - Long-bodied species (centipede, snake) use their segmented armour instead of a bubble shell.
 
-## 4. Spawn pressure
+## 5. Spawn pressure
 
 Per-zone densities and caps are listed in section 0 (v1.3). In short: the outer rings are the
 busiest (2.6 enemies/chunk, cap 56), the core is the calmest (0.9/chunk, cap 28), a top-up pass
@@ -970,7 +982,7 @@ refills to ~85% of the local cap, and a visibility floor guarantees 2–4 enemie
 still avoid the base safe zone and usually the area within 1,200u of the player (the visibility
 floor may place one at the edge of the screen).
 
-## 5. Serpentine bodies
+## 6. Serpentine bodies
 
 - **Centipede**: `12 + 3×tier` segments (27 at tier 5), body length `9 + 0.8×tier` units
   (≈4,400 world px at tier 5, ~2.5× the old length). Wave amplitude `0.22 × size`, wave number
@@ -987,7 +999,7 @@ floor may place one at the edge of the screen).
   swallow the arena, so it was capped at ~5.4x (≈9,100px). One constant controls it:
   `buildSnake`: `L = 7 + 0.3 * n`. Raise `0.3` for a longer animal.
 
-## 6. UI and tone
+## 7. UI and tone
 
 - Removed the **HANGAR** lettering and its subtitle from the base; replaced with a hex sigil.
 - Removed the **CRIPPLED** / **IMMOBILISED** warnings entirely.
@@ -998,7 +1010,7 @@ floor may place one at the edge of the screen).
   `CORE DESTROYED` and "rebuilding at hangar" is "reforming at the base".
 - Copy switched away from ship language ("craft", "base", "integrity", "callsign").
 
-## 7. Website and save codes
+## 8. Website and save codes
 
 - `/` is now the Wofgue.io title screen (callsign, PLAY, SETTINGS, CHANGELOG, version); the old
   feature grid, how-to-play and controls-table site is gone, and save-code entry lives in SETTINGS.
@@ -1012,14 +1024,14 @@ floor may place one at the edge of the screen).
 - Server-side profiles (`/api/save`) still work when `DATABASE_URL` is configured; without a
   database the browser is the vault.
 
-## 8. Compatibility and migration
+## 9. Compatibility and migration
 
 - Save version stays **2**; `autoFire` is additive and defaults to `true`.
 - Components whose species was `"World Serpent"` are migrated to `"Snake"` so old crafting
   requirements still match.
 - `encodeSave` / `decodeSave` are exported from `src/game/data.ts`.
 
-## 9. Verification
+## 10. Verification
 
 ```
 npx tsc --noEmit

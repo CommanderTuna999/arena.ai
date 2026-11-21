@@ -771,7 +771,7 @@ Skewer | 1 (needs Stinger) | 200 | 1.5s | hitscan line, 2400u, drawn as a hard w
 Peashooter | 1 (needs Stinger) | 15 | 0.1s | 430u/s seed, 720u reach, 12.6 deg base spread | Damage, Accuracy, Projectile Speed | 300 CR + 1x Common carapace plate, 1x Common antenna arm, 1x Common wing, 1x Uncommon core
 Workhorse | 1 (needs Stinger) | 45 | 0.55s | 720u/s round, 900u reach, 1.7 deg base spread | Damage, Fire Rate, Physical Penetration, Barrels (2) | 300 CR + 2x Common carapace plate, 1x Common antenna arm, 1x Common body segment, 1x Uncommon core
 
-Bills name a part kind and a rarity, never a species: any combination's carapace plate will do. The tree consumes the cheapest matching parts in storage when you build.
+Bills are mostly legs, common cores, heads and antennae, and never name a species: any insect's leg will do. A head is a body segment part called "Head" and an antenna is a spike part called "Antenna", so a plain body segment or a tail spike does not fill those lines. The tree consumes the cheapest matching parts in storage when you build, and admin mode's infinite components skips the bill (but not the 300 credits).
 
 Kinetic rounds (every chassis) are stopped dead by enemy energy shields, which take no damage. Energy panels are also **solid**: the hull is lifted back onto the outside face every frame whether or not the shock is on cooldown, so a panel cannot be flown through at any speed. Contact still discharges 25x the body's damage (capped below a full hull) and throws the ship off.
 

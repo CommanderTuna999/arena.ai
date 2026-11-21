@@ -12,8 +12,8 @@ const skewer = CANNON_BY_ID["skewer"];
 const pea = CANNON_BY_ID["peashooter"];
 const horse = CANNON_BY_ID["workhorse"];
 
-const comp = (kind: Comp["kind"], tier: number, id: string): Comp =>
-  ({ id, species: "Worker Ant", name: `test ${kind}`, kind, tier, poly: [0, 0, 10, 0, 10, 10], area: 100, mass: 1, hue: 0, value: 5 });
+const comp = (kind: Comp["kind"], tier: number, id: string, name?: string): Comp =>
+  ({ id, species: "Worker Ant", name: name ?? `test ${kind}`, kind, tier, poly: [0, 0, 10, 0, 10, 10], area: 100, mass: 1, hue: 0, value: 5 });
 
 /* --- the tree starts at the bottom with the Stinger --- */
 let s = newSave();
@@ -28,15 +28,19 @@ assert(tier1.length === 3, `three tier 1 chassis (${tier1.map((c) => c.name).joi
 assert(tier1.every((c) => c.requires === "sting"), "every tier 1 chassis requires the Stinger");
 assert(tier1.every((c) => c.name !== "" && c.desc.length > 20), "every tier 1 chassis has a name and a description");
 
-/* --- bills: 3-4 named commons plus an uncommon core, no species --- */
+/* --- bills: 3-4 common legs/cores/heads/antennae plus an uncommon core --- */
+const ALLOWED = new Set(["leg", "core", "segment", "spike"]);
 for (const c of tier1) {
   const commons = c.parts.filter((b) => b.tier === 0);
-  const cores = c.parts.filter((b) => b.kind === "core");
+  const uncommon = c.parts.filter((b) => b.tier === 1);
   const commonCount = commons.reduce((n, b) => n + b.count, 0);
   assert(commonCount >= 3 && commonCount <= 4, `${c.name}: ${commonCount} common parts in the bill`);
-  assert(cores.length === 1 && cores[0].tier === 1 && cores[0].count === 1, `${c.name}: one uncommon core, no species named`);
+  assert(commons.every((b) => ALLOWED.has(b.kind)), `${c.name}: every common is a leg, core, head or antenna (${commons.map((b) => b.label).join(", ")})`);
+  assert(commons.some((b) => b.kind === "leg"), `${c.name}: legs are the bulk of the bill`);
+  assert(uncommon.length === 1 && uncommon[0].kind === "core" && uncommon[0].count === 1, `${c.name}: one uncommon core, no species named`);
   assert(c.credits === 300, `${c.name}: 300 credits on top of the parts`);
 }
+assert(tier1.every((c) => c.parts.every((b) => !("species" in b))), "no bill line names a species");
 
 /* --- the frames' upgrades, per chassis --- */
 assert(cannonTracks(sting).map((t) => t.id).join() === "dmg", "the Stinger has a damage track and nothing else");
@@ -61,17 +65,34 @@ assert(cannonCritMul({}) === 2 && cannonCritMul({ critDmg: 4 }) === 3, "crit dam
 const g = new Game(newSave(), "t") as any;
 g.save.credits = 1000;
 assert(g.buyCannonChassis("skewer") !== null, "cannot build the Skewer without the parts in storage");
+/* right kinds, wrong part names: a plain body segment is not a head, a plain
+ * spike is not an antenna */
+g.save.inventory = [comp("segment", 0, "s0"), comp("spike", 0, "sp0", "Tail Spike"), comp("leg", 0, "l0"), comp("leg", 0, "l4"), comp("core", 1, "c0")];
+const nameProb = g.buyCannonChassis("skewer");
+assert(!!nameProb && /antenna|head/i.test(nameProb), `a body segment and a spike do not stand in for a head and an antenna (${nameProb})`);
 g.save.inventory = [
-  comp("armor", 0, "a1"), comp("armor", 0, "a2"), comp("armor", 0, "a3"),
-  comp("arm", 0, "b1"), comp("arm", 0, "b2"),
+  comp("leg", 0, "l1"), comp("leg", 0, "l2"), comp("leg", 0, "l3"),
+  comp("spike", 0, "an1", "Worker Ant Antenna"), comp("spike", 0, "sp1", "Tail Spike"),
+  comp("segment", 0, "h1", "Mantis Head"), comp("segment", 0, "s1", "Body Segment"),
   comp("core", 1, "c1"), comp("core", 1, "c2"),
-  comp("wing", 0, "w1"),
 ];
-assert(g.buyCannonChassis("skewer") === null, "with 2 carapace plates, 2 antennae and an uncommon core the Skewer builds");
+assert(g.buyCannonChassis("skewer") === null, "2 legs, an antenna, a head and an uncommon core build the Skewer");
 const left = g.save.inventory.map((c: Comp) => c.id).sort().join();
-assert(left === "a3,c2,w1", `exactly the bill is consumed (left: ${left})`);
+assert(left === "c2,l3,s1,sp1", `exactly the bill is consumed (left: ${left})`);
 assert(g.save.credits === 700, `300 credits were spent (left ${g.save.credits})`);
 assert(cannonOwned(g.save, "skewer") && g.save.cannon.id === "skewer", "the new chassis is owned and fitted");
+
+/* --- admin mode's infinite components skips the bill, not the price --- */
+const ga = new Game(newSave(), "t") as any;
+ga.admin = { ...ga.admin, on: true, components: true, credits: false };
+ga.save.credits = 1000;
+ga.save.inventory = [];
+assert(ga.buyCannonChassis("peashooter") === null, "admin infinite components builds a gun with an empty hold");
+assert(ga.save.credits === 700, "admin infinite components still charges the credits");
+const gb = new Game(newSave(), "t") as any;
+gb.admin = { ...gb.admin, on: true, components: true, credits: false };
+gb.save.credits = 10;
+assert(gb.buyCannonChassis("peashooter") !== null, "and it still refuses when the credits are short");
 
 /* --- levels stay with their chassis --- */
 g.save.credits = 100000;

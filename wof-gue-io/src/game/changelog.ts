@@ -8,7 +8,7 @@
  *   CHANGELOG and mirror the details in docs/CHANGELOG.md.
  */
 
-export const VERSION = "2.12.0";
+export const VERSION = "2.12.1";
 
 export interface ChangeEntry {
   version: string;
@@ -19,6 +19,16 @@ export interface ChangeEntry {
 }
 
 export const CHANGELOG: ChangeEntry[] = [
+  {
+    version: "2.12.1",
+    date: "20 Nov 2026",
+    title: "Bills made of bits you actually find",
+    points: [
+      "Chassis bills are legs, common cores, heads and antennae now, with legs making up most of every bill. Skewer: 2 legs, an antenna, a head and an uncommon core. Peashooter: 2 legs, a common core and an uncommon core. Workhorse: 2 legs, a head, a common core and an uncommon core.",
+      "A head only counts if the part is actually called a Head and an antenna only counts if it is called an Antenna - a plain body segment or a tail spike will not do.",
+      "Admin mode's infinite components now works on the cannon tree: build any chassis with an empty hold, while the 300 credits are still charged.",
+    ],
+  },
   {
     version: "2.12.0",
     date: "20 Nov 2026",
