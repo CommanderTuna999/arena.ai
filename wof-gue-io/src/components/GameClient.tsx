@@ -676,6 +676,7 @@ function CannonTree({ game }: { game: Game }) {
     const problem = cannonBillProblem(save, c, freeParts, game.admin.on);
     /* the row is decided: everything else in it is out of the running */
     const dim = !owned && CANNONS.some((o) => o.id !== c.id && o.tier === c.tier && cannonOwned(save, o.id));
+    const heats = (c.heatMax ?? 1) > 1;
     const hot = Math.round(cannonDmg(c, cl) * (c.heatMax ?? 1));
     const isOpen = open === c.id;
     return (
@@ -725,7 +726,7 @@ function CannonTree({ game }: { game: Game }) {
               <div className="mt-1 flex flex-wrap gap-x-2 gap-y-0.5 text-[10px] text-white/60">
                 <span>
                   <b className="text-white/90">{fmtNum(cannonDmg(c, cl))}</b>
-                  {hot !== cannonDmg(c, cl) && <> → <b className="text-orange-300">{fmtNum(hot)}</b> hot</>} dmg
+                  {heats && <> → <b className="text-orange-300">{fmtNum(hot)}</b> hot</>} dmg
                 </span>
                 <span><b className="text-white/90">{cannonRate(c, cl).toFixed(c.hitscan ? 2 : 1)}</b>/s</span>
                 <span>{c.hitscan ? "hitscan" : `${c.range}u`}</span>
