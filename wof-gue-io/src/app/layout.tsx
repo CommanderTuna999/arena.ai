@@ -4,8 +4,12 @@ import { VERSION } from "@/game/changelog";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Wofgue.io",
-  description: "Wofgue.io — a neon geometric hunting ground. Strip insects of their parts, craft weapons and abilities, and survive the deeper zones.",
+  /* The tab says exactly this, on every page. */
+  title: { default: "wofgue.io", template: "%s" },
+  description: "wofgue.io — a neon geometric hunting ground. Strip insects of their parts, craft weapons and abilities, and survive the deeper zones.",
+  applicationName: "wofgue.io",
+  icons: { icon: [{ url: "/icon.svg", type: "image/svg+xml", sizes: "any" }], shortcut: "/icon.svg" },
+  openGraph: { title: "wofgue.io", siteName: "wofgue.io", description: "Hunt geometric insects. Strip their plating, shear their limbs, then break the core." },
   other: { "wof-version": VERSION },
 };
 
