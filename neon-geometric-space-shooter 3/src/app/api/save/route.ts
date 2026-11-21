@@ -9,6 +9,8 @@ const ID_RE = /^[a-zA-Z0-9_-]{8,64}$/;
 export async function GET(req: Request) {
   const id = new URL(req.url).searchParams.get("id") ?? "";
   if (!ID_RE.test(id)) return Response.json({ ok: false, error: "bad id" }, { status: 400 });
+  /* no database on this host: the client keeps its save locally */
+  if (!db) return Response.json({ ok: true, save: null, db: false });
   try {
     const rows = await db.select().from(players).where(eq(players.id, id)).limit(1);
     if (!rows.length) return Response.json({ ok: true, save: null });
@@ -26,6 +28,7 @@ export async function POST(req: Request) {
     if (!body.id || !ID_RE.test(body.id) || !body.save || typeof body.save !== "object") {
       return Response.json({ ok: false, error: "bad request" }, { status: 400 });
     }
+    if (!db) return Response.json({ ok: true, stored: false, db: false });
     const name = String(body.name ?? "Pilot").slice(0, 16);
     const kills = Math.max(0, Math.floor(Number(body.save.kills) || 0));
     await db
