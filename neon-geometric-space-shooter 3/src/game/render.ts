@@ -1225,21 +1225,57 @@ function drawEnemy(g: Game, ctx: CanvasRenderingContext2D, e: Enemy, z: number, 
   const drawOrder = detail === 0
     ? e.order
     : e.order.filter((idx, i) => i % stride === 0 || e.parts[idx].kind === "core" || e.parts[idx].kind === "weapon");
-  const showPlate = !simple && sr > 28 && e.shells.length > 0;
-  const plateStyles: { grow: number; stroke: string; width: number }[] = [];
-  if (showPlate) {
-    /* One rim is enough to read as plating. Stacking a stroke per shell layer
-     * turned dense mythical packs into a solid white web of overlapping lines. */
-    const si = e.shells.length - 1;
-    const f = clamp(e.shells[si].hp / Math.max(1, e.shells[si].max), 0, 1);
-    const hit = e.shellHit > 0 ? 0.15 : 0;
-    plateStyles.push({
-      grow: 3 + si * 4.5,
-      stroke: `hsla(${e.spd.hue},48%,64%,${0.24 + 0.26 * f + hit})`,
-      width: 2 / z,
-    });
-  }
+  /* ---- physical plating ----
+   * Solid steel slabs bolted around every body plate: a dark underlay for thickness,
+   * a filled top face and a bright rim, plus one faint ridge per extra layer. It is
+   * drawn in its own pass so the slabs sit under the whole body rather than painting
+   * over whatever limbs happen to come later in the draw order. */
+  const shellN = e.shells.length;
+  const showPlate = !simple && sr > 24 && shellN > 0;
   const plateMin = e.radius * 0.05;
+  if (showPlate) {
+    const top = e.shells[shellN - 1];
+    const f = clamp(top.hp / Math.max(1, top.max), 0, 1);
+    const hit = e.shellHit > 0 ? 0.18 : 0;
+    const grow = 4 + (shellN - 1) * 5;
+    const fill = `hsla(${e.spd.hue},15%,${16 + 12 * f}%,0.94)`;
+    const seam = `hsla(${e.spd.hue},32%,6%,0.6)`;
+    const rim = `hsla(${e.spd.hue},58%,${56 + 20 * f}%,${0.55 + 0.4 * f + hit})`;
+    const rimW = 1.8 / z;
+    const platePath = (p: { poly: number[]; cx: number; cy: number; r: number }, g: number) => {
+      const k = 1 + Math.min(g, p.r * 0.9) / Math.max(1, p.r);
+      ctx.beginPath();
+      for (let i = 0; i < p.poly.length; i += 2) {
+        const vx = p.cx + (p.poly[i] - p.cx) * k;
+        const vy = p.cy + (p.poly[i + 1] - p.cy) * k;
+        if (i === 0) ctx.moveTo(vx, vy); else ctx.lineTo(vx, vy);
+      }
+      ctx.closePath();
+    };
+    for (const idx of drawOrder) {
+      const p = e.parts[idx];
+      if (!p.alive || p.r <= plateMin || !PLATE_KINDS.has(p.kind)) continue;
+      const grp = p.g >= 0 ? e.groups[p.g] : null;
+      const gs = !!(grp && grp.ang !== 0);
+      if (grp && gs) { ctx.save(); ctx.translate(grp.px, grp.py); ctx.rotate(grp.ang); ctx.translate(-grp.px, -grp.py); }
+      const bo = bend(e, p);
+      const bs = bo !== 0;
+      if (bs) { ctx.save(); ctx.translate(0, bo); }
+      platePath(p, grow + 2.4);
+      ctx.fillStyle = seam; ctx.fill();
+      platePath(p, grow);
+      ctx.fillStyle = fill; ctx.fill();
+      ctx.strokeStyle = rim; ctx.lineWidth = rimW; ctx.stroke();
+      for (let i = 1; i < shellN; i++) {
+        ctx.globalAlpha = 0.5;
+        platePath(p, grow * (1 - i / (shellN + 0.6)));
+        ctx.lineWidth = 1.1 / z; ctx.stroke();
+      }
+      ctx.globalAlpha = 1;
+      if (bs) ctx.restore();
+      if (gs) ctx.restore();
+    }
+  }
   for (const idx of drawOrder) {
     const p = e.parts[idx];
     if (!p.alive) continue;
@@ -1247,21 +1283,6 @@ function drawEnemy(g: Game, ctx: CanvasRenderingContext2D, e: Enemy, z: number, 
     if (gr && gr.ang !== 0) { ctx.save(); ctx.translate(gr.px, gr.py); ctx.rotate(gr.ang); ctx.translate(-gr.px, -gr.py); }
     const bo = bend(e, p);
     if (bo !== 0) { ctx.save(); ctx.translate(0, bo); }
-    /* Plating sits *under* the part it wraps, so species colours stay visible
-     * and small covered plates cannot float on top of wings as grey hexes. */
-    if (plateStyles.length && p.r > plateMin && PLATE_KINDS.has(p.kind)) {
-      for (const st of plateStyles) {
-        const k = 1 + Math.min(st.grow, p.r * 0.45) / Math.max(1, p.r);
-        ctx.beginPath();
-        for (let i = 0; i < p.poly.length; i += 2) {
-          const vx = p.cx + (p.poly[i] - p.cx) * k;
-          const vy = p.cy + (p.poly[i + 1] - p.cy) * k;
-          if (i === 0) ctx.moveTo(vx, vy); else ctx.lineTo(vx, vy);
-        }
-        ctx.closePath();
-        ctx.strokeStyle = st.stroke; ctx.lineWidth = st.width; ctx.stroke();
-      }
-    }
     polyPath(ctx, p.poly);
     const hf = p.hp / p.maxHp;
     const hurt = p.hurt > 0;

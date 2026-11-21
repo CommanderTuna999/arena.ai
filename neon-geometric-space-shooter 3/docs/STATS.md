@@ -1,6 +1,6 @@
 # wof gue — complete stat compendium
 
-Build 2.0.4 · generated 21 Nov 2026 · every figure is a live simulation constant, not a design target.
+Build 2.0.6 · generated 21 Nov 2026 · every figure is a live simulation constant, not a design target.
 
 How to read it: enemy health is the sum of every part at that rarity tier. Enemy damage is listed as a multiplier of the tier damage (eDmg), because every bite, bolt, blast and contact hit scales from that one number. Weapon damage is a multiplier of the player cannon damage (st.dmg = 10 x 1.2^Cannon Damage level). Efficiency (eff) is the crafted item quality: 0.30 minimum, 1.00 typical; the raw formula can reach 2.25 on an unrestricted tier-5 core build and 1.80 on a 7-part difficulty-5 recipe.
 
@@ -36,16 +36,16 @@ Top-up refills only toward 85% of the local cap: 48 / 41 / 34 / 12 / 7 / 3 enemi
 ============================================================
 
 Type | Carried by | Enemy energy shield | Enemy hull shells | Player shield (damageProfile)
-Kinetic | base cannon, scatter, hmg, rail, drones | STOPPED dead; no shield drain | bullet: 30%; beam: 0% | crafting label: kinetic/phase/ward/reflector/prismatic/nullfield shields
-Energy | pulse, lance, bypass | passes through | bullet: 30%; beam: 0% | crafting label: every player shield
-Explosive | missile, homing, flak, mines, cluster | STOPPED dead; no shield drain | bullet: 30%; blast: 30% | crafting label: kinetic and prismatic shields only
-Shock | emp, chain, gravity, sonic | passes through; direct AoE bypasses | direct AoE: 0% if shelled; bullets: 30% | crafting label: every player shield
-Corrosive | acid, venom | STOPPED dead; no shield drain | bullet: 30%; acid adds melt | armour label: titan/carapace/chitin block it
-Thermal | cutter | passes through | beam: 0% | crafting label: every player shield
-Physical | collisions, knockback, shockwave abilities | collisions are not projectiles; physical rounds stopped | usually no shell interaction | armour label: every armour blocks physical
+Kinetic | base cannon, scatter, hmg, rail, drones | STOPPED dead; no shield drain | bullet: 30%; beam: 22% | crafting label: kinetic/phase/ward/reflector/prismatic/nullfield shields
+Energy | pulse, lance, bypass | passes through | bullet: 30%; beam: 22% | crafting label: every player shield
+Explosive | missile, homing, flak, mines, cluster | STOPPED dead; no shield drain | missile/flak: 40%; blast: 40% | crafting label: kinetic and prismatic shields only
+Shock | emp, chain, gravity, sonic | passes through; direct AoE bypasses | blast: 15%; EMP/chain/sonic skip shelled enemies | crafting label: every player shield
+Corrosive | acid, venom | STOPPED dead; no shield drain | bullet: 30% | armour label: titan/carapace/chitin block it
+Thermal | cutter | passes through | beam: 22% | crafting label: every player shield
+Physical | collisions, knockback, shockwave abilities | collisions are not projectiles; physical rounds stopped | no shell check on collisions | armour label: every armour blocks physical
 
 Enemy energy-shield bubble: a Shield Generator part projects a hex bubble of 1.9 x body size that covers only that generator, not the whole body; a shot outside the hex reaches the hull normally. Energy, shock and thermal projectiles and beams pass straight through and hit the generator inside. Every other projectile is stopped dead at the hex edge with no effect on the bubble or the hull: the bubble has no charge to strip, so it never collapses, re-arms or regenerates, and only disappears when its Shield Generator part is destroyed. The Shield-Bypass Laser still ignores bubbles; the Rail Sniper no longer does, and hull shells still stop the rail. Direct area effects (EMP, chain lightning, sonic, gravity, mines, explosions, collisions) do not run the bubble check.
-Enemy hull shells (plating): tier 2+ enemies get tier-1 layers, 5 x HP_MUL[tier] HP each. Bullet impacts deal 30% damage to a layer regardless of damage type; beam impacts deal 0; area effects deal 30%. A layer shatters into a shockwave when destroyed. Tier 5 mythical: 4 layers of 8,000 HP each.
+Enemy hull shells (plating): tier 2+ enemies get tier-1 solid armour layers, each holding 60% of the enemy total hull, bolted over the body as steel slabs. A hit is swallowed by the outermost layer and only a share of it is lost: bullets 30%, missile/flak rounds 40%, beams 22%, area blasts 40%, shockwaves 15% (EMP, chain lightning and sonic skip shelled enemies entirely). Plate Breaker multiplies the plate loss by up to 2.5x. A layer shatters into a damaging shockwave when destroyed. Tier 5 mythical: 4 layers of 60% hull each, e.g. 943,872 HP per layer (3.8M total) on a 1,573,120 hull.
 Player defence labels: the Blocks column comes from damageProfile, which the crafting UI displays. Actual player mitigation is type-agnostic: armour reduces every incoming hit, then shield absorbs the remainder, then hull takes the rest. Kinetic Barrier adds another multiplier while shield holds; dodge is checked before all of it.
 
 ============================================================
@@ -60,11 +60,11 @@ Movement: flying; speed 210u/s; turn 3.4; ranged, keeps 330u; muzzle 2.2 body-si
 Hull by tier:
   T0: 310 HP total; core 30; largest part 30; 30 parts; radius 101u; no energy shield.
   T1: 1,405 HP total; core 120; largest part 120; 33 parts; radius 167u; no energy shield.
-  T2: 9,792 HP total; core 540; largest part 540; 44 parts; radius 276u; no energy shield; 1 hull shell (90 HP).
-  T3: 62,496 HP total; core 2,400; largest part 2,400; 63 parts; radius 455u; 1 shield generator (239-239u bubbles; energy/shock/thermal pass); 2 hull shells (800 HP).
-  T4: 328,608 HP total; core 10,800; largest part 12,672; 69 parts; radius 751u; 2 shield generators (394-434u bubbles; energy/shock/thermal pass); 3 hull shells (5,400 HP).
-  T5: 1,573,120 HP total; core 48,000; largest part 56,320; 73 parts; radius 1,239u; 2 shield generators (651-716u bubbles; energy/shock/thermal pass); 4 hull shells (32,000 HP).
-Defence: energy shields appear at tier 3+; hull shells at tier 2+.
+  T2: 9,792 HP total; core 540; largest part 540; 44 parts; radius 276u; no energy shield; 1 hull shell (5,875 HP).
+  T3: 62,496 HP total; core 2,400; largest part 2,400; 63 parts; radius 455u; 1 shield generator (239-239u bubbles; energy/shock/thermal pass); 2 hull shells (74,996 HP).
+  T4: 328,608 HP total; core 10,800; largest part 12,672; 69 parts; radius 751u; 2 shield generators (394-434u bubbles; energy/shock/thermal pass); 3 hull shells (591,495 HP).
+  T5: 1,573,120 HP total; core 48,000; largest part 56,320; 73 parts; radius 1,239u; 2 shield generators (651-716u bubbles; energy/shock/thermal pass); 4 hull shells (3,775,488 HP).
+Defence: energy shields appear at tier 3+; hull shells at tier 2+ (60% hull per layer, ~4x that in kinetic fire).
 Damage: eDmg 16 / 48 / 144 / 432 / 1,296 / 3,888 by tier. Contact = 0.25x eDmg every 0.7s. Weapon mounts: 6 gun(s) (0.4x eDmg, 1.1-1.7s cadence) and 0 missile pod(s) (1.1x eDmg, 4.5-6s cadence) at T5; T3 has 2 gun(s) / 0 pod(s). Destroying a weapon part explodes for 1.8x eDmg to the player; other parts explode for 1.3x.
 Abilities (4):
   - Ion Bolt [shoot], from T1, 1.8s cooldown: 0.7x eDmg damage (2,722 at T5); 0.3s wind-up; 2 projectiles at T5 (1 + 0.3/tier); 0.15 rad spread; 700 u/s; 1.4s life; size 6; slow to 0.75x for 1.2s; range 0-950u; bolt projectile.
@@ -78,11 +78,11 @@ Movement: ground; speed 115u/s; turn 2.4; melee, no keep distance; muzzle 2.6 bo
 Hull by tier:
   T0: 486 HP total; core 30; largest part 30; 41 parts; radius 108u; no energy shield.
   T1: 1,987 HP total; core 120; largest part 120; 42 parts; radius 178u; no energy shield.
-  T2: 12,262 HP total; core 540; largest part 540; 56 parts; radius 294u; no energy shield; 1 hull shell (90 HP).
-  T3: 85,760 HP total; core 2,400; largest part 2,400; 89 parts; radius 485u; no energy shield; 2 hull shells (800 HP).
-  T4: 498,960 HP total; core 10,800; largest part 12,672; 103 parts; radius 800u; no energy shield; 3 hull shells (5,400 HP).
-  T5: 2,288,000 HP total; core 48,000; largest part 56,320; 105 parts; radius 1,321u; no energy shield; 4 hull shells (32,000 HP).
-Defence: no energy shields at any tier; hull shells at tier 2+.
+  T2: 12,262 HP total; core 540; largest part 540; 56 parts; radius 294u; no energy shield; 1 hull shell (7,357 HP).
+  T3: 85,760 HP total; core 2,400; largest part 2,400; 89 parts; radius 485u; no energy shield; 2 hull shells (102,912 HP).
+  T4: 498,960 HP total; core 10,800; largest part 12,672; 103 parts; radius 800u; no energy shield; 3 hull shells (898,128 HP).
+  T5: 2,288,000 HP total; core 48,000; largest part 56,320; 105 parts; radius 1,321u; no energy shield; 4 hull shells (5,491,200 HP).
+Defence: no energy shields at any tier; hull shells at tier 2+ (60% hull per layer, ~4x that in kinetic fire).
 Damage: eDmg 16 / 48 / 144 / 432 / 1,296 / 3,888 by tier. Contact = 0.25x eDmg every 0.7s. Weapon mounts: 6 gun(s) (0.4x eDmg, 1.1-1.7s cadence) and 0 missile pod(s) (1.1x eDmg, 4.5-6s cadence) at T5; T3 has 2 gun(s) / 0 pod(s). Destroying a weapon part explodes for 1.8x eDmg to the player; other parts explode for 1.3x.
 Abilities (4):
   - Pincer Clamp [swing], from T1, 2.6s cooldown: 2x eDmg damage (7,776 at T5); 0.5s wind-up; range 0-3.5 body-size units; arm swing; requires intact Pincer.
@@ -96,11 +96,11 @@ Movement: ground; speed 140u/s; turn 2.8; ranged, keeps 300u; muzzle 2.2 body-si
 Hull by tier:
   T0: 406 HP total; core 30; largest part 30; 40 parts; radius 110u; no energy shield.
   T1: 1,644 HP total; core 120; largest part 120; 41 parts; radius 182u; no energy shield.
-  T2: 9,947 HP total; core 540; largest part 540; 52 parts; radius 301u; no energy shield; 1 hull shell (90 HP).
-  T3: 74,928 HP total; core 2,400; largest part 2,400; 90 parts; radius 496u; no energy shield; 2 hull shells (800 HP).
-  T4: 446,328 HP total; core 10,800; largest part 12,672; 103 parts; radius 818u; no energy shield; 3 hull shells (5,400 HP).
-  T5: 2,054,080 HP total; core 48,000; largest part 56,320; 105 parts; radius 1,350u; no energy shield; 4 hull shells (32,000 HP).
-Defence: no energy shields at any tier; hull shells at tier 2+.
+  T2: 9,947 HP total; core 540; largest part 540; 52 parts; radius 301u; no energy shield; 1 hull shell (5,968 HP).
+  T3: 74,928 HP total; core 2,400; largest part 2,400; 90 parts; radius 496u; no energy shield; 2 hull shells (89,914 HP).
+  T4: 446,328 HP total; core 10,800; largest part 12,672; 103 parts; radius 818u; no energy shield; 3 hull shells (803,391 HP).
+  T5: 2,054,080 HP total; core 48,000; largest part 56,320; 105 parts; radius 1,350u; no energy shield; 4 hull shells (4,929,792 HP).
+Defence: no energy shields at any tier; hull shells at tier 2+ (60% hull per layer, ~4x that in kinetic fire).
 Damage: eDmg 16 / 48 / 144 / 432 / 1,296 / 3,888 by tier. Contact = 0.25x eDmg every 0.7s. Weapon mounts: 0 gun(s) (0.4x eDmg, 1.1-1.7s cadence) and 4 missile pod(s) (1.1x eDmg, 4.5-6s cadence) at T5; no gun or missile mounts at T3. Destroying a weapon part explodes for 1.8x eDmg to the player; other parts explode for 1.3x.
 Abilities (4):
   - Web Shot [shoot], from T1, 6s cooldown: 0.4x eDmg damage (1,555 at T5); 0.5s wind-up; 1 projectile at T5 (1); 460 u/s; 1.8s life; size 12; slow to 0.5x for 2.5s; range 120-800u; web projectile.
@@ -114,11 +114,11 @@ Movement: flying; speed 130u/s; turn 2.6; ranged, keeps 380u; muzzle 1.4 body-si
 Hull by tier:
   T0: 350 HP total; core 30; largest part 30; 34 parts; radius 71u; no energy shield.
   T1: 1,683 HP total; core 120; largest part 120; 38 parts; radius 116u; no energy shield.
-  T2: 8,957 HP total; core 540; largest part 540; 45 parts; radius 192u; no energy shield; 1 hull shell (90 HP).
-  T3: 67,232 HP total; core 2,400; largest part 2,400; 64 parts; radius 317u; 1 shield generator (239-239u bubbles; energy/shock/thermal pass); 2 hull shells (800 HP).
-  T4: 337,248 HP total; core 10,800; largest part 12,672; 68 parts; radius 523u; 2 shield generators (394-434u bubbles; energy/shock/thermal pass); 3 hull shells (5,400 HP).
-  T5: 1,540,480 HP total; core 48,000; largest part 56,320; 69 parts; radius 862u; 3 shield generators (651-781u bubbles; energy/shock/thermal pass); 4 hull shells (32,000 HP).
-Defence: energy shields appear at tier 3+; hull shells at tier 2+.
+  T2: 8,957 HP total; core 540; largest part 540; 45 parts; radius 192u; no energy shield; 1 hull shell (5,374 HP).
+  T3: 67,232 HP total; core 2,400; largest part 2,400; 64 parts; radius 317u; 1 shield generator (239-239u bubbles; energy/shock/thermal pass); 2 hull shells (80,678 HP).
+  T4: 337,248 HP total; core 10,800; largest part 12,672; 68 parts; radius 523u; 2 shield generators (394-434u bubbles; energy/shock/thermal pass); 3 hull shells (607,047 HP).
+  T5: 1,540,480 HP total; core 48,000; largest part 56,320; 69 parts; radius 862u; 3 shield generators (651-781u bubbles; energy/shock/thermal pass); 4 hull shells (3,697,152 HP).
+Defence: energy shields appear at tier 3+; hull shells at tier 2+ (60% hull per layer, ~4x that in kinetic fire).
 Damage: eDmg 16 / 48 / 144 / 432 / 1,296 / 3,888 by tier. Contact = 0.25x eDmg every 0.7s. Weapon mounts: 0 gun(s) (0.4x eDmg, 1.1-1.7s cadence) and 0 missile pod(s) (1.1x eDmg, 4.5-6s cadence) at T5; no gun or missile mounts at T3. Destroying a weapon part explodes for 1.8x eDmg to the player; other parts explode for 1.3x.
 Abilities (4):
   - Scale Dust [cloud], from T1, 8s cooldown: 0.4x eDmg damage (1,555 at T5); 0.6s wind-up; size 2.8; slow to 0.55x for 1.5s; range 0-700u; spawns on the player.
@@ -132,11 +132,11 @@ Movement: ground; speed 120u/s; turn 3; melee, no keep distance; muzzle 2 body-s
 Hull by tier:
   T0: 428 HP total; core 30; largest part 30; 36 parts; radius 92u; no energy shield.
   T1: 1,710 HP total; core 120; largest part 120; 36 parts; radius 152u; no energy shield.
-  T2: 9,022 HP total; core 540; largest part 540; 43 parts; radius 251u; no energy shield; 1 hull shell (90 HP).
-  T3: 70,464 HP total; core 2,400; largest part 2,400; 72 parts; radius 414u; 1 shield generator (239-239u bubbles; energy/shock/thermal pass); 2 hull shells (800 HP).
-  T4: 350,640 HP total; core 10,800; largest part 12,672; 76 parts; radius 683u; 2 shield generators (394-434u bubbles; energy/shock/thermal pass); 3 hull shells (5,400 HP).
-  T5: 1,886,720 HP total; core 48,000; largest part 56,320; 85 parts; radius 1,127u; 3 shield generators (651-781u bubbles; energy/shock/thermal pass); 4 hull shells (32,000 HP).
-Defence: energy shields appear at tier 3+; hull shells at tier 2+.
+  T2: 9,022 HP total; core 540; largest part 540; 43 parts; radius 251u; no energy shield; 1 hull shell (5,413 HP).
+  T3: 70,464 HP total; core 2,400; largest part 2,400; 72 parts; radius 414u; 1 shield generator (239-239u bubbles; energy/shock/thermal pass); 2 hull shells (84,556 HP).
+  T4: 350,640 HP total; core 10,800; largest part 12,672; 76 parts; radius 683u; 2 shield generators (394-434u bubbles; energy/shock/thermal pass); 3 hull shells (631,152 HP).
+  T5: 1,886,720 HP total; core 48,000; largest part 56,320; 85 parts; radius 1,127u; 3 shield generators (651-781u bubbles; energy/shock/thermal pass); 4 hull shells (4,528,128 HP).
+Defence: energy shields appear at tier 3+; hull shells at tier 2+ (60% hull per layer, ~4x that in kinetic fire).
 Damage: eDmg 16 / 48 / 144 / 432 / 1,296 / 3,888 by tier. Contact = 0.25x eDmg every 0.7s. Weapon mounts: 0 gun(s) (0.4x eDmg, 1.1-1.7s cadence) and 0 missile pod(s) (1.1x eDmg, 4.5-6s cadence) at T5; no gun or missile mounts at T3. Destroying a weapon part explodes for 1.8x eDmg to the player; other parts explode for 1.3x.
 Abilities (4):
   - Scythe Strike [swing], from T1, 2.2s cooldown: 2.4x eDmg damage (9,331 at T5); 0.5s wind-up; range 0-3.2 body-size units; arm swing; requires intact Raptor Blade.
@@ -154,7 +154,7 @@ Hull by tier:
   T3: 224,288 HP total; core 2,400; largest part 2,400; 273 parts; radius 863u; no energy shield.
   T4: 1,162,800 HP total; core 10,800; largest part 12,672; 313 parts; radius 1,505u; no energy shield.
   T5: 5,793,920 HP total; core 48,000; largest part 56,320; 352 parts; radius 2,618u; no energy shield.
-Defence: serpentine body (no hull shells); no energy shields at any tier; hull shells at tier 2+.
+Defence: serpentine body (no hull shells); no energy shields at any tier; hull shells at tier 2+ (60% hull per layer, ~4x that in kinetic fire).
 Damage: eDmg 16 / 48 / 144 / 432 / 1,296 / 3,888 by tier. Contact = 0.25x eDmg every 0.7s. Weapon mounts: 0 gun(s) (0.4x eDmg, 1.1-1.7s cadence) and 0 missile pod(s) (1.1x eDmg, 4.5-6s cadence) at T5; no gun or missile mounts at T3. Destroying a weapon part explodes for 1.8x eDmg to the player; other parts explode for 1.3x.
 Abilities (4):
   - Forcipule Bite [swing], from T1, 2s cooldown: 1.8x eDmg damage (6,998 at T5); 0.4s wind-up; range 0-3.6 body-size units; mandible swing; requires intact Forcipule.
@@ -168,11 +168,11 @@ Movement: flying; speed 190u/s; turn 3.6; melee, no keep distance; muzzle 1.8 bo
 Hull by tier:
   T0: 403 HP total; core 30; largest part 30; 38 parts; radius 99u; no energy shield.
   T1: 1,682 HP total; core 120; largest part 120; 39 parts; radius 164u; no energy shield.
-  T2: 8,978 HP total; core 540; largest part 540; 43 parts; radius 271u; no energy shield; 1 hull shell (90 HP).
-  T3: 56,992 HP total; core 2,400; largest part 2,400; 66 parts; radius 447u; no energy shield; 2 hull shells (800 HP).
-  T4: 307,152 HP total; core 10,800; largest part 12,672; 72 parts; radius 737u; no energy shield; 3 hull shells (5,400 HP).
-  T5: 1,393,280 HP total; core 48,000; largest part 56,320; 73 parts; radius 1,216u; no energy shield; 4 hull shells (32,000 HP).
-Defence: no energy shields at any tier; hull shells at tier 2+.
+  T2: 8,978 HP total; core 540; largest part 540; 43 parts; radius 271u; no energy shield; 1 hull shell (5,387 HP).
+  T3: 56,992 HP total; core 2,400; largest part 2,400; 66 parts; radius 447u; no energy shield; 2 hull shells (68,390 HP).
+  T4: 307,152 HP total; core 10,800; largest part 12,672; 72 parts; radius 737u; no energy shield; 3 hull shells (552,873 HP).
+  T5: 1,393,280 HP total; core 48,000; largest part 56,320; 73 parts; radius 1,216u; no energy shield; 4 hull shells (3,343,872 HP).
+Defence: no energy shields at any tier; hull shells at tier 2+ (60% hull per layer, ~4x that in kinetic fire).
 Damage: eDmg 16 / 48 / 144 / 432 / 1,296 / 3,888 by tier. Contact = 0.25x eDmg every 0.7s. Weapon mounts: 6 gun(s) (0.4x eDmg, 1.1-1.7s cadence) and 0 missile pod(s) (1.1x eDmg, 4.5-6s cadence) at T5; T3 has 2 gun(s) / 0 pod(s). Destroying a weapon part explodes for 1.8x eDmg to the player; other parts explode for 1.3x.
 Abilities (4):
   - Mandible Snap [swing], from T1, 2s cooldown: 1.2x eDmg damage (4,666 at T5); 0.35s wind-up; range 0-2.2 body-size units; mandible swing; requires intact Mandible.
@@ -186,11 +186,11 @@ Movement: ground; speed 110u/s; turn 2.8; melee, no keep distance; muzzle 2.8 bo
 Hull by tier:
   T0: 362 HP total; core 30; largest part 30; 29 parts; radius 84u; no energy shield.
   T1: 1,448 HP total; core 120; largest part 120; 29 parts; radius 139u; no energy shield.
-  T2: 8,768 HP total; core 540; largest part 540; 48 parts; radius 230u; no energy shield; 1 hull shell (90 HP).
-  T3: 71,448 HP total; core 2,400; largest part 2,400; 70 parts; radius 379u; 1 shield generator (239-239u bubbles; energy/shock/thermal pass); 2 hull shells (800 HP).
-  T4: 406,908 HP total; core 10,800; largest part 12,672; 92 parts; radius 626u; 2 shield generators (394-434u bubbles; energy/shock/thermal pass); 3 hull shells (5,400 HP).
-  T5: 2,307,680 HP total; core 48,000; largest part 56,320; 106 parts; radius 1,032u; 2 shield generators (651-716u bubbles; energy/shock/thermal pass); 4 hull shells (32,000 HP).
-Defence: energy shields appear at tier 3+; hull shells at tier 2+.
+  T2: 8,768 HP total; core 540; largest part 540; 48 parts; radius 230u; no energy shield; 1 hull shell (5,261 HP).
+  T3: 71,448 HP total; core 2,400; largest part 2,400; 70 parts; radius 379u; 1 shield generator (239-239u bubbles; energy/shock/thermal pass); 2 hull shells (85,738 HP).
+  T4: 406,908 HP total; core 10,800; largest part 12,672; 92 parts; radius 626u; 2 shield generators (394-434u bubbles; energy/shock/thermal pass); 3 hull shells (732,435 HP).
+  T5: 2,307,680 HP total; core 48,000; largest part 56,320; 106 parts; radius 1,032u; 2 shield generators (651-716u bubbles; energy/shock/thermal pass); 4 hull shells (5,538,432 HP).
+Defence: energy shields appear at tier 3+; hull shells at tier 2+ (60% hull per layer, ~4x that in kinetic fire).
 Damage: eDmg 16 / 48 / 144 / 432 / 1,296 / 3,888 by tier. Contact = 0.25x eDmg every 0.7s. Weapon mounts: 6 gun(s) (0.4x eDmg, 1.1-1.7s cadence) and 4 missile pod(s) (1.1x eDmg, 4.5-6s cadence) at T5; T3 has 2 gun(s) / 0 pod(s). Destroying a weapon part explodes for 1.8x eDmg to the player; other parts explode for 1.3x.
 Abilities (3):
   - Mandible Crush [swing], from T1, 2.4s cooldown: 1.8x eDmg damage (6,998 at T5); 0.45s wind-up; range 0-2.7 body-size units; mandible swing; requires intact Mandible.
@@ -203,11 +203,11 @@ Movement: ground; speed 150u/s; turn 3.4; melee, no keep distance; muzzle 3 body
 Hull by tier:
   T0: 390 HP total; core 30; largest part 30; 34 parts; radius 93u; no energy shield.
   T1: 1,562 HP total; core 120; largest part 120; 34 parts; radius 153u; no energy shield.
-  T2: 9,144 HP total; core 540; largest part 540; 52 parts; radius 253u; no energy shield; 1 hull shell (90 HP).
-  T3: 71,040 HP total; core 2,400; largest part 2,400; 73 parts; radius 418u; no energy shield; 2 hull shells (800 HP).
-  T4: 374,112 HP total; core 10,800; largest part 12,672; 88 parts; radius 689u; no energy shield; 3 hull shells (5,400 HP).
-  T5: 1,733,120 HP total; core 48,000; largest part 56,320; 90 parts; radius 1,137u; no energy shield; 4 hull shells (32,000 HP).
-Defence: no energy shields at any tier; hull shells at tier 2+.
+  T2: 9,144 HP total; core 540; largest part 540; 52 parts; radius 253u; no energy shield; 1 hull shell (5,486 HP).
+  T3: 71,040 HP total; core 2,400; largest part 2,400; 73 parts; radius 418u; no energy shield; 2 hull shells (85,248 HP).
+  T4: 374,112 HP total; core 10,800; largest part 12,672; 88 parts; radius 689u; no energy shield; 3 hull shells (673,401 HP).
+  T5: 1,733,120 HP total; core 48,000; largest part 56,320; 90 parts; radius 1,137u; no energy shield; 4 hull shells (4,159,488 HP).
+Defence: no energy shields at any tier; hull shells at tier 2+ (60% hull per layer, ~4x that in kinetic fire).
 Damage: eDmg 16 / 48 / 144 / 432 / 1,296 / 3,888 by tier. Contact = 0.25x eDmg every 0.7s. Weapon mounts: 6 gun(s) (0.4x eDmg, 1.1-1.7s cadence) and 0 missile pod(s) (1.1x eDmg, 4.5-6s cadence) at T5; T3 has 2 gun(s) / 0 pod(s). Destroying a weapon part explodes for 1.8x eDmg to the player; other parts explode for 1.3x.
 Abilities (4):
   - Mandible Crush [swing], from T1, 2s cooldown: 1.6x eDmg damage (6,221 at T5); 0.4s wind-up; range 0-3.1 body-size units; mandible swing; requires intact Mandible.
@@ -221,11 +221,11 @@ Movement: flying; speed 125u/s; turn 2.8; ranged, keeps 340u; muzzle 1.7 body-si
 Hull by tier:
   T0: 352 HP total; core 30; largest part 30; 33 parts; radius 91u; no energy shield.
   T1: 1,522 HP total; core 120; largest part 120; 35 parts; radius 150u; no energy shield.
-  T2: 7,308 HP total; core 540; largest part 540; 36 parts; radius 248u; no energy shield; 1 hull shell (90 HP).
-  T3: 67,648 HP total; core 2,400; largest part 2,400; 71 parts; radius 410u; 1 shield generator (239-239u bubbles; energy/shock/thermal pass); 2 hull shells (800 HP).
-  T4: 342,288 HP total; core 10,800; largest part 12,672; 75 parts; radius 676u; 2 shield generators (394-434u bubbles; energy/shock/thermal pass); 3 hull shells (5,400 HP).
-  T5: 1,633,280 HP total; core 48,000; largest part 56,320; 78 parts; radius 1,115u; 3 shield generators (651-781u bubbles; energy/shock/thermal pass); 4 hull shells (32,000 HP).
-Defence: energy shields appear at tier 3+; hull shells at tier 2+.
+  T2: 7,308 HP total; core 540; largest part 540; 36 parts; radius 248u; no energy shield; 1 hull shell (4,385 HP).
+  T3: 67,648 HP total; core 2,400; largest part 2,400; 71 parts; radius 410u; 1 shield generator (239-239u bubbles; energy/shock/thermal pass); 2 hull shells (81,178 HP).
+  T4: 342,288 HP total; core 10,800; largest part 12,672; 75 parts; radius 676u; 2 shield generators (394-434u bubbles; energy/shock/thermal pass); 3 hull shells (616,119 HP).
+  T5: 1,633,280 HP total; core 48,000; largest part 56,320; 78 parts; radius 1,115u; 3 shield generators (651-781u bubbles; energy/shock/thermal pass); 4 hull shells (3,919,872 HP).
+Defence: energy shields appear at tier 3+; hull shells at tier 2+ (60% hull per layer, ~4x that in kinetic fire).
 Damage: eDmg 16 / 48 / 144 / 432 / 1,296 / 3,888 by tier. Contact = 0.25x eDmg every 0.7s. Weapon mounts: 6 gun(s) (0.4x eDmg, 1.1-1.7s cadence) and 0 missile pod(s) (1.1x eDmg, 4.5-6s cadence) at T5; T3 has 2 gun(s) / 0 pod(s). Destroying a weapon part explodes for 1.8x eDmg to the player; other parts explode for 1.3x.
 Abilities (4):
   - Glow Orb [shoot], from T1, 3s cooldown: 0.8x eDmg damage (3,110 at T5); 0.4s wind-up; 3 projectiles at T5 (1 + 0.4/tier); 0.5 rad spread; 300 u/s; 4.5s life; size 9; slow to 0.8x for 1s; homing 1.2 rad/s; range 0-850u; orb projectile.
@@ -239,11 +239,11 @@ Movement: ground; speed 165u/s; turn 3.8; melee, no keep distance; muzzle 2.6 bo
 Hull by tier:
   T0: 394 HP total; core 30; largest part 30; 34 parts; radius 96u; no energy shield.
   T1: 1,574 HP total; core 120; largest part 120; 34 parts; radius 158u; no energy shield.
-  T2: 9,202 HP total; core 540; largest part 540; 52 parts; radius 261u; no energy shield; 1 hull shell (90 HP).
-  T3: 73,536 HP total; core 2,400; largest part 2,400; 83 parts; radius 431u; no energy shield; 2 hull shells (800 HP).
-  T4: 343,584 HP total; core 10,800; largest part 12,672; 84 parts; radius 712u; no energy shield; 3 hull shells (5,400 HP).
-  T5: 1,527,040 HP total; core 48,000; largest part 56,320; 84 parts; radius 1,175u; no energy shield; 4 hull shells (32,000 HP).
-Defence: no energy shields at any tier; hull shells at tier 2+.
+  T2: 9,202 HP total; core 540; largest part 540; 52 parts; radius 261u; no energy shield; 1 hull shell (5,521 HP).
+  T3: 73,536 HP total; core 2,400; largest part 2,400; 83 parts; radius 431u; no energy shield; 2 hull shells (88,244 HP).
+  T4: 343,584 HP total; core 10,800; largest part 12,672; 84 parts; radius 712u; no energy shield; 3 hull shells (618,450 HP).
+  T5: 1,527,040 HP total; core 48,000; largest part 56,320; 84 parts; radius 1,175u; no energy shield; 4 hull shells (3,664,896 HP).
+Defence: no energy shields at any tier; hull shells at tier 2+ (60% hull per layer, ~4x that in kinetic fire).
 Damage: eDmg 16 / 48 / 144 / 432 / 1,296 / 3,888 by tier. Contact = 0.25x eDmg every 0.7s. Weapon mounts: 0 gun(s) (0.4x eDmg, 1.1-1.7s cadence) and 0 missile pod(s) (1.1x eDmg, 4.5-6s cadence) at T5; no gun or missile mounts at T3. Destroying a weapon part explodes for 1.8x eDmg to the player; other parts explode for 1.3x.
 Abilities (3):
   - Mandible Crush [swing], from T1, 2.1s cooldown: 1.4x eDmg damage (5,443 at T5); 0.4s wind-up; range 0-2.9 body-size units; mandible swing; requires intact Mandible.
@@ -256,11 +256,11 @@ Movement: flying; speed 175u/s; turn 3.6; melee, no keep distance; muzzle 1.9 bo
 Hull by tier:
   T0: 451 HP total; core 30; largest part 30; 39 parts; radius 94u; no energy shield.
   T1: 1,872 HP total; core 120; largest part 120; 40 parts; radius 155u; no energy shield.
-  T2: 10,787 HP total; core 540; largest part 540; 58 parts; radius 256u; no energy shield; 1 hull shell (90 HP).
-  T3: 69,576 HP total; core 2,400; largest part 2,400; 73 parts; radius 422u; no energy shield; 2 hull shells (800 HP).
-  T4: 332,100 HP total; core 10,800; largest part 12,672; 75 parts; radius 696u; no energy shield; 3 hull shells (5,400 HP).
-  T5: 1,504,160 HP total; core 48,000; largest part 56,320; 76 parts; radius 1,149u; no energy shield; 4 hull shells (32,000 HP).
-Defence: no energy shields at any tier; hull shells at tier 2+.
+  T2: 10,787 HP total; core 540; largest part 540; 58 parts; radius 256u; no energy shield; 1 hull shell (6,472 HP).
+  T3: 69,576 HP total; core 2,400; largest part 2,400; 73 parts; radius 422u; no energy shield; 2 hull shells (83,492 HP).
+  T4: 332,100 HP total; core 10,800; largest part 12,672; 75 parts; radius 696u; no energy shield; 3 hull shells (597,780 HP).
+  T5: 1,504,160 HP total; core 48,000; largest part 56,320; 76 parts; radius 1,149u; no energy shield; 4 hull shells (3,609,984 HP).
+Defence: no energy shields at any tier; hull shells at tier 2+ (60% hull per layer, ~4x that in kinetic fire).
 Damage: eDmg 16 / 48 / 144 / 432 / 1,296 / 3,888 by tier. Contact = 0.25x eDmg every 0.7s. Weapon mounts: 0 gun(s) (0.4x eDmg, 1.1-1.7s cadence) and 0 missile pod(s) (1.1x eDmg, 4.5-6s cadence) at T5; no gun or missile mounts at T3. Destroying a weapon part explodes for 1.8x eDmg to the player; other parts explode for 1.3x.
 Abilities (3):
   - Venom Sting [spit], from T1, 4.5s cooldown: 0.8x eDmg damage (3,110 at T5); 0.4s wind-up; 520 u/s; size 1.2; poison 0.3x eDmg; range 0-520u.
@@ -273,11 +273,11 @@ Movement: ground; speed 155u/s; turn 3.2; melee, no keep distance; muzzle 2.4 bo
 Hull by tier:
   T0: 326 HP total; core 30; largest part 30; 30 parts; radius 118u; no energy shield.
   T1: 1,306 HP total; core 120; largest part 120; 30 parts; radius 195u; no energy shield.
-  T2: 7,920 HP total; core 540; largest part 540; 47 parts; radius 322u; no energy shield; 1 hull shell (90 HP).
-  T3: 45,440 HP total; core 2,400; largest part 2,400; 55 parts; radius 531u; no energy shield; 2 hull shells (800 HP).
-  T4: 217,152 HP total; core 10,800; largest part 12,672; 56 parts; radius 876u; no energy shield; 3 hull shells (5,400 HP).
-  T5: 965,120 HP total; core 48,000; largest part 56,320; 56 parts; radius 1,445u; no energy shield; 4 hull shells (32,000 HP).
-Defence: no energy shields at any tier; hull shells at tier 2+.
+  T2: 7,920 HP total; core 540; largest part 540; 47 parts; radius 322u; no energy shield; 1 hull shell (4,752 HP).
+  T3: 45,440 HP total; core 2,400; largest part 2,400; 55 parts; radius 531u; no energy shield; 2 hull shells (54,528 HP).
+  T4: 217,152 HP total; core 10,800; largest part 12,672; 56 parts; radius 876u; no energy shield; 3 hull shells (390,873 HP).
+  T5: 965,120 HP total; core 48,000; largest part 56,320; 56 parts; radius 1,445u; no energy shield; 4 hull shells (2,316,288 HP).
+Defence: no energy shields at any tier; hull shells at tier 2+ (60% hull per layer, ~4x that in kinetic fire).
 Damage: eDmg 16 / 48 / 144 / 432 / 1,296 / 3,888 by tier. Contact = 0.25x eDmg every 0.7s. Weapon mounts: 0 gun(s) (0.4x eDmg, 1.1-1.7s cadence) and 0 missile pod(s) (1.1x eDmg, 4.5-6s cadence) at T5; no gun or missile mounts at T3. Destroying a weapon part explodes for 1.8x eDmg to the player; other parts explode for 1.3x.
 Abilities (3):
   - Leaping Charge [charge], from T1, 5.5s cooldown: 1.8x eDmg damage (6,998 at T5); 0.6s wind-up; 980 u/s; 0.45s duration; range 180-900u.
@@ -290,11 +290,11 @@ Movement: ground; speed 190u/s; turn 3.5; melee, no keep distance; muzzle 2.4 bo
 Hull by tier:
   T0: 497 HP total; core 30; largest part 30; 40 parts; radius 81u; no energy shield.
   T1: 1,989 HP total; core 120; largest part 120; 40 parts; radius 133u; no energy shield.
-  T2: 11,066 HP total; core 540; largest part 540; 58 parts; radius 220u; no energy shield; 1 hull shell (90 HP).
-  T3: 86,304 HP total; core 2,400; largest part 2,400; 82 parts; radius 363u; no energy shield; 2 hull shells (800 HP).
-  T4: 426,960 HP total; core 10,800; largest part 12,672; 95 parts; radius 599u; no energy shield; 3 hull shells (5,400 HP).
-  T5: 1,897,600 HP total; core 48,000; largest part 56,320; 95 parts; radius 988u; no energy shield; 4 hull shells (32,000 HP).
-Defence: no energy shields at any tier; hull shells at tier 2+.
+  T2: 11,066 HP total; core 540; largest part 540; 58 parts; radius 220u; no energy shield; 1 hull shell (6,640 HP).
+  T3: 86,304 HP total; core 2,400; largest part 2,400; 82 parts; radius 363u; no energy shield; 2 hull shells (103,564 HP).
+  T4: 426,960 HP total; core 10,800; largest part 12,672; 95 parts; radius 599u; no energy shield; 3 hull shells (768,528 HP).
+  T5: 1,897,600 HP total; core 48,000; largest part 56,320; 95 parts; radius 988u; no energy shield; 4 hull shells (4,554,240 HP).
+Defence: no energy shields at any tier; hull shells at tier 2+ (60% hull per layer, ~4x that in kinetic fire).
 Damage: eDmg 16 / 48 / 144 / 432 / 1,296 / 3,888 by tier. Contact = 0.25x eDmg every 0.7s. Weapon mounts: 0 gun(s) (0.4x eDmg, 1.1-1.7s cadence) and 0 missile pod(s) (1.1x eDmg, 4.5-6s cadence) at T5; no gun or missile mounts at T3. Destroying a weapon part explodes for 1.8x eDmg to the player; other parts explode for 1.3x.
 Abilities (3):
   - Shell Bash [charge], from T1, 4.5s cooldown: 1.6x eDmg damage (6,221 at T5); 0.5s wind-up; 760 u/s; 0.5s duration; range 160-700u.
@@ -307,11 +307,11 @@ Movement: flying; speed 220u/s; turn 4.2; melee, no keep distance; muzzle 2.2 bo
 Hull by tier:
   T0: 343 HP total; core 30; largest part 30; 33 parts; radius 69u; no energy shield.
   T1: 1,374 HP total; core 120; largest part 120; 33 parts; radius 113u; no energy shield.
-  T2: 6,930 HP total; core 540; largest part 540; 38 parts; radius 187u; no energy shield; 1 hull shell (90 HP).
-  T3: 39,376 HP total; core 2,400; largest part 2,400; 52 parts; radius 308u; no energy shield; 2 hull shells (800 HP).
-  T4: 189,864 HP total; core 10,800; largest part 12,672; 53 parts; radius 508u; no energy shield; 3 hull shells (5,400 HP).
-  T5: 843,840 HP total; core 48,000; largest part 56,320; 53 parts; radius 838u; no energy shield; 4 hull shells (32,000 HP).
-Defence: no energy shields at any tier; hull shells at tier 2+.
+  T2: 6,930 HP total; core 540; largest part 540; 38 parts; radius 187u; no energy shield; 1 hull shell (4,158 HP).
+  T3: 39,376 HP total; core 2,400; largest part 2,400; 52 parts; radius 308u; no energy shield; 2 hull shells (47,252 HP).
+  T4: 189,864 HP total; core 10,800; largest part 12,672; 53 parts; radius 508u; no energy shield; 3 hull shells (341,754 HP).
+  T5: 843,840 HP total; core 48,000; largest part 56,320; 53 parts; radius 838u; no energy shield; 4 hull shells (2,025,216 HP).
+Defence: no energy shields at any tier; hull shells at tier 2+ (60% hull per layer, ~4x that in kinetic fire).
 Damage: eDmg 16 / 48 / 144 / 432 / 1,296 / 3,888 by tier. Contact = 0.25x eDmg every 0.7s. Weapon mounts: 0 gun(s) (0.4x eDmg, 1.1-1.7s cadence) and 0 missile pod(s) (1.1x eDmg, 4.5-6s cadence) at T5; no gun or missile mounts at T3. Destroying a weapon part explodes for 1.8x eDmg to the player; other parts explode for 1.3x.
 Abilities (3):
   - Blood Drain [drain], from T1, 5s cooldown: 0.55x eDmg damage (2,138 at T5); 0.5s wind-up; 1.6s duration; range 0-380u; range 0-2.4 body-size units.
@@ -324,11 +324,11 @@ Movement: ground; speed 120u/s; turn 2.9; ranged, keeps 300u; muzzle 2.8 body-si
 Hull by tier:
   T0: 411 HP total; core 30; largest part 30; 37 parts; radius 80u; no energy shield.
   T1: 1,645 HP total; core 120; largest part 120; 37 parts; radius 133u; no energy shield.
-  T2: 9,518 HP total; core 540; largest part 540; 55 parts; radius 219u; no energy shield; 1 hull shell (90 HP).
-  T3: 72,704 HP total; core 2,400; largest part 2,400; 76 parts; radius 361u; no energy shield; 2 hull shells (800 HP).
-  T4: 371,520 HP total; core 10,800; largest part 12,672; 81 parts; radius 596u; no energy shield; 3 hull shells (5,400 HP).
-  T5: 1,792,000 HP total; core 48,000; largest part 56,320; 85 parts; radius 984u; no energy shield; 4 hull shells (32,000 HP).
-Defence: no energy shields at any tier; hull shells at tier 2+.
+  T2: 9,518 HP total; core 540; largest part 540; 55 parts; radius 219u; no energy shield; 1 hull shell (5,711 HP).
+  T3: 72,704 HP total; core 2,400; largest part 2,400; 76 parts; radius 361u; no energy shield; 2 hull shells (87,244 HP).
+  T4: 371,520 HP total; core 10,800; largest part 12,672; 81 parts; radius 596u; no energy shield; 3 hull shells (668,736 HP).
+  T5: 1,792,000 HP total; core 48,000; largest part 56,320; 85 parts; radius 984u; no energy shield; 4 hull shells (4,300,800 HP).
+Defence: no energy shields at any tier; hull shells at tier 2+ (60% hull per layer, ~4x that in kinetic fire).
 Damage: eDmg 16 / 48 / 144 / 432 / 1,296 / 3,888 by tier. Contact = 0.25x eDmg every 0.7s. Weapon mounts: 6 gun(s) (0.4x eDmg, 1.1-1.7s cadence) and 4 missile pod(s) (1.1x eDmg, 4.5-6s cadence) at T5; T3 has 2 gun(s) / 0 pod(s). Destroying a weapon part explodes for 1.8x eDmg to the player; other parts explode for 1.3x.
 Abilities (3):
   - Chemical Spray [spit], from T1, 5s cooldown: 0.7x eDmg damage (2,722 at T5); 0.45s wind-up; 520 u/s; size 1.7; range 0-640u.
@@ -341,11 +341,11 @@ Movement: ground; speed 105u/s; turn 2.2; melee, no keep distance; muzzle 2.9 bo
 Hull by tier:
   T0: 418 HP total; core 30; largest part 30; 37 parts; radius 91u; no energy shield.
   T1: 1,673 HP total; core 120; largest part 120; 37 parts; radius 160u; no energy shield.
-  T2: 11,372 HP total; core 540; largest part 540; 60 parts; radius 279u; no energy shield; 1 hull shell (90 HP).
-  T3: 75,344 HP total; core 2,400; largest part 2,400; 77 parts; radius 485u; 1 shield generator (239-239u bubbles; energy/shock/thermal pass); 2 hull shells (800 HP).
-  T4: 483,480 HP total; core 10,800; largest part 12,672; 103 parts; radius 842u; 2 shield generators (394-434u bubbles; energy/shock/thermal pass); 3 hull shells (5,400 HP).
-  T5: 2,260,800 HP total; core 48,000; largest part 56,320; 106 parts; radius 1,457u; 3 shield generators (651-781u bubbles; energy/shock/thermal pass); 4 hull shells (32,000 HP).
-Defence: energy shields appear at tier 3+; hull shells at tier 2+.
+  T2: 11,372 HP total; core 540; largest part 540; 60 parts; radius 279u; no energy shield; 1 hull shell (6,823 HP).
+  T3: 75,344 HP total; core 2,400; largest part 2,400; 77 parts; radius 485u; 1 shield generator (239-239u bubbles; energy/shock/thermal pass); 2 hull shells (90,412 HP).
+  T4: 483,480 HP total; core 10,800; largest part 12,672; 103 parts; radius 842u; 2 shield generators (394-434u bubbles; energy/shock/thermal pass); 3 hull shells (870,264 HP).
+  T5: 2,260,800 HP total; core 48,000; largest part 56,320; 106 parts; radius 1,457u; 3 shield generators (651-781u bubbles; energy/shock/thermal pass); 4 hull shells (5,425,920 HP).
+Defence: energy shields appear at tier 3+; hull shells at tier 2+ (60% hull per layer, ~4x that in kinetic fire).
 Damage: eDmg 16 / 48 / 144 / 432 / 1,296 / 3,888 by tier. Contact = 0.25x eDmg every 0.7s. Weapon mounts: 6 gun(s) (0.4x eDmg, 1.1-1.7s cadence) and 0 missile pod(s) (1.1x eDmg, 4.5-6s cadence) at T5; T3 has 2 gun(s) / 0 pod(s). Destroying a weapon part explodes for 1.8x eDmg to the player; other parts explode for 1.3x.
 Abilities (3):
   - Horn Charge [charge], from T1, 7s cooldown: 3.2x eDmg damage (12,442 at T5); 0.9s wind-up; 620 u/s; 0.6s duration; range 200-800u.
@@ -358,11 +358,11 @@ Movement: flying; speed 200u/s; turn 3.9; ranged, keeps 300u; muzzle 2 body-size
 Hull by tier:
   T0: 468 HP total; core 30; largest part 30; 40 parts; radius 105u; no energy shield.
   T1: 1,943 HP total; core 120; largest part 120; 41 parts; radius 174u; no energy shield.
-  T2: 9,808 HP total; core 540; largest part 540; 47 parts; radius 287u; no energy shield; 1 hull shell (90 HP).
-  T3: 74,504 HP total; core 2,400; largest part 2,400; 76 parts; radius 473u; no energy shield; 2 hull shells (800 HP).
-  T4: 370,116 HP total; core 10,800; largest part 12,672; 80 parts; radius 780u; no energy shield; 3 hull shells (5,400 HP).
-  T5: 1,743,520 HP total; core 48,000; largest part 56,320; 83 parts; radius 1,288u; no energy shield; 4 hull shells (32,000 HP).
-Defence: no energy shields at any tier; hull shells at tier 2+.
+  T2: 9,808 HP total; core 540; largest part 540; 47 parts; radius 287u; no energy shield; 1 hull shell (5,885 HP).
+  T3: 74,504 HP total; core 2,400; largest part 2,400; 76 parts; radius 473u; no energy shield; 2 hull shells (89,404 HP).
+  T4: 370,116 HP total; core 10,800; largest part 12,672; 80 parts; radius 780u; no energy shield; 3 hull shells (666,210 HP).
+  T5: 1,743,520 HP total; core 48,000; largest part 56,320; 83 parts; radius 1,288u; no energy shield; 4 hull shells (4,184,448 HP).
+Defence: no energy shields at any tier; hull shells at tier 2+ (60% hull per layer, ~4x that in kinetic fire).
 Damage: eDmg 16 / 48 / 144 / 432 / 1,296 / 3,888 by tier. Contact = 0.25x eDmg every 0.7s. Weapon mounts: 6 gun(s) (0.4x eDmg, 1.1-1.7s cadence) and 0 missile pod(s) (1.1x eDmg, 4.5-6s cadence) at T5; T3 has 2 gun(s) / 0 pod(s). Destroying a weapon part explodes for 1.8x eDmg to the player; other parts explode for 1.3x.
 Abilities (3):
   - Venom Darts [shoot], from T1, 4s cooldown: 0.65x eDmg damage (2,527 at T5); 0.4s wind-up; 5 projectiles at T5 (3 + 0.5/tier); 0.35 rad spread; 600 u/s; 1.4s life; size 5; slow to 0.7x for 1.2s; poison 0.2x eDmg; range 180-800u; bolt projectile.
@@ -375,11 +375,11 @@ Movement: flying; speed 135u/s; turn 3; ranged, keeps 280u; muzzle 2 body-size u
 Hull by tier:
   T0: 440 HP total; core 30; largest part 30; 37 parts; radius 81u; no energy shield.
   T1: 1,758 HP total; core 120; largest part 120; 37 parts; radius 133u; no energy shield.
-  T2: 11,758 HP total; core 540; largest part 540; 60 parts; radius 220u; no energy shield; 1 hull shell (90 HP).
-  T3: 73,536 HP total; core 2,400; largest part 2,400; 75 parts; radius 363u; 1 shield generator (239-239u bubbles; energy/shock/thermal pass); 2 hull shells (800 HP).
-  T4: 352,944 HP total; core 10,800; largest part 12,672; 77 parts; radius 599u; 2 shield generators (394-434u bubbles; energy/shock/thermal pass); 3 hull shells (5,400 HP).
-  T5: 1,610,240 HP total; core 48,000; largest part 56,320; 78 parts; radius 988u; 3 shield generators (651-781u bubbles; energy/shock/thermal pass); 4 hull shells (32,000 HP).
-Defence: energy shields appear at tier 3+; hull shells at tier 2+.
+  T2: 11,758 HP total; core 540; largest part 540; 60 parts; radius 220u; no energy shield; 1 hull shell (7,055 HP).
+  T3: 73,536 HP total; core 2,400; largest part 2,400; 75 parts; radius 363u; 1 shield generator (239-239u bubbles; energy/shock/thermal pass); 2 hull shells (88,244 HP).
+  T4: 352,944 HP total; core 10,800; largest part 12,672; 77 parts; radius 599u; 2 shield generators (394-434u bubbles; energy/shock/thermal pass); 3 hull shells (635,298 HP).
+  T5: 1,610,240 HP total; core 48,000; largest part 56,320; 78 parts; radius 988u; 3 shield generators (651-781u bubbles; energy/shock/thermal pass); 4 hull shells (3,864,576 HP).
+Defence: energy shields appear at tier 3+; hull shells at tier 2+ (60% hull per layer, ~4x that in kinetic fire).
 Damage: eDmg 16 / 48 / 144 / 432 / 1,296 / 3,888 by tier. Contact = 0.25x eDmg every 0.7s. Weapon mounts: 0 gun(s) (0.4x eDmg, 1.1-1.7s cadence) and 0 missile pod(s) (1.1x eDmg, 4.5-6s cadence) at T5; no gun or missile mounts at T3. Destroying a weapon part explodes for 1.8x eDmg to the player; other parts explode for 1.3x.
 Abilities (3):
   - Spore Cloud [cloud], from T1, 8s cooldown: 0.45x eDmg damage (1,750 at T5); 0.6s wind-up; size 2.9; slow to 0.6x for 1.5s; range 0-3.2 body-size units.
@@ -392,11 +392,11 @@ Movement: ground; speed 120u/s; turn 2.6; melee, no keep distance; muzzle 2.8 bo
 Hull by tier:
   T0: 419 HP total; core 30; largest part 30; 36 parts; radius 92u; no energy shield.
   T1: 1,675 HP total; core 120; largest part 120; 36 parts; radius 158u; no energy shield.
-  T2: 9,655 HP total; core 540; largest part 540; 54 parts; radius 273u; no energy shield; 1 hull shell (90 HP).
-  T3: 71,872 HP total; core 2,400; largest part 2,400; 74 parts; radius 469u; 1 shield generator (239-239u bubbles; energy/shock/thermal pass); 2 hull shells (800 HP).
-  T4: 371,376 HP total; core 10,800; largest part 12,672; 88 parts; radius 805u; 2 shield generators (394-434u bubbles; energy/shock/thermal pass); 3 hull shells (5,400 HP).
-  T5: 1,692,160 HP total; core 48,000; largest part 56,320; 89 parts; radius 1,379u; 3 shield generators (651-781u bubbles; energy/shock/thermal pass); 4 hull shells (32,000 HP).
-Defence: energy shields appear at tier 3+; hull shells at tier 2+.
+  T2: 9,655 HP total; core 540; largest part 540; 54 parts; radius 273u; no energy shield; 1 hull shell (5,793 HP).
+  T3: 71,872 HP total; core 2,400; largest part 2,400; 74 parts; radius 469u; 1 shield generator (239-239u bubbles; energy/shock/thermal pass); 2 hull shells (86,246 HP).
+  T4: 371,376 HP total; core 10,800; largest part 12,672; 88 parts; radius 805u; 2 shield generators (394-434u bubbles; energy/shock/thermal pass); 3 hull shells (668,478 HP).
+  T5: 1,692,160 HP total; core 48,000; largest part 56,320; 89 parts; radius 1,379u; 3 shield generators (651-781u bubbles; energy/shock/thermal pass); 4 hull shells (4,061,184 HP).
+Defence: energy shields appear at tier 3+; hull shells at tier 2+ (60% hull per layer, ~4x that in kinetic fire).
 Damage: eDmg 16 / 48 / 144 / 432 / 1,296 / 3,888 by tier. Contact = 0.25x eDmg every 0.7s. Weapon mounts: 0 gun(s) (0.4x eDmg, 1.1-1.7s cadence) and 0 missile pod(s) (1.1x eDmg, 4.5-6s cadence) at T5; no gun or missile mounts at T3. Destroying a weapon part explodes for 1.8x eDmg to the player; other parts explode for 1.3x.
 Abilities (3):
   - Pincer Grab [swing], from T1, 2.8s cooldown: 2.4x eDmg damage (9,331 at T5); 0.5s wind-up; range 0-3.2 body-size units; mandible swing; requires intact Pincer.
@@ -409,11 +409,11 @@ Movement: ground; speed 135u/s; turn 3; melee, no keep distance; muzzle 2.8 body
 Hull by tier:
   T0: 490 HP total; core 30; largest part 30; 39 parts; radius 99u; no energy shield.
   T1: 1,958 HP total; core 120; largest part 120; 39 parts; radius 164u; no energy shield.
-  T2: 9,634 HP total; core 540; largest part 540; 45 parts; radius 270u; no energy shield; 1 hull shell (90 HP).
-  T3: 73,376 HP total; core 2,400; largest part 2,400; 74 parts; radius 445u; 1 shield generator (239-239u bubbles; energy/shock/thermal pass); 2 hull shells (800 HP).
-  T4: 448,704 HP total; core 10,800; largest part 12,672; 88 parts; radius 735u; 2 shield generators (394-434u bubbles; energy/shock/thermal pass); 3 hull shells (5,400 HP).
-  T5: 2,023,040 HP total; core 48,000; largest part 56,320; 89 parts; radius 1,212u; 1 shield generator (651-651u bubbles; energy/shock/thermal pass); 4 hull shells (32,000 HP).
-Defence: energy shields appear at tier 3+; hull shells at tier 2+.
+  T2: 9,634 HP total; core 540; largest part 540; 45 parts; radius 270u; no energy shield; 1 hull shell (5,780 HP).
+  T3: 73,376 HP total; core 2,400; largest part 2,400; 74 parts; radius 445u; 1 shield generator (239-239u bubbles; energy/shock/thermal pass); 2 hull shells (88,052 HP).
+  T4: 448,704 HP total; core 10,800; largest part 12,672; 88 parts; radius 735u; 2 shield generators (394-434u bubbles; energy/shock/thermal pass); 3 hull shells (807,666 HP).
+  T5: 2,023,040 HP total; core 48,000; largest part 56,320; 89 parts; radius 1,212u; 1 shield generator (651-651u bubbles; energy/shock/thermal pass); 4 hull shells (4,855,296 HP).
+Defence: energy shields appear at tier 3+; hull shells at tier 2+ (60% hull per layer, ~4x that in kinetic fire).
 Damage: eDmg 16 / 48 / 144 / 432 / 1,296 / 3,888 by tier. Contact = 0.25x eDmg every 0.7s. Weapon mounts: 6 gun(s) (0.4x eDmg, 1.1-1.7s cadence) and 0 missile pod(s) (1.1x eDmg, 4.5-6s cadence) at T5; T3 has 2 gun(s) / 0 pod(s). Destroying a weapon part explodes for 1.8x eDmg to the player; other parts explode for 1.3x.
 Abilities (3):
   - Crushing Bite [swing], from T1, 2.2s cooldown: 2.2x eDmg damage (8,554 at T5); 0.45s wind-up; range 0-3 body-size units; mandible swing; requires intact Mandible.
@@ -426,11 +426,11 @@ Movement: flying; speed 140u/s; turn 3; ranged, keeps 340u; muzzle 1.8 body-size
 Hull by tier:
   T0: 338 HP total; core 30; largest part 30; 32 parts; radius 94u; no energy shield.
   T1: 1,354 HP total; core 120; largest part 120; 32 parts; radius 154u; no energy shield.
-  T2: 8,222 HP total; core 540; largest part 540; 41 parts; radius 255u; no energy shield; 1 hull shell (90 HP).
-  T3: 63,584 HP total; core 2,400; largest part 2,400; 68 parts; radius 420u; 1 shield generator (239-239u bubbles; energy/shock/thermal pass); 2 hull shells (800 HP).
-  T4: 308,160 HP total; core 10,800; largest part 12,672; 70 parts; radius 694u; 2 shield generators (394-434u bubbles; energy/shock/thermal pass); 3 hull shells (5,400 HP).
-  T5: 1,411,200 HP total; core 48,000; largest part 56,320; 71 parts; radius 1,145u; 3 shield generators (651-781u bubbles; energy/shock/thermal pass); 4 hull shells (32,000 HP).
-Defence: energy shields appear at tier 3+; hull shells at tier 2+.
+  T2: 8,222 HP total; core 540; largest part 540; 41 parts; radius 255u; no energy shield; 1 hull shell (4,933 HP).
+  T3: 63,584 HP total; core 2,400; largest part 2,400; 68 parts; radius 420u; 1 shield generator (239-239u bubbles; energy/shock/thermal pass); 2 hull shells (76,300 HP).
+  T4: 308,160 HP total; core 10,800; largest part 12,672; 70 parts; radius 694u; 2 shield generators (394-434u bubbles; energy/shock/thermal pass); 3 hull shells (554,688 HP).
+  T5: 1,411,200 HP total; core 48,000; largest part 56,320; 71 parts; radius 1,145u; 3 shield generators (651-781u bubbles; energy/shock/thermal pass); 4 hull shells (3,386,880 HP).
+Defence: energy shields appear at tier 3+; hull shells at tier 2+ (60% hull per layer, ~4x that in kinetic fire).
 Damage: eDmg 16 / 48 / 144 / 432 / 1,296 / 3,888 by tier. Contact = 0.25x eDmg every 0.7s. Weapon mounts: 0 gun(s) (0.4x eDmg, 1.1-1.7s cadence) and 0 missile pod(s) (1.1x eDmg, 4.5-6s cadence) at T5; no gun or missile mounts at T3. Destroying a weapon part explodes for 1.8x eDmg to the player; other parts explode for 1.3x.
 Abilities (3):
   - Sonic Screech [ring], from T1, 8s cooldown: 1.4x eDmg damage (5,443 at T5); 0.75s wind-up; 520 u/s; size 6; range 0-4.2 body-size units.
@@ -443,11 +443,11 @@ Movement: ground; speed 185u/s; turn 3.4; melee, no keep distance; muzzle 2.6 bo
 Hull by tier:
   T0: 417 HP total; core 30; largest part 30; 36 parts; radius 79u; no energy shield.
   T1: 1,667 HP total; core 120; largest part 120; 36 parts; radius 131u; no energy shield.
-  T2: 9,619 HP total; core 540; largest part 540; 54 parts; radius 216u; no energy shield; 1 hull shell (90 HP).
-  T3: 69,632 HP total; core 2,400; largest part 2,400; 73 parts; radius 356u; no energy shield; 2 hull shells (800 HP).
-  T4: 326,016 HP total; core 10,800; largest part 12,672; 74 parts; radius 588u; no energy shield; 3 hull shells (5,400 HP).
-  T5: 1,448,960 HP total; core 48,000; largest part 56,320; 74 parts; radius 969u; no energy shield; 4 hull shells (32,000 HP).
-Defence: no energy shields at any tier; hull shells at tier 2+.
+  T2: 9,619 HP total; core 540; largest part 540; 54 parts; radius 216u; no energy shield; 1 hull shell (5,772 HP).
+  T3: 69,632 HP total; core 2,400; largest part 2,400; 73 parts; radius 356u; no energy shield; 2 hull shells (83,558 HP).
+  T4: 326,016 HP total; core 10,800; largest part 12,672; 74 parts; radius 588u; no energy shield; 3 hull shells (586,830 HP).
+  T5: 1,448,960 HP total; core 48,000; largest part 56,320; 74 parts; radius 969u; no energy shield; 4 hull shells (3,477,504 HP).
+Defence: no energy shields at any tier; hull shells at tier 2+ (60% hull per layer, ~4x that in kinetic fire).
 Damage: eDmg 16 / 48 / 144 / 432 / 1,296 / 3,888 by tier. Contact = 0.25x eDmg every 0.7s. Weapon mounts: 0 gun(s) (0.4x eDmg, 1.1-1.7s cadence) and 0 missile pod(s) (1.1x eDmg, 4.5-6s cadence) at T5; no gun or missile mounts at T3. Destroying a weapon part explodes for 1.8x eDmg to the player; other parts explode for 1.3x.
 Abilities (3):
   - Piercing Proboscis [drain], from T1, 5s cooldown: 0.7x eDmg damage (2,722 at T5); 0.45s wind-up; 1.8s duration; range 0-460u; range 0-2.6 body-size units.
@@ -460,11 +460,11 @@ Movement: ground; speed 230u/s; turn 4; melee, no keep distance; muzzle 2.7 body
 Hull by tier:
   T0: 401 HP total; core 30; largest part 30; 35 parts; radius 82u; no energy shield.
   T1: 1,605 HP total; core 120; largest part 120; 35 parts; radius 135u; no energy shield.
-  T2: 8,978 HP total; core 540; largest part 540; 48 parts; radius 224u; no energy shield; 1 hull shell (90 HP).
-  T3: 68,384 HP total; core 2,400; largest part 2,400; 72 parts; radius 369u; no energy shield; 2 hull shells (800 HP).
-  T4: 362,160 HP total; core 10,800; largest part 12,672; 87 parts; radius 609u; no energy shield; 3 hull shells (5,400 HP).
-  T5: 1,680,000 HP total; core 48,000; largest part 56,320; 89 parts; radius 1,004u; no energy shield; 4 hull shells (32,000 HP).
-Defence: no energy shields at any tier; hull shells at tier 2+.
+  T2: 8,978 HP total; core 540; largest part 540; 48 parts; radius 224u; no energy shield; 1 hull shell (5,387 HP).
+  T3: 68,384 HP total; core 2,400; largest part 2,400; 72 parts; radius 369u; no energy shield; 2 hull shells (82,060 HP).
+  T4: 362,160 HP total; core 10,800; largest part 12,672; 87 parts; radius 609u; no energy shield; 3 hull shells (651,888 HP).
+  T5: 1,680,000 HP total; core 48,000; largest part 56,320; 89 parts; radius 1,004u; no energy shield; 4 hull shells (4,032,000 HP).
+Defence: no energy shields at any tier; hull shells at tier 2+ (60% hull per layer, ~4x that in kinetic fire).
 Damage: eDmg 16 / 48 / 144 / 432 / 1,296 / 3,888 by tier. Contact = 0.25x eDmg every 0.7s. Weapon mounts: 0 gun(s) (0.4x eDmg, 1.1-1.7s cadence) and 4 missile pod(s) (1.1x eDmg, 4.5-6s cadence) at T5; no gun or missile mounts at T3. Destroying a weapon part explodes for 1.8x eDmg to the player; other parts explode for 1.3x.
 Abilities (3):
   - Dash [charge], from T1, 3.5s cooldown: 1.4x eDmg damage (5,443 at T5); 0.3s wind-up; 1,000 u/s; 0.32s duration; range 200-900u.
@@ -477,11 +477,11 @@ Movement: ground; speed 130u/s; turn 3; melee, no keep distance; muzzle 2.8 body
 Hull by tier:
   T0: 383 HP total; core 30; largest part 30; 30 parts; radius 122u; no energy shield.
   T1: 1,533 HP total; core 120; largest part 120; 30 parts; radius 202u; no energy shield.
-  T2: 8,942 HP total; core 540; largest part 540; 47 parts; radius 333u; no energy shield; 1 hull shell (90 HP).
-  T3: 58,208 HP total; core 2,400; largest part 2,400; 60 parts; radius 549u; 1 shield generator (239-239u bubbles; energy/shock/thermal pass); 2 hull shells (800 HP).
-  T4: 283,968 HP total; core 10,800; largest part 12,672; 62 parts; radius 905u; 2 shield generators (394-434u bubbles; energy/shock/thermal pass); 3 hull shells (5,400 HP).
-  T5: 1,303,680 HP total; core 48,000; largest part 56,320; 63 parts; radius 1,494u; 3 shield generators (651-781u bubbles; energy/shock/thermal pass); 4 hull shells (32,000 HP).
-Defence: energy shields appear at tier 3+; hull shells at tier 2+.
+  T2: 8,942 HP total; core 540; largest part 540; 47 parts; radius 333u; no energy shield; 1 hull shell (5,365 HP).
+  T3: 58,208 HP total; core 2,400; largest part 2,400; 60 parts; radius 549u; 1 shield generator (239-239u bubbles; energy/shock/thermal pass); 2 hull shells (69,850 HP).
+  T4: 283,968 HP total; core 10,800; largest part 12,672; 62 parts; radius 905u; 2 shield generators (394-434u bubbles; energy/shock/thermal pass); 3 hull shells (511,143 HP).
+  T5: 1,303,680 HP total; core 48,000; largest part 56,320; 63 parts; radius 1,494u; 3 shield generators (651-781u bubbles; energy/shock/thermal pass); 4 hull shells (3,128,832 HP).
+Defence: energy shields appear at tier 3+; hull shells at tier 2+ (60% hull per layer, ~4x that in kinetic fire).
 Damage: eDmg 16 / 48 / 144 / 432 / 1,296 / 3,888 by tier. Contact = 0.25x eDmg every 0.7s. Weapon mounts: 0 gun(s) (0.4x eDmg, 1.1-1.7s cadence) and 0 missile pod(s) (1.1x eDmg, 4.5-6s cadence) at T5; no gun or missile mounts at T3. Destroying a weapon part explodes for 1.8x eDmg to the player; other parts explode for 1.3x.
 Abilities (3):
   - Burrow Ambush [blink], from T1, 8s cooldown: 1.2x eDmg damage (4,666 at T5); 0.6s wind-up; range 0-700u.
@@ -494,11 +494,11 @@ Movement: flying; speed 165u/s; turn 3.3; ranged, keeps 320u; muzzle 2.2 body-si
 Hull by tier:
   T0: 350 HP total; core 30; largest part 30; 34 parts; radius 112u; no energy shield.
   T1: 1,402 HP total; core 120; largest part 120; 34 parts; radius 184u; no energy shield.
-  T2: 7,056 HP total; core 540; largest part 540; 39 parts; radius 304u; no energy shield; 1 hull shell (90 HP).
-  T3: 42,752 HP total; core 2,400; largest part 2,400; 55 parts; radius 501u; no energy shield; 2 hull shells (800 HP).
-  T4: 205,056 HP total; core 10,800; largest part 12,672; 56 parts; radius 826u; no energy shield; 3 hull shells (5,400 HP).
-  T5: 911,360 HP total; core 48,000; largest part 56,320; 56 parts; radius 1,364u; no energy shield; 4 hull shells (32,000 HP).
-Defence: no energy shields at any tier; hull shells at tier 2+.
+  T2: 7,056 HP total; core 540; largest part 540; 39 parts; radius 304u; no energy shield; 1 hull shell (4,234 HP).
+  T3: 42,752 HP total; core 2,400; largest part 2,400; 55 parts; radius 501u; no energy shield; 2 hull shells (51,302 HP).
+  T4: 205,056 HP total; core 10,800; largest part 12,672; 56 parts; radius 826u; no energy shield; 3 hull shells (369,102 HP).
+  T5: 911,360 HP total; core 48,000; largest part 56,320; 56 parts; radius 1,364u; no energy shield; 4 hull shells (2,187,264 HP).
+Defence: no energy shields at any tier; hull shells at tier 2+ (60% hull per layer, ~4x that in kinetic fire).
 Damage: eDmg 16 / 48 / 144 / 432 / 1,296 / 3,888 by tier. Contact = 0.25x eDmg every 0.7s. Weapon mounts: 0 gun(s) (0.4x eDmg, 1.1-1.7s cadence) and 0 missile pod(s) (1.1x eDmg, 4.5-6s cadence) at T5; no gun or missile mounts at T3. Destroying a weapon part explodes for 1.8x eDmg to the player; other parts explode for 1.3x.
 Abilities (3):
   - Leaf Shards [shoot], from T1, 4.5s cooldown: 0.7x eDmg damage (2,722 at T5); 0.4s wind-up; 5 projectiles at T5 (3 + 0.5/tier); 0.4 rad spread; 540 u/s; 1.5s life; size 7; pierces; range 180-800u; wave projectile.
@@ -511,11 +511,11 @@ Movement: ground; speed 92u/s; turn 2; melee, no keep distance; muzzle 3.2 body-
 Hull by tier:
   T0: 505 HP total; core 30; largest part 30; 41 parts; radius 94u; no energy shield.
   T1: 2,021 HP total; core 120; largest part 120; 41 parts; radius 154u; no energy shield.
-  T2: 11,210 HP total; core 540; largest part 540; 59 parts; radius 255u; no energy shield; 1 hull shell (90 HP).
-  T3: 80,384 HP total; core 2,400; largest part 2,400; 88 parts; radius 420u; 1 shield generator (239-239u bubbles; energy/shock/thermal pass); 2 hull shells (800 HP).
-  T4: 480,240 HP total; core 10,800; largest part 12,672; 102 parts; radius 693u; 2 shield generators (394-434u bubbles; energy/shock/thermal pass); 3 hull shells (5,400 HP).
-  T5: 2,246,400 HP total; core 48,000; largest part 56,320; 105 parts; radius 1,144u; 3 shield generators (651-781u bubbles; energy/shock/thermal pass); 4 hull shells (32,000 HP).
-Defence: energy shields appear at tier 3+; hull shells at tier 2+.
+  T2: 11,210 HP total; core 540; largest part 540; 59 parts; radius 255u; no energy shield; 1 hull shell (6,726 HP).
+  T3: 80,384 HP total; core 2,400; largest part 2,400; 88 parts; radius 420u; 1 shield generator (239-239u bubbles; energy/shock/thermal pass); 2 hull shells (96,460 HP).
+  T4: 480,240 HP total; core 10,800; largest part 12,672; 102 parts; radius 693u; 2 shield generators (394-434u bubbles; energy/shock/thermal pass); 3 hull shells (864,432 HP).
+  T5: 2,246,400 HP total; core 48,000; largest part 56,320; 105 parts; radius 1,144u; 3 shield generators (651-781u bubbles; energy/shock/thermal pass); 4 hull shells (5,391,360 HP).
+Defence: energy shields appear at tier 3+; hull shells at tier 2+ (60% hull per layer, ~4x that in kinetic fire).
 Damage: eDmg 16 / 48 / 144 / 432 / 1,296 / 3,888 by tier. Contact = 0.25x eDmg every 0.7s. Weapon mounts: 6 gun(s) (0.4x eDmg, 1.1-1.7s cadence) and 0 missile pod(s) (1.1x eDmg, 4.5-6s cadence) at T5; T3 has 2 gun(s) / 0 pod(s). Destroying a weapon part explodes for 1.8x eDmg to the player; other parts explode for 1.3x.
 Abilities (3):
   - Rolling Slam [charge], from T1, 8s cooldown: 3.4x eDmg damage (13,219 at T5); 1s wind-up; 560 u/s; 0.7s duration; range 220-900u.
@@ -528,11 +528,11 @@ Movement: flying; speed 115u/s; turn 2.4; ranged, keeps 420u; muzzle 1.6 body-si
 Hull by tier:
   T0: 350 HP total; core 30; largest part 30; 34 parts; radius 137u; no energy shield.
   T1: 1,542 HP total; core 120; largest part 120; 36 parts; radius 226u; no energy shield.
-  T2: 7,690 HP total; core 540; largest part 540; 41 parts; radius 373u; no energy shield; 1 hull shell (90 HP).
-  T3: 53,792 HP total; core 2,400; largest part 2,400; 62 parts; radius 616u; 1 shield generator (239-239u bubbles; energy/shock/thermal pass); 2 hull shells (800 HP).
-  T4: 264,096 HP total; core 10,800; largest part 12,672; 64 parts; radius 1,016u; 2 shield generators (394-434u bubbles; energy/shock/thermal pass); 3 hull shells (5,400 HP).
-  T5: 1,215,360 HP total; core 48,000; largest part 56,320; 65 parts; radius 1,677u; 3 shield generators (651-781u bubbles; energy/shock/thermal pass); 4 hull shells (32,000 HP).
-Defence: energy shields appear at tier 3+; hull shells at tier 2+.
+  T2: 7,690 HP total; core 540; largest part 540; 41 parts; radius 373u; no energy shield; 1 hull shell (4,614 HP).
+  T3: 53,792 HP total; core 2,400; largest part 2,400; 62 parts; radius 616u; 1 shield generator (239-239u bubbles; energy/shock/thermal pass); 2 hull shells (64,550 HP).
+  T4: 264,096 HP total; core 10,800; largest part 12,672; 64 parts; radius 1,016u; 2 shield generators (394-434u bubbles; energy/shock/thermal pass); 3 hull shells (475,374 HP).
+  T5: 1,215,360 HP total; core 48,000; largest part 56,320; 65 parts; radius 1,677u; 3 shield generators (651-781u bubbles; energy/shock/thermal pass); 4 hull shells (2,916,864 HP).
+Defence: energy shields appear at tier 3+; hull shells at tier 2+ (60% hull per layer, ~4x that in kinetic fire).
 Damage: eDmg 16 / 48 / 144 / 432 / 1,296 / 3,888 by tier. Contact = 0.25x eDmg every 0.7s. Weapon mounts: 0 gun(s) (0.4x eDmg, 1.1-1.7s cadence) and 0 missile pod(s) (1.1x eDmg, 4.5-6s cadence) at T5; no gun or missile mounts at T3. Destroying a weapon part explodes for 1.8x eDmg to the player; other parts explode for 1.3x.
 Abilities (3):
   - Wind Gust [ring], from T1, 8s cooldown: 1.3x eDmg damage (5,054 at T5); 0.8s wind-up; 480 u/s; size 7; range 0-4.6 body-size units.
@@ -545,11 +545,11 @@ Movement: ground; speed 110u/s; turn 2.8; melee, no keep distance; muzzle 3.4 bo
 Hull by tier:
   T0: 390 HP total; core 30; largest part 30; 35 parts; radius 97u; no energy shield.
   T1: 1,558 HP total; core 120; largest part 120; 35 parts; radius 159u; no energy shield.
-  T2: 7,834 HP total; core 540; largest part 540; 41 parts; radius 263u; no energy shield; 1 hull shell (90 HP).
-  T3: 73,056 HP total; core 2,400; largest part 2,400; 75 parts; radius 434u; 1 shield generator (239-239u bubbles; energy/shock/thermal pass); 2 hull shells (800 HP).
-  T4: 366,624 HP total; core 10,800; largest part 12,672; 79 parts; radius 716u; 2 shield generators (394-434u bubbles; energy/shock/thermal pass); 3 hull shells (5,400 HP).
-  T5: 1,741,440 HP total; core 48,000; largest part 56,320; 82 parts; radius 1,182u; 3 shield generators (651-781u bubbles; energy/shock/thermal pass); 4 hull shells (32,000 HP).
-Defence: energy shields appear at tier 3+; hull shells at tier 2+.
+  T2: 7,834 HP total; core 540; largest part 540; 41 parts; radius 263u; no energy shield; 1 hull shell (4,700 HP).
+  T3: 73,056 HP total; core 2,400; largest part 2,400; 75 parts; radius 434u; 1 shield generator (239-239u bubbles; energy/shock/thermal pass); 2 hull shells (87,668 HP).
+  T4: 366,624 HP total; core 10,800; largest part 12,672; 79 parts; radius 716u; 2 shield generators (394-434u bubbles; energy/shock/thermal pass); 3 hull shells (659,922 HP).
+  T5: 1,741,440 HP total; core 48,000; largest part 56,320; 82 parts; radius 1,182u; 3 shield generators (651-781u bubbles; energy/shock/thermal pass); 4 hull shells (4,179,456 HP).
+Defence: energy shields appear at tier 3+; hull shells at tier 2+ (60% hull per layer, ~4x that in kinetic fire).
 Damage: eDmg 16 / 48 / 144 / 432 / 1,296 / 3,888 by tier. Contact = 0.25x eDmg every 0.7s. Weapon mounts: 6 gun(s) (0.4x eDmg, 1.1-1.7s cadence) and 0 missile pod(s) (1.1x eDmg, 4.5-6s cadence) at T5; T3 has 2 gun(s) / 0 pod(s). Destroying a weapon part explodes for 1.8x eDmg to the player; other parts explode for 1.3x.
 Abilities (3):
   - Drill Strike [swing], from T1, 3s cooldown: 2.6x eDmg damage (10,109 at T5); 0.55s wind-up; range 0-3.4 body-size units; mandible swing; requires intact Snout.
@@ -562,11 +562,11 @@ Movement: flying; speed 205u/s; turn 3.4; melee, no keep distance; muzzle 2.6 bo
 Hull by tier:
   T0: 386 HP total; core 30; largest part 30; 36 parts; radius 114u; no energy shield.
   T1: 1,542 HP total; core 120; largest part 120; 36 parts; radius 189u; no energy shield.
-  T2: 9,936 HP total; core 540; largest part 540; 56 parts; radius 312u; no energy shield; 1 hull shell (90 HP).
-  T3: 53,312 HP total; core 2,400; largest part 2,400; 62 parts; radius 514u; no energy shield; 2 hull shells (800 HP).
-  T4: 284,256 HP total; core 10,800; largest part 12,672; 67 parts; radius 849u; no energy shield; 3 hull shells (5,400 HP).
-  T5: 1,263,360 HP total; core 48,000; largest part 56,320; 67 parts; radius 1,400u; no energy shield; 4 hull shells (32,000 HP).
-Defence: no energy shields at any tier; hull shells at tier 2+.
+  T2: 9,936 HP total; core 540; largest part 540; 56 parts; radius 312u; no energy shield; 1 hull shell (5,962 HP).
+  T3: 53,312 HP total; core 2,400; largest part 2,400; 62 parts; radius 514u; no energy shield; 2 hull shells (63,974 HP).
+  T4: 284,256 HP total; core 10,800; largest part 12,672; 67 parts; radius 849u; no energy shield; 3 hull shells (511,662 HP).
+  T5: 1,263,360 HP total; core 48,000; largest part 56,320; 67 parts; radius 1,400u; no energy shield; 4 hull shells (3,032,064 HP).
+Defence: no energy shields at any tier; hull shells at tier 2+ (60% hull per layer, ~4x that in kinetic fire).
 Damage: eDmg 16 / 48 / 144 / 432 / 1,296 / 3,888 by tier. Contact = 0.25x eDmg every 0.7s. Weapon mounts: 6 gun(s) (0.4x eDmg, 1.1-1.7s cadence) and 0 missile pod(s) (1.1x eDmg, 4.5-6s cadence) at T5; T3 has 2 gun(s) / 0 pod(s). Destroying a weapon part explodes for 1.8x eDmg to the player; other parts explode for 1.3x.
 Abilities (3):
   - Swarm Rush [charge], from T1, 5s cooldown: 1.5x eDmg damage (5,832 at T5); 0.4s wind-up; 950 u/s; 0.4s duration; range 180-850u.
@@ -579,11 +579,11 @@ Movement: flying; speed 170u/s; turn 3.2; ranged, keeps 360u; muzzle 2.4 body-si
 Hull by tier:
   T0: 553 HP total; core 30; largest part 30; 44 parts; radius 82u; no energy shield.
   T1: 2,210 HP total; core 120; largest part 120; 44 parts; radius 136u; no energy shield.
-  T2: 12,064 HP total; core 540; largest part 540; 62 parts; radius 224u; no energy shield; 1 hull shell (90 HP).
-  T3: 78,416 HP total; core 2,400; largest part 2,400; 79 parts; radius 370u; 1 shield generator (239-239u bubbles; energy/shock/thermal pass); 2 hull shells (800 HP).
-  T4: 487,224 HP total; core 10,800; largest part 12,672; 95 parts; radius 611u; 2 shield generators (394-434u bubbles; energy/shock/thermal pass); 3 hull shells (5,400 HP).
-  T5: 2,306,240 HP total; core 48,000; largest part 56,320; 99 parts; radius 1,008u; 2 shield generators (651-716u bubbles; energy/shock/thermal pass); 4 hull shells (32,000 HP).
-Defence: energy shields appear at tier 3+; reflective bubbles; hull shells at tier 2+.
+  T2: 12,064 HP total; core 540; largest part 540; 62 parts; radius 224u; no energy shield; 1 hull shell (7,238 HP).
+  T3: 78,416 HP total; core 2,400; largest part 2,400; 79 parts; radius 370u; 1 shield generator (239-239u bubbles; energy/shock/thermal pass); 2 hull shells (94,100 HP).
+  T4: 487,224 HP total; core 10,800; largest part 12,672; 95 parts; radius 611u; 2 shield generators (394-434u bubbles; energy/shock/thermal pass); 3 hull shells (877,002 HP).
+  T5: 2,306,240 HP total; core 48,000; largest part 56,320; 99 parts; radius 1,008u; 2 shield generators (651-716u bubbles; energy/shock/thermal pass); 4 hull shells (5,534,976 HP).
+Defence: energy shields appear at tier 3+; hull shells at tier 2+ (60% hull per layer, ~4x that in kinetic fire).
 Damage: eDmg 16 / 48 / 144 / 432 / 1,296 / 3,888 by tier. Contact = 0.25x eDmg every 0.7s. Weapon mounts: 6 gun(s) (0.4x eDmg, 1.1-1.7s cadence) and 4 missile pod(s) (1.1x eDmg, 4.5-6s cadence) at T5; T3 has 2 gun(s) / 0 pod(s). Destroying a weapon part explodes for 1.8x eDmg to the player; other parts explode for 1.3x.
 Abilities (3):
   - Prismatic Beam [shoot], from T1, 5s cooldown: 1.1x eDmg damage (4,277 at T5); 0.5s wind-up; 2 projectiles at T5 (1 + 0.3/tier); 0.1 rad spread; 760 u/s; 1.5s life; size 8; pierces; range 200-950u; wave projectile.
@@ -600,7 +600,7 @@ Hull by tier:
   T3: 459,016 HP total; core 2,400; largest part 2,432; 414 parts; radius 1,589u; 1 shield generator (239-239u bubbles; energy/shock/thermal pass).
   T4: 2,274,804 HP total; core 10,800; largest part 12,672; 454 parts; radius 2,773u; 1 shield generator (394-394u bubbles; energy/shock/thermal pass).
   T5: 10,913,440 HP total; core 48,000; largest part 56,320; 491 parts; radius 4,827u; 1 shield generator (651-651u bubbles; energy/shock/thermal pass).
-Defence: serpentine body (no hull shells); energy shields appear at tier 3+; hull shells at tier 2+.
+Defence: serpentine body (no hull shells); energy shields appear at tier 3+; hull shells at tier 2+ (60% hull per layer, ~4x that in kinetic fire).
 Damage: eDmg 16 / 48 / 144 / 432 / 1,296 / 3,888 by tier. Contact = 0.25x eDmg every 0.7s. Weapon mounts: 4 gun(s) (0.4x eDmg, 1.1-1.7s cadence) and 0 missile pod(s) (1.1x eDmg, 4.5-6s cadence) at T5; T3 has 2 gun(s) / 0 pod(s). Destroying a weapon part explodes for 1.8x eDmg to the player; other parts explode for 1.3x.
 Abilities (4):
   - Tail Sweep [swing], from T1, 4s cooldown: 4.5x eDmg damage (17,496 at T5); 0.8s wind-up; range 0-5 body-size units; tail swing; requires intact Tail Barb.
@@ -807,4 +807,4 @@ Energy shields: a bubble has no charge to strip, so it never collapses, re-arms 
 Destroyed parts: each dead part can drop a component; weapons and shield generators detonate for 1.8x eDmg to the player (other parts 1.3x) and damage enemies in the blast.
 Boss: the Snake is the only boss (217 parts, body wave, 294u radius at T0; no reflective shield). At most one is alive; it spawns in the mythical core and never counts as a normal resident. SNAKE_ENABLED is false in this build, so the dedicated core pass is dormant even though the encounter code exists.
 
-End of compendium · build 2.0.4
+End of compendium · build 2.0.6

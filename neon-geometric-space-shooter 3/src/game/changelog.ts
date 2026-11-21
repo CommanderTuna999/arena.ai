@@ -8,7 +8,7 @@
  *   CHANGELOG and mirror the details in docs/CHANGELOG.md.
  */
 
-export const VERSION = "2.0.5";
+export const VERSION = "2.0.6";
 
 export interface ChangeEntry {
   version: string;
@@ -19,6 +19,17 @@ export interface ChangeEntry {
 }
 
 export const CHANGELOG: ChangeEntry[] = [
+  {
+    version: "2.0.6",
+    date: "21 Nov 2026",
+    title: "Real armour plating, proximity cannon",
+    points: [
+      "Enemy plating is now a genuine second health bar instead of a token outline. Every layer holds 60% of the enemy's total hull, and tier 2/3/4/5 carry 1/2/3/4 layers, so a mythical body brings 3.8M points of armour to the fight.",
+      "Every damage type now wears the plates down: bullets 30% of their damage, missiles and flak 40%, beams 22%, area blasts 40% and shockwaves 15% (EMP, chain lightning and sonic still skip shelled enemies). Plate Breaker multiplies that by up to 2.5x, and a shattered layer's shockwave now scales with the enemy's own bite instead of its plate HP, so it cannot nuke a screen.",
+      "Plating is drawn as solid steel slabs: a dark underlay for thickness, a filled top face tinted to the species, a bright rim, and one ridge per remaining layer. It sits under the whole body, darkens as it is chewed up, and no longer reads as a thin outline.",
+      "The nest's siege cannon is now proximity-fused: any enemy inside the nest's 1,760u alert band powers it, and it stays online for 120s after the band clears. Taking damage no longer powers it; the retaliation blast still erases whatever hit the hull.",
+    ],
+  },
   {
     version: "2.0.5",
     date: "21 Nov 2026",

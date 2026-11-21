@@ -3,6 +3,22 @@
 Everything below is implemented in the current build. Numbers are the actual constants used by
 the simulation, not design targets.
 
+## 0. v2.0.6 — real armour plating, proximity cannon
+
+### Plating is an extra armour layer
+- Each `ShellLayer` now holds `SHELL_HP_FRAC` (0.6) of the enemy's total part hull instead of the old `5 * HP_MUL[tier]`, which was under 1% of hull. Layers remain `tier - 1`, so tier 2 = 1 layer, tier 5 = 4 layers. A 1,573,120 HP mythical now carries 4 × 943,872 HP of plating.
+- `SHELL_TAKE` became a per-source table: kinetic 0.30, missile 0.32, explosive 0.40, laser 0.22, shock 0.15, dot 0.10. Beams and shockwaves chip plates now instead of being permanently walled by them.
+- `shellHit` multiplies the plate loss by `stats.breaker` (Plate Breaker, up to 2.5x) for player damage.
+- A shattered layer's shockwave deals `e.eDmg * 1.25` to nearby enemies instead of `layer.max * 0.75`, which at the new plate HP would have wiped every enemy on screen.
+
+### Plating is visible
+- `drawEnemy` draws plating in its own pass before the body: a dark underlay grown 2.4u past the slab, a solid filled top face (`hsla` steel tinted to the species hue, brightening as integrity drops), a bright rim, and one faint ridge per extra layer. Growth is `4 + 5 × (layers - 1)` capped at 0.9 × part radius.
+- Old code drew a single translucent 2px stroke per body part; that is gone.
+
+### Nest cannon
+- `updateTurret` sets `basePowerT = BASE_POWER_IDLE` whenever `nearestEnemy(BASE.x, BASE.y, BASE.aggroR)` finds anything, so the cannon powers up as soon as any enemy enters the 1,760u alert band and stays up 120s after the band clears.
+- `hurtBase` no longer touches `basePowerT`. The instant retaliation kill on the attacker is unchanged, as is the rare+ targeting rule.
+
 ## 0. v2.0.5 — admin test range
 
 ### Test range

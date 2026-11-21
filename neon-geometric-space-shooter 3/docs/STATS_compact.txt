@@ -1,4 +1,4 @@
-WOF GUE — COMPLETE STAT COMPENDIUM (build 2.0.4)
+WOF GUE — COMPLETE STAT COMPENDIUM (build 2.0.6)
 Generated 21 Nov 2026. Every number below is a simulation constant. Health is the sum of all parts at that tier; enemy damage is a multiple of eDmg; weapon damage is a multiple of the player cannon damage st.dmg.
 
 1. FORMULAS
@@ -20,32 +20,32 @@ Chunk seed pass rate = clamp(density/2.6, 0.03, 1): common 100%, uncommon 84.6%,
 3. DAMAGE TYPES AND ENEMY DEFENCES
 Energy shields: a blue hex stops every projectile dead except energy, shock and thermal, which pass straight through. Blocked hits do nothing to the bubble - it has no charge to strip and only disappears when its Shield Generator part is destroyed. Bypass laser ignores bubbles; rail sniper does not. Kinetic: base cannon, scatter, hmg, rail, drones. Explosive: missile, homing, flak, mines, cluster. Corrosive: acid, venom. All stopped. Shock: emp, chain, gravity, sonic; passes. Thermal: cutter; passes. Physical: collisions are not projectiles; physical rounds are stopped.
 Energy shield: each Shield Generator projects a 1.9x body-size hex bubble, local to that generator, not body-wide. Energy/shock/thermal pass through; all other projectiles and beams stop at the edge and deal nothing. The bubble never depletes and only vanishes when the generator part is destroyed. Bypass laser ignores bubbles. Direct AoE (EMP, chain, sonic, gravity, mines, explosions) skips the bubble check.
-Hull shells: tier 2+ gets tier-1 layers of 5 x HP_MUL[tier] HP (T5 = 4 x 8,000). Bullets deal 30% to a layer; beams deal 0; AoE deals 30%. Breaking a layer emits a damaging shockwave.
+Hull shells: tier 2+ gets tier-1 solid armour layers, 60% of total hull each (T5 = 4 x 943,872 on a 1.57M hull). A hit is swallowed by the outer layer for 30% (bullets/missile 30-40%), 22% (beams), 40% (blasts), 15% (shock); Plate Breaker up to 2.5x. Breaking a layer emits a damaging shockwave.
 
 4. ENEMIES (32 SPECIES)
 1. Dragonfly (dragonfly) — zones 0-4; flying ranged, keep 330u; speed 210, turn 3.4; pack 1/1/1/1/1/1.
 Hull T0-T5: 310 / 1,405 / 9,792 / 62,496 / 328,608 / 1,573,120 HP. T5: 73 parts, 1,239u radius. Core T0-T5: 30 / 120 / 540 / 2,400 / 10,800 / 48,000.
-Defence: T2 1 shell(s) 90 HP; T3 2 shell(s) 800 HP; T4 3 shell(s) 5,400 HP; T5 4 shell(s) 32,000 HP; T3 1 shield(s) 6,240 HP, 239-239u; T4 2 shield(s) 56,160 HP, 394-434u; T5 2 shield(s) 249,600 HP, 651-716u. Mounts T5: 6 gun(s), 0 missile pod(s).
+Defence: T2 1 shell(s) 5,875 HP; T3 2 shell(s) 74,996 HP; T4 3 shell(s) 591,495 HP; T5 4 shell(s) 3,775,488 HP; T3 1 shield(s) 6,240 HP, 239-239u; T4 2 shield(s) 56,160 HP, 394-434u; T5 2 shield(s) 249,600 HP, 651-716u. Mounts T5: 6 gun(s), 0 missile pod(s).
 Abilities: Ion Bolt [shoot] T1+ 1.8s cd, 0.7x eDmg dmg; 0.3s wind, 2 proj T5, 0.15 spread, 700u/s, 1.4s life, size 6, slow 0.75x/1.2s, 0-950u, bolt. | Strafe Run [charge] T2+ 7s cd, 1.5x eDmg dmg; 0.5s wind, 880u/s, 0.5s dur, 220-750u. | Fan Burst [shoot] T3+ 6s cd, 0.6x eDmg dmg; 0.5s wind, 8 proj T5, 0.9 spread, 600u/s, 1.2s life, size 6, 0-800u, bolt. | Wing Shear [nova] T4+ 10s cd, 0.7x eDmg dmg; 0.8s wind, 17 proj T5, 420u/s, 1.6s life, size 7, 0-600u, wave.
 
 2. Scorpion (scorpion) — zones 0-3; ground melee; speed 115, turn 2.4; pack 1/1/1/1/1/1.
 Hull T0-T5: 486 / 1,987 / 12,262 / 85,760 / 498,960 / 2,288,000 HP. T5: 105 parts, 1,321u radius. Core T0-T5: 30 / 120 / 540 / 2,400 / 10,800 / 48,000.
-Defence: T2 1 shell(s) 90 HP; T3 2 shell(s) 800 HP; T4 3 shell(s) 5,400 HP; T5 4 shell(s) 32,000 HP. Mounts T5: 6 gun(s), 0 missile pod(s).
+Defence: T2 1 shell(s) 7,357 HP; T3 2 shell(s) 102,912 HP; T4 3 shell(s) 898,128 HP; T5 4 shell(s) 5,491,200 HP. Mounts T5: 6 gun(s), 0 missile pod(s).
 Abilities: Pincer Clamp [swing] T1+ 2.6s cd, 2x eDmg dmg; 0.5s wind, 0-3.5 body units, arm swing, needs Pincer. | Tail Lash [swing] T2+ 4.2s cd, 2.6x eDmg dmg; 0.6s wind, poison 0.3x, 0-3.9 body units, tail swing, needs Stinger. | Venom Bolt [shoot] T3+ 4.5s cd, 0.9x eDmg dmg; 0.4s wind, 3 proj T5, 0.3 spread, 560u/s, 1.5s life, size 7, poison 0.25x, 200-800u, bolt. | Claw Grapple [pull] T4+ 11s cd, 0.5x eDmg dmg; 0.5s wind, 760u/s, 260-800u.
 
 3. Widow Spider (spider) — zones 0-4; ground ranged, keep 300u; speed 140, turn 2.8; pack 1/1/1/1/1/1.
 Hull T0-T5: 406 / 1,644 / 9,947 / 74,928 / 446,328 / 2,054,080 HP. T5: 105 parts, 1,350u radius. Core T0-T5: 30 / 120 / 540 / 2,400 / 10,800 / 48,000.
-Defence: T2 1 shell(s) 90 HP; T3 2 shell(s) 800 HP; T4 3 shell(s) 5,400 HP; T5 4 shell(s) 32,000 HP. Mounts T5: 0 gun(s), 4 missile pod(s).
+Defence: T2 1 shell(s) 5,968 HP; T3 2 shell(s) 89,914 HP; T4 3 shell(s) 803,391 HP; T5 4 shell(s) 4,929,792 HP. Mounts T5: 0 gun(s), 4 missile pod(s).
 Abilities: Web Shot [shoot] T1+ 6s cd, 0.4x eDmg dmg; 0.5s wind, 1 proj T5, 460u/s, 1.8s life, size 12, slow 0.5x/2.5s, 120-800u, web. | Fang Strike [swing] T2+ 2s cd, 1.7x eDmg dmg; 0.4s wind, 0-2.3 body units, mandible swing, needs Fang. | Acid Glob [spit] T3+ 7s cd, 0.6x eDmg dmg; 0.5s wind, 480u/s, size 1.5, 0-800u. | Silk Line [pull] T4+ 12s cd, 0.5x eDmg dmg; 0.5s wind, 760u/s, 250-850u.
 
 4. Luna Moth (moth) — zones 0-4; flying ranged, keep 380u; speed 130, turn 2.6; pack 1/1/1/1/1/1.
 Hull T0-T5: 350 / 1,683 / 8,957 / 67,232 / 337,248 / 1,540,480 HP. T5: 69 parts, 862u radius. Core T0-T5: 30 / 120 / 540 / 2,400 / 10,800 / 48,000.
-Defence: T2 1 shell(s) 90 HP; T3 2 shell(s) 800 HP; T4 3 shell(s) 5,400 HP; T5 4 shell(s) 32,000 HP; T3 1 shield(s) 6,240 HP, 239-239u; T4 2 shield(s) 56,160 HP, 394-434u; T5 3 shield(s) 374,400 HP, 651-781u. Mounts T5: 0 gun(s), 0 missile pod(s).
+Defence: T2 1 shell(s) 5,374 HP; T3 2 shell(s) 80,678 HP; T4 3 shell(s) 607,047 HP; T5 4 shell(s) 3,697,152 HP; T3 1 shield(s) 6,240 HP, 239-239u; T4 2 shield(s) 56,160 HP, 394-434u; T5 3 shield(s) 374,400 HP, 651-781u. Mounts T5: 0 gun(s), 0 missile pod(s).
 Abilities: Scale Dust [cloud] T1+ 8s cd, 0.4x eDmg dmg; 0.6s wind, size 2.8, slow 0.55x/1.5s, 0-700u. | Spore Orbs [shoot] T2+ 5s cd, 0.8x eDmg dmg; 0.5s wind, 4 proj T5, 0.7 spread, 260u/s, 4s life, size 9, slow 0.8x/1s, homing 1.6, 0-800u, orb. | Lunar Lure [pull] T3+ 12s cd, 0.5x eDmg dmg; 0.6s wind, 700u/s, 250-800u. | Gust Pulse [ring] T4+ 9s cd, 1.2x eDmg dmg; 0.9s wind, 460u/s, size 6, 0-4 body units.
 
 5. Mantis (mantis) — zones 0-4; ground melee; speed 120, turn 3; pack 1/1/1/1/1/1.
 Hull T0-T5: 428 / 1,710 / 9,022 / 70,464 / 350,640 / 1,886,720 HP. T5: 85 parts, 1,127u radius. Core T0-T5: 30 / 120 / 540 / 2,400 / 10,800 / 48,000.
-Defence: T2 1 shell(s) 90 HP; T3 2 shell(s) 800 HP; T4 3 shell(s) 5,400 HP; T5 4 shell(s) 32,000 HP; T3 1 shield(s) 6,240 HP, 239-239u; T4 2 shield(s) 56,160 HP, 394-434u; T5 3 shield(s) 374,400 HP, 651-781u. Mounts T5: 0 gun(s), 0 missile pod(s).
+Defence: T2 1 shell(s) 5,413 HP; T3 2 shell(s) 84,556 HP; T4 3 shell(s) 631,152 HP; T5 4 shell(s) 4,528,128 HP; T3 1 shield(s) 6,240 HP, 239-239u; T4 2 shield(s) 56,160 HP, 394-434u; T5 3 shield(s) 374,400 HP, 651-781u. Mounts T5: 0 gun(s), 0 missile pod(s).
 Abilities: Scythe Strike [swing] T1+ 2.2s cd, 2.4x eDmg dmg; 0.5s wind, 0-3.2 body units, arm swing, needs Raptor Blade. | Lunge [charge] T2+ 6s cd, 2x eDmg dmg; 0.5s wind, 820u/s, 0.35s dur, 150-600u. | Blade Wave [shoot] T3+ 5s cd, 1.5x eDmg dmg; 0.5s wind, 3 proj T5, 0.3 spread, 520u/s, 1.5s life, size 14, pierce, 150-800u, wave. | Whirling Blades [nova] T4+ 10s cd, 1x eDmg dmg; 0.8s wind, 15 proj T5, 380u/s, 1.6s life, size 9, 0-600u, wave.
 
 6. Centipede (centipede) — zones 0-3; ground melee; speed 170, turn 2.8; pack 1/1/1/1/1/1; serpentine body.
@@ -55,127 +55,127 @@ Abilities: Forcipule Bite [swing] T1+ 2s cd, 1.8x eDmg dmg; 0.4s wind, 0-3.6 bod
 
 7. Hornet (wasp) — zones 0-4; flying melee; speed 190, turn 3.6; pack 2/2/1/1/1/1.
 Hull T0-T5: 403 / 1,682 / 8,978 / 56,992 / 307,152 / 1,393,280 HP. T5: 73 parts, 1,216u radius. Core T0-T5: 30 / 120 / 540 / 2,400 / 10,800 / 48,000.
-Defence: T2 1 shell(s) 90 HP; T3 2 shell(s) 800 HP; T4 3 shell(s) 5,400 HP; T5 4 shell(s) 32,000 HP. Mounts T5: 6 gun(s), 0 missile pod(s).
+Defence: T2 1 shell(s) 5,387 HP; T3 2 shell(s) 68,390 HP; T4 3 shell(s) 552,873 HP; T5 4 shell(s) 3,343,872 HP. Mounts T5: 6 gun(s), 0 missile pod(s).
 Abilities: Mandible Snap [swing] T1+ 2s cd, 1.2x eDmg dmg; 0.35s wind, 0-2.2 body units, mandible swing, needs Mandible. | Hornet Dive [charge] T2+ 5s cd, 1.6x eDmg dmg; 0.5s wind, 900u/s, poison 0.25x, 0.45s dur, 150-800u. | Stinger Volley [shoot] T3+ 4s cd, 0.7x eDmg dmg; 0.35s wind, 5 proj T5, 0.35 spread, 620u/s, 1.3s life, size 5, poison 0.2x, 150-750u, bolt. | Stinger Burst [nova] T4+ 10s cd, 0.6x eDmg dmg; 0.8s wind, 19 proj T5, 440u/s, 1.4s life, size 5, 0-600u, bolt.
 
 8. Scarab (beetle) — zones 0-5; ground melee; speed 110, turn 2.8; pack 1/1/1/1/1/1.
 Hull T0-T5: 362 / 1,448 / 8,768 / 71,448 / 406,908 / 2,307,680 HP. T5: 106 parts, 1,032u radius. Core T0-T5: 30 / 120 / 540 / 2,400 / 10,800 / 48,000.
-Defence: T2 1 shell(s) 90 HP; T3 2 shell(s) 800 HP; T4 3 shell(s) 5,400 HP; T5 4 shell(s) 32,000 HP; T3 1 shield(s) 6,240 HP, 239-239u; T4 2 shield(s) 56,160 HP, 394-434u; T5 2 shield(s) 249,600 HP, 651-716u. Mounts T5: 6 gun(s), 4 missile pod(s).
+Defence: T2 1 shell(s) 5,261 HP; T3 2 shell(s) 85,738 HP; T4 3 shell(s) 732,435 HP; T5 4 shell(s) 5,538,432 HP; T3 1 shield(s) 6,240 HP, 239-239u; T4 2 shield(s) 56,160 HP, 394-434u; T5 2 shield(s) 249,600 HP, 651-716u. Mounts T5: 6 gun(s), 4 missile pod(s).
 Abilities: Mandible Crush [swing] T1+ 2.4s cd, 1.8x eDmg dmg; 0.45s wind, 0-2.7 body units, mandible swing, needs Mandible. | Ram [charge] T2+ 7s cd, 2.6x eDmg dmg; 0.8s wind, 560u/s, 0.6s dur, 200-750u. | Quake Stomp [ring] T3+ 9s cd, 1.6x eDmg dmg; 0.9s wind, 420u/s, size 6, 0-3.8 body units.
 
 9. Soldier Ant (ant) — zones 0-4; ground melee; speed 150, turn 3.4; pack 4/3/2/1/1/1.
 Hull T0-T5: 390 / 1,562 / 9,144 / 71,040 / 374,112 / 1,733,120 HP. T5: 90 parts, 1,137u radius. Core T0-T5: 30 / 120 / 540 / 2,400 / 10,800 / 48,000.
-Defence: T2 1 shell(s) 90 HP; T3 2 shell(s) 800 HP; T4 3 shell(s) 5,400 HP; T5 4 shell(s) 32,000 HP. Mounts T5: 6 gun(s), 0 missile pod(s).
+Defence: T2 1 shell(s) 5,486 HP; T3 2 shell(s) 85,248 HP; T4 3 shell(s) 673,401 HP; T5 4 shell(s) 4,159,488 HP. Mounts T5: 6 gun(s), 0 missile pod(s).
 Abilities: Mandible Crush [swing] T1+ 2s cd, 1.6x eDmg dmg; 0.4s wind, 0-3.1 body units, mandible swing, needs Mandible. | Formic Acid [spit] T2+ 5s cd, 0.7x eDmg dmg; 0.45s wind, 500u/s, size 1.3, 150-750u. | Formic Haze [cloud] T3+ 9s cd, 0.5x eDmg dmg; 0.6s wind, size 3.2, slow 0.6x/1.5s, 0-3.2 body units. | Acid Burst [nova] T4+ 10s cd, 0.7x eDmg dmg; 0.8s wind, 19 proj T5, 380u/s, 1.5s life, size 8, 0-600u, bolt.
 
 10. Firefly (firefly) — zones 1-5; flying ranged, keep 340u; speed 125, turn 2.8; pack 1/1/1/1/1/1.
 Hull T0-T5: 352 / 1,522 / 7,308 / 67,648 / 342,288 / 1,633,280 HP. T5: 78 parts, 1,115u radius. Core T0-T5: 30 / 120 / 540 / 2,400 / 10,800 / 48,000.
-Defence: T2 1 shell(s) 90 HP; T3 2 shell(s) 800 HP; T4 3 shell(s) 5,400 HP; T5 4 shell(s) 32,000 HP; T3 1 shield(s) 6,240 HP, 239-239u; T4 2 shield(s) 56,160 HP, 394-434u; T5 3 shield(s) 374,400 HP, 651-781u. Mounts T5: 6 gun(s), 0 missile pod(s).
+Defence: T2 1 shell(s) 4,385 HP; T3 2 shell(s) 81,178 HP; T4 3 shell(s) 616,119 HP; T5 4 shell(s) 3,919,872 HP; T3 1 shield(s) 6,240 HP, 239-239u; T4 2 shield(s) 56,160 HP, 394-434u; T5 3 shield(s) 374,400 HP, 651-781u. Mounts T5: 6 gun(s), 0 missile pod(s).
 Abilities: Glow Orb [shoot] T1+ 3s cd, 0.8x eDmg dmg; 0.4s wind, 3 proj T5, 0.5 spread, 300u/s, 4.5s life, size 9, slow 0.8x/1s, homing 1.2, 0-850u, orb. | Flash Pulse [ring] T2+ 8s cd, 1.4x eDmg dmg; 0.8s wind, 480u/s, size 5, 0-4 body units. | Flash Dive [charge] T3+ 7s cd, 1.6x eDmg dmg; 0.6s wind, 780u/s, 0.5s dur, 200-700u. | Firework [nova] T4+ 10s cd, 0.7x eDmg dmg; 0.8s wind, 24 proj T5, 360u/s, 1.8s life, size 8, homing 0.4, 0-600u, orb.
 
 11. Worker Ant (workerant) — zones 0-2; ground melee; speed 165, turn 3.8; pack 4/4/3/2/1/1.
 Hull T0-T5: 394 / 1,574 / 9,202 / 73,536 / 343,584 / 1,527,040 HP. T5: 84 parts, 1,175u radius. Core T0-T5: 30 / 120 / 540 / 2,400 / 10,800 / 48,000.
-Defence: T2 1 shell(s) 90 HP; T3 2 shell(s) 800 HP; T4 3 shell(s) 5,400 HP; T5 4 shell(s) 32,000 HP. Mounts T5: 0 gun(s), 0 missile pod(s).
+Defence: T2 1 shell(s) 5,521 HP; T3 2 shell(s) 88,244 HP; T4 3 shell(s) 618,450 HP; T5 4 shell(s) 3,664,896 HP. Mounts T5: 0 gun(s), 0 missile pod(s).
 Abilities: Mandible Crush [swing] T1+ 2.1s cd, 1.4x eDmg dmg; 0.4s wind, 0-2.9 body units, mandible swing, needs Mandible. | Call Swarm [summon] T2+ 15s cd, no direct dmg; 0.7s wind, 2 proj T5, 0-2 body units. | Formic Haze [cloud] T3+ 10s cd, 0.4x eDmg dmg; 0.6s wind, size 2.6, slow 0.6x/1.5s, 0-2.8 body units.
 
 12. Honeybee (honeybee) — zones 0-2; flying melee; speed 175, turn 3.6; pack 3/3/2/1/1/1.
 Hull T0-T5: 451 / 1,872 / 10,787 / 69,576 / 332,100 / 1,504,160 HP. T5: 76 parts, 1,149u radius. Core T0-T5: 30 / 120 / 540 / 2,400 / 10,800 / 48,000.
-Defence: T2 1 shell(s) 90 HP; T3 2 shell(s) 800 HP; T4 3 shell(s) 5,400 HP; T5 4 shell(s) 32,000 HP. Mounts T5: 0 gun(s), 0 missile pod(s).
+Defence: T2 1 shell(s) 6,472 HP; T3 2 shell(s) 83,492 HP; T4 3 shell(s) 597,780 HP; T5 4 shell(s) 3,609,984 HP. Mounts T5: 0 gun(s), 0 missile pod(s).
 Abilities: Venom Sting [spit] T1+ 4.5s cd, 0.8x eDmg dmg; 0.4s wind, 520u/s, size 1.2, poison 0.3x, 0-520u. | Sting Dive [charge] T2+ 6s cd, 1.5x eDmg dmg; 0.5s wind, 850u/s, poison 0.25x, 0.4s dur, 150-750u. | Pollen Burst [nova] T3+ 11s cd, 0.5x eDmg dmg; 0.8s wind, 17 proj T5, 420u/s, 1.4s life, size 5, poison 0.18x, 0-600u, bolt.
 
 13. Grasshopper (grasshopper) — zones 0-2; ground melee; speed 155, turn 3.2; pack 2/2/2/1/1/1.
 Hull T0-T5: 326 / 1,306 / 7,920 / 45,440 / 217,152 / 965,120 HP. T5: 56 parts, 1,445u radius. Core T0-T5: 30 / 120 / 540 / 2,400 / 10,800 / 48,000.
-Defence: T2 1 shell(s) 90 HP; T3 2 shell(s) 800 HP; T4 3 shell(s) 5,400 HP; T5 4 shell(s) 32,000 HP. Mounts T5: 0 gun(s), 0 missile pod(s).
+Defence: T2 1 shell(s) 4,752 HP; T3 2 shell(s) 54,528 HP; T4 3 shell(s) 390,873 HP; T5 4 shell(s) 2,316,288 HP. Mounts T5: 0 gun(s), 0 missile pod(s).
 Abilities: Leaping Charge [charge] T1+ 5.5s cd, 1.8x eDmg dmg; 0.6s wind, 980u/s, 0.45s dur, 180-900u. | Kick [swing] T2+ 3.4s cd, 1.5x eDmg dmg; 0.35s wind, 0-3.1 body units, leg swing, needs Hind Leg. | Spit Seeds [shoot] T3+ 5s cd, 0.5x eDmg dmg; 0.4s wind, 5 proj T5, 0.4 spread, 480u/s, 1.3s life, size 5, 200-800u, bolt.
 
 14. Cockroach (cockroach) — zones 0-2; ground melee; speed 190, turn 3.5; pack 3/3/2/2/1/1.
 Hull T0-T5: 497 / 1,989 / 11,066 / 86,304 / 426,960 / 1,897,600 HP. T5: 95 parts, 988u radius. Core T0-T5: 30 / 120 / 540 / 2,400 / 10,800 / 48,000.
-Defence: T2 1 shell(s) 90 HP; T3 2 shell(s) 800 HP; T4 3 shell(s) 5,400 HP; T5 4 shell(s) 32,000 HP. Mounts T5: 0 gun(s), 0 missile pod(s).
+Defence: T2 1 shell(s) 6,640 HP; T3 2 shell(s) 103,564 HP; T4 3 shell(s) 768,528 HP; T5 4 shell(s) 4,554,240 HP. Mounts T5: 0 gun(s), 0 missile pod(s).
 Abilities: Shell Bash [charge] T1+ 4.5s cd, 1.6x eDmg dmg; 0.5s wind, 760u/s, 0.5s dur, 160-700u. | Wing Flare [ring] T2+ 9s cd, 1x eDmg dmg; 0.7s wind, 460u/s, size 4.5, 0-3.4 body units. | Scuttle Acid [spit] T3+ 6s cd, 0.5x eDmg dmg; 0.4s wind, 460u/s, size 1.4, 0-700u.
 
 15. Mosquito (mosquito) — zones 0-2; flying melee; speed 220, turn 4.2; pack 3/3/2/2/1/1.
 Hull T0-T5: 343 / 1,374 / 6,930 / 39,376 / 189,864 / 843,840 HP. T5: 53 parts, 838u radius. Core T0-T5: 30 / 120 / 540 / 2,400 / 10,800 / 48,000.
-Defence: T2 1 shell(s) 90 HP; T3 2 shell(s) 800 HP; T4 3 shell(s) 5,400 HP; T5 4 shell(s) 32,000 HP. Mounts T5: 0 gun(s), 0 missile pod(s).
+Defence: T2 1 shell(s) 4,158 HP; T3 2 shell(s) 47,252 HP; T4 3 shell(s) 341,754 HP; T5 4 shell(s) 2,025,216 HP. Mounts T5: 0 gun(s), 0 missile pod(s).
 Abilities: Blood Drain [drain] T1+ 5s cd, 0.55x eDmg dmg; 0.5s wind, 1.6s dur, 0-380u, 0-2.4 body units. | Dive [charge] T2+ 6s cd, 1.2x eDmg dmg; 0.4s wind, 880u/s, poison 0.3x, 0.35s dur, 150-700u. | Swarm Bite [nova] T3+ 9s cd, 0.4x eDmg dmg; 0.7s wind, 14 proj T5, 440u/s, 1.3s life, size 4, poison 0.2x, 0-520u, bolt.
 
 16. Bombardier Beetle (bombardier) — zones 1-3; ground ranged, keep 300u; speed 120, turn 2.9; pack 1/1/1/1/1/1.
 Hull T0-T5: 411 / 1,645 / 9,518 / 72,704 / 371,520 / 1,792,000 HP. T5: 85 parts, 984u radius. Core T0-T5: 30 / 120 / 540 / 2,400 / 10,800 / 48,000.
-Defence: T2 1 shell(s) 90 HP; T3 2 shell(s) 800 HP; T4 3 shell(s) 5,400 HP; T5 4 shell(s) 32,000 HP. Mounts T5: 6 gun(s), 4 missile pod(s).
+Defence: T2 1 shell(s) 5,711 HP; T3 2 shell(s) 87,244 HP; T4 3 shell(s) 668,736 HP; T5 4 shell(s) 4,300,800 HP. Mounts T5: 6 gun(s), 4 missile pod(s).
 Abilities: Chemical Spray [spit] T1+ 5s cd, 0.7x eDmg dmg; 0.45s wind, 520u/s, size 1.7, 0-640u. | Acid Puddle [cloud] T2+ 9s cd, 0.55x eDmg dmg; 0.5s wind, size 3, slow 0.7x/1.5s, 0-720u. | Boiling Jet [shoot] T3+ 6s cd, 0.55x eDmg dmg; 0.5s wind, 7 proj T5, 0.7 spread, 500u/s, 1.3s life, size 6, poison 0.2x, 150-720u, bolt.
 
 17. Rhinoceros Beetle (rhino) — zones 1-3; ground melee; speed 105, turn 2.2; pack 1/1/1/1/1/1.
 Hull T0-T5: 418 / 1,673 / 11,372 / 75,344 / 483,480 / 2,260,800 HP. T5: 106 parts, 1,457u radius. Core T0-T5: 30 / 120 / 540 / 2,400 / 10,800 / 48,000.
-Defence: T2 1 shell(s) 90 HP; T3 2 shell(s) 800 HP; T4 3 shell(s) 5,400 HP; T5 4 shell(s) 32,000 HP; T3 1 shield(s) 6,240 HP, 239-239u; T4 2 shield(s) 56,160 HP, 394-434u; T5 3 shield(s) 374,400 HP, 651-781u. Mounts T5: 6 gun(s), 0 missile pod(s).
+Defence: T2 1 shell(s) 6,823 HP; T3 2 shell(s) 90,412 HP; T4 3 shell(s) 870,264 HP; T5 4 shell(s) 5,425,920 HP; T3 1 shield(s) 6,240 HP, 239-239u; T4 2 shield(s) 56,160 HP, 394-434u; T5 3 shield(s) 374,400 HP, 651-781u. Mounts T5: 6 gun(s), 0 missile pod(s).
 Abilities: Horn Charge [charge] T1+ 7s cd, 3.2x eDmg dmg; 0.9s wind, 620u/s, 0.6s dur, 200-800u. | Horn Toss [swing] T2+ 3s cd, 2.2x eDmg dmg; 0.5s wind, 0-3.4 body units, mandible swing, needs Mandible. | Ground Slam [ring] T3+ 10s cd, 2x eDmg dmg; 0.9s wind, 420u/s, size 5.5, 0-4 body units.
 
 18. Yellowjacket (yellowjacket) — zones 1-3; flying ranged, keep 300u; speed 200, turn 3.9; pack 2/2/2/1/1/1.
 Hull T0-T5: 468 / 1,943 / 9,808 / 74,504 / 370,116 / 1,743,520 HP. T5: 83 parts, 1,288u radius. Core T0-T5: 30 / 120 / 540 / 2,400 / 10,800 / 48,000.
-Defence: T2 1 shell(s) 90 HP; T3 2 shell(s) 800 HP; T4 3 shell(s) 5,400 HP; T5 4 shell(s) 32,000 HP. Mounts T5: 6 gun(s), 0 missile pod(s).
+Defence: T2 1 shell(s) 5,885 HP; T3 2 shell(s) 89,404 HP; T4 3 shell(s) 666,210 HP; T5 4 shell(s) 4,184,448 HP. Mounts T5: 6 gun(s), 0 missile pod(s).
 Abilities: Venom Darts [shoot] T1+ 4s cd, 0.65x eDmg dmg; 0.4s wind, 5 proj T5, 0.35 spread, 600u/s, 1.4s life, size 5, slow 0.7x/1.2s, poison 0.2x, 180-800u, bolt. | Stinger Thrust [swing] T2+ 2.6s cd, 1.8x eDmg dmg; 0.35s wind, 0-2.6 body units, tail swing, needs Stinger. | Dive Bomb [charge] T3+ 7s cd, 1.8x eDmg dmg; 0.5s wind, 900u/s, poison 0.25x, 0.45s dur, 150-800u.
 
 19. Ladybug (ladybug) — zones 1-3; flying ranged, keep 280u; speed 135, turn 3; pack 1/1/1/1/1/1.
 Hull T0-T5: 440 / 1,758 / 11,758 / 73,536 / 352,944 / 1,610,240 HP. T5: 78 parts, 988u radius. Core T0-T5: 30 / 120 / 540 / 2,400 / 10,800 / 48,000.
-Defence: T2 1 shell(s) 90 HP; T3 2 shell(s) 800 HP; T4 3 shell(s) 5,400 HP; T5 4 shell(s) 32,000 HP; T3 1 shield(s) 6,240 HP, 239-239u; T4 2 shield(s) 56,160 HP, 394-434u; T5 3 shield(s) 374,400 HP, 651-781u. Mounts T5: 0 gun(s), 0 missile pod(s).
+Defence: T2 1 shell(s) 7,055 HP; T3 2 shell(s) 88,244 HP; T4 3 shell(s) 635,298 HP; T5 4 shell(s) 3,864,576 HP; T3 1 shield(s) 6,240 HP, 239-239u; T4 2 shield(s) 56,160 HP, 394-434u; T5 3 shield(s) 374,400 HP, 651-781u. Mounts T5: 0 gun(s), 0 missile pod(s).
 Abilities: Spore Cloud [cloud] T1+ 8s cd, 0.45x eDmg dmg; 0.6s wind, size 2.9, slow 0.6x/1.5s, 0-3.2 body units. | Repel Pulse [ring] T2+ 8s cd, 1.1x eDmg dmg; 0.7s wind, 440u/s, size 5, 0-3.6 body units. | Spore Burst [nova] T3+ 10s cd, 0.4x eDmg dmg; 0.8s wind, 19 proj T5, 360u/s, 1.6s life, size 6, poison 0.15x, homing 0.6, 0-620u, orb.
 
 20. Stag Beetle (stag) — zones 1-3; ground melee; speed 120, turn 2.6; pack 1/1/1/1/1/1.
 Hull T0-T5: 419 / 1,675 / 9,655 / 71,872 / 371,376 / 1,692,160 HP. T5: 89 parts, 1,379u radius. Core T0-T5: 30 / 120 / 540 / 2,400 / 10,800 / 48,000.
-Defence: T2 1 shell(s) 90 HP; T3 2 shell(s) 800 HP; T4 3 shell(s) 5,400 HP; T5 4 shell(s) 32,000 HP; T3 1 shield(s) 6,240 HP, 239-239u; T4 2 shield(s) 56,160 HP, 394-434u; T5 3 shield(s) 374,400 HP, 651-781u. Mounts T5: 0 gun(s), 0 missile pod(s).
+Defence: T2 1 shell(s) 5,793 HP; T3 2 shell(s) 86,246 HP; T4 3 shell(s) 668,478 HP; T5 4 shell(s) 4,061,184 HP; T3 1 shield(s) 6,240 HP, 239-239u; T4 2 shield(s) 56,160 HP, 394-434u; T5 3 shield(s) 374,400 HP, 651-781u. Mounts T5: 0 gun(s), 0 missile pod(s).
 Abilities: Pincer Grab [swing] T1+ 2.8s cd, 2.4x eDmg dmg; 0.5s wind, 0-3.2 body units, mandible swing, needs Pincer. | Toss [pull] T2+ 10s cd, 0.7x eDmg dmg; 0.6s wind, 780u/s, 220-800u. | Goring Rush [charge] T3+ 7s cd, 2.6x eDmg dmg; 0.7s wind, 700u/s, 0.55s dur, 200-800u.
 
 21. Carpenter Ant (carpenter) — zones 2-4; ground melee; speed 135, turn 3; pack 2/2/2/1/1/1.
 Hull T0-T5: 490 / 1,958 / 9,634 / 73,376 / 448,704 / 2,023,040 HP. T5: 89 parts, 1,212u radius. Core T0-T5: 30 / 120 / 540 / 2,400 / 10,800 / 48,000.
-Defence: T2 1 shell(s) 90 HP; T3 2 shell(s) 800 HP; T4 3 shell(s) 5,400 HP; T5 4 shell(s) 32,000 HP; T3 1 shield(s) 6,240 HP, 239-239u; T4 2 shield(s) 56,160 HP, 394-434u; T5 1 shield(s) 124,800 HP, 651-651u. Mounts T5: 6 gun(s), 0 missile pod(s).
+Defence: T2 1 shell(s) 5,780 HP; T3 2 shell(s) 88,052 HP; T4 3 shell(s) 807,666 HP; T5 4 shell(s) 4,855,296 HP; T3 1 shield(s) 6,240 HP, 239-239u; T4 2 shield(s) 56,160 HP, 394-434u; T5 1 shield(s) 124,800 HP, 651-651u. Mounts T5: 6 gun(s), 0 missile pod(s).
 Abilities: Crushing Bite [swing] T1+ 2.2s cd, 2.2x eDmg dmg; 0.45s wind, 0-3 body units, mandible swing, needs Mandible. | Quake Stomp [ring] T2+ 9s cd, 1.6x eDmg dmg; 0.8s wind, 440u/s, size 5, 0-3.6 body units. | Call Colony [summon] T3+ 16s cd, no direct dmg; 0.8s wind, 3 proj T5, 0-2.5 body units.
 
 22. Cicada (cicada) — zones 2-4; flying ranged, keep 340u; speed 140, turn 3; pack 1/1/1/1/1/1.
 Hull T0-T5: 338 / 1,354 / 8,222 / 63,584 / 308,160 / 1,411,200 HP. T5: 71 parts, 1,145u radius. Core T0-T5: 30 / 120 / 540 / 2,400 / 10,800 / 48,000.
-Defence: T2 1 shell(s) 90 HP; T3 2 shell(s) 800 HP; T4 3 shell(s) 5,400 HP; T5 4 shell(s) 32,000 HP; T3 1 shield(s) 6,240 HP, 239-239u; T4 2 shield(s) 56,160 HP, 394-434u; T5 3 shield(s) 374,400 HP, 651-781u. Mounts T5: 0 gun(s), 0 missile pod(s).
+Defence: T2 1 shell(s) 4,933 HP; T3 2 shell(s) 76,300 HP; T4 3 shell(s) 554,688 HP; T5 4 shell(s) 3,386,880 HP; T3 1 shield(s) 6,240 HP, 239-239u; T4 2 shield(s) 56,160 HP, 394-434u; T5 3 shield(s) 374,400 HP, 651-781u. Mounts T5: 0 gun(s), 0 missile pod(s).
 Abilities: Sonic Screech [ring] T1+ 8s cd, 1.4x eDmg dmg; 0.75s wind, 520u/s, size 6, 0-4.2 body units. | Resonance [nova] T2+ 10s cd, 0.6x eDmg dmg; 0.8s wind, 22 proj T5, 380u/s, 1.5s life, size 7, 0-600u, wave. | Chorus Field [cloud] T3+ 11s cd, 0.5x eDmg dmg; 0.7s wind, size 3.4, slow 0.7x/1.5s, 0-800u.
 
 23. Assassin Bug (assassin) — zones 2-4; ground melee; speed 185, turn 3.4; pack 1/1/1/1/1/1.
 Hull T0-T5: 417 / 1,667 / 9,619 / 69,632 / 326,016 / 1,448,960 HP. T5: 74 parts, 969u radius. Core T0-T5: 30 / 120 / 540 / 2,400 / 10,800 / 48,000.
-Defence: T2 1 shell(s) 90 HP; T3 2 shell(s) 800 HP; T4 3 shell(s) 5,400 HP; T5 4 shell(s) 32,000 HP. Mounts T5: 0 gun(s), 0 missile pod(s).
+Defence: T2 1 shell(s) 5,772 HP; T3 2 shell(s) 83,558 HP; T4 3 shell(s) 586,830 HP; T5 4 shell(s) 3,477,504 HP. Mounts T5: 0 gun(s), 0 missile pod(s).
 Abilities: Piercing Proboscis [drain] T1+ 5s cd, 0.7x eDmg dmg; 0.45s wind, 1.8s dur, 0-460u, 0-2.6 body units. | Fang Slash [swing] T2+ 2.4s cd, 2x eDmg dmg; 0.4s wind, 0-2.8 body units, mandible swing, needs Proboscis. | Ambush Lunge [charge] T3+ 6s cd, 2.2x eDmg dmg; 0.5s wind, 900u/s, 0.4s dur, 180-700u.
 
 24. Tiger Beetle (tiger) — zones 2-4; ground melee; speed 230, turn 4; pack 1/1/1/1/1/1.
 Hull T0-T5: 401 / 1,605 / 8,978 / 68,384 / 362,160 / 1,680,000 HP. T5: 89 parts, 1,004u radius. Core T0-T5: 30 / 120 / 540 / 2,400 / 10,800 / 48,000.
-Defence: T2 1 shell(s) 90 HP; T3 2 shell(s) 800 HP; T4 3 shell(s) 5,400 HP; T5 4 shell(s) 32,000 HP. Mounts T5: 0 gun(s), 4 missile pod(s).
+Defence: T2 1 shell(s) 5,387 HP; T3 2 shell(s) 82,060 HP; T4 3 shell(s) 651,888 HP; T5 4 shell(s) 4,032,000 HP. Mounts T5: 0 gun(s), 4 missile pod(s).
 Abilities: Dash [charge] T1+ 3.5s cd, 1.4x eDmg dmg; 0.3s wind, 1,000u/s, 0.32s dur, 200-900u. | Second Dash [charge] T2+ 4s cd, 1.5x eDmg dmg; 0.3s wind, 1,000u/s, 0.32s dur, 200-900u. | Sickle Jaws [swing] T3+ 2.2s cd, 2.1x eDmg dmg; 0.35s wind, 0-2.8 body units, mandible swing, needs Mandible.
 
 25. Mole Cricket (molecricket) — zones 2-4; ground melee; speed 130, turn 3; pack 1/1/1/1/1/1.
 Hull T0-T5: 383 / 1,533 / 8,942 / 58,208 / 283,968 / 1,303,680 HP. T5: 63 parts, 1,494u radius. Core T0-T5: 30 / 120 / 540 / 2,400 / 10,800 / 48,000.
-Defence: T2 1 shell(s) 90 HP; T3 2 shell(s) 800 HP; T4 3 shell(s) 5,400 HP; T5 4 shell(s) 32,000 HP; T3 1 shield(s) 6,240 HP, 239-239u; T4 2 shield(s) 56,160 HP, 394-434u; T5 3 shield(s) 374,400 HP, 651-781u. Mounts T5: 0 gun(s), 0 missile pod(s).
+Defence: T2 1 shell(s) 5,365 HP; T3 2 shell(s) 69,850 HP; T4 3 shell(s) 511,143 HP; T5 4 shell(s) 3,128,832 HP; T3 1 shield(s) 6,240 HP, 239-239u; T4 2 shield(s) 56,160 HP, 394-434u; T5 3 shield(s) 374,400 HP, 651-781u. Mounts T5: 0 gun(s), 0 missile pod(s).
 Abilities: Burrow Ambush [blink] T1+ 8s cd, 1.2x eDmg dmg; 0.6s wind, 0-700u. | Digger Claws [swing] T2+ 2.6s cd, 2x eDmg dmg; 0.45s wind, 0-3 body units, leg swing, needs Hind Leg. | Earth Shock [ring] T3+ 10s cd, 1.8x eDmg dmg; 0.9s wind, 420u/s, size 6, 0-4 body units.
 
 26. Katydid (katydid) — zones 2-5; flying ranged, keep 320u; speed 165, turn 3.3; pack 1/1/1/1/1/1.
 Hull T0-T5: 350 / 1,402 / 7,056 / 42,752 / 205,056 / 911,360 HP. T5: 56 parts, 1,364u radius. Core T0-T5: 30 / 120 / 540 / 2,400 / 10,800 / 48,000.
-Defence: T2 1 shell(s) 90 HP; T3 2 shell(s) 800 HP; T4 3 shell(s) 5,400 HP; T5 4 shell(s) 32,000 HP. Mounts T5: 0 gun(s), 0 missile pod(s).
+Defence: T2 1 shell(s) 4,234 HP; T3 2 shell(s) 51,302 HP; T4 3 shell(s) 369,102 HP; T5 4 shell(s) 2,187,264 HP. Mounts T5: 0 gun(s), 0 missile pod(s).
 Abilities: Leaf Shards [shoot] T1+ 4.5s cd, 0.7x eDmg dmg; 0.4s wind, 5 proj T5, 0.4 spread, 540u/s, 1.5s life, size 7, pierce, 180-800u, wave. | Camo Shift [blink] T2+ 9s cd, 0.6x eDmg dmg; 0.4s wind, 0-600u. | Shard Storm [nova] T3+ 10s cd, 0.5x eDmg dmg; 0.8s wind, 19 proj T5, 460u/s, 1.3s life, size 7, 0-600u, wave.
 
 27. Dung Beetle (dung) — zones 3-5; ground melee; speed 92, turn 2; pack 1/1/1/1/1/1.
 Hull T0-T5: 505 / 2,021 / 11,210 / 80,384 / 480,240 / 2,246,400 HP. T5: 105 parts, 1,144u radius. Core T0-T5: 30 / 120 / 540 / 2,400 / 10,800 / 48,000.
-Defence: T2 1 shell(s) 90 HP; T3 2 shell(s) 800 HP; T4 3 shell(s) 5,400 HP; T5 4 shell(s) 32,000 HP; T3 1 shield(s) 6,240 HP, 239-239u; T4 2 shield(s) 56,160 HP, 394-434u; T5 3 shield(s) 374,400 HP, 651-781u. Mounts T5: 6 gun(s), 0 missile pod(s).
+Defence: T2 1 shell(s) 6,726 HP; T3 2 shell(s) 96,460 HP; T4 3 shell(s) 864,432 HP; T5 4 shell(s) 5,391,360 HP; T3 1 shield(s) 6,240 HP, 239-239u; T4 2 shield(s) 56,160 HP, 394-434u; T5 3 shield(s) 374,400 HP, 651-781u. Mounts T5: 6 gun(s), 0 missile pod(s).
 Abilities: Rolling Slam [charge] T1+ 8s cd, 3.4x eDmg dmg; 1s wind, 560u/s, 0.7s dur, 220-900u. | Boulder Toss [spit] T2+ 6s cd, 0.9x eDmg dmg; 0.6s wind, 420u/s, size 2.4, 0-800u. | Impact Wave [ring] T3+ 11s cd, 2.4x eDmg dmg; 1s wind, 400u/s, size 7, 0-4.4 body units.
 
 28. Atlas Moth (atlas) — zones 3-5; flying ranged, keep 420u; speed 115, turn 2.4; pack 1/1/1/1/1/1.
 Hull T0-T5: 350 / 1,542 / 7,690 / 53,792 / 264,096 / 1,215,360 HP. T5: 65 parts, 1,677u radius. Core T0-T5: 30 / 120 / 540 / 2,400 / 10,800 / 48,000.
-Defence: T2 1 shell(s) 90 HP; T3 2 shell(s) 800 HP; T4 3 shell(s) 5,400 HP; T5 4 shell(s) 32,000 HP; T3 1 shield(s) 6,240 HP, 239-239u; T4 2 shield(s) 56,160 HP, 394-434u; T5 3 shield(s) 374,400 HP, 651-781u. Mounts T5: 0 gun(s), 0 missile pod(s).
+Defence: T2 1 shell(s) 4,614 HP; T3 2 shell(s) 64,550 HP; T4 3 shell(s) 475,374 HP; T5 4 shell(s) 2,916,864 HP; T3 1 shield(s) 6,240 HP, 239-239u; T4 2 shield(s) 56,160 HP, 394-434u; T5 3 shield(s) 374,400 HP, 651-781u. Mounts T5: 0 gun(s), 0 missile pod(s).
 Abilities: Wind Gust [ring] T1+ 8s cd, 1.3x eDmg dmg; 0.8s wind, 480u/s, size 7, 0-4.6 body units. | Slow Powder [cloud] T2+ 10s cd, 0.5x eDmg dmg; 0.7s wind, size 4, slow 0.8x/1.5s, 0-900u. | Downdraft [pull] T3+ 13s cd, 0.8x eDmg dmg; 0.7s wind, 700u/s, 300-900u.
 
 29. Weevil (weevil) — zones 3-5; ground melee; speed 110, turn 2.8; pack 1/1/1/1/1/1.
 Hull T0-T5: 390 / 1,558 / 7,834 / 73,056 / 366,624 / 1,741,440 HP. T5: 82 parts, 1,182u radius. Core T0-T5: 30 / 120 / 540 / 2,400 / 10,800 / 48,000.
-Defence: T2 1 shell(s) 90 HP; T3 2 shell(s) 800 HP; T4 3 shell(s) 5,400 HP; T5 4 shell(s) 32,000 HP; T3 1 shield(s) 6,240 HP, 239-239u; T4 2 shield(s) 56,160 HP, 394-434u; T5 3 shield(s) 374,400 HP, 651-781u. Mounts T5: 6 gun(s), 0 missile pod(s).
+Defence: T2 1 shell(s) 4,700 HP; T3 2 shell(s) 87,668 HP; T4 3 shell(s) 659,922 HP; T5 4 shell(s) 4,179,456 HP; T3 1 shield(s) 6,240 HP, 239-239u; T4 2 shield(s) 56,160 HP, 394-434u; T5 3 shield(s) 374,400 HP, 651-781u. Mounts T5: 6 gun(s), 0 missile pod(s).
 Abilities: Drill Strike [swing] T1+ 3s cd, 2.6x eDmg dmg; 0.55s wind, 0-3.4 body units, mandible swing, needs Snout. | Boring Charge [charge] T2+ 8s cd, 2.8x eDmg dmg; 0.8s wind, 640u/s, 0.6s dur, 200-800u. | Drill Shock [ring] T3+ 10s cd, 1.8x eDmg dmg; 0.9s wind, 440u/s, size 6, 0-4 body units.
 
 30. Locust (locust) — zones 3-5; flying melee; speed 205, turn 3.4; pack 2/2/2/2/1/1.
 Hull T0-T5: 386 / 1,542 / 9,936 / 53,312 / 284,256 / 1,263,360 HP. T5: 67 parts, 1,400u radius. Core T0-T5: 30 / 120 / 540 / 2,400 / 10,800 / 48,000.
-Defence: T2 1 shell(s) 90 HP; T3 2 shell(s) 800 HP; T4 3 shell(s) 5,400 HP; T5 4 shell(s) 32,000 HP. Mounts T5: 6 gun(s), 0 missile pod(s).
+Defence: T2 1 shell(s) 5,962 HP; T3 2 shell(s) 63,974 HP; T4 3 shell(s) 511,662 HP; T5 4 shell(s) 3,032,064 HP. Mounts T5: 6 gun(s), 0 missile pod(s).
 Abilities: Swarm Rush [charge] T1+ 5s cd, 1.5x eDmg dmg; 0.4s wind, 950u/s, 0.4s dur, 180-850u. | Summon Swarm [summon] T2+ 14s cd, no direct dmg; 0.6s wind, 3 proj T5, 0-2.5 body units. | Wing Storm [nova] T3+ 10s cd, 0.5x eDmg dmg; 0.7s wind, 22 proj T5, 480u/s, 1.4s life, size 6, 0-640u, wave.
 
 31. Jewel Beetle (jewel) — zones 4-5; flying ranged, keep 360u; speed 170, turn 3.2; pack 1/1/1/1/1/1; reflective bubbles.
 Hull T0-T5: 553 / 2,210 / 12,064 / 78,416 / 487,224 / 2,306,240 HP. T5: 99 parts, 1,008u radius. Core T0-T5: 30 / 120 / 540 / 2,400 / 10,800 / 48,000.
-Defence: T2 1 shell(s) 90 HP; T3 2 shell(s) 800 HP; T4 3 shell(s) 5,400 HP; T5 4 shell(s) 32,000 HP; T3 1 shield(s) 6,240 HP, 239-239u; T4 2 shield(s) 56,160 HP, 394-434u; T5 2 shield(s) 249,600 HP, 651-716u. Mounts T5: 6 gun(s), 4 missile pod(s).
+Defence: T2 1 shell(s) 7,238 HP; T3 2 shell(s) 94,100 HP; T4 3 shell(s) 877,002 HP; T5 4 shell(s) 5,534,976 HP; T3 1 shield(s) 6,240 HP, 239-239u; T4 2 shield(s) 56,160 HP, 394-434u; T5 2 shield(s) 249,600 HP, 651-716u. Mounts T5: 6 gun(s), 4 missile pod(s).
 Abilities: Prismatic Beam [shoot] T1+ 5s cd, 1.1x eDmg dmg; 0.5s wind, 2 proj T5, 0.1 spread, 760u/s, 1.5s life, size 8, pierce, 200-950u, wave. | Refraction [nova] T2+ 9s cd, 0.7x eDmg dmg; 0.7s wind, 24 proj T5, 420u/s, 1.7s life, size 7, 0-700u, wave. | Prism Pulse [ring] T3+ 11s cd, 2x eDmg dmg; 0.8s wind, 480u/s, size 6, 0-4 body units.
 
 32. Snake (serpent) — zone 5; ground melee; speed 430, turn 3.6; pack 1/1/1/1/1/1; BOSS, one alive; serpentine body.

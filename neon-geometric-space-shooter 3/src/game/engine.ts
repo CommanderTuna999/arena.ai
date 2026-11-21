@@ -1,6 +1,6 @@
 import { TAU, angDiff, clamp, distToPoly, hash2, lerp, mulberry32, pointInPoly } from "./math";
 import {
-  ABILITY_BY_ID, BASE, BASE_MAX_HP, BASE_RING, BASE_TAKE, DMG_MUL, HP_MUL, KIND_CAT, RARITIES, RECIPE_BY_ID, SHIP_R, UPGRADES, WORLD_R, W_SLOTS, compMass, compValue, computeStats, craftEfficiency,
+  ABILITY_BY_ID, BASE, BASE_MAX_HP, BASE_RING, BASE_TAKE, DMG_MUL, KIND_CAT, RARITIES, RECIPE_BY_ID, SHIP_R, UPGRADES, WORLD_R, W_SLOTS, compMass, compValue, computeStats, craftEfficiency,
   recipeProblem, upgradeCost, zoneTier, WEAPON_DMG, WEAPON_RANGE, type Comp, type DmgKind, type PartKind, type SaveData, type Slot, type Stats,
 } from "./data";
 import { SPECIES_LIST, buildEnemy, type AbilityDef, type Group, type Part, type ProjType, type SpeciesDef } from "./enemies";
@@ -8,8 +8,9 @@ import { SPECIES_LIST, buildEnemy, type AbilityDef, type Group, type Part, type 
 /* ---------------------------------------------------------------------------
  * COMBAT & WORLD REFERENCE (live constants)
  *   Base cannon      : st.dmg per shot, rate 4 + 0.7/level, 1 + barrels shots.
- *   Nest defences    : the siege cannon is dormant until the nest takes damage, then
- *                      stays online for 120s and one-shots up to legendary; six hex
+ *   Nest defences    : the siege cannon powers up whenever any enemy enters the
+ *                      nest's 1,760u alert band and stays online 120s after the last
+ *                      intruder leaves; it one-shots up to legendary; six hex
  *                      turrets fire fast weak tracers to 850u. Any enemy whose shot
  *                      damages the hull is instantly destroyed. One turret dies per
  *                      1/6 nest integrity; repair starts after 120s without damage.
@@ -23,9 +24,11 @@ import { SPECIES_LIST, buildEnemy, type AbilityDef, type Group, type Part, type 
  *                      never targets anything outside the current view.
  *   Precision missiles: right-click marks a part; kind-4 bullets ignore all collision
  *                      and hit that part for 3.1x base damage. Re-marking resets reload.
- *   Plating          : tier 2/3/4/5 get 1/2/3/4 grey layers of 5*HP_MUL[tier] HP.
- *                      Kinetic and explosive hits deal 30%; laser and shock deal 0.
- *                      Layers are drawn as solid grey copies of the part outlines.
+ *   Plating          : tier 2/3/4/5 get 1/2/3/4 bolted armour layers, each holding
+ *                      60% of the enemy's total hull. A layer swallows the whole hit
+ *                      and only loses a share of it (kinetic 30%, explosive 40%,
+ *                      laser 22%, shock 15%, damage-over-time 10%). Layers are drawn
+ *                      as solid steel plates under the body, one rim per layer.
  *   Energy shields   : blue hexes stop every damage type except energy, shock and
  *                      thermal, which cut straight through. Blocked hits do not
  *                      drain the bubble at all — it stays up until its generator
@@ -53,14 +56,16 @@ const ZONE_CAP = [56, 48, 40, 14, 8, 4];
 const HARD_MAX = 420;
 /** how many enemies one chunk may contribute during the initial world seed */
 const SEED_BUDGET = 1;
-/** shells shave 70% off kinetic hits; lasers and shockwaves do nothing to them */
-const SHELL_TAKE = 0.3;
+/** a plating layer stops the whole hit but only loses this share of it */
+const SHELL_TAKE: Record<DmgSrc, number> = { kinetic: 0.3, missile: 0.32, explosive: 0.4, laser: 0.22, shock: 0.15, dot: 0.1 };
+/** each plating layer carries this share of the enemy's total part hull */
+export const SHELL_HP_FRAC = 0.6;
 /* Nest defence tuning. The siege shell one-shots up to legendary; mythicals lose
  * a fixed chunk so they stay a genuine end-game threat. */
 const SHELL_DMG = 2_500_000;
 const MYTHIC_SHELL_FRAC = 0.55;
 const BASE_REPAIR_IDLE = 120;
-/** the siege cannon stays powered for this long after the nest is hit */
+/** the siege cannon stays powered for this long after the last intruder leaves */
 const BASE_POWER_IDLE = 120;
 /** baseline camera pull-back: the player sees 1.3x further everywhere */
 const VISION_MUL = 1.3;
@@ -296,7 +301,7 @@ export class Game {
   baseLostT = 0;
   baseFlash = 0;
   baseHitT = 0;
-  /** >0 while the siege cannon is powered; reset to 120s by any nest hit */
+  /** >0 while the siege cannon is powered; refreshed to 120s by any nearby enemy */
   basePowerT = 0;
   /** cumulative integrity damage; one turret dies per sixth of max HP */
   private baseDamageTaken = 0;
@@ -1061,7 +1066,8 @@ export class Game {
   private shellHit(e: Enemy, dmg: number, src: DmgSrc, fromBase = false) {
     const layer = e.shells[e.shells.length - 1];
     if (!layer) return false;
-    const dealt = src === "laser" || src === "shock" ? 0 : dmg * SHELL_TAKE;
+    /* Plate Breaker buys extra bite against the slabs, not just the armour parts */
+    const dealt = dmg * (SHELL_TAKE[src] ?? 0.3) * (fromBase ? 1 : this.stats.breaker);
     const before = layer.hp;
     this.trackDamage(e, Math.min(dealt, Math.max(0, before)), fromBase);
     layer.hp -= dealt;
@@ -1072,7 +1078,7 @@ export class Game {
       /* A shattered shield lets go in a shockwave: it chews the hull it was
        * bolted to, everything nearby and the player if they are too close. */
       const R = e.shellR * 1.7 + 40;
-      this.shockwave(e.x, e.y, R, e.eDmg * 1.1, layer.max * 0.75, "#ffc46b");
+      this.shockwave(e.x, e.y, R, e.eDmg * 1.1, e.eDmg * 1.25, "#ffc46b");
     }
     return true;
   }
@@ -1085,6 +1091,10 @@ export class Game {
     const spd = SPECIES_LIST[spi];
     const b = buildEnemy(spi, tier, seed);
     const roleGroups: Record<string, number[]> = { arm: [], mandible: [], tail: [], leg: [], wing: [] };
+    /* plating is a genuine second health bar, not a token: one layer per tier
+     * above common, each worth 60% of the hull underneath it */
+    const hull = b.parts.reduce((a, p) => a + p.maxHp, 0);
+    const shellMax = Math.max(1, Math.round(hull * SHELL_HP_FRAC));
     b.groups.forEach((g, i) => { if (roleGroups[g.role]) roleGroups[g.role].push(i); });
     // ability gating: tier 0 enemies have none, tier 1 has one, tier 2 two, and so on
     const gate = Math.min(tier, spd.abilities.length);
@@ -1105,7 +1115,7 @@ export class Game {
       tags, shields: [], weaponParts, shieldParts, dist: 9999, bdist: 9999, contactCd: 0, hasChange: false, gen: 0,
       dmgTaken: 0, baseDmg: 0,
       dot: 0, dotT: 0, melt: 0, slowT: 0, slowF: 1,
-      shells: Array.from({ length: tier >= 2 && !spd.bodyWave ? tier - 1 : 0 }, () => ({ hp: 5 * HP_MUL[tier], max: 5 * HP_MUL[tier] })),
+      shells: Array.from({ length: tier >= 2 && !spd.bodyWave ? tier - 1 : 0 }, () => ({ hp: shellMax, max: shellMax })),
       shellHit: 0, shellR: b.radius + 6,
       bend: spd.bodyWave ? { amp: spd.bodyWave.amp * b.size, k: spd.bodyWave.k, speed: spd.bodyWave.speed } : null,
     };
@@ -2709,8 +2719,7 @@ export class Game {
     this.baseFlash = 0.22;
     /* the nest only starts repairing after two full minutes without a hit */
     this.baseHitT = BASE_REPAIR_IDLE;
-    /* any damage wakes the siege cannon and keeps it online for two minutes */
-    this.basePowerT = BASE_POWER_IDLE;
+    /* damage no longer wakes the cannon: proximity does, in updateTurret */
     this.syncMiniLoss();
     this.shake = Math.max(this.shake, Math.min(12, 2 + tier * 2));
     if (this.baseAlarmCd <= 0 && tier >= 2) {
@@ -2730,16 +2739,17 @@ export class Game {
     }
   }
 
-  /** Slow siege cannon: dormant until the nest is hit, then it tracks one rare+
-   *  target at a time for two minutes and hits like a meteor. */
+  /** Slow siege cannon: side-lined while the alert band is clear, then it tracks
+   *  one rare+ target at a time and hits like a meteor. */
   private updateTurret(dt: number) {
     const T = this.turret;
     T.cd -= dt;
     T.recoil = Math.max(0, T.recoil - dt * 2.2);
     T.flash = Math.max(0, T.flash - dt);
     if (this.baseLost) { T.target = null; return; }
-    /* The main cannon is asleep until the nest itself is damaged. Once awake
-     * it keeps tracking for two minutes after the last hit. */
+    /* Proximity fuse: any enemy inside the nest's alert band powers the cannon
+     * and refreshes its two-minute window. Nothing has to hit the hull first. */
+    if (this.nearestEnemy(BASE.x, BASE.y, BASE.aggroR)) this.basePowerT = BASE_POWER_IDLE;
     if (this.basePowerT <= 0) {
       T.target = null;
       T.a += dt * 0.25;

@@ -1,5 +1,5 @@
 WOF GUE — STAT COMPENDIUM
-Build 2.0.4 · 21 November 2026
+Build 2.0.6 · 21 November 2026
 
 HOW TO READ THIS
 C / U / R / E / L / M = Common, Uncommon, Rare, Epic, Legendary, Mythic.
@@ -42,7 +42,7 @@ DAMAGE TYPES
 
 ENEMY DEFENCE RULES
 Energy shield: each Shield Generator projects a hex bubble 1.9 × body size that only covers that generator, not the whole body. Energy, shock and thermal damage passes through it. Every other projectile or beam is stopped at the edge and does nothing to the bubble: it has no charge to strip, so it never drops or re-arms and only disappears when the generator part is destroyed.
-Hull shells: tier 2 and above can carry layers of 5 × tier health. Bullets deal 30% of their damage to a shell layer; beams deal 0; area effects deal 30%. Breaking a layer releases a damaging shockwave. T5 layers have 8,000 HP each.
+Hull shells (armour plating): tier 2 and above carry solid layers holding 60% of the enemy hull each, drawn as steel slabs over the body. A hit is swallowed by the outer layer and only part of it is lost: bullets 30%, missiles and flak 40%, beams 22%, area blasts 40%, shock 15%; Plate Breaker boosts this up to 2.5×. Breaking a layer releases a damaging shockwave. A mythical tier-5 layer is 60% of its hull, e.g. 943,872 HP on a 1,573,120 hull (four layers).
 
 ════════════════════════════════════════
 ENEMIES — 32 SPECIES
@@ -72,7 +72,7 @@ PARTS AT MYTHIC
 73 parts · 1,239u radius · C 30 · U 33 · R 44 · E 63 · L 69 · M 73 parts by tier
 
 DEFENCES
-Shells: Rare 1 layer (90 HP each) · Epic 2 layers (400 HP each) · Legendary 3 layers (1,800 HP each) · Mythic 4 layers (8,000 HP each)
+Shells: Rare 1 layer (5,875 HP each, 60% hull) · Epic 2 layers (37,498 HP each, 60% hull) · Legendary 3 layers (197,165 HP each, 60% hull) · Mythic 4 layers (943,872 HP each, 60% hull)
 Energy shields: Epic 1 bubble (239u) · Legendary 2 bubbles (394–434u) · Mythic 2 bubbles (651–716u) — permanent, energy/shock/thermal pass
 
 MOUNTS AT MYTHIC
@@ -116,7 +116,7 @@ PARTS AT MYTHIC
 105 parts · 1,321u radius · C 41 · U 42 · R 56 · E 89 · L 103 · M 105 parts by tier
 
 DEFENCES
-Shells: Rare 1 layer (90 HP each) · Epic 2 layers (400 HP each) · Legendary 3 layers (1,800 HP each) · Mythic 4 layers (8,000 HP each)
+Shells: Rare 1 layer (7,357 HP each, 60% hull) · Epic 2 layers (51,456 HP each, 60% hull) · Legendary 3 layers (299,376 HP each, 60% hull) · Mythic 4 layers (1,372,800 HP each, 60% hull)
 
 MOUNTS AT MYTHIC
 6 gun mounts · 0 missile pods · gun 0.4× enemy damage at 1.1–1.7s cadence; missiles 1.1× at 4.5–6s
@@ -159,7 +159,7 @@ PARTS AT MYTHIC
 105 parts · 1,350u radius · C 40 · U 41 · R 52 · E 90 · L 103 · M 105 parts by tier
 
 DEFENCES
-Shells: Rare 1 layer (90 HP each) · Epic 2 layers (400 HP each) · Legendary 3 layers (1,800 HP each) · Mythic 4 layers (8,000 HP each)
+Shells: Rare 1 layer (5,968 HP each, 60% hull) · Epic 2 layers (44,957 HP each, 60% hull) · Legendary 3 layers (267,797 HP each, 60% hull) · Mythic 4 layers (1,232,448 HP each, 60% hull)
 
 MOUNTS AT MYTHIC
 0 gun mounts · 4 missile pods · gun 0.4× enemy damage at 1.1–1.7s cadence; missiles 1.1× at 4.5–6s
@@ -202,7 +202,7 @@ PARTS AT MYTHIC
 69 parts · 862u radius · C 34 · U 38 · R 45 · E 64 · L 68 · M 69 parts by tier
 
 DEFENCES
-Shells: Rare 1 layer (90 HP each) · Epic 2 layers (400 HP each) · Legendary 3 layers (1,800 HP each) · Mythic 4 layers (8,000 HP each)
+Shells: Rare 1 layer (5,374 HP each, 60% hull) · Epic 2 layers (40,339 HP each, 60% hull) · Legendary 3 layers (202,349 HP each, 60% hull) · Mythic 4 layers (924,288 HP each, 60% hull)
 Energy shields: Epic 1 bubble (239u) · Legendary 2 bubbles (394–434u) · Mythic 3 bubbles (651–781u) — permanent, energy/shock/thermal pass
 
 MOUNTS AT MYTHIC
@@ -246,7 +246,7 @@ PARTS AT MYTHIC
 85 parts · 1,127u radius · C 36 · U 36 · R 43 · E 72 · L 76 · M 85 parts by tier
 
 DEFENCES
-Shells: Rare 1 layer (90 HP each) · Epic 2 layers (400 HP each) · Legendary 3 layers (1,800 HP each) · Mythic 4 layers (8,000 HP each)
+Shells: Rare 1 layer (5,413 HP each, 60% hull) · Epic 2 layers (42,278 HP each, 60% hull) · Legendary 3 layers (210,384 HP each, 60% hull) · Mythic 4 layers (1,132,032 HP each, 60% hull)
 Energy shields: Epic 1 bubble (239u) · Legendary 2 bubbles (394–434u) · Mythic 3 bubbles (651–781u) — permanent, energy/shock/thermal pass
 
 MOUNTS AT MYTHIC
@@ -333,7 +333,7 @@ PARTS AT MYTHIC
 73 parts · 1,216u radius · C 38 · U 39 · R 43 · E 66 · L 72 · M 73 parts by tier
 
 DEFENCES
-Shells: Rare 1 layer (90 HP each) · Epic 2 layers (400 HP each) · Legendary 3 layers (1,800 HP each) · Mythic 4 layers (8,000 HP each)
+Shells: Rare 1 layer (5,387 HP each, 60% hull) · Epic 2 layers (34,195 HP each, 60% hull) · Legendary 3 layers (184,291 HP each, 60% hull) · Mythic 4 layers (835,968 HP each, 60% hull)
 
 MOUNTS AT MYTHIC
 6 gun mounts · 0 missile pods · gun 0.4× enemy damage at 1.1–1.7s cadence; missiles 1.1× at 4.5–6s
@@ -376,7 +376,7 @@ PARTS AT MYTHIC
 106 parts · 1,032u radius · C 29 · U 29 · R 48 · E 70 · L 92 · M 106 parts by tier
 
 DEFENCES
-Shells: Rare 1 layer (90 HP each) · Epic 2 layers (400 HP each) · Legendary 3 layers (1,800 HP each) · Mythic 4 layers (8,000 HP each)
+Shells: Rare 1 layer (5,261 HP each, 60% hull) · Epic 2 layers (42,869 HP each, 60% hull) · Legendary 3 layers (244,145 HP each, 60% hull) · Mythic 4 layers (1,384,608 HP each, 60% hull)
 Energy shields: Epic 1 bubble (239u) · Legendary 2 bubbles (394–434u) · Mythic 2 bubbles (651–716u) — permanent, energy/shock/thermal pass
 
 MOUNTS AT MYTHIC
@@ -417,7 +417,7 @@ PARTS AT MYTHIC
 90 parts · 1,137u radius · C 34 · U 34 · R 52 · E 73 · L 88 · M 90 parts by tier
 
 DEFENCES
-Shells: Rare 1 layer (90 HP each) · Epic 2 layers (400 HP each) · Legendary 3 layers (1,800 HP each) · Mythic 4 layers (8,000 HP each)
+Shells: Rare 1 layer (5,486 HP each, 60% hull) · Epic 2 layers (42,624 HP each, 60% hull) · Legendary 3 layers (224,467 HP each, 60% hull) · Mythic 4 layers (1,039,872 HP each, 60% hull)
 
 MOUNTS AT MYTHIC
 6 gun mounts · 0 missile pods · gun 0.4× enemy damage at 1.1–1.7s cadence; missiles 1.1× at 4.5–6s
@@ -460,7 +460,7 @@ PARTS AT MYTHIC
 78 parts · 1,115u radius · C 33 · U 35 · R 36 · E 71 · L 75 · M 78 parts by tier
 
 DEFENCES
-Shells: Rare 1 layer (90 HP each) · Epic 2 layers (400 HP each) · Legendary 3 layers (1,800 HP each) · Mythic 4 layers (8,000 HP each)
+Shells: Rare 1 layer (4,385 HP each, 60% hull) · Epic 2 layers (40,589 HP each, 60% hull) · Legendary 3 layers (205,373 HP each, 60% hull) · Mythic 4 layers (979,968 HP each, 60% hull)
 Energy shields: Epic 1 bubble (239u) · Legendary 2 bubbles (394–434u) · Mythic 3 bubbles (651–781u) — permanent, energy/shock/thermal pass
 
 MOUNTS AT MYTHIC
@@ -504,7 +504,7 @@ PARTS AT MYTHIC
 84 parts · 1,175u radius · C 34 · U 34 · R 52 · E 83 · L 84 · M 84 parts by tier
 
 DEFENCES
-Shells: Rare 1 layer (90 HP each) · Epic 2 layers (400 HP each) · Legendary 3 layers (1,800 HP each) · Mythic 4 layers (8,000 HP each)
+Shells: Rare 1 layer (5,521 HP each, 60% hull) · Epic 2 layers (44,122 HP each, 60% hull) · Legendary 3 layers (206,150 HP each, 60% hull) · Mythic 4 layers (916,224 HP each, 60% hull)
 
 MOUNTS AT MYTHIC
 0 gun mounts · 0 missile pods · gun 0.4× enemy damage at 1.1–1.7s cadence; missiles 1.1× at 4.5–6s
@@ -544,7 +544,7 @@ PARTS AT MYTHIC
 76 parts · 1,149u radius · C 39 · U 40 · R 58 · E 73 · L 75 · M 76 parts by tier
 
 DEFENCES
-Shells: Rare 1 layer (90 HP each) · Epic 2 layers (400 HP each) · Legendary 3 layers (1,800 HP each) · Mythic 4 layers (8,000 HP each)
+Shells: Rare 1 layer (6,472 HP each, 60% hull) · Epic 2 layers (41,746 HP each, 60% hull) · Legendary 3 layers (199,260 HP each, 60% hull) · Mythic 4 layers (902,496 HP each, 60% hull)
 
 MOUNTS AT MYTHIC
 0 gun mounts · 0 missile pods · gun 0.4× enemy damage at 1.1–1.7s cadence; missiles 1.1× at 4.5–6s
@@ -584,7 +584,7 @@ PARTS AT MYTHIC
 56 parts · 1,445u radius · C 30 · U 30 · R 47 · E 55 · L 56 · M 56 parts by tier
 
 DEFENCES
-Shells: Rare 1 layer (90 HP each) · Epic 2 layers (400 HP each) · Legendary 3 layers (1,800 HP each) · Mythic 4 layers (8,000 HP each)
+Shells: Rare 1 layer (4,752 HP each, 60% hull) · Epic 2 layers (27,264 HP each, 60% hull) · Legendary 3 layers (130,291 HP each, 60% hull) · Mythic 4 layers (579,072 HP each, 60% hull)
 
 MOUNTS AT MYTHIC
 0 gun mounts · 0 missile pods · gun 0.4× enemy damage at 1.1–1.7s cadence; missiles 1.1× at 4.5–6s
@@ -624,7 +624,7 @@ PARTS AT MYTHIC
 95 parts · 988u radius · C 40 · U 40 · R 58 · E 82 · L 95 · M 95 parts by tier
 
 DEFENCES
-Shells: Rare 1 layer (90 HP each) · Epic 2 layers (400 HP each) · Legendary 3 layers (1,800 HP each) · Mythic 4 layers (8,000 HP each)
+Shells: Rare 1 layer (6,640 HP each, 60% hull) · Epic 2 layers (51,782 HP each, 60% hull) · Legendary 3 layers (256,176 HP each, 60% hull) · Mythic 4 layers (1,138,560 HP each, 60% hull)
 
 MOUNTS AT MYTHIC
 0 gun mounts · 0 missile pods · gun 0.4× enemy damage at 1.1–1.7s cadence; missiles 1.1× at 4.5–6s
@@ -664,7 +664,7 @@ PARTS AT MYTHIC
 53 parts · 838u radius · C 33 · U 33 · R 38 · E 52 · L 53 · M 53 parts by tier
 
 DEFENCES
-Shells: Rare 1 layer (90 HP each) · Epic 2 layers (400 HP each) · Legendary 3 layers (1,800 HP each) · Mythic 4 layers (8,000 HP each)
+Shells: Rare 1 layer (4,158 HP each, 60% hull) · Epic 2 layers (23,626 HP each, 60% hull) · Legendary 3 layers (113,918 HP each, 60% hull) · Mythic 4 layers (506,304 HP each, 60% hull)
 
 MOUNTS AT MYTHIC
 0 gun mounts · 0 missile pods · gun 0.4× enemy damage at 1.1–1.7s cadence; missiles 1.1× at 4.5–6s
@@ -704,7 +704,7 @@ PARTS AT MYTHIC
 85 parts · 984u radius · C 37 · U 37 · R 55 · E 76 · L 81 · M 85 parts by tier
 
 DEFENCES
-Shells: Rare 1 layer (90 HP each) · Epic 2 layers (400 HP each) · Legendary 3 layers (1,800 HP each) · Mythic 4 layers (8,000 HP each)
+Shells: Rare 1 layer (5,711 HP each, 60% hull) · Epic 2 layers (43,622 HP each, 60% hull) · Legendary 3 layers (222,912 HP each, 60% hull) · Mythic 4 layers (1,075,200 HP each, 60% hull)
 
 MOUNTS AT MYTHIC
 6 gun mounts · 4 missile pods · gun 0.4× enemy damage at 1.1–1.7s cadence; missiles 1.1× at 4.5–6s
@@ -744,7 +744,7 @@ PARTS AT MYTHIC
 106 parts · 1,457u radius · C 37 · U 37 · R 60 · E 77 · L 103 · M 106 parts by tier
 
 DEFENCES
-Shells: Rare 1 layer (90 HP each) · Epic 2 layers (400 HP each) · Legendary 3 layers (1,800 HP each) · Mythic 4 layers (8,000 HP each)
+Shells: Rare 1 layer (6,823 HP each, 60% hull) · Epic 2 layers (45,206 HP each, 60% hull) · Legendary 3 layers (290,088 HP each, 60% hull) · Mythic 4 layers (1,356,480 HP each, 60% hull)
 Energy shields: Epic 1 bubble (239u) · Legendary 2 bubbles (394–434u) · Mythic 3 bubbles (651–781u) — permanent, energy/shock/thermal pass
 
 MOUNTS AT MYTHIC
@@ -785,7 +785,7 @@ PARTS AT MYTHIC
 83 parts · 1,288u radius · C 40 · U 41 · R 47 · E 76 · L 80 · M 83 parts by tier
 
 DEFENCES
-Shells: Rare 1 layer (90 HP each) · Epic 2 layers (400 HP each) · Legendary 3 layers (1,800 HP each) · Mythic 4 layers (8,000 HP each)
+Shells: Rare 1 layer (5,885 HP each, 60% hull) · Epic 2 layers (44,702 HP each, 60% hull) · Legendary 3 layers (222,070 HP each, 60% hull) · Mythic 4 layers (1,046,112 HP each, 60% hull)
 
 MOUNTS AT MYTHIC
 6 gun mounts · 0 missile pods · gun 0.4× enemy damage at 1.1–1.7s cadence; missiles 1.1× at 4.5–6s
@@ -825,7 +825,7 @@ PARTS AT MYTHIC
 78 parts · 988u radius · C 37 · U 37 · R 60 · E 75 · L 77 · M 78 parts by tier
 
 DEFENCES
-Shells: Rare 1 layer (90 HP each) · Epic 2 layers (400 HP each) · Legendary 3 layers (1,800 HP each) · Mythic 4 layers (8,000 HP each)
+Shells: Rare 1 layer (7,055 HP each, 60% hull) · Epic 2 layers (44,122 HP each, 60% hull) · Legendary 3 layers (211,766 HP each, 60% hull) · Mythic 4 layers (966,144 HP each, 60% hull)
 Energy shields: Epic 1 bubble (239u) · Legendary 2 bubbles (394–434u) · Mythic 3 bubbles (651–781u) — permanent, energy/shock/thermal pass
 
 MOUNTS AT MYTHIC
@@ -866,7 +866,7 @@ PARTS AT MYTHIC
 89 parts · 1,379u radius · C 36 · U 36 · R 54 · E 74 · L 88 · M 89 parts by tier
 
 DEFENCES
-Shells: Rare 1 layer (90 HP each) · Epic 2 layers (400 HP each) · Legendary 3 layers (1,800 HP each) · Mythic 4 layers (8,000 HP each)
+Shells: Rare 1 layer (5,793 HP each, 60% hull) · Epic 2 layers (43,123 HP each, 60% hull) · Legendary 3 layers (222,826 HP each, 60% hull) · Mythic 4 layers (1,015,296 HP each, 60% hull)
 Energy shields: Epic 1 bubble (239u) · Legendary 2 bubbles (394–434u) · Mythic 3 bubbles (651–781u) — permanent, energy/shock/thermal pass
 
 MOUNTS AT MYTHIC
@@ -907,7 +907,7 @@ PARTS AT MYTHIC
 89 parts · 1,212u radius · C 39 · U 39 · R 45 · E 74 · L 88 · M 89 parts by tier
 
 DEFENCES
-Shells: Rare 1 layer (90 HP each) · Epic 2 layers (400 HP each) · Legendary 3 layers (1,800 HP each) · Mythic 4 layers (8,000 HP each)
+Shells: Rare 1 layer (5,780 HP each, 60% hull) · Epic 2 layers (44,026 HP each, 60% hull) · Legendary 3 layers (269,222 HP each, 60% hull) · Mythic 4 layers (1,213,824 HP each, 60% hull)
 Energy shields: Epic 1 bubble (239u) · Legendary 2 bubbles (394–434u) · Mythic 1 bubble (651u) — permanent, energy/shock/thermal pass
 
 MOUNTS AT MYTHIC
@@ -948,7 +948,7 @@ PARTS AT MYTHIC
 71 parts · 1,145u radius · C 32 · U 32 · R 41 · E 68 · L 70 · M 71 parts by tier
 
 DEFENCES
-Shells: Rare 1 layer (90 HP each) · Epic 2 layers (400 HP each) · Legendary 3 layers (1,800 HP each) · Mythic 4 layers (8,000 HP each)
+Shells: Rare 1 layer (4,933 HP each, 60% hull) · Epic 2 layers (38,150 HP each, 60% hull) · Legendary 3 layers (184,896 HP each, 60% hull) · Mythic 4 layers (846,720 HP each, 60% hull)
 Energy shields: Epic 1 bubble (239u) · Legendary 2 bubbles (394–434u) · Mythic 3 bubbles (651–781u) — permanent, energy/shock/thermal pass
 
 MOUNTS AT MYTHIC
@@ -989,7 +989,7 @@ PARTS AT MYTHIC
 74 parts · 969u radius · C 36 · U 36 · R 54 · E 73 · L 74 · M 74 parts by tier
 
 DEFENCES
-Shells: Rare 1 layer (90 HP each) · Epic 2 layers (400 HP each) · Legendary 3 layers (1,800 HP each) · Mythic 4 layers (8,000 HP each)
+Shells: Rare 1 layer (5,772 HP each, 60% hull) · Epic 2 layers (41,779 HP each, 60% hull) · Legendary 3 layers (195,610 HP each, 60% hull) · Mythic 4 layers (869,376 HP each, 60% hull)
 
 MOUNTS AT MYTHIC
 0 gun mounts · 0 missile pods · gun 0.4× enemy damage at 1.1–1.7s cadence; missiles 1.1× at 4.5–6s
@@ -1029,7 +1029,7 @@ PARTS AT MYTHIC
 89 parts · 1,004u radius · C 35 · U 35 · R 48 · E 72 · L 87 · M 89 parts by tier
 
 DEFENCES
-Shells: Rare 1 layer (90 HP each) · Epic 2 layers (400 HP each) · Legendary 3 layers (1,800 HP each) · Mythic 4 layers (8,000 HP each)
+Shells: Rare 1 layer (5,387 HP each, 60% hull) · Epic 2 layers (41,030 HP each, 60% hull) · Legendary 3 layers (217,296 HP each, 60% hull) · Mythic 4 layers (1,008,000 HP each, 60% hull)
 
 MOUNTS AT MYTHIC
 0 gun mounts · 4 missile pods · gun 0.4× enemy damage at 1.1–1.7s cadence; missiles 1.1× at 4.5–6s
@@ -1069,7 +1069,7 @@ PARTS AT MYTHIC
 63 parts · 1,494u radius · C 30 · U 30 · R 47 · E 60 · L 62 · M 63 parts by tier
 
 DEFENCES
-Shells: Rare 1 layer (90 HP each) · Epic 2 layers (400 HP each) · Legendary 3 layers (1,800 HP each) · Mythic 4 layers (8,000 HP each)
+Shells: Rare 1 layer (5,365 HP each, 60% hull) · Epic 2 layers (34,925 HP each, 60% hull) · Legendary 3 layers (170,381 HP each, 60% hull) · Mythic 4 layers (782,208 HP each, 60% hull)
 Energy shields: Epic 1 bubble (239u) · Legendary 2 bubbles (394–434u) · Mythic 3 bubbles (651–781u) — permanent, energy/shock/thermal pass
 
 MOUNTS AT MYTHIC
@@ -1110,7 +1110,7 @@ PARTS AT MYTHIC
 56 parts · 1,364u radius · C 34 · U 34 · R 39 · E 55 · L 56 · M 56 parts by tier
 
 DEFENCES
-Shells: Rare 1 layer (90 HP each) · Epic 2 layers (400 HP each) · Legendary 3 layers (1,800 HP each) · Mythic 4 layers (8,000 HP each)
+Shells: Rare 1 layer (4,234 HP each, 60% hull) · Epic 2 layers (25,651 HP each, 60% hull) · Legendary 3 layers (123,034 HP each, 60% hull) · Mythic 4 layers (546,816 HP each, 60% hull)
 
 MOUNTS AT MYTHIC
 0 gun mounts · 0 missile pods · gun 0.4× enemy damage at 1.1–1.7s cadence; missiles 1.1× at 4.5–6s
@@ -1150,7 +1150,7 @@ PARTS AT MYTHIC
 105 parts · 1,144u radius · C 41 · U 41 · R 59 · E 88 · L 102 · M 105 parts by tier
 
 DEFENCES
-Shells: Rare 1 layer (90 HP each) · Epic 2 layers (400 HP each) · Legendary 3 layers (1,800 HP each) · Mythic 4 layers (8,000 HP each)
+Shells: Rare 1 layer (6,726 HP each, 60% hull) · Epic 2 layers (48,230 HP each, 60% hull) · Legendary 3 layers (288,144 HP each, 60% hull) · Mythic 4 layers (1,347,840 HP each, 60% hull)
 Energy shields: Epic 1 bubble (239u) · Legendary 2 bubbles (394–434u) · Mythic 3 bubbles (651–781u) — permanent, energy/shock/thermal pass
 
 MOUNTS AT MYTHIC
@@ -1191,7 +1191,7 @@ PARTS AT MYTHIC
 65 parts · 1,677u radius · C 34 · U 36 · R 41 · E 62 · L 64 · M 65 parts by tier
 
 DEFENCES
-Shells: Rare 1 layer (90 HP each) · Epic 2 layers (400 HP each) · Legendary 3 layers (1,800 HP each) · Mythic 4 layers (8,000 HP each)
+Shells: Rare 1 layer (4,614 HP each, 60% hull) · Epic 2 layers (32,275 HP each, 60% hull) · Legendary 3 layers (158,458 HP each, 60% hull) · Mythic 4 layers (729,216 HP each, 60% hull)
 Energy shields: Epic 1 bubble (239u) · Legendary 2 bubbles (394–434u) · Mythic 3 bubbles (651–781u) — permanent, energy/shock/thermal pass
 
 MOUNTS AT MYTHIC
@@ -1232,7 +1232,7 @@ PARTS AT MYTHIC
 82 parts · 1,182u radius · C 35 · U 35 · R 41 · E 75 · L 79 · M 82 parts by tier
 
 DEFENCES
-Shells: Rare 1 layer (90 HP each) · Epic 2 layers (400 HP each) · Legendary 3 layers (1,800 HP each) · Mythic 4 layers (8,000 HP each)
+Shells: Rare 1 layer (4,700 HP each, 60% hull) · Epic 2 layers (43,834 HP each, 60% hull) · Legendary 3 layers (219,974 HP each, 60% hull) · Mythic 4 layers (1,044,864 HP each, 60% hull)
 Energy shields: Epic 1 bubble (239u) · Legendary 2 bubbles (394–434u) · Mythic 3 bubbles (651–781u) — permanent, energy/shock/thermal pass
 
 MOUNTS AT MYTHIC
@@ -1273,7 +1273,7 @@ PARTS AT MYTHIC
 67 parts · 1,400u radius · C 36 · U 36 · R 56 · E 62 · L 67 · M 67 parts by tier
 
 DEFENCES
-Shells: Rare 1 layer (90 HP each) · Epic 2 layers (400 HP each) · Legendary 3 layers (1,800 HP each) · Mythic 4 layers (8,000 HP each)
+Shells: Rare 1 layer (5,962 HP each, 60% hull) · Epic 2 layers (31,987 HP each, 60% hull) · Legendary 3 layers (170,554 HP each, 60% hull) · Mythic 4 layers (758,016 HP each, 60% hull)
 
 MOUNTS AT MYTHIC
 6 gun mounts · 0 missile pods · gun 0.4× enemy damage at 1.1–1.7s cadence; missiles 1.1× at 4.5–6s
@@ -1313,7 +1313,7 @@ PARTS AT MYTHIC
 99 parts · 1,008u radius · C 44 · U 44 · R 62 · E 79 · L 95 · M 99 parts by tier
 
 DEFENCES
-Shells: Rare 1 layer (90 HP each) · Epic 2 layers (400 HP each) · Legendary 3 layers (1,800 HP each) · Mythic 4 layers (8,000 HP each)
+Shells: Rare 1 layer (7,238 HP each, 60% hull) · Epic 2 layers (47,050 HP each, 60% hull) · Legendary 3 layers (292,334 HP each, 60% hull) · Mythic 4 layers (1,383,744 HP each, 60% hull)
 Energy shields: Epic 1 bubble (239u) · Legendary 2 bubbles (394–434u) · Mythic 2 bubbles (651–716u) — permanent, energy/shock/thermal pass
 
 MOUNTS AT MYTHIC
