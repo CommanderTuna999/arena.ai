@@ -5,8 +5,9 @@ import { useRouter } from "next/navigation";
 import { Game, type Hud } from "@/game/engine";
 import { render } from "@/game/render";
 import {
-  ABILITY_LIST, CAT_NAME, DMG_INFO, KIND_CAT, RARITIES, RECIPES, RECIPE_BY_ID, SLOT_NAME, UPGRADES, UP_CATS, craftEfficiency, damageProfile, migrate, newSave, recipeProblem, upgradeCost,
-  type Comp, type Recipe, type SaveData, type Slot, type UpCat,
+  ABILITY_LIST, CANNONS, CANNON_BY_ID, CANNON_TRACKS, CAT_NAME, DMG_INFO, KIND_CAT, RARITIES, RECIPES, RECIPE_BY_ID, SLOT_NAME, UPGRADES, UP_CATS,
+  cannonDmg, cannonRate, cannonTrackCost, craftEfficiency, damageProfile, migrate, newSave, recipeProblem, upgradeCost,
+  type CannonDef, type Comp, type Recipe, type SaveData, type Slot, type UpCat,
 } from "@/game/data";
 import { clamp, fmtNum } from "@/game/math";
 import { SPECIES_LIST } from "@/game/enemies";
@@ -466,6 +467,7 @@ function Help({ onClose }: { onClose: () => void }) {
     ["T", "Recall beacon (craftable)"],
     ["E", "Open the base at your base"],
     ["ESC", "Settings: how the ship handles, the look, aim aids"],
+    ["CANNON tab", "Your gun is a chassis with its own damage and rate tracks — buy them in the tree at the base. The Stinger Mk I is free and fitted from the start"],
     ["Base cannon", "Dormant until the base is hit, then online for 120s; only tracks rare+ targets and one-shots legendaries"],
     ["Base retaliation", "Any insect that damages the base is instantly destroyed — no swarming the hull"],
     ["Base targeting", "Insects hunt your ship, never the base — they will follow you straight through turret range, and stray fire can still scar the hull"],
@@ -502,7 +504,7 @@ function Help({ onClose }: { onClose: () => void }) {
 }
 
 /* ---------------------------------------------------------------- Hangar */
-type Tab = "upgrades" | "craft" | "storage" | "loadout" | "settings";
+type Tab = "cannon" | "upgrades" | "craft" | "storage" | "loadout" | "settings";
 
 function CompIcon({ c, size = 44 }: { c: Comp; size?: number }) {
   let minx = Infinity, miny = Infinity, maxx = -Infinity, maxy = -Infinity;
@@ -520,7 +522,7 @@ function CompIcon({ c, size = 44 }: { c: Comp; size?: number }) {
 
 function Hangar({ game, hud, onClose }: { game: Game; hud: Hud; onClose: () => void }) {
   const [tab, setTab] = useState<Tab>("upgrades");
-  const tabs: [Tab, string][] = [["upgrades", "UPGRADES"], ["craft", "CRAFTING"], ["storage", `STORAGE ${hud.inv}/${hud.cargo}`], ["loadout", "LOADOUT"], ["settings", "SYSTEM"]];
+  const tabs: [Tab, string][] = [["cannon", "CANNON"], ["upgrades", "UPGRADES"], ["craft", "CRAFTING"], ["storage", `STORAGE ${hud.inv}/${hud.cargo}`], ["loadout", "LOADOUT"], ["settings", "SYSTEM"]];
   return (
     <div className="absolute inset-0 z-40 grid place-items-center bg-black/60 p-2 sm:p-6">
       <div className="flex h-full max-h-[760px] w-full max-w-5xl flex-col rounded-md border border-cyan-300/60 bg-[#060a18]/97 shadow-[0_0_50px_rgba(77,255,210,0.2)]">
@@ -540,11 +542,130 @@ function Hangar({ game, hud, onClose }: { game: Game; hud: Hud; onClose: () => v
           <button onClick={onClose} className="rounded-sm border border-red-400/60 px-3 py-1 text-xs font-bold text-red-300 hover:bg-red-500/20">CLOSE [E]</button>
         </div>
         <div className="min-h-0 flex-1 overflow-auto p-3">
+          {tab === "cannon" && <CannonTree game={game} />}
           {tab === "upgrades" && <Upgrades game={game} />}
           {tab === "craft" && <Craft game={game} />}
           {tab === "storage" && <Storage game={game} />}
           {tab === "loadout" && <Loadout game={game} />}
           {tab === "settings" && <Settings game={game} />}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* Cannon tree. The starter gun sits at the bottom of the tree, exactly like the
+ * sheet asks: cannons are bought and upgraded down here, not in the global shop.
+ * Only tier 0 exists so far, so the row above it is a locked placeholder. */
+function CannonTree({ game }: { game: Game }) {
+  const save = game.save;
+  const fitted = CANNON_BY_ID[save.cannon?.id ?? ""] ?? CANNONS[0];
+  const [open, setOpen] = useState<string>(fitted.id);
+  const free = game.admin.on && game.admin.credits;
+  const lv = save.cannon?.lv ?? {};
+  return (
+    <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)]">
+      {/* ---- the tree ---- */}
+      <div className="rounded-sm border border-white/10 bg-white/[0.02] p-3">
+        <div className="mb-2 text-[10px] font-bold tracking-[0.22em] text-cyan-200/60">CANNON TREE</div>
+        <div className="flex flex-col-reverse items-stretch gap-0">
+          {/* future tiers stack above tier 0 */}
+          <div className="flex items-center justify-center">
+            <div className="mb-1 h-5 w-px bg-gradient-to-t from-cyan-300/50 to-transparent" />
+          </div>
+          <div className="mb-1 rounded-sm border border-dashed border-white/15 bg-black/30 px-3 py-2 text-center text-[10px] font-bold tracking-[0.18em] text-white/25">
+            TIER 1 · NOT IN SERVICE
+          </div>
+          <div className="flex items-center justify-center">
+            <div className="my-1 h-6 w-px bg-cyan-300/40" />
+          </div>
+          {CANNONS.map((c) => {
+            const owned = c.cost === 0 || save.cannon?.id === c.id;
+            const selected = fitted.id === c.id;
+            return (
+              <div key={c.id} className="flex flex-col items-stretch">
+                <button
+                  onClick={() => { game.selectCannon(c.id); setOpen(c.id); }}
+                  className={`group relative rounded-sm border px-3 py-2.5 text-left transition ${
+                    selected ? "border-yellow-300/80 bg-yellow-300/10 shadow-[0_0_22px_rgba(255,225,77,0.18)]"
+                      : owned ? "border-cyan-300/50 bg-cyan-400/5 hover:bg-cyan-400/10" : "border-white/15 bg-black/40 hover:bg-white/5"
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <span className="grid h-6 w-6 place-items-center rounded-sm border border-yellow-300/50 bg-yellow-300/10 text-[11px] font-black text-yellow-200">{c.tier}</span>
+                      <span className={`text-sm font-black tracking-wide ${selected ? "text-yellow-100" : "text-white"}`}>{c.name}</span>
+                    </div>
+                    {selected && <span className="rounded-sm bg-yellow-300/20 px-1.5 py-0.5 text-[9px] font-black tracking-[0.16em] text-yellow-200">FITTED</span>}
+                  </div>
+                  <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] text-white/60">
+                    <span><b className="text-white/85">{fmtNum(cannonDmg(c, lv.dmg ?? 0))}</b> dmg</span>
+                    <span><b className="text-white/85">{cannonRate(c, lv.rate ?? 0).toFixed(1)}</b>/s</span>
+                    <span>{c.range}u reach</span>
+                  </div>
+                </button>
+              </div>
+            );
+          })}
+        </div>
+        <p className="mt-3 text-[10px] leading-relaxed text-white/35">
+          Damage and rate are per cannon: a new chassis starts its own tracks at zero, it does not inherit the last gun&apos;s work.
+        </p>
+      </div>
+
+      {/* ---- the fitted gun's tracks ---- */}
+      <div className="rounded-sm border border-white/10 bg-white/[0.02] p-3">
+        <div className="flex items-baseline justify-between">
+          <div className="text-[10px] font-bold tracking-[0.22em] text-cyan-200/60">FITTED · {fitted.name.toUpperCase()}</div>
+          <div className="text-[10px] text-white/40">tier {fitted.tier}</div>
+        </div>
+        <p className="mt-1 text-[11px] leading-snug text-white/55">{fitted.desc}</p>
+        <div className="mt-3 grid gap-2">
+          {CANNON_TRACKS.map((t) => {
+            const l = lv[t.id] ?? 0;
+            const maxed = l >= t.max;
+            const price = free ? 0 : cannonTrackCost(fitted, t, l);
+            const can = !maxed && (free || save.credits >= price);
+            const now = t.id === "dmg" ? `${fmtNum(cannonDmg(fitted, l))} dmg` : `${cannonRate(fitted, l).toFixed(1)}/s`;
+            const next = t.id === "dmg" ? `${fmtNum(cannonDmg(fitted, l + 1))} dmg` : `${cannonRate(fitted, l + 1).toFixed(1)}/s`;
+            return (
+              <div key={t.id} className="rounded-sm border border-white/15 bg-white/[0.03] p-2.5">
+                <div className="flex items-center justify-between">
+                  <div className="text-sm font-bold text-yellow-200">{t.name}</div>
+                  <div className="text-[11px] text-white/60">LV {l}/{t.max}</div>
+                </div>
+                <div className="text-[11px] text-white/55">{t.desc}</div>
+                <div className="mt-1.5 flex gap-px">
+                  {Array.from({ length: t.max }).map((_, i) => (
+                    <div key={i} className="h-1.5 flex-1" style={{ background: i < l ? "#ffd24d" : "rgba(255,255,255,0.1)" }} />
+                  ))}
+                </div>
+                <div className="mt-2 flex items-center justify-between gap-2">
+                  <div className="text-xs text-cyan-100">{now}{!maxed && <span className="text-emerald-300"> → {next}</span>}</div>
+                  <div className="flex gap-1">
+                    {[1, 5].map((n) => (
+                      <button
+                        key={n}
+                        disabled={!can}
+                        onClick={() => game.buyCannon(t.id, n)}
+                        className={`rounded-sm border px-2 py-1 text-[11px] font-bold ${can ? "border-yellow-300 bg-yellow-300/15 text-yellow-200 hover:bg-yellow-300/30" : "border-white/10 text-white/30"}`}
+                      >
+                        +{n}
+                      </button>
+                    ))}
+                    <button
+                      disabled={!can}
+                      onClick={() => game.buyCannon(t.id, t.max - l)}
+                      className={`rounded-sm border px-2 py-1 text-[11px] font-bold ${can ? "border-cyan-300 bg-cyan-400/15 text-cyan-100 hover:bg-cyan-400/30" : "border-white/10 text-white/30"}`}
+                    >
+                      MAX
+                    </button>
+                  </div>
+                </div>
+                <div className="mt-1 text-right text-[10px] text-white/40">{maxed ? "fully calibrated" : `${fmtNum(price)} CR per level`}</div>
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>

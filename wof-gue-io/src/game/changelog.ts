@@ -8,7 +8,7 @@
  *   CHANGELOG and mirror the details in docs/CHANGELOG.md.
  */
 
-export const VERSION = "2.9.0";
+export const VERSION = "2.10.0";
 
 export interface ChangeEntry {
   version: string;
@@ -19,6 +19,18 @@ export interface ChangeEntry {
 }
 
 export const CHANGELOG: ChangeEntry[] = [
+  {
+    version: "2.10.0",
+    date: "21 Nov 2026",
+    title: "Cannons are their own thing now",
+    points: [
+      "There is a CANNON tab in the base. It is a tree: the starter gun sits at the bottom of it and the row above is a locked tier 1 slot waiting for the next chassis.",
+      "The starter cannon has a name: the Stinger Mk I. One fat round bolt at a time, slow enough to watch, with a small charge that pops where it lands.",
+      "Cannon damage and fire rate moved off the global shop and onto the gun itself: each chassis carries its own Bore Calibration and Autoloader tracks. Levels you already bought carried over.",
+      "The bolt is a glowing round slug with a tapering tail instead of a tracer line.",
+      "Energy shield panels are solid now: they shock, shake the screen and throw the ship back off the wall instead of letting it slide through.",
+    ],
+  },
   {
     version: "2.9.0",
     date: "21 Nov 2026",

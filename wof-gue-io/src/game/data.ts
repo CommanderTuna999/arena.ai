@@ -44,10 +44,9 @@ export const SIZE_GROWTH = 1.65;
 /* Piece health by rarity, straight from the balance sheet: each step multiplies
  * the one below it (x3.75, x4, x4.7, x6, x8.1). */
 export const HP_MUL = [1, 3.75, 15, 70.5, 423, 3426.3];
-/** the starting cannon from the sheet: 20 damage on a 0.7s interval, free */
+/** the starting cannon from the sheet (see CANNONS below): 20 damage, 0.7s interval */
 export const CANNON_DMG = 20;
 export const CANNON_INTERVAL = 0.7;
-export const CANNON_RATE = 1 / CANNON_INTERVAL;
 /* 2x baseline as of v2.0 — the 3x ratio between tiers is unchanged. */
 export const DMG_MUL = [1, 3, 9, 27, 81, 243];
 
@@ -94,8 +93,6 @@ export interface UpgradeDef {
 }
 
 export const UPGRADES: UpgradeDef[] = [
-  { id: "dmg", name: "Cannon Damage", cat: "weapons", desc: "Raw damage per shot.", max: 30, base: 20, growth: 1.45, fmt: (l) => `${fmtNum(20 * Math.pow(1.2, l))} dmg` },
-  { id: "rate", name: "Fire Rate", cat: "weapons", desc: "Shots per second.", max: 12, base: 40, growth: 1.5, fmt: (l) => `${(CANNON_RATE + 0.7 * l).toFixed(1)}/s` },
   { id: "barrels", name: "Extra Barrels", cat: "weapons", desc: "Fire a fan of additional shots.", max: 4, base: 150, growth: 2.6, fmt: (l) => `${1 + l} barrel${l ? "s" : ""}` },
   { id: "crit", name: "Targeting Matrix", cat: "weapons", desc: "Chance for 2.5x critical hits.", max: 10, base: 60, growth: 1.55, fmt: (l) => `${5 + 4 * l}% crit` },
 
@@ -122,6 +119,61 @@ export const UPGRADES: UpgradeDef[] = [
 ];
 
 export const UPGRADE_BY_ID: Record<string, UpgradeDef> = Object.fromEntries(UPGRADES.map((u) => [u.id, u]));
+
+/* ---------- base cannons ----------
+ * A cannon is a chassis plus its own upgrade tracks: two ships with different guns
+ * do not share a bore size, so damage and rate are per cannon, never global.
+ * The tree is displayed bottom-up (tier 0 at the bottom); only the starter exists. */
+export interface CannonTrack {
+  id: "dmg" | "rate";
+  name: string;
+  desc: string;
+  max: number;
+  /** price of level 0, before the cannon's own multiplier */
+  base: number;
+  growth: number;
+}
+export interface CannonDef {
+  id: string;
+  name: string;
+  /** tree row: 0 sits at the bottom of the tree */
+  tier: number;
+  desc: string;
+  /** damage of one bolt before the damage track */
+  dmg: number;
+  /** seconds between bolts before the rate track */
+  interval: number;
+  /** bolt speed and reach, in world units */
+  speed: number;
+  range: number;
+  /** purchase price; 0 means it is handed to you at the start */
+  cost: number;
+  /** every price on this chassis is scaled by this */
+  costMul: number;
+  requires: string | null;
+}
+
+export const CANNONS: CannonDef[] = [
+  {
+    id: "sting", name: "Stinger Mk I", tier: 0,
+    desc: "The gun the yard gives every pilot: one fat round bolt at a time, slow enough to watch, with a small charge that pops on impact.",
+    dmg: 20, interval: 0.7, speed: 640, range: 820, cost: 0, costMul: 1, requires: null,
+  },
+];
+export const CANNON_BY_ID: Record<string, CannonDef> = Object.fromEntries(CANNONS.map((c) => [c.id, c]));
+
+export const CANNON_TRACKS: CannonTrack[] = [
+  { id: "dmg", name: "Bore Calibration", desc: "Damage of every bolt this cannon fires.", max: 30, base: 20, growth: 1.45 },
+  { id: "rate", name: "Autoloader", desc: "How fast the cannon cycles between bolts.", max: 12, base: 40, growth: 1.5 },
+];
+export const CANNON_TRACK_BY_ID: Record<string, CannonTrack> = Object.fromEntries(CANNON_TRACKS.map((t) => [t.id, t]));
+
+export const cannonTrackCost = (c: CannonDef, t: CannonTrack, level: number) =>
+  Math.round(t.base * Math.pow(t.growth, level) * c.costMul);
+/** bolt damage at a given damage-track level */
+export const cannonDmg = (c: CannonDef, level: number) => c.dmg * Math.pow(1.2, level);
+/** bolts per second at a given rate-track level */
+export const cannonRate = (c: CannonDef, level: number) => 1 / c.interval + 0.7 * level;
 
 export const UP_CATS: { id: UpCat; name: string; color: string }[] = [
   { id: "weapons", name: "Weapons", color: "#ff4d6d" },
@@ -414,6 +466,8 @@ export interface SaveData {
   kills: number;
   seq: number;
   upgrades: Record<string, number>;
+  /** fitted cannon and its own upgrade levels (not shared with any other gun) */
+  cannon: { id: string; lv: Record<string, number> };
   inventory: Comp[];
   crafted: Crafted[];
   equip: Equip;
@@ -432,7 +486,7 @@ export interface SaveData {
 export function newSave(): SaveData {
   return {
     v: 2, ts: Date.now(), name: "",
-    credits: 60, earned: 0, kills: 0, seq: 1, upgrades: {}, inventory: [], crafted: [],
+    credits: 60, earned: 0, kills: 0, seq: 1, upgrades: {}, cannon: { id: CANNONS[0].id, lv: {} }, inventory: [], crafted: [],
     equip: { weapon: [null, null, null], shield: null, armor: null, optics: null, utility: null },
     abilitySlots: [null, null, null, null, null], autoSell: false, autoFire: true, showCompInfo: true, showRanges: false, bestiary: {},
   };
@@ -443,11 +497,21 @@ export function migrate(raw: unknown): SaveData {
   if (!raw || typeof raw !== "object") return d;
   const r = raw as Partial<SaveData>;
   const abilitySlots = [0, 1, 2, 3, 4].map((i) => r.abilitySlots?.[i] ?? null);
+  /* v2.9 and earlier kept cannon damage and fire rate in the global upgrade map */
+  const legacy = r.upgrades ?? {};
+  const saved = r.cannon;
+  const cannon = {
+    id: saved && CANNON_BY_ID[saved.id] ? saved.id : CANNONS[0].id,
+    lv: { ...(saved?.lv ?? {}) } as Record<string, number>,
+  };
+  if (cannon.lv.dmg === undefined && typeof legacy.dmg === "number") cannon.lv.dmg = legacy.dmg;
+  if (cannon.lv.rate === undefined && typeof legacy.rate === "number") cannon.lv.rate = legacy.rate;
   return {
     ...d,
     ...r,
     v: 2,
-    upgrades: Object.fromEntries(Object.entries(r.upgrades ?? {}).filter(([k]) => UPGRADE_BY_ID[k])),
+    cannon,
+    upgrades: Object.fromEntries(Object.entries(legacy).filter(([k]) => UPGRADE_BY_ID[k])),
     inventory: Array.isArray(r.inventory)
       ? r.inventory.map((c) => (c && c.species === "World Serpent" ? { ...c, species: "Snake" } : c))
       : [],
@@ -525,8 +589,10 @@ export function computeStats(s: SaveData): Stats {
   const L = (id: string) => s.upgrades[id] ?? 0;
   const find = (id: string | null) => (id ? s.crafted.find((c) => c.id === id) : undefined);
   let hull = 100 * Math.pow(1.19, L("hull"));
-  /* the starting cannon from the balance sheet: 20 damage every 0.7s */
-  const baseDmg = CANNON_DMG * Math.pow(1.2, L("dmg"));
+  /* the cannon carries its own upgrades; nothing here is shared with the shop */
+  const cannon = CANNON_BY_ID[s.cannon?.id ?? ""] ?? CANNONS[0];
+  const CL = (id: string) => s.cannon?.lv?.[id] ?? 0;
+  const baseDmg = cannonDmg(cannon, CL("dmg"));
   let shieldMax = L("shield") ? 60 * Math.pow(1.22, L("shield") - 1) : 0;
   let shieldRegen = 0.18;
   let shieldDelay = 4;
@@ -597,11 +663,11 @@ export function computeStats(s: SaveData): Stats {
 
   return {
     dmg: baseDmg,
-    rate: CANNON_RATE + 0.7 * L("rate"),
+    rate: cannonRate(cannon, CL("rate")),
     barrels: 1 + L("barrels"),
     crit: 0.05 + 0.04 * L("crit"),
-    bulletSpeed: 900,
-    bulletRange: 760,
+    bulletSpeed: cannon.speed,
+    bulletRange: cannon.range,
     hull,
     regen,
     armor,

@@ -3,6 +3,28 @@
 Everything below is implemented in the current build. Numbers are the actual constants used by
 the simulation, not design targets.
 
+## 0. v2.10.0 — the cannon tree
+
+Per the cannon section of the sheet.
+
+- **`CANNONS`** (data.ts): chassis table with `tier`, `dmg`, `interval`, `speed`, `range`, `cost`,
+  `costMul`, `requires`. Tier 0 is `sting` / **Stinger Mk I** — 20 damage, 0.7s interval, 640u/s,
+  820u reach, free. Only the starter exists; the tree renders a locked tier 1 slot above it.
+- **Per-cannon tracks**: `CANNON_TRACKS` = Bore Calibration (dmg, 30 levels, 20×1.45^l) and
+  Autoloader (rate, 12 levels, 40×1.5^l), priced through the chassis `costMul`. The global `dmg` and
+  `rate` upgrade entries are gone; `migrate()` copies old levels onto `save.cannon.lv`, so nobody
+  loses progress. `computeStats` reads the fitted chassis for damage, rate, bolt speed and reach.
+- **Engine**: `buyCannon(track, n)`, `cannon()`, `selectCannon(id)`; the cannon's bolt carries
+  `boom: 1`, which fires a small `areaDamage(x, y, 34, dmg*0.3)` charge plus a ring and sparks where
+  it lands.
+- **Render**: the base-cannon round is a filled 5.4u glowing slug with a white core and a four-segment
+  tapering tail, instead of a line tracer.
+- **UI**: new CANNON tab in the hangar — tree on the left (tier 0 node at the bottom, stats live),
+  the fitted gun's two tracks on the right with +1/+5/MAX.
+- **Shields as walls**: `shieldInfoAt()` now returns the panel geometry, and `shieldContact()` places
+  the hull back on the outside face (`r + thick + SHIP_R + 2`) after the shock, so nothing can pass
+  through a live panel.
+
 ## 0. v2.9.0 — the balance sheet lands
 
 Applied from the owner's design sheet; every value and where it lives is recorded in

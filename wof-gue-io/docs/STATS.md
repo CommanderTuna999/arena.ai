@@ -8,7 +8,7 @@ How to read it: enemy health is the sum of every part at that rarity tier. Enemy
 1. CORE FORMULAS
 ============================================================
 
-Player base cannon: damage = st.dmg per shot; rate = 4 + 0.7 x Fire Rate level shots/s; shots per trigger = 1 + Extra Barrels level; range 760u; projectile speed 900u/s. Cannon upgrades are damage, rate, barrels and crit only.
+Player cannon: every cannon is a chassis (`CANNONS` in data.ts) with its **own** upgrade tracks — damage and rate are never shared between guns. The fitted Stinger Mk I fires a 20-damage round bolt on a 0.7s interval (640u/s, 820u reach) with a small charge on impact; damage = 20 x 1.2^dmg level, rate = 1/0.7 + 0.7 x rate level. Shots per trigger = 1 + Extra Barrels level (still a global upgrade), crit and everything else unchanged. The tree lives in the base under the CANNON tab, tier 0 at the bottom.
 Crafted weapon: damage per hit = st.dmg x wpn.dmg x eff (then x2.5 on a crit, x2.2 during Overdrive). Cooldown = wpn.cd / (0.7 + 0.3 x eff), so 100% efficiency is the listed cooldown and 30% efficiency is 1.27x slower (cd / 0.79).
 Enemy damage: eDmg = 16 x DMG_MUL[tier] = 16 / 48 / 144 / 432 / 1,296 / 3,888. Every ability, gun, missile and contact hit is a multiplier of that eDmg.
 Enemy hull: every part HP is generated from HP_MUL[tier] = 1 / 4 / 18 / 80 / 360 / 1,600, with part size and shape adding their own multipliers. The tables below give the resulting totals.
@@ -766,8 +766,8 @@ Shockwave (ab_shockwave): 16s base cooldown. 520u blast: 5x st.dmg x eff, 900u/s
 Base cannon: kinetic, st.dmg = 10 x 1.2^level per shot; 4 + 0.7 x level shots/s; 1 + barrels shots per trigger in a 0.09 rad fan; 760u range; 900u/s projectile speed; no innate pierce, splash or core/plate bonus - only crafted weapon recipes add those, and Kinetic rounds are stopped dead by enemy energy shields, which take no damage. The cannon system is scheduled for a rework.
 
 Upgrade | Max | Effect per level | Cost
-Cannon Damage (dmg) | 30 | Raw damage per shot. 12 dmg at L1, 2.37K dmg at max | 20 x 1.45^level credits
-Fire Rate (rate) | 12 | Shots per second. 4.7/s at L1, 12.4/s at max | 40 x 1.5^level credits
+Bore Calibration (fitted cannon, dmg) | 30 | Damage per bolt, per cannon. 24 dmg at L1, 4.75K dmg at max | 20 x 1.45^level x chassis cost multiplier
+Autoloader (fitted cannon, rate) | 12 | Bolts per second, per cannon. 2.1/s at L1, 9.8/s at max | 40 x 1.5^level x chassis cost multiplier
 Extra Barrels (barrels) | 4 | Fire a fan of additional shots. 2 barrels at L1, 5 barrels at max | 150 x 2.6^level credits
 Targeting Matrix (crit) | 10 | Chance for 2.5x critical hits. 9% crit at L1, 45% crit at max | 60 x 1.55^level credits
 Hull Plating (hull) | 30 | Maximum hull integrity. 122 HP at L1, 39.0K HP at max | 25 x 1.5^level credits

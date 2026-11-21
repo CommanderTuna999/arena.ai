@@ -359,6 +359,31 @@ export function render(g: Game, ctx: CanvasRenderingContext2D) {
       ctx.beginPath(); ctx.moveTo(b.x, b.y); ctx.lineTo(b.x - b.vx * 0.03, b.y - b.vy * 0.03); ctx.stroke();
       ctx.globalAlpha = 0.5; ctx.lineWidth = 2;
       ctx.beginPath(); ctx.moveTo(b.x, b.y); ctx.lineTo(b.x - b.vx * 0.045, b.y - b.vy * 0.045); ctx.stroke(); ctx.globalAlpha = 1;
+    } else if (b.boom) {
+      /* The Stinger's bolt: a fat round slug with a tail, not a tracer. The tail
+       * is drawn as a few tapering segments so it reads as motion smear and stays
+       * cheap: no gradients, no per-bullet allocations. */
+      const sp = Math.hypot(b.vx, b.vy) || 1;
+      const ux = b.vx / sp, uy = b.vy / sp;
+      const r = b.crit ? 6.4 : 5.4;
+      ctx.lineCap = "round";
+      for (let k = 1; k <= 4; k++) {
+        const a = 1 - k / 5;
+        const seg = 9 + k * 7;
+        ctx.globalAlpha = a * 0.55;
+        ctx.lineWidth = r * (1.5 - k * 0.26);
+        ctx.beginPath();
+        ctx.moveTo(b.x - ux * (seg - 8), b.y - uy * (seg - 8));
+        ctx.lineTo(b.x - ux * seg, b.y - uy * seg);
+        ctx.stroke();
+      }
+      ctx.globalAlpha = 1;
+      ctx.beginPath(); ctx.arc(b.x, b.y, r, 0, TAU); ctx.fill();
+      ctx.fillStyle = "#fff8d6";
+      ctx.beginPath(); ctx.arc(b.x - ux * r * 0.25, b.y - uy * r * 0.25, r * 0.45, 0, TAU); ctx.fill();
+      ctx.lineWidth = 1.4;
+      ctx.strokeStyle = "rgba(255,248,214,0.8)";
+      ctx.beginPath(); ctx.arc(b.x, b.y, r, 0, TAU); ctx.stroke();
     } else {
       ctx.lineWidth = (b.crit ? 4 : 3);
       ctx.beginPath(); ctx.moveTo(b.x, b.y); ctx.lineTo(b.x - b.vx * 0.022, b.y - b.vy * 0.022); ctx.stroke();

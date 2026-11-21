@@ -1,6 +1,8 @@
 import { TAU, angDiff, clamp, distToPoly, hash2, lerp, mulberry32, pointInPoly } from "./math";
 import {
-  ABILITY_BY_ID, BASE, BASE_MAX_HP, BASE_RING, BASE_TAKE, DMG_MUL, KIND_CAT, RARITIES, RECIPE_BY_ID, SHIP_R, UPGRADES, WORLD_R, W_SLOTS, compMass, compValue, computeStats, craftEfficiency,
+  ABILITY_BY_ID, BASE, BASE_MAX_HP, BASE_RING, BASE_TAKE, CANNONS, CANNON_BY_ID, CANNON_TRACKS, CANNON_TRACK_BY_ID,
+  DMG_MUL, KIND_CAT, RARITIES, RECIPE_BY_ID, SHIP_R, UPGRADES, WORLD_R, W_SLOTS, cannonDmg, cannonRate, cannonTrackCost,
+  compMass, compValue, computeStats, craftEfficiency,
   recipeProblem, upgradeCost, zoneTier, WEAPON_DMG, WEAPON_RANGE, type Comp, type DmgKind, type PartKind, type SaveData, type Slot, type Stats,
 } from "./data";
 import { GUN_SPECS, SPECIES_LIST, buildEnemy, type AbilityDef, type Group, type GunKind, type Part, type ProjType, type SpeciesDef } from "./enemies";
@@ -197,6 +199,8 @@ export type DmgSrc = "kinetic" | "laser" | "shock" | "explosive" | "missile" | "
 export interface Bullet {
   x: number; y: number; vx: number; vy: number; life: number; dmg: number; pierce: number; hit: number[];
   kind: 0 | 1 | 2 | 3 | 4; target: Enemy | null; crit: boolean;
+  /** the base cannon's bolt: pops a small charge where it lands */
+  boom?: number;
   /** what kind of damage this round carries (drives visuals + shield rules) */
   elem?: DmgKind;
   dot?: number; melt?: number; split?: number; flak?: boolean;
@@ -582,6 +586,41 @@ export class Game {
   /* ---------------- UI facing actions ---------------- */
   /** Buy up to `count` levels; MAX callers pass the upgrade's remaining room.
    *  Purchases stop when credits run out, so a bulk buy never overdraws. */
+  /** buy levels on the fitted cannon's own track (damage or rate) */
+  buyCannon(track: string, count = 1) {
+    const t = CANNON_TRACK_BY_ID[track];
+    if (!t) return 0;
+    const c = this.cannon();
+    if (!this.save.cannon) this.save.cannon = { id: c.id, lv: {} };
+    const lv = this.save.cannon.lv ?? (this.save.cannon.lv = {});
+    let l = lv[track] ?? 0, bought = 0;
+    while (bought < count && l < t.max) {
+      const price = this.admin.on && this.admin.credits ? 0 : cannonTrackCost(c, t, l);
+      if (this.save.credits < price) break;
+      this.save.credits -= price;
+      l++; bought++;
+    }
+    if (!bought) return 0;
+    lv[track] = l;
+    this.recompute();
+    this.markDirty();
+    return bought;
+  }
+  /** the cannon currently bolted to the hull */
+  cannon() {
+    if (!this.save.cannon) this.save.cannon = { id: CANNONS[0].id, lv: {} };
+    const c = CANNON_BY_ID[this.save.cannon.id];
+    if (!c) { this.save.cannon.id = CANNONS[0].id; return CANNONS[0]; }
+    return c;
+  }
+  /** fit a different gun; free, the tree charges for the chassis, not for swapping */
+  selectCannon(id: string) {
+    if (!CANNON_BY_ID[id] || !this.save.cannon) return;
+    if (this.save.cannon.id === id) return;
+    this.save.cannon.id = id;
+    this.recompute();
+    this.markDirty();
+  }
   buy(id: string, count = 1) {
     const u = UPGRADES.find((x) => x.id === id);
     if (!u) return 0;
@@ -1208,22 +1247,25 @@ export class Game {
 
   /** Which shield panel, if any, covers this world point. Only a slice of the body
    *  is covered, so flying at a gap is the whole point. */
-  private shieldAt(e: Enemy, x: number, y: number): Part | null {
+  private shieldInfoAt(e: Enemy, x: number, y: number): ShieldInfo | null {
     const dx = x - e.x, dy = y - e.y;
+    const d = Math.hypot(dx, dy);
     for (const s of e.shields) {
       if (!s.part.alive || s.part.shieldHp <= 0) continue;
       const c = Math.cos(s.ang), sn = Math.sin(s.ang);
       const along = dx * c + dy * sn;
       const perp = -dx * sn + dy * c;
       if (s.bar) {
-        if (Math.abs(perp) <= s.span && Math.abs(along - s.r) <= s.thick) return s.part;
+        if (Math.abs(perp) <= s.span && Math.abs(along - s.r) <= s.thick) return s;
       } else {
-        const d = Math.hypot(dx, dy);
         if (Math.abs(d - s.r) > s.thick) continue;
-        if (Math.abs(angDiff(Math.atan2(dy, dx), s.ang)) <= s.span) return s.part;
+        if (Math.abs(angDiff(Math.atan2(dy, dx), s.ang)) <= s.span) return s;
       }
     }
     return null;
+  }
+  private shieldAt(e: Enemy, x: number, y: number): Part | null {
+    return this.shieldInfoAt(e, x, y)?.part ?? null;
   }
 
   /** plating takes the hit instead of the body. Returns true if it absorbed it. */
@@ -1808,9 +1850,28 @@ export class Game {
       const dx = p.x - e.x, dy = p.y - e.y;
       const dd = Math.hypot(dx, dy);
       if (dd > e.shieldReach + 70) continue;
-      const sp = this.shieldAt(e, p.x, p.y);
-      if (!sp) continue;
+      const info = this.shieldInfoAt(e, p.x, p.y);
+      if (!info) continue;
+      const sp = info.part;
       const out = dd > 1 ? Math.atan2(dy, dx) : e.a;
+      /* The panel is a wall, not a fence: the hull is lifted back onto the
+       * outside face so a fast ship cannot tunnel through it. */
+      const c = Math.cos(info.ang), sn = Math.sin(info.ang);
+      /* Always out. The inside of the shell is the body: letting the ship settle
+       * there would put it inside the hull, so the wall spits it back the way it
+       * came even if it somehow got through. */
+      const want = info.r + info.thick + SHIP_R + 2;
+      let px: number, py: number;
+      if (info.bar) {
+        const perp = -dx * sn + dy * c;
+        px = e.x + c * want - sn * perp;
+        py = e.y + sn * want + c * perp;
+      } else {
+        const a = Math.atan2(dy, dx);
+        px = e.x + Math.cos(a) * want;
+        py = e.y + Math.sin(a) * want;
+      }
+      p.x = px; p.y = py;
       const zx = p.x, zy = p.y;
       sp.shieldHit = 0.3;
       /* The sheet prices an unshielded contact at 25x a base hit: a panel is a
@@ -2600,6 +2661,14 @@ export class Game {
       if (b.dot) { e.dot = Math.max(e.dot, b.dot); e.dotT = Math.max(e.dotT, 2.5); }
       if (b.melt) e.melt = Math.min(0.9, e.melt + b.melt);
       this.damagePart(e, p, dmg, b.x, b.y);
+      if (b.boom) {
+        /* "explodes slightly": a small charge that catches whatever is packed
+         * around the impact point, never a fireball */
+        const r = 34 + 10 * b.boom;
+        this.areaDamage(b.x, b.y, r, dmg * 0.3, p, "explosive");
+        this.ringFx(b.x, b.y, r, "#ffd24d", 820);
+        this.burst(b.x, b.y, "#ffd24d", 6, 4, 250);
+      }
       if (b.kind === 1) { this.areaDamage(b.x, b.y, 95, b.dmg * 0.6, null); this.ringFx(b.x, b.y, 95, "#ffb04d", 500); this.burst(b.x, b.y, "#ffb04d", 8, 4, 220); b.life = 0; return true; }
       if (b.kind === 3) { this.areaDamage(b.x, b.y, 120, b.dmg * 0.7, null); this.ringFx(b.x, b.y, 120, "#ffd24d", 600); this.burst(b.x, b.y, "#ffd24d", 12, 5, 300); return true; }
       if (b.pierce > 0) { b.pierce--; b.dmg *= 0.8; return false; }
@@ -2769,7 +2838,7 @@ export class Game {
       for (let i = 0; i < n; i++) {
         const ang = base + (i - (n - 1) / 2) * 0.09;
         const crit = Math.random() < st.crit;
-        this.bullets.push({ x: p.x + Math.cos(ang) * 12, y: p.y + Math.sin(ang) * 12, vx: Math.cos(ang) * st.bulletSpeed + p.vx * 0.3, vy: Math.sin(ang) * st.bulletSpeed + p.vy * 0.3, life: st.bulletRange / st.bulletSpeed, dmg: st.dmg * (crit ? 2.5 : 1) * (p.overT > 0 ? 2.2 : 1) * this.dmgMul(), pierce: 0, hit: [], kind: 0, target: null, crit, elem: "kinetic" });
+        this.bullets.push({ x: p.x + Math.cos(ang) * 14, y: p.y + Math.sin(ang) * 14, vx: Math.cos(ang) * st.bulletSpeed + p.vx * 0.3, vy: Math.sin(ang) * st.bulletSpeed + p.vy * 0.3, life: st.bulletRange / st.bulletSpeed, dmg: st.dmg * (crit ? 2.5 : 1) * (p.overT > 0 ? 2.2 : 1) * this.dmgMul(), pierce: 0, hit: [], kind: 0, target: null, crit, elem: "kinetic", boom: 1 });
       }
       p.vx -= Math.cos(base) * 6; p.vy -= Math.sin(base) * 6;
     }
