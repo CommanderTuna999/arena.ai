@@ -8,7 +8,7 @@
  *   CHANGELOG and mirror the details in docs/CHANGELOG.md.
  */
 
-export const VERSION = "2.0.6";
+export const VERSION = "2.0.7";
 
 export interface ChangeEntry {
   version: string;
@@ -19,6 +19,17 @@ export interface ChangeEntry {
 }
 
 export const CHANGELOG: ChangeEntry[] = [
+  {
+    version: "2.0.7",
+    date: "21 Nov 2026",
+    title: "Plating you can actually see (and hit)",
+    points: [
+      "Armour slabs stand ~4x thicker again: 20u base + 10u per extra layer + 26% of the plate's own radius, capped at 1.9x the part. They are now gunmetal plates with a bevelled lip, a bright outer rim and one ridge per layer, instead of a pale outline.",
+      "Shots now stop on the plating itself. The old collision was a single circle around the whole silhouette, so on winged or leggy species rounds vanished in empty air well before the armour; bullets and beams test the actual slab shapes (with a capped shell radius for the broad phase), so they visibly strike steel.",
+      "Plate hits throw a spark burst and a flash ring, and fast rounds get intermediate-position samples so they cannot tunnel straight through a thin slab between frames.",
+      "Fixed a separate ring bug: a fast shockwave could jump past the ship between frames (the old +-26u band test), so shell-break blasts now always register on the way out.",
+    ],
+  },
   {
     version: "2.0.6",
     date: "21 Nov 2026",

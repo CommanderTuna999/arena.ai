@@ -1,5 +1,5 @@
 WOF GUE — STAT COMPENDIUM
-Build 2.0.6 · 21 November 2026
+Build 2.0.7 · 21 November 2026
 
 HOW TO READ THIS
 C / U / R / E / L / M = Common, Uncommon, Rare, Epic, Legendary, Mythic.

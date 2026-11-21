@@ -3,6 +3,21 @@
 Everything below is implemented in the current build. Numbers are the actual constants used by
 the simulation, not design targets.
 
+## 0. v2.0.7 — plating you can see and hit
+
+### Thicker slabs
+- `plateGrow(r, layers)` (exported from `engine.ts`, used by both the renderer and hit detection) is now `min(1.9r, 20 + 10(layers - 1) + 0.26r)`, up from `min(1.5r, 12 + 8(layers - 1) + 0.18r)` and far above the original fixed 4–19u rim.
+- The renderer draws a dark underlay grown by 1.3x, a gunmetal face (`hsla(hue, 9%, 19+11f%)`), a lighter bevelled lip at 0.84x of the growth, a bright rim and one ridge per extra layer.
+
+### Hits land on the armour
+- Added `plateAt(e, wx, wy)`: point-in-slab test against every alive `segment`/`armor` part, with the same `plateGrow` radius the renderer uses. It handles the enemy's rotation, per-group pivots and the body-wave bend, so armour on a serpent still lines up.
+- `tryHit` now uses `plateAt` (three samples along the round's per-frame travel, to stop tunnelling) instead of the body-wide `shellR` circle. `beam` uses the same test inside the `shellR` broad phase, so beams end on steel too.
+- `shellR` is now the plate envelope (`max(center + r + plateGrow)` over plated parts, at least core radius + 10) rather than `b.radius + 6`, which on winged species was mostly empty space.
+- Every plate hit spawns a spark burst and a flash ring at the contact point (`shellHit` takes optional `hx, hy`), so a stopped round is visible instead of silent.
+
+### Ring sweep
+- `rings` update now tests the swept band `prev - 26 <= d <= r + 26` instead of `abs(d - r) < 26`. A shell-break shockwave at ~3,900u/s moves ~65u per frame and could previously skip past the ship entirely.
+
 ## 0. v2.0.6 — real armour plating, proximity cannon
 
 ### Plating is an extra armour layer

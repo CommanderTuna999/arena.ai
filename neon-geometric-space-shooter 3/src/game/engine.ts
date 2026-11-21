@@ -60,6 +60,14 @@ const SEED_BUDGET = 1;
 const SHELL_TAKE: Record<DmgSrc, number> = { kinetic: 0.3, missile: 0.32, explosive: 0.4, laser: 0.22, shock: 0.15, dot: 0.1 };
 /** each plating layer carries this share of the enemy's total part hull */
 export const SHELL_HP_FRAC = 0.6;
+/* How far the drawn slabs stand proud of the part they wrap. Shared with the
+ * renderer so the collision shell lines up with what the player can see. */
+export const SHELL_BASE_GROW = 20;
+export const SHELL_GROW_PER_LAYER = 10;
+export const SHELL_GROW_FRAC = 0.26;
+export const SHELL_GROW_CAP = 1.9;
+export const plateGrow = (r: number, layers: number) =>
+  Math.min(r * SHELL_GROW_CAP, SHELL_BASE_GROW + (layers - 1) * SHELL_GROW_PER_LAYER + r * SHELL_GROW_FRAC);
 /* Nest defence tuning. The siege shell one-shots up to legendary; mythicals lose
  * a fixed chunk so they stay a genuine end-game threat. */
 const SHELL_DMG = 2_500_000;
@@ -1062,10 +1070,46 @@ export class Game {
     this._w[0] = e.x + x * ca - y * sa; this._w[1] = e.y + x * sa + y * ca;
     return this._w;
   }
+  /** True when a world point is inside the drawn armour slabs. The shell used to
+   *  be one big circle around the body, which let shots vanish in mid-air where
+   *  wings and legs stretched the silhouette past the plates. */
+  private plateAt(e: Enemy, wx: number, wy: number): boolean {
+    const layers = e.shells.length;
+    if (!layers) return false;
+    const ca = Math.cos(e.a), sa = Math.sin(e.a);
+    const dx = wx - e.x, dy = wy - e.y;
+    const lx = dx * ca + dy * sa, ly = -dx * sa + dy * ca;
+    for (const p of e.parts) {
+      if (!p.alive || (p.kind !== "segment" && p.kind !== "armor")) continue;
+      let x = lx, y = ly;
+      if (p.g >= 0) {
+        const g = e.groups[p.g];
+        if (g.ang !== 0) {
+          const c = Math.cos(-g.ang), sn = Math.sin(-g.ang);
+          const gx = lx - g.px, gy = ly - g.py;
+          x = g.px + gx * c - gy * sn; y = g.py + gx * sn + gy * c;
+        }
+      }
+      if (p.seg >= 0 && e.bend) y -= this.bendOff(e, p);
+      const r = p.r + plateGrow(p.r, layers);
+      const px = x - p.cx, py = y - p.cy;
+      if (px * px + py * py <= r * r) return true;
+    }
+    return false;
+  }
+
   /** plating takes the hit instead of the body. Returns true if it absorbed it. */
-  private shellHit(e: Enemy, dmg: number, src: DmgSrc, fromBase = false) {
+  private shellHit(e: Enemy, dmg: number, src: DmgSrc, fromBase = false, hx?: number, hy?: number) {
     const layer = e.shells[e.shells.length - 1];
     if (!layer) return false;
+    /* Sparks at the point of contact: without them a hit on thick plating looks
+     * like the shot simply vanished. */
+    if (!fromBase) {
+      const ix = hx ?? e.x, iy = hy ?? e.y;
+      this.burst(ix, iy, "#e9f2ff", 5, 3.4, 250);
+      this.burst(ix, iy, "#ffd9a0", 3, 2.2, 170);
+      this.ringFx(ix, iy, 26, "#ffe9b8", 620);
+    }
     /* Plate Breaker buys extra bite against the slabs, not just the armour parts */
     const dealt = dmg * (SHELL_TAKE[src] ?? 0.3) * (fromBase ? 1 : this.stats.breaker);
     const before = layer.hp;
@@ -1095,6 +1139,18 @@ export class Game {
      * above common, each worth 60% of the hull underneath it */
     const hull = b.parts.reduce((a, p) => a + p.maxHp, 0);
     const shellMax = Math.max(1, Math.round(hull * SHELL_HP_FRAC));
+    const shellN = tier >= 2 && !spd.bodyWave ? tier - 1 : 0;
+    /* The shell only has to cover the plates, not the whole silhouette: wings
+     * and legs stick far past the body, and a body-radius circle made shots
+     * vanish in empty space long before they reached the armour. */
+    let plateR = 0;
+    for (const p of b.parts) {
+      if (p.kind !== "segment" && p.kind !== "armor") continue;
+      plateR = Math.max(plateR, Math.hypot(p.cx, p.cy) + p.r + plateGrow(p.r, Math.max(1, shellN)));
+    }
+    const coreR = b.parts[b.parts.findIndex((q) => q.id === b.coreId)]?.r ?? 0;
+    if (shellN && plateR <= 0) plateR = b.radius;
+    if (shellN) plateR = Math.max(plateR, coreR + 10);
     b.groups.forEach((g, i) => { if (roleGroups[g.role]) roleGroups[g.role].push(i); });
     // ability gating: tier 0 enemies have none, tier 1 has one, tier 2 two, and so on
     const gate = Math.min(tier, spd.abilities.length);
@@ -1115,8 +1171,8 @@ export class Game {
       tags, shields: [], weaponParts, shieldParts, dist: 9999, bdist: 9999, contactCd: 0, hasChange: false, gen: 0,
       dmgTaken: 0, baseDmg: 0,
       dot: 0, dotT: 0, melt: 0, slowT: 0, slowF: 1,
-      shells: Array.from({ length: tier >= 2 && !spd.bodyWave ? tier - 1 : 0 }, () => ({ hp: shellMax, max: shellMax })),
-      shellHit: 0, shellR: b.radius + 6,
+      shells: Array.from({ length: shellN }, () => ({ hp: shellMax, max: shellMax })),
+      shellHit: 0, shellR: plateR || b.radius + 6,
       bend: spd.bodyWave ? { amp: spd.bodyWave.amp * b.size, k: spd.bodyWave.k, speed: spd.bodyWave.speed } : null,
     };
   }
@@ -1542,7 +1598,11 @@ export class Game {
       if (e.dead) continue;
       const dx = e.x - x, dy = e.y - y;
       if (dx * dx + dy * dy > (R + e.radius) * (R + e.radius)) continue;
-      if (e.shells.length && Math.hypot(dx, dy) < R + e.shellR) { this.shellHit(e, dmg, src); continue; }
+      if (e.shells.length && Math.hypot(dx, dy) < R + e.shellR) {
+        const len = Math.hypot(dx, dy) || 1;
+        this.shellHit(e, dmg, src, false, e.x - (dx / len) * e.shellR, e.y - (dy / len) * e.shellR);
+        continue;
+      }
       for (const q of e.parts) {
         if (!q.alive || q === skip) continue;
         const w = this.partWorld(e, q);
@@ -2204,8 +2264,14 @@ export class Game {
       const dx = b.x - e.x, dy = b.y - e.y;
       const rr = Math.max(e.radius, e.shellR) + 12;
       if (dx * dx + dy * dy > rr * rr) continue;
-      if (e.shells.length && b.kind !== 4 && dx * dx + dy * dy < e.shellR * e.shellR) {
-        this.shellHit(e, b.dmg, b.kind === 3 ? "explosive" : "kinetic");
+      /* The plates are thin compared with a fast round's per-frame travel, so
+       * test the two intermediate points as well to avoid tunnelling. */
+      if (e.shells.length && b.kind !== 4 && (
+        this.plateAt(e, b.x, b.y) ||
+        this.plateAt(e, b.x - b.vx / 120, b.y - b.vy / 120) ||
+        this.plateAt(e, b.x - b.vx / 60, b.y - b.vy / 60)
+      )) {
+        this.shellHit(e, b.dmg, b.kind === 3 ? "explosive" : "kinetic", false, b.x, b.y);
         return true;
       }
       for (const s of e.shields) {
@@ -2328,8 +2394,8 @@ export class Game {
       for (const e of cands) {
         const dx = bx - e.x, dy = by - e.y;
         if (dx * dx + dy * dy > (e.radius + 6) * (e.radius + 6)) continue;
-        if (e.shells.length && (bx - e.x) * (bx - e.x) + (by - e.y) * (by - e.y) < e.shellR * e.shellR) {
-          this.shellHit(e, dmg, "laser");
+        if (e.shells.length && (bx - e.x) * (bx - e.x) + (by - e.y) * (by - e.y) < e.shellR * e.shellR && this.plateAt(e, bx, by)) {
+          this.shellHit(e, dmg, "laser", false, bx, by);
           endLen = d;
           break outer;
         }
@@ -3138,10 +3204,13 @@ export class Game {
     // rings
     for (let i = this.rings.length - 1; i >= 0; i--) {
       const r = this.rings[i];
+      const prev = r.r;
       r.r += r.speed * dt;
       if (r.hurts && !r.hit && !p.dead) {
         const d = Math.hypot(p.x - r.x, p.y - r.y);
-        if (Math.abs(d - r.r) < 26) {
+        /* test the whole swept band: a fast ring moves further in one frame
+         * than the old 26u band was wide, so it could skip straight past the ship */
+        if (d >= prev - 26 && d <= r.r + 26) {
           r.hit = true;
           this.hurtPlayer(r.dmg, { kb: 700, kbx: (p.x - r.x) / (d || 1), kby: (p.y - r.y) / (d || 1) });
         }

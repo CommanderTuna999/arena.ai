@@ -1,6 +1,6 @@
 import { TAU, clamp, fmtNum } from "./math";
 import { BASE, CAT_NAME, KIND_CAT, RARITIES, SHIP_R, W_SLOTS, WEAPON_RANGE, WEAPON_TINT, WORLD_R, ZONE_EDGES } from "./data";
-import { N_ROPE, type Enemy, type Game, type LComp } from "./engine";
+import { N_ROPE, plateGrow, type Enemy, type Game, type LComp } from "./engine";
 
 function bend(e: Enemy, p: { seg: number }) {
   if (!e.bend || p.seg < 0) return 0;
@@ -1236,14 +1236,19 @@ function drawEnemy(g: Game, ctx: CanvasRenderingContext2D, e: Enemy, z: number, 
   if (showPlate) {
     const top = e.shells[shellN - 1];
     const f = clamp(top.hp / Math.max(1, top.max), 0, 1);
-    const hit = e.shellHit > 0 ? 0.18 : 0;
-    const grow = 4 + (shellN - 1) * 5;
-    const fill = `hsla(${e.spd.hue},15%,${16 + 12 * f}%,0.94)`;
-    const seam = `hsla(${e.spd.hue},32%,6%,0.6)`;
-    const rim = `hsla(${e.spd.hue},58%,${56 + 20 * f}%,${0.55 + 0.4 * f + hit})`;
-    const rimW = 1.8 / z;
+    const hit = e.shellHit > 0 ? 1 : 0;
+    /* Neutral steel, not a species-tinted stroke: the slabs have to read as a
+     * separate physical object bolted onto the body. */
+    const steel = (l: number, a = 1) => `hsla(${e.spd.hue},9%,${l}%,${a})`;
+    const under = steel(5, 0.92);
+    const fill = steel(19 + 11 * f, 0.97);
+    const lip = steel(36 + 14 * f, 0.95);
+    const rim = steel(62, 0.75 + 0.2 * f + 0.25 * hit);
+    const rimW = 2.6 / z;
+    /* The old plating was a 4-19u rim; the slabs now stand ~10x thicker, and
+     * their width tracks the size of the plate they are bolted to. */
     const platePath = (p: { poly: number[]; cx: number; cy: number; r: number }, g: number) => {
-      const k = 1 + Math.min(g, p.r * 0.9) / Math.max(1, p.r);
+      const k = 1 + g / Math.max(1, p.r);
       ctx.beginPath();
       for (let i = 0; i < p.poly.length; i += 2) {
         const vx = p.cx + (p.poly[i] - p.cx) * k;
@@ -1255,23 +1260,33 @@ function drawEnemy(g: Game, ctx: CanvasRenderingContext2D, e: Enemy, z: number, 
     for (const idx of drawOrder) {
       const p = e.parts[idx];
       if (!p.alive || p.r <= plateMin || !PLATE_KINDS.has(p.kind)) continue;
+      const grow = plateGrow(p.r, shellN);
       const grp = p.g >= 0 ? e.groups[p.g] : null;
       const gs = !!(grp && grp.ang !== 0);
       if (grp && gs) { ctx.save(); ctx.translate(grp.px, grp.py); ctx.rotate(grp.ang); ctx.translate(-grp.px, -grp.py); }
       const bo = bend(e, p);
       const bs = bo !== 0;
       if (bs) { ctx.save(); ctx.translate(0, bo); }
-      platePath(p, grow + 2.4);
-      ctx.fillStyle = seam; ctx.fill();
+      /* dark underlay reads as thickness / a shadow gap around the slab */
+      platePath(p, grow + grow * 0.3);
+      ctx.fillStyle = under; ctx.fill();
+      /* solid top face */
       platePath(p, grow);
       ctx.fillStyle = fill; ctx.fill();
+      /* lighter lip just inside the outer edge gives the slab a bevel */
+      platePath(p, grow * 0.84);
+      ctx.strokeStyle = lip; ctx.lineWidth = Math.max(2, grow * 0.22) / z; ctx.stroke();
+      /* bright outer rim */
       ctx.strokeStyle = rim; ctx.lineWidth = rimW; ctx.stroke();
-      for (let i = 1; i < shellN; i++) {
-        ctx.globalAlpha = 0.5;
-        platePath(p, grow * (1 - i / (shellN + 0.6)));
-        ctx.lineWidth = 1.1 / z; ctx.stroke();
+      /* one ridge per extra layer, so four bolted layers read as four */
+      if (shellN > 1) {
+        for (let i = 1; i < shellN; i++) {
+          ctx.globalAlpha = 0.65;
+          platePath(p, grow * (1 - i / (shellN + 0.4)));
+          ctx.strokeStyle = lip; ctx.lineWidth = Math.max(1.2, grow * 0.1) / z; ctx.stroke();
+        }
+        ctx.globalAlpha = 1;
       }
-      ctx.globalAlpha = 1;
       if (bs) ctx.restore();
       if (gs) ctx.restore();
     }
