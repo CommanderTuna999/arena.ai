@@ -497,7 +497,10 @@ function drawCreditFlights(g: Game, ctx: CanvasRenderingContext2D) {
     const lift = Math.sin(Math.PI * e) * (60 + 40 * Math.min(1, Math.hypot(hx - sx, hy - sy) / 600));
     const x = sx + (hx - sx) * e;
     const y = sy + (hy - sy) * e - lift;
-    const s = 1.05 - 0.25 * e;
+    /* heavier coins start bigger and finish bigger, so a fat break reads at a
+     * glance without throwing more chips into the air */
+    const weight = 0.72 + 0.46 * Math.min(2.2, Math.log10(1 + c.value));
+    const s = (1.05 - 0.25 * e) * weight;
     ctx.globalAlpha = p < 0.1 ? p / 0.1 : 1 - Math.max(0, (p - 0.88) / 0.12) * 0.7;
     /* speed streak behind the coin */
     if (e > 0.12) {

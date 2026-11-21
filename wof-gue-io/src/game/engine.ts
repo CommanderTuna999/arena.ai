@@ -99,12 +99,22 @@ const PICKUP_MASS = 7;
 /* How far a bug notices the player, per rarity (common -> mythical). A big body
  * adds a little reach on top; the leash is only a hair longer than the notice
  * range, so stepping out of it ends the chase. */
-const AGGRO_RANGE = [360, 460, 580, 720, 880, 1060];
-const AGGRO_SIZE = 0.22;
-const AGGRO_LEASH = 1.18;
+const AGGRO_RANGE = [140, 200, 320, 450, 590, 760];
+const AGGRO_SIZE = 0.16;
+const AGGRO_LEASH = 1.15;
+/** bodies at or below this tier never start a fight - they only fight back */
+const NEUTRAL_TIER = 1;
+/** how long a provoked neutral body stays angry after the last hit */
+const PROVOKE_T = 9;
 /** The one boss hunts across most of the middle of the map. */
-const BOSS_AGGRO_MUL = 1.6;
-const BOSS_LEASH = 2.4;
+const BOSS_AGGRO_MUL = 1.45;
+const BOSS_LEASH = 2.1;
+/** hard ceiling on coins in the air; the flight is a flourish, not a currency */
+const CREDIT_DROP_CAP = 24;
+/** coins landing inside this window count as one collection */
+const CREDIT_BATCH_T = 0.5;
+/** ceiling on decorative ring effects in flight */
+const RING_FX_CAP = 22;
 const BASE_REPAIR_IDLE = 120;
 /** the siege cannon stays powered for this long after the last intruder leaves */
 const BASE_POWER_IDLE = 120;
@@ -155,6 +165,8 @@ export interface Enemy {
   abil: AbilityDef[]; abilCd: number[]; gap: number; act: Act | null; stun: number;
   wander: { x: number; y: number; t: number }; roleGroups: Record<string, number[]>;
   walk: number; dead: boolean; eDmg: number; keep: number; strafe: number; strafeT: number;
+  /** seconds left of "you hit me first" aggression (neutral bodies only) */
+  provoked: number;
   tags: Record<string, number>; shields: ShieldInfo[]; weaponParts: number[]; shieldParts: number[];
   dist: number; contactCd: number; /** cooldown on the "get off my hull" swat */ swatCd: number; hasChange: boolean;
   dot: number; dotT: number; melt: number; slowT: number; slowF: number;
@@ -264,6 +276,8 @@ export interface Hud {
   hp: number; maxHp: number; shield: number; maxShield: number; boost: number; hasBoost: boolean; credits: number;
   /** increments every time a credit flight lands, so the HUD can pulse the counter */
   creditTick: number;
+  /** the running collection: value collected "at once" and the coin scale for it */
+  creditPop: { v: number; s: number };
   harp: { state: number; load: number; hp: number }[]; toasts: Toast[]; nearBase: boolean;
   tp: { has: boolean; ch: number; cd: number; max: number }; dead: boolean; respawn: number; x: number; y: number;
   online: number; zoomOn: boolean; inv: number; cargo: number; hold: number; rev: number; zoom: number; fps: number;
@@ -342,6 +356,11 @@ export class Game {
   /** screen position of the HUD credit counter; credit coins fly here */
   creditHud = { x: 40, y: 210 };
   creditTick = 0;
+  /** credits collected in the current burst, and how big that burst draws */
+  creditBatch = 0;
+  creditBatchT = 0;
+  creditPopValue = 0;
+  creditPopScale = 1;
   harpoons: Harpoon[] = [];
   others: Other[] = [];
   toasts: Toast[] = [];
@@ -1209,9 +1228,11 @@ export class Game {
      * like the shot simply vanished. */
     if (!fromBase) {
       const ix = hx ?? e.x, iy = hy ?? e.y;
-      this.burst(ix, iy, "#e9f2ff", 5, 3.4, 250);
-      this.burst(ix, iy, "#ffd9a0", 3, 2.2, 170);
-      this.ringFx(ix, iy, 26, "#ffe9b8", 620);
+      /* Sparks at the point of contact: without them a hit on thick plating
+       * looks like the shot simply vanished. No ring - a fast weapon would draw
+       * one per bullet. */
+      this.burst(ix, iy, "#e9f2ff", 3, 3.2, 240);
+      this.burst(ix, iy, "#ffd9a0", 2, 2.1, 160);
     }
     /* Plate Breaker buys extra bite against the slabs, not just the armour parts */
     const dealt = dmg * (SHELL_TAKE[src] ?? 0.3);
@@ -1230,6 +1251,11 @@ export class Game {
     return true;
   }
   ringFx(x: number, y: number, max: number, color: string, speed = 600) {
+    /* Pure decoration, and there is a hard budget for it: a body coming apart
+     * used to paint a dozen expanding circles over each other, which is fill
+     * rate nobody sees and every frame pays for. Damaging rings are pushed
+     * directly by shockwave() and are never dropped. */
+    if (this.rings.length >= RING_FX_CAP) return;
     this.rings.push({ x, y, r: 4, max, speed, dmg: 0, hit: true, color, hurts: false });
   }
 
@@ -1297,7 +1323,7 @@ export class Game {
       speed: spd.speed * (1 + 0.04 * tier), turn: (spd.turn * TIER_TURN[clamp(tier, 0, 5)]) / (1 + b.radius / (b.size * 6)), mobility: 1, legCount: b.legCount, wingCount: b.wingCount, turnFrac: 1, legPlate: tier >= 4 ? tier - 3 : 0, crippledLegs: [], shieldReach: shieldParts.reduce((m, id) => Math.max(m, b.parts[id].shieldR), 0),
       abil, abilCd: abil.map(() => 1 + Math.random() * 3), gap: 1, act: null, stun: 0, wander: { x, y, t: 0 }, roleGroups,
       walk: Math.random() * 6, dead: false, eDmg: 16 * DMG_MUL[tier], keep: spd.keep + b.radius * 0.9, strafe: Math.random() < 0.5 ? 1 : -1, strafeT: 2,
-      tags, shields: [], weaponParts, shieldParts, dist: 9999, bdist: 9999, contactCd: 0, swatCd: 0, hasChange: false, gen: 0,
+      provoked: 0, tags, shields: [], weaponParts, shieldParts, dist: 9999, bdist: 9999, contactCd: 0, swatCd: 0, hasChange: false, gen: 0,
       dmgTaken: 0, baseDmg: 0,
       dot: 0, dotT: 0, melt: 0, slowT: 0, slowF: 1,
       shells: Array.from({ length: shellN }, () => ({ hp: shellMax, max: shellMax })),
@@ -1482,6 +1508,8 @@ export class Game {
   private trackDamage(e: Enemy, dealt: number, fromBase: boolean) {
     const d = Math.max(0, dealt);
     if (d <= 0) return;
+    /* common and uncommon bodies are neutral until somebody shoots them */
+    if (!fromBase) e.provoked = PROVOKE_T;
     e.dmgTaken += d;
     if (fromBase) e.baseDmg += d;
   }
@@ -1627,14 +1655,16 @@ export class Game {
       if (firstSeen) this.discovery = { name: e.spd.name, t: 5 };
     }
     this.dirty = true;
-    let i = 0;
+    let i = 0, blasts = 0;
     for (const q of e.parts) {
       if (!q.alive) continue;
       q.alive = false;
       i++;
       const [wx, wy] = this.partWorld(e, q);
-      if (e.parts.length < 70 || i % 2 === 0) this.burst(wx, wy, q.stroke, clamp(Math.round(q.r / 9), 3, 14), clamp(q.r * 0.16, 3, 22), 160 + q.r * 2);
-      if (q.wpn || q.kind === "shield") this.explode(e, q, wx, wy, true);
+      if (e.parts.length < 70 || i % 2 === 0) this.burst(wx, wy, q.stroke, clamp(Math.round(q.r / 9), 3, 12), clamp(q.r * 0.16, 3, 22), 160 + q.r * 2);
+      /* Only the first two weapon/panel blasts get the full cascade treatment.
+       * A packed body used to throw one shockwave per gun it was carrying. */
+      if ((q.wpn || q.kind === "shield") && blasts < 2) { blasts++; this.explode(e, q, wx, wy, true); }
     }
     this.ringFx(x, y, e.radius * 1.4, "#ffffff", 900);
     this.shake = Math.max(this.shake, 16);
@@ -1655,7 +1685,10 @@ export class Game {
   private dropCreditValue(e: Enemy, x: number, y: number, area: number, kind: PartKind) {
     if (this.baseMajority(e)) return;
     const cr = Math.max(1, Math.round(compValue(area, Math.min(5, e.tier), kind) * 0.04 * this.stats.sellMul));
-    const n = cr >= 90 ? 5 : cr >= 24 ? 3 : cr >= 6 ? 2 : 1;
+    /* One coin per break, two for a big score. The sky used to fill with chips
+     * and the counter was the only thing anyone read, so the flight count is
+     * kept deliberately low. */
+    const n = cr >= 60 ? 2 : 1;
     const each = Math.max(1, Math.round(cr / n));
     for (let k = 0; k < n; k++) {
       const delay = k * 0.055 + Math.random() * 0.05;
@@ -1665,7 +1698,7 @@ export class Game {
         spin: Math.random() * TAU, delay, dur, srcId: e.id,
       });
     }
-    if (this.creditDrops.length > 160) this.creditDrops.splice(0, this.creditDrops.length - 160);
+    if (this.creditDrops.length > CREDIT_DROP_CAP) this.creditDrops.splice(0, this.creditDrops.length - CREDIT_DROP_CAP);
   }
   private dropCredits(e: Enemy, p: Part, x: number, y: number) {
     this.dropCreditValue(e, x, y, p.area, p.kind);
@@ -1676,10 +1709,17 @@ export class Game {
       c.life -= dt;
       c.spin += dt * 6;
       if (c.life <= 0) {
-        /* the coin reached the counter: pay it out and let the HUD pulse */
+        /* the coin reached the counter: pay it out, then fold it into the burst
+         * that is already in the air. One counter, one number, however many
+         * coins landed - "+1.2k" reads better than twelve "+100"s. */
         this.save.credits += c.value;
         this.save.earned += c.value;
         this.dirty = true;
+        this.creditBatch += c.value;
+        this.creditBatchT = CREDIT_BATCH_T;
+        this.creditPopValue = this.creditBatch;
+        /* the coin itself swells with the burst, and the cap is generous */
+        this.creditPopScale = clamp(0.55 + 0.72 * Math.log10(1 + this.creditBatch), 1, 3.6);
         this.creditTick++;
         this.creditDrops.splice(i, 1);
       }
@@ -1751,6 +1791,32 @@ export class Game {
         const d = Math.hypot(w[0] - x, w[1] - y);
         if (d < R + q.r * 0.5) this.damagePart(e, q, dmg * (1 - clamp(d / (R + 1), 0, 1) * 0.5), 0, 0);
       }
+    }
+  }
+
+  /** Touch an enemy's energy panel and it zaps: energy damage (no kinetic
+   *  reduction), a hard shove away from the body, sparks and a screen shake. */
+  private shieldContact(p: Player) {
+    for (const e of this.enemies) {
+      if (e.dead || e.shields.length === 0) continue;
+      const dx = p.x - e.x, dy = p.y - e.y;
+      const dd = Math.hypot(dx, dy);
+      if (dd > e.shieldReach + 70) continue;
+      const sp = this.shieldAt(e, p.x, p.y);
+      if (!sp) continue;
+      const out = dd > 1 ? Math.atan2(dy, dx) : e.a;
+      const zx = p.x, zy = p.y;
+      sp.shieldHit = 0.3;
+      /* a shock, not a guillotine: capped so brushing a panel is never a
+       * one-shot even on a mythical body */
+      const zap = Math.min(e.eDmg * 0.9, this.stats.hull * 0.18);
+      this.hurtPlayer(zap, { kb: 780 + e.tier * 70, kbx: Math.cos(out), kby: Math.sin(out), energy: true });
+      this.ringFx(zx, zy, clamp(110 + e.tier * 16, 110, 220), "#7de9ff", 1500);
+      this.burst(zx, zy, "#9df1ff", 12, 6.5, 420);
+      this.burst(zx, zy, "#ffffff", 5, 4, 300);
+      this.shake = Math.max(this.shake, 14);
+      if (p.flash <= 0) p.flash = 0.2;
+      break;
     }
   }
 
@@ -2231,15 +2297,21 @@ export class Game {
       if (e.dotT <= 0) e.dot = 0;
     }
     const safe = this.inSafe() || p.dead;
-    /* Aggro range scales with rarity: a common barely notices you, a mythical
-     * picks you up from a screen and a half away. Walk out of that range and
-     * the chase is over - the bug drops whatever it was winding up and goes
-     * back to patrolling its home ground. */
+    if (e.provoked > 0) e.provoked -= dt;
+    /* Aggro range scales with rarity, and every tier keeps it tight: a common
+     * has to be almost on top of you. Commons and uncommons are neutral besides -
+     * they fight back when hit, but they never open. Walk out of the range and
+     * the chase is over: the bug drops whatever it was winding up and goes home. */
     const boss = e.chunk === "boss";
-    const noticeR = (AGGRO_RANGE[clamp(e.tier, 0, 5)] + Math.min(e.radius, 700) * AGGRO_SIZE) * (boss ? BOSS_AGGRO_MUL : 1);
+    const angry = e.provoked > 0;
+    const neutral = e.tier <= NEUTRAL_TIER && !angry;
+    /* a provoked body is wide awake and will follow you further than it would
+     * ever have noticed you on its own */
+    const rage = angry && e.tier <= NEUTRAL_TIER ? 2.1 : 1;
+    const noticeR = (AGGRO_RANGE[clamp(e.tier, 0, 5)] + Math.min(e.radius, 700) * AGGRO_SIZE) * (boss ? BOSS_AGGRO_MUL : 1) * rage;
     const leashR = noticeR * (boss ? BOSS_LEASH : AGGRO_LEASH);
     if (!e.aggro) {
-      if (!safe && dist < noticeR) e.aggro = true;
+      if (!safe && !neutral && dist < noticeR) e.aggro = true;
     } else if (safe || dist > leashR) {
       e.aggro = false;
       e.act = null;           // no half-finished lunges once interest is lost
@@ -3361,6 +3433,9 @@ export class Game {
         const vn = p.vx * nx + p.vy * ny;
         if (vn > 0) { p.vx -= nx * vn; p.vy -= ny * vn; }
       }
+      /* energy panels are walls with teeth: fly into one and it discharges into
+       * the hull and throws the ship off it */
+      if (!this.inSafe() && p.hitT > 0.45) this.shieldContact(p);
       const [mx, my] = this.mouseWorld();
       const want = Math.atan2(my - p.y, mx - p.x);
       p.a += clamp(angDiff(p.a, want), -14 * dt, 14 * dt);
@@ -3509,6 +3584,12 @@ export class Game {
     this.cam.x += (p.x + p.vx * 0.12 - this.cam.x) * Math.min(1, dt * 7);
     this.cam.y += (p.y + p.vy * 0.12 - this.cam.y) * Math.min(1, dt * 7);
     this.shake = Math.max(0, this.shake - dt * 30);
+    if (this.creditBatchT > 0) {
+      this.creditBatchT -= dt;
+      /* the burst window closes: the next coin starts a new count. The last
+       * figure stays put so its floater can finish fading out. */
+      if (this.creditBatchT <= 0) { this.creditBatch = 0; this.creditPopScale = 1; }
+    }
 
     // saving / net
     this.saveT -= dt; this.serverT -= dt; this.netT -= dt;
@@ -3521,6 +3602,7 @@ export class Game {
     const p = this.player, st = this.stats;
     return {
       hp: p.hp, maxHp: st.hull, shield: p.shield, maxShield: st.shieldMax, boost: p.boost, hasBoost: st.hasBoost, credits: this.save.credits, creditTick: this.creditTick,
+      creditPop: { v: this.creditPopValue, s: this.creditPopScale },
       harp: this.harpoons.map((h) => ({ state: h.state, load: h.comp ? h.comp.c.mass / (h.comp.hooks.length * st.hStr) : 0, hp: h.hp / h.maxHp })),
       toasts: [...this.toasts], nearBase: this.nearBase(),
       tp: { has: st.tpTime > 0, ch: p.tpT > 0 ? 1 - p.tpT / st.tpTime : 0, cd: p.tpCd, max: st.tpCd },

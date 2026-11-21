@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
 <defs><filter id="g" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="0.7" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
-<g filter="url(#g)">
+<g transform="translate(32 32) scale(0.7) translate(-32 -32)" filter="url(#g)">
 <polygon points="31.83,35.32 35.31,41.00 37.34,39.81 34.06,34.00" fill="hsla(92,60%,14%,0.92)" stroke="hsl(92,70%,46%)" stroke-width="1.1" stroke-linejoin="round"/>
 <polygon points="34.77,40.09 38.19,45.69 40.03,44.61 36.80,38.89" fill="hsla(92,60%,14%,0.92)" stroke="hsl(92,70%,46%)" stroke-width="1.1" stroke-linejoin="round"/>
 <polygon points="37.85,44.46 39.67,51.66 41.53,51.23 39.93,43.97" fill="hsla(92,60%,14%,0.92)" stroke="hsl(92,70%,46%)" stroke-width="1.1" stroke-linejoin="round"/>

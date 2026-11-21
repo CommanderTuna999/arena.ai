@@ -38,12 +38,26 @@ button {
   }
 }
 
-/* the credit counter pops every time a coin lands */
+/* the credit coin pops every time a coin lands, and swells with the size of the
+   collection: --pop carries the scale the engine worked out for this burst */
 @keyframes creditPop {
   0% { transform: scale(1); }
-  35% { transform: scale(1.32) rotate(-8deg); }
+  32% { transform: scale(calc(var(--pop, 1.32) * 1.06)) rotate(-9deg); }
+  62% { transform: scale(calc(1 + (var(--pop, 1.32) - 1) * 0.45)) rotate(3deg); }
   100% { transform: scale(1); }
 }
 .credit-pop {
-  animation: creditPop 240ms cubic-bezier(0.2, 0.9, 0.3, 1);
+  animation: creditPop 340ms cubic-bezier(0.2, 0.9, 0.3, 1);
+}
+
+/* "+1.2k" drifting off the counter: the number collected in the last burst */
+@keyframes creditFloat {
+  0% { opacity: 0; transform: translateY(5px) scale(0.72); }
+  18% { opacity: 1; transform: translateY(-1px) scale(calc(0.9 + 0.22 * (var(--pop, 1) - 1))); }
+  70% { opacity: 0.95; }
+  100% { opacity: 0; transform: translateY(calc(-16px - 10px * (var(--pop, 1) - 1))) scale(calc(0.9 + 0.26 * (var(--pop, 1) - 1))); }
+}
+.credit-float {
+  animation: creditFloat 950ms cubic-bezier(0.2, 0.8, 0.3, 1) forwards;
+  text-shadow: 0 0 10px rgba(255, 210, 77, 0.85);
 }

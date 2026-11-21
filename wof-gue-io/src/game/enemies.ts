@@ -385,17 +385,15 @@ function wingSub(b: Builder, wingId: number, host: number, ax: number, ay: numbe
 /** stable per-species number, used to give each species its own shield layout */
 const idHash = (id: string) => { let h = 0; for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0; return h; };
 
-/** Which shape this species projects: flyers and serpents get curved panels that
- *  can sweep, walkers get straight bars. Every panel covers only a slice of the
- *  body so there is always a way in. */
+/** Which shape this species projects: flyers and serpents get curved panels,
+ *  walkers get straight bars. Panels are wide enough to overlap their neighbours
+ *  so a formation reads as one wall instead of a fence. */
 function shieldStyle(sp: SpeciesDef, S: number) {
   const arc = sp.flying || !!sp.bodyWave;
-  const h = idHash(sp.id) % 3;
-  let spin = 0;
-  if (sp.boss) spin = 0.5;
-  else if (h === 0) spin = sp.flying ? 0.7 : -0.4;
-  else if (h === 1 && sp.flying) spin = -0.55;
-  return { bar: !arc, span: arc ? 0.5 : 1.25 * S, r: 1.45 * S, spin };
+  /* Only the boss sweeps: a rotating front formation would open and close gaps
+   * on its own, which turns aiming into a lottery. */
+  const spin = sp.boss ? 0.35 : 0;
+  return { bar: !arc, span: arc ? 0.9 : 1.5 * S, r: 1.45 * S, spin };
 }
 
 const GUN_ROLL: { kind: GunKind; w: number[] }[] = [
@@ -425,7 +423,7 @@ function loadout(b: Builder, mounts: Mount[], sp: SpeciesDef) {
   const chanceShield = t >= 3 && !armed.shield && b.rng() < 0.1 + 0.05 * t;
   const nGun = (armed.gun || chanceGun) && t >= 3 ? t - 2 : 0;
   const nMis = armed.missile && t >= 4 ? t - 3 : 0;
-  const nSh = (armed.shield || chanceShield) && t >= 3 ? t - 1 : 0;
+  const nSh = (armed.shield || chanceShield) && t >= 3 ? t : 0;
   if (!nGun && !nMis && !nSh) return;
   const kind: GunKind = sp.gunType ?? (chanceGun ? randomGunKind(b.rng(), t) : "gun");
 
@@ -463,19 +461,25 @@ function loadout(b: Builder, mounts: Mount[], sp: SpeciesDef) {
   for (let i = 0; i < nGun && pi < pairs.length; i++, pi++) { turret(pairs[pi], 1, false); turret(pairs[pi], -1, false); }
   for (let i = 0; i < nMis && pi < pairs.length; i++, pi++) { turret(pairs[pi], 1, true); turret(pairs[pi], -1, true); }
   if (nSh > 0) {
-    /* generators are spread evenly around the body, and each one projects a single
-     * panel - arc or bar - out at the hull line. Gaps between panels are the weak
-     * points; more generators means smaller gaps, not a closed bubble. */
+    /* Panels are load-bearing wall, not decoration: they are packed across the
+     * leading arc so the body is sealed head-on and the flanks/tail stay open.
+     * Body-local angle 0 is "in front", so the formation is centred there and
+     * each panel is widened to overlap its neighbours. */
     const style = shieldStyle(sp, b.S);
-    const phase = b.rng() * TAU;
     const ring = 0.95;
+    const front = 3.6;                      // radians of leading arc covered (~206 degrees)
+    const slot = front / nSh;
     for (let i = 0; i < nSh; i++) {
-      const a = phase + (i / nSh) * TAU;
+      const a = -front / 2 + (i + 0.5) * slot;
       const px = Math.cos(a) * ring, py = Math.sin(a) * ring;
       const id = b.add("shield", "Shield Generator", ell(px, py, 0.26, 0.2, 6, a), { layer: 8, links: [b.coreId], style: 2 });
       const p = b.parts[id];
       p.shieldKind = style.bar ? 1 : 0;
-      p.shieldSpan = style.span;
+      /* straight bars are sized by chord length so they meet the next panel;
+       * curved panels get a hair over half the slot on each side */
+      p.shieldSpan = style.bar
+        ? Math.max(style.span, Math.sin(slot / 2) * 1.45 * b.S * 1.12)
+        : Math.max(style.span, slot * 0.62);
       p.shieldAng = a;
       p.shieldSpin = style.spin;
       p.shieldR = style.r;

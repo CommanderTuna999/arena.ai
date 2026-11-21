@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { useRouter } from "next/navigation";
 import { Game, type Hud } from "@/game/engine";
 import { render } from "@/game/render";
@@ -144,7 +144,19 @@ export default function GameClient() {
           return;
         }
         if (e.code === "Backquote") { e.preventDefault(); setMenu(false); setAdminOpen((v) => !v); game.blur(); return; }
-        if (e.code === "Escape") { setMenu(false); setAdminOpen(false); setSettingsOpen(false); setBestiaryOpen(false); return; }
+        if (e.code === "Escape") {
+          e.preventDefault();
+          /* Esc is the settings key: it opens the panel, and closes whatever is
+           * already up (settings first, then the other screens). */
+          if (settingsRef.current) { setSettingsOpen(false); return; }
+          if (menuRef.current || adminRef.current || bestiaryRef.current) {
+            setMenu(false); setAdminOpen(false); setBestiaryOpen(false);
+            return;
+          }
+          game.blur();
+          setSettingsOpen(true);
+          return;
+        }
         if (menuRef.current || adminRef.current || settingsRef.current || bestiaryRef.current) return;
         if (!e.repeat) game.keyDown(e.code);
         else game.input.keys.add(e.code);
@@ -324,9 +336,24 @@ function Hud_({ hud, creditRef, onOpen, onHelp, onAdmin, onSettings, onBestiary,
             </span>
           </div>
         )}
-        <div ref={creditRef} className="mt-1 flex items-center gap-1.5 text-sm font-bold text-yellow-300 drop-shadow-[0_0_8px_rgba(255,225,77,0.7)]">
-          <span key={hud.creditTick} className="credit-pop inline-flex drop-shadow-[0_0_6px_rgba(255,210,77,0.8)]"><CreditCoin size={17} /></span>
+        <div ref={creditRef} className="relative mt-1 flex items-center gap-1.5 text-sm font-bold text-yellow-300 drop-shadow-[0_0_8px_rgba(255,225,77,0.7)]">
+          <span
+            key={hud.creditTick}
+            className="credit-pop inline-flex drop-shadow-[0_0_6px_rgba(255,210,77,0.8)]"
+            style={{ "--pop": hud.creditPop.s } as CSSProperties}
+          >
+            <CreditCoin size={17} />
+          </span>
           <span>{fmtNum(hud.credits)}</span>
+          {hud.creditPop.v > 0 && (
+            <span
+              key={`f${hud.creditPop.v}-${hud.creditTick}`}
+              className="credit-float pointer-events-none absolute left-5 top-[-2px] whitespace-nowrap text-[13px] font-black text-yellow-200"
+              style={{ "--pop": hud.creditPop.s } as CSSProperties}
+            >
+              +{fmtNum(hud.creditPop.v)}
+            </span>
+          )}
         </div>
         <div className="flex gap-1.5">
           {hud.harp.map((h, i) => <HarpoonGlyph key={i} state={h.state} load={h.load} hp={h.hp} />)}
@@ -438,10 +465,12 @@ function Help({ onClose }: { onClose: () => void }) {
     ["SHIFT", "Afterburner (upgrade)"],
     ["T", "Recall beacon (craftable)"],
     ["E", "Open the nest at your base"],
+    ["ESC", "Settings: how the ship handles, the look, aim aids"],
     ["Nest cannon", "Dormant until the nest is hit, then online for 120s; only tracks rare+ targets and one-shots legendaries"],
     ["Nest retaliation", "Any insect that damages the nest is instantly destroyed — no swarming the hull"],
     ["Nest targeting", "Insects hunt your ship, never the nest — they will follow you straight through turret range, and stray fire can still scar the hull"],
-    ["Credits", "Broken enemy parts throw credit coins straight into your counter — nothing to pick up"],
+    ["Credits", "Broken enemy parts throw credit coins straight into your counter — nothing to pick up. Coins land as one collection, so a fat break reads as +1.2k"],
+    ["Energy shields", "A panel wall, packed across the front of most rare+ bodies. Fly around it: the tail is the way in. Touching one shocks the hull and throws you off it"],
     ["Hex turrets", "Six fast, weak point-defence turrets; one dies for every 1/6 of nest integrity lost"],
     ["Mouse wheel", "Zoom out (craftable optics)"],
     ["Z X C V F", "Fire equipped active abilities"],

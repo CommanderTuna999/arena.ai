@@ -8,7 +8,7 @@
  *   CHANGELOG and mirror the details in docs/CHANGELOG.md.
  */
 
-export const VERSION = "2.7.0";
+export const VERSION = "2.8.0";
 
 export interface ChangeEntry {
   version: string;
@@ -19,6 +19,20 @@ export interface ChangeEntry {
 }
 
 export const CHANGELOG: ChangeEntry[] = [
+  {
+    version: "2.8.0",
+    date: "21 Nov 2026",
+    title: "Neutral bugs, front shields, quieter credits",
+    points: [
+      "Commons and uncommons are neutral now: they will sit there while you work, and only fight once something hits them. Everything from a rare up still opens on you, but every aggro range came down hard - a rare wants you inside 350u, a mythical inside 850u, where these used to be a screen and a half of standing threat.",
+      "Shield panels are packed across the front of most rare and up bodies instead of being sprinkled around the ring, so head-on fire is a waste of ammo. The tail is the way in.",
+      "Touching an energy panel now discharges into the hull and throws the ship off it - no more parking against a wall to line up a shot.",
+      "Esc opens settings on its own now (it still closes whatever is on screen first).",
+      "Credits: a broken part throws one coin, not a shower, and the coins that do fly are capped at 24. Everything that lands inside half a second reads as one collection - a single +1.2k off the counter - and the counter's coin swells with it, up to three and a half times normal for a fat break.",
+      "Effect diet: plate hits spark instead of painting a shockwave ring per bullet, a destroyed body throws at most two blast cascades instead of one per gun it carried, and decorative rings are capped at 22 in flight.",
+      "The site icon is scaled to 70% so the mantis is no longer cropped.",
+    ],
+  },
   {
     version: "2.7.0",
     date: "21 Nov 2026",

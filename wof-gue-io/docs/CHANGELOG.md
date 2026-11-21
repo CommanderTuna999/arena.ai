@@ -3,6 +3,47 @@
 Everything below is implemented in the current build. Numbers are the actual constants used by
 the simulation, not design targets.
 
+## 0. v2.8.0 — neutral commons, front-loaded shields, quieter FX and credits
+
+### Aggro
+- `AGGRO_RANGE = [140, 200, 320, 450, 590, 760]`, `AGGRO_SIZE = 0.16` (was `[360 … 1060]` at 0.22).
+  Measured notice radius: 66 / 99 / 364 / 523 / 702 / 872u for tiers 0-5 (tier 0-1 values are only
+  reachable once provoked — see below).
+- `NEUTRAL_TIER = 1`: commons and uncommons never open a fight. `trackDamage()` sets `e.provoked`
+  (`PROVOKE_T = 9s`) when the player lands a hit, which turns the proximity rule on and widens the
+  notice range ×2.1 while it lasts.
+- Leash stays `1.15x` notice range; losing aggro still clears `e.act` and re-arms `e.gap`.
+
+### Shields
+- `loadout()` packs `nSh = tier` panels across the leading `front = 3.6 rad` arc (body-local 0 = front)
+  instead of spreading them around the ring, each widened to `slot * 0.62` (arc) or the chord length
+  ×1.12 (bar) so neighbours overlap. Tier 5 carries 5 panels and seals ±80°; the tail stays open.
+- `shieldStyle()` no longer sweeps non-boss panels (a sweeping front wall opens and closes gaps on its
+  own). Boss keeps 0.35 rad/s.
+- New `shieldContact()` in the player step: touching a live panel deals `eDmg * 1.5` as **energy**
+  damage (skips kinetic plating), knocks the ship back `760 + tier * 70`, sparks, shakes and starts an
+  `p.hitT > 0.45` gate so it cannot be applied per frame.
+
+### Credits
+- `dropCreditValue()` throws `1` coin per break (`2` at 60+ credits) instead of 1-5; `CREDIT_DROP_CAP`
+  dropped from 160 to 24.
+- Landings accumulate into `creditBatch` (window `CREDIT_BATCH_T = 0.5s`) and publish
+  `hud.creditPop = { v, s }`: `v` is the whole collection, `s = clamp(0.55 + 0.72 * log10(1 + v), 1, 3.6)`.
+- HUD shows "+1.2k" drifting off the counter (`.credit-float`) and the coin pops at `--pop` scaled
+  (`creditPop` keyframes now read the variable). Flying coins also start heavier with value.
+
+### FX budget
+- `ringFx()` is cosmetic-only and returns early past `RING_FX_CAP = 22` live rings; damaging rings are
+  pushed by `shockwave()` directly and are never dropped.
+- `shellHit()` no longer paints a ring per plate hit (sparks only, 5 particles instead of 8).
+- `killEnemy()` runs at most two `explode(..., cascade)` cascades; the rest of the body just sparks.
+
+### Input / misc
+- Esc opens the settings panel when nothing else is up; it still closes settings, the nest menu, admin
+  or the bestiary first.
+- `src/app/icon.svg` geometry wrapped in `translate(32 32) scale(0.7) translate(-32 -32)` so the
+  mantis fits the tab icon instead of being cropped.
+
 ## 0. v2.7.0 — aggro ranges, deploy standby screen, transparent icon
 
 ### Aggro by rarity
