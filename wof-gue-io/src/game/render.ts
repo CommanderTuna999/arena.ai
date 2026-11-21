@@ -202,6 +202,61 @@ export function render(g: Game, ctx: CanvasRenderingContext2D) {
     drawEnemy(g, ctx, e, z, t);
   }
 
+  /* ---- open domains: the moth's dark moon arena ---- */
+  for (const e of g.enemies) {
+    if (e.domainT <= 0) continue;
+    const phase = clamp(1 - e.domainT / (e.act?.def.dur ?? 180), 0, 1);
+    const R = e.radius * (2.2 + phase * 2.6);
+    ctx.save();
+    /* a dark translucent disc: the world inside the domain dims and takes on
+     * the moth's hue, so the player feels the arena closing in */
+    ctx.fillStyle = `hsla(${e.spd.hue},70%,12%,${0.28 + 0.22 * phase})`;
+    ctx.beginPath(); ctx.arc(e.x, e.y, R, 0, TAU); ctx.fill();
+    /* a shimmering ring at the domain's edge */
+    ctx.strokeStyle = `hsla(${e.spd.hue},80%,60%,${0.35 + 0.35 * phase})`;
+    ctx.lineWidth = 5 / z; ctx.shadowColor = `hsl(${e.spd.hue} 80% 65%)`; ctx.shadowBlur = 22;
+    ctx.beginPath(); ctx.arc(e.x, e.y, R, 0, TAU); ctx.stroke();
+    /* the shadowy moon: a glowing orb that swells and brightens with the phase */
+    const mr = e.radius * (0.9 + phase * 1.4);
+    const my = e.y - e.radius * (2.2 + phase * 1.6);
+    const mg = ctx.createRadialGradient(e.x, my, mr * 0.2, e.x, my, mr);
+    mg.addColorStop(0, `hsla(${e.spd.hue},90%,80%,${0.85})`);
+    mg.addColorStop(0.6, `hsla(${e.spd.hue},80%,55%,${0.5})`);
+    mg.addColorStop(1, `hsla(${e.spd.hue},80%,40%,0)`);
+    ctx.shadowBlur = 30;
+    ctx.fillStyle = mg;
+    ctx.beginPath(); ctx.arc(e.x, my, mr, 0, TAU); ctx.fill();
+    /* cratered moon surface */
+    ctx.fillStyle = `hsla(${e.spd.hue},25%,18%,${0.5 + 0.3 * phase})`;
+    ctx.beginPath(); ctx.arc(e.x - mr * 0.3, my - mr * 0.2, mr * 0.22, 0, TAU); ctx.fill();
+    ctx.beginPath(); ctx.arc(e.x + mr * 0.25, my + mr * 0.1, mr * 0.16, 0, TAU); ctx.fill();
+    ctx.beginPath(); ctx.arc(e.x + mr * 0.05, my - mr * 0.35, mr * 0.12, 0, TAU); ctx.fill();
+    ctx.restore();
+  }
+
+  /* ---- active beam abilities: persistent rotating lasers ---- */
+  for (const e of g.enemies) {
+    const a = e.act;
+    if (!a || a.def.type !== "beam" || !a.fired) continue;
+    const spin = a.spin ?? 0;
+    const beamAng = a.beamAng ?? [];
+    const n = beamAng.length;
+    ctx.save();
+    for (let i = 0; i < n; i++) {
+      const ang = e.a + (beamAng[i] ?? 0) + spin;
+      const bx = e.x + Math.cos(ang) * e.radius * 0.5, by = e.y + Math.sin(ang) * e.radius * 0.5;
+      const col = `hsl(${e.spd.hue} 100% 65%)`;
+      ctx.strokeStyle = col; ctx.lineWidth = 6 / z;
+      ctx.shadowColor = col; ctx.shadowBlur = 22;
+      ctx.globalAlpha = 0.9;
+      ctx.beginPath(); ctx.moveTo(bx, by); ctx.lineTo(bx + Math.cos(ang) * 550, by + Math.sin(ang) * 550); ctx.stroke();
+      /* a bright core down the middle of each beam */
+      ctx.strokeStyle = `hsl(${e.spd.hue} 100% 88%)`; ctx.lineWidth = 2 / z; ctx.shadowBlur = 10;
+      ctx.beginPath(); ctx.moveTo(bx, by); ctx.lineTo(bx + Math.cos(ang) * 550, by + Math.sin(ang) * 550); ctx.stroke();
+    }
+    ctx.restore();
+  }
+
   /* ---- debris ---- */
   for (const d of g.debris) {
     ctx.save();
@@ -213,11 +268,31 @@ export function render(g: Game, ctx: CanvasRenderingContext2D) {
   }
   ctx.globalAlpha = 1;
 
-  /* ---- pull line ---- */
+  /* ---- pull / grab tether ---- */
   const pl = g.player;
   if (pl.pull) {
-    ctx.strokeStyle = "rgba(255,140,80,0.8)"; ctx.lineWidth = 3 / z; ctx.setLineDash([12 / z, 8 / z]);
-    ctx.beginPath(); ctx.moveTo(pl.x, pl.y); ctx.lineTo(pl.pull.e.x, pl.pull.e.y); ctx.stroke(); ctx.setLineDash([]);
+    /* a grabbed ship is pinned: a thick glowing tether down the middle with a
+     * pulsing core, so the hold reads as a real restraint rather than a thin
+     * line. Hooks keep the dashed pull look. */
+    const pinned = pl.pull.e.act?.def.type === "grab" && pl.pull.e.act?.ph === 1;
+    const tether = pl.pull.e.x - pl.x, tetherY = pl.pull.e.y - pl.y;
+    const tx = Math.hypot(tether, tetherY) || 1;
+    if (pinned) {
+      ctx.strokeStyle = `rgba(255,90,110,0.9)`; ctx.lineWidth = 7 / z;
+      ctx.shadowColor = "rgba(255,90,110,0.9)"; ctx.shadowBlur = 16;
+      ctx.beginPath(); ctx.moveTo(pl.x, pl.y); ctx.lineTo(pl.pull.e.x, pl.pull.e.y); ctx.stroke();
+      ctx.strokeStyle = "rgba(255,200,210,0.95)"; ctx.lineWidth = 2 / z; ctx.shadowBlur = 8;
+      ctx.beginPath(); ctx.moveTo(pl.x, pl.y); ctx.lineTo(pl.pull.e.x, pl.pull.e.y); ctx.stroke();
+      /* restraint rings around the ship */
+      ctx.shadowBlur = 0;
+      const pulse = 0.5 + 0.5 * Math.sin(t * 16);
+      ctx.strokeStyle = `rgba(255,120,140,${0.4 + 0.4 * pulse})`; ctx.lineWidth = 3 / z;
+      ctx.beginPath(); ctx.arc(pl.x, pl.y, SHIP_R + 6, 0, TAU); ctx.stroke();
+    } else {
+      ctx.strokeStyle = "rgba(255,140,80,0.8)"; ctx.lineWidth = 3 / z; ctx.setLineDash([12 / z, 8 / z]);
+      ctx.beginPath(); ctx.moveTo(pl.x, pl.y); ctx.lineTo(pl.pull.e.x, pl.pull.e.y); ctx.stroke(); ctx.setLineDash([]);
+    }
+    void tx;
   }
 
   /* ---- enemy projectiles ---- */
@@ -1499,6 +1574,7 @@ function drawEnemy(g: Game, ctx: CanvasRenderingContext2D, e: Enemy, z: number, 
   if (e.act && e.act.ph === 0 && e.act.t < e.act.def.wind + 0.01) {
     const d = e.act.def;
     const f = e.act.t / d.wind;
+    const pulse = 0.5 + 0.5 * Math.sin(t * 18);
     if (d.type === "charge") {
       ctx.save(); ctx.translate(e.x, e.y); ctx.rotate(e.a);
       const len = Math.max(300, (d.speed ?? 600) * (d.dur ?? 0.5));
@@ -1510,6 +1586,58 @@ function drawEnemy(g: Game, ctx: CanvasRenderingContext2D, e: Enemy, z: number, 
     } else if (d.type === "ring" || d.type === "nova") {
       ctx.strokeStyle = `rgba(255,120,90,${0.25 + 0.5 * f})`; ctx.lineWidth = 4 / z;
       ctx.beginPath(); ctx.arc(e.x, e.y, e.radius * (0.4 + 0.7 * f), 0, TAU); ctx.stroke();
+    } else if (d.type === "grab") {
+      /* a target reticle snaps onto the ship, then a glowing arc sweeps in
+       * around the enemy as it winds up to lunge and pin */
+      const tx = g.player.x, ty = g.player.y;
+      ctx.strokeStyle = `rgba(255,80,90,${0.35 + 0.5 * f})`; ctx.lineWidth = 3 / z;
+      ctx.beginPath(); ctx.arc(tx, ty, (e.radius + SHIP_R) * (0.5 + 0.5 * f), 0, TAU); ctx.stroke();
+      ctx.strokeStyle = `rgba(255,110,120,${0.25 + 0.4 * f})`; ctx.lineWidth = 5 / z;
+      ctx.beginPath(); ctx.arc(e.x, e.y, e.radius * (0.6 + 0.6 * f), e.a - 0.6, e.a + 0.6); ctx.stroke();
+      ctx.setLineDash([10 / z, 6 / z]);
+      ctx.strokeStyle = `rgba(255,140,150,${0.5 * f})`; ctx.lineWidth = 2 / z;
+      ctx.beginPath(); ctx.moveTo(e.x, e.y); ctx.lineTo(tx, ty); ctx.stroke();
+      ctx.setLineDash([]);
+    } else if (d.type === "beam") {
+      /* wind-up: a pulsing warning ring, then preview arcs where the beams
+       * will sweep from */
+      ctx.strokeStyle = `rgba(255,150,60,${0.2 + 0.45 * f})`; ctx.lineWidth = 4 / z;
+      ctx.beginPath(); ctx.arc(e.x, e.y, e.radius * (0.8 + 0.5 * f), 0, TAU); ctx.stroke();
+      ctx.strokeStyle = `rgba(255,180,90,${0.3 + 0.5 * f * pulse})`; ctx.lineWidth = 2 / z;
+      for (let k = 0; k < (d.beams ?? 4); k++) {
+        const ang = e.a + (k / (d.beams ?? 4)) * TAU;
+        ctx.beginPath();
+        ctx.moveTo(e.x + Math.cos(ang) * e.radius * 0.5, e.y + Math.sin(ang) * e.radius * 0.5);
+        ctx.lineTo(e.x + Math.cos(ang) * 420, e.y + Math.sin(ang) * 420);
+        ctx.stroke();
+      }
+    } else if (d.type === "domain") {
+      /* a dark moon swells above the moth as it opens its domain */
+      const mr = e.radius * (1.2 + 1.6 * f);
+      ctx.fillStyle = `rgba(80,70,180,${0.12 + 0.22 * f})`;
+      ctx.beginPath(); ctx.arc(e.x, e.y - e.radius * (1.6 + 1.2 * f), mr, 0, TAU); ctx.fill();
+      ctx.strokeStyle = `rgba(170,150,255,${0.4 + 0.5 * f})`; ctx.lineWidth = 4 / z;
+      ctx.beginPath(); ctx.arc(e.x, e.y - e.radius * (1.6 + 1.2 * f), mr, 0, TAU); ctx.stroke();
+      ctx.strokeStyle = `rgba(150,130,240,${0.25 + 0.4 * f})`; ctx.lineWidth = 2 / z;
+      ctx.beginPath(); ctx.arc(e.x, e.y, e.radius * (1.4 + 1.0 * f), 0, TAU); ctx.stroke();
+    } else if (d.type === "shoot" || d.type === "spit") {
+      /* a small aiming marker at the muzzle while it winds up to fire */
+      const mx = e.x + Math.cos(e.a) * e.spd.muzzle * e.S, my = e.y + Math.sin(e.a) * e.spd.muzzle * e.S;
+      ctx.strokeStyle = `rgba(255,200,90,${0.3 + 0.5 * f})`; ctx.lineWidth = 2 / z;
+      ctx.beginPath(); ctx.arc(mx, my, 6 + 6 * f, 0, TAU); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(mx - Math.cos(e.a) * 14, my - Math.sin(e.a) * 14);
+      ctx.lineTo(mx + Math.cos(e.a) * 14, my + Math.sin(e.a) * 14);
+      ctx.moveTo(mx - Math.sin(e.a) * 14, my + Math.cos(e.a) * 14);
+      ctx.lineTo(mx + Math.sin(e.a) * 14, my - Math.cos(e.a) * 14); ctx.stroke();
+    } else if (d.type === "pull") {
+      /* a hooked line + destination marker while it winds up to pull */
+      const tx = g.player.x, ty = g.player.y;
+      ctx.strokeStyle = `rgba(255,120,200,${0.25 + 0.45 * f})`; ctx.lineWidth = 2 / z;
+      ctx.setLineDash([12 / z, 8 / z]);
+      ctx.beginPath(); ctx.moveTo(e.x, e.y); ctx.lineTo(tx, ty); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.strokeStyle = `rgba(255,150,220,${0.4 + 0.5 * f})`; ctx.lineWidth = 3 / z;
+      ctx.beginPath(); ctx.arc(tx, ty, 10 + 8 * f, 0, TAU); ctx.stroke();
     }
   }
   ctx.save();
