@@ -1,6 +1,6 @@
 # wof gue — complete stat compendium
 
-Build 2.0.2 · generated 21 Nov 2026 · every figure is a live simulation constant, not a design target.
+Build 2.0.3 · generated 21 Nov 2026 · every figure is a live simulation constant, not a design target.
 
 How to read it: enemy health is the sum of every part at that rarity tier. Enemy damage is listed as a multiplier of the tier damage (eDmg), because every bite, bolt, blast and contact hit scales from that one number. Weapon damage is a multiplier of the player cannon damage (st.dmg = 10 x 1.2^Cannon Damage level). Efficiency (eff) is the crafted item quality: 0.30 minimum, 1.00 typical; the raw formula can reach 2.25 on an unrestricted tier-5 core build and 1.80 on a 7-part difficulty-5 recipe.
 
@@ -620,92 +620,92 @@ Craft: difficulty 1, exactly 3 components. Efficiency = max(0.30, (0.60 + 0.30 x
 Behaviour: Auto-targeting turret. Fires at the nearest enemy piece on its own. Auto-targets the nearest enemy within 560u; one projectile.
 
 --- Scatter Driver (scatter) ---
-Type: kinetic. Per projectile: 0.55x st.dmg. Per trigger/beam-part: 3.3x st.dmg. Cooldown 0.75s at eff 1.00 (0.95s at eff 0.30). Nominal DPS 44 at st.dmg 10 / eff 1.00 (3.3x st.dmg per second). Range 420u (capped at 95% of the visible radius when zoomed in).
+Type: kinetic. Per projectile: 0.55x st.dmg. Per trigger/beam-part: 3.3x st.dmg. Cooldown 0.75s at eff 1.00 (0.949s at eff 0.30). Nominal DPS 44 at st.dmg 10 / eff 1.00 (3.3x st.dmg per second). Range 420u (capped at 95% of the visible radius when zoomed in).
 Craft: difficulty 2, exactly 4 components; 1x Limb/Plate. Efficiency = max(0.30, (0.60 + 0.30 x average component tier [+0.5 if core]) x (1 - 0.05 x (difficulty - 1))).
 Behaviour: Short-range shotgun burst on your fire button. Six pellets per trigger, each 0.55x st.dmg, random spread up to 0.42 rad; short 420u range.
 
 --- Seeker Pod (missile) ---
-Type: explosive. Per projectile: 2.2x st.dmg. Per trigger/beam-part: 4.4x st.dmg. Cooldown 1.5s at eff 1.00 (1.9s at eff 0.30). Nominal DPS 29.3 at st.dmg 10 / eff 1.00 (4.4x st.dmg per second). Range 850u (capped at 95% of the visible radius when zoomed in).
+Type: explosive. Per projectile: 2.2x st.dmg. Per trigger/beam-part: 4.4x st.dmg. Cooldown 1.5s at eff 1.00 (1.899s at eff 0.30). Nominal DPS 29.3 at st.dmg 10 / eff 1.00 (4.4x st.dmg per second). Range 850u (capped at 95% of the visible radius when zoomed in).
 Craft: difficulty 3, exactly 5 components; 1x Weapon/Shield. Efficiency = max(0.30, (0.60 + 0.30 x average component tier [+0.5 if core]) x (1 - 0.05 x (difficulty - 1))).
 Behaviour: Launches homing missiles with splash damage. Two homing missiles per trigger, each 2.2x st.dmg; 74u splash for 35% of the hit.
 
 --- Arc Lance (lance) ---
-Type: energy. Per projectile: 0.22x st.dmg. Per trigger/beam-part: 0.22x st.dmg. Cooldown 0.12s at eff 1.00 (0.15s at eff 0.30). Nominal DPS 18.3 at st.dmg 10 / eff 1.00 (0.22x st.dmg per second). Range 330u (capped at 95% of the visible radius when zoomed in).
+Type: energy. Per projectile: 0.22x st.dmg. Per trigger/beam-part: 0.22x st.dmg. Cooldown 0.12s at eff 1.00 (0.152s at eff 0.30). Nominal DPS 18.3 at st.dmg 10 / eff 1.00 (0.22x st.dmg per second). Range 330u (capped at 95% of the visible radius when zoomed in).
 Craft: difficulty 4, exactly 6 components; 1x Core. Efficiency = max(0.30, (0.60 + 0.30 x average component tier [+0.5 if core]) x (1 - 0.05 x (difficulty - 1))).
 Behaviour: Piercing beam. Strong against soft targets, stopped dead by armour plating. Continuous beam: 0.22x st.dmg per part hit, 2 + floor(eff) pierce, 8u step. Hull shells stop it completely.
 
 --- Homing Missile Launcher (homing) ---
-Type: explosive. Per projectile: 3.1x st.dmg. Per trigger/beam-part: 3.1x st.dmg. Cooldown 1.8s at eff 1.00 (2.28s at eff 0.30). Nominal DPS 17.2 at st.dmg 10 / eff 1.00 (3.1x st.dmg per second). Range 900u (capped at 95% of the visible radius when zoomed in).
+Type: explosive. Per projectile: 3.1x st.dmg. Per trigger/beam-part: 3.1x st.dmg. Cooldown 1.7s at eff 1.00 (2.152s at eff 0.30). Nominal DPS 18.2 at st.dmg 10 / eff 1.00 (3.1x st.dmg per second). Range 900u (capped at 95% of the visible radius when zoomed in).
 Craft: difficulty 3, exactly 5 components; 1x Weapon + 1x Bombardier Beetle / Yellowjacket part. Efficiency = max(0.30, (0.60 + 0.30 x average component tier [+0.5 if core]) x (1 - 0.05 x (difficulty - 1))).
 Behaviour: Right-click any enemy piece to mark it. Missiles fly straight through everything else to that exact spot. Requires right-click lock on one exact part; flies through everything else, then deals 3.1x st.dmg + 35% splash in 74u.
 
 --- Shield-Bypass Laser (bypass) ---
-Type: energy. Per projectile: 0.16x st.dmg. Per trigger/beam-part: 0.16x st.dmg. Cooldown 0.1s at eff 1.00 (0.13s at eff 0.30). Nominal DPS 16 at st.dmg 10 / eff 1.00 (0.16x st.dmg per second). Range 700u (capped at 95% of the visible radius when zoomed in).
+Type: energy. Per projectile: 0.16x st.dmg. Per trigger/beam-part: 0.16x st.dmg. Cooldown 0.1s at eff 1.00 (0.127s at eff 0.30). Nominal DPS 16 at st.dmg 10 / eff 1.00 (0.16x st.dmg per second). Range 700u (capped at 95% of the visible radius when zoomed in).
 Craft: difficulty 5, exactly 7 components; 1x Core/Weapon + 1x Jewel Beetle / Firefly part. Efficiency = max(0.30, (0.60 + 0.30 x average component tier [+0.5 if core]) x (1 - 0.05 x (difficulty - 1))).
 Behaviour: Auto-firing beam that ignores shield generators but cannot cut through armour plating. Beam ignores enemy energy-shield bubbles and hits 3 parts; 0.16x st.dmg per part. Hull shells still block it.
 
 --- Heavy Machine Gun (hmg) ---
-Type: kinetic. Per projectile: 0.1x st.dmg. Per trigger/beam-part: 0.1x st.dmg. Cooldown 0.08s at eff 1.00 (0.1s at eff 0.30). Nominal DPS 12.5 at st.dmg 10 / eff 1.00 (0.1x st.dmg per second). Range 650u (capped at 95% of the visible radius when zoomed in).
+Type: kinetic. Per projectile: 0.1x st.dmg. Per trigger/beam-part: 0.1x st.dmg. Cooldown 0.075s at eff 1.00 (0.095s at eff 0.30). Nominal DPS 13.3 at st.dmg 10 / eff 1.00 (0.1x st.dmg per second). Range 650u (capped at 95% of the visible radius when zoomed in).
 Craft: difficulty 2, exactly 4 components; 1x Weapon/Limb. Efficiency = max(0.30, (0.60 + 0.30 x average component tier [+0.5 if core]) x (1 - 0.05 x (difficulty - 1))).
 Behaviour: Very high rate of fire, wide spray, weak per hit. Good for stripping light enemies. One tracer per trigger, 0.10x st.dmg, 0.13 rad random spray; no pierce.
 
 --- EMP Cannon (emp) ---
-Type: shock. Per projectile: 1.4x st.dmg. Per trigger/beam-part: 1.4x st.dmg. Cooldown 2.6s at eff 1.00 (3.29s at eff 0.30). Nominal DPS 5.4 at st.dmg 10 / eff 1.00 (1.4x st.dmg per second). Range 560u (capped at 95% of the visible radius when zoomed in).
+Type: shock. Per projectile: 1.4x st.dmg. Per trigger/beam-part: 1.4x st.dmg. Cooldown 2.6s at eff 1.00 (3.291s at eff 0.30). Nominal DPS 5.4 at st.dmg 10 / eff 1.00 (1.4x st.dmg per second). Range 560u (capped at 95% of the visible radius when zoomed in).
 Craft: difficulty 4, exactly 6 components; 1x Core/Shield + 1x Cicada / Firefly part. Efficiency = max(0.30, (0.60 + 0.30 x average component tier [+0.5 if core]) x (1 - 0.05 x (difficulty - 1))).
 Behaviour: Pulse that stuns every enemy within a wide radius. 620u radius EMP: 1.4x st.dmg to every enemy and 1.8s stun; ignores shield bubbles but not hull shells.
 
 --- Plasma Cutter (cutter) ---
-Type: thermal. Per projectile: 1.1x st.dmg. Per trigger/beam-part: 1.1x st.dmg. Cooldown 0.18s at eff 1.00 (0.23s at eff 0.30). Nominal DPS 61.1 at st.dmg 10 / eff 1.00 (1.1x st.dmg per second). Range 190u (capped at 95% of the visible radius when zoomed in).
+Type: thermal. Per projectile: 1.1x st.dmg. Per trigger/beam-part: 1.1x st.dmg. Cooldown 0.18s at eff 1.00 (0.228s at eff 0.30). Nominal DPS 61.1 at st.dmg 10 / eff 1.00 (1.1x st.dmg per second). Range 190u (capped at 95% of the visible radius when zoomed in).
 Craft: difficulty 3, exactly 5 components; 1x Plate/Weapon. Efficiency = max(0.30, (0.60 + 0.30 x average component tier [+0.5 if core]) x (1 - 0.05 x (difficulty - 1))).
 Behaviour: Short, searing plasma arc that shreds plates at point-blank range. Short beam: 1.1x st.dmg per part, 1 + floor(eff) pierce, 175-195u length.
 
 --- Acid Sprayer (acid) ---
-Type: corrosive. Per projectile: 0.3x st.dmg. Per trigger/beam-part: 0.9x st.dmg. Cooldown 0.16s at eff 1.00 (0.2s at eff 0.30). Nominal DPS 56.3 at st.dmg 10 / eff 1.00 (0.9x st.dmg per second). Range 400u (capped at 95% of the visible radius when zoomed in).
+Type: corrosive. Per projectile: 0.3x st.dmg. Per trigger/beam-part: 0.9x st.dmg. Cooldown 0.16s at eff 1.00 (0.203s at eff 0.30). Nominal DPS 56.3 at st.dmg 10 / eff 1.00 (0.9x st.dmg per second). Range 400u (capped at 95% of the visible radius when zoomed in).
 Craft: difficulty 3, exactly 5 components; 1x Body/Limb + 1x Soldier Ant / Worker Ant / Bombardier Beetle part. Efficiency = max(0.30, (0.60 + 0.30 x average component tier [+0.5 if core]) x (1 - 0.05 x (difficulty - 1))).
 Behaviour: Cone of corrosive globs. Melts armour so every following hit lands harder. Three globs per trigger, each 0.3x st.dmg; each hit adds 0.32 melt and 1.6x eff damage-over-time. Slips through energy shields.
 
 --- Chain Lightning (chain) ---
-Type: shock. Per projectile: 1.6x st.dmg. Per trigger/beam-part: 1.6x st.dmg. Cooldown 0.8s at eff 1.00 (1.01s at eff 0.30). Nominal DPS 20 at st.dmg 10 / eff 1.00 (1.6x st.dmg per second). Range 780u (capped at 95% of the visible radius when zoomed in).
+Type: shock. Per projectile: 1.6x st.dmg. Per trigger/beam-part: 1.6x st.dmg. Cooldown 0.8s at eff 1.00 (1.013s at eff 0.30). Nominal DPS 20 at st.dmg 10 / eff 1.00 (1.6x st.dmg per second). Range 780u (capped at 95% of the visible radius when zoomed in).
 Craft: difficulty 4, exactly 6 components; 1x Core/Wing + 1x Firefly / Jewel Beetle part. Efficiency = max(0.30, (0.60 + 0.30 x average component tier [+0.5 if core]) x (1 - 0.05 x (difficulty - 1))).
 Behaviour: Arcs between up to five nearby pieces, losing power with every jump. Up to 5 jumps within 520u; first hit 1.6x st.dmg, then 75% per jump. Skips enemies with hull shells.
 
 --- Flak Cannon (flak) ---
-Type: explosive. Per projectile: 1.3x st.dmg. Per trigger/beam-part: 2x st.dmg. Cooldown 0.9s at eff 1.00 (1.14s at eff 0.30). Nominal DPS 22.2 at st.dmg 10 / eff 1.00 (2x st.dmg per second). Range 800u (capped at 95% of the visible radius when zoomed in).
+Type: explosive. Per projectile: 1.3x st.dmg. Per trigger/beam-part: 2x st.dmg. Cooldown 0.9s at eff 1.00 (1.139s at eff 0.30). Nominal DPS 22.2 at st.dmg 10 / eff 1.00 (2x st.dmg per second). Range 800u (capped at 95% of the visible radius when zoomed in).
 Craft: difficulty 3, exactly 5 components; 1x Plate/Body. Efficiency = max(0.30, (0.60 + 0.30 x average component tier [+0.5 if core]) x (1 - 0.05 x (difficulty - 1))).
 Behaviour: Lobs airburst shells that detonate near the target point. Airburst shell: 1.3x st.dmg on impact plus 0.7x in a 125u blast; explodes at the target point.
 
 --- Rail Sniper (rail) ---
-Type: kinetic. Per projectile: 2.4x st.dmg. Per trigger/beam-part: 2.4x st.dmg. Cooldown 1.4s at eff 1.00 (1.77s at eff 0.30). Nominal DPS 17.1 at st.dmg 10 / eff 1.00 (2.4x st.dmg per second). Range 1150u (capped at 95% of the visible radius when zoomed in).
+Type: kinetic. Per projectile: 2.4x st.dmg. Per trigger/beam-part: 2.4x st.dmg. Cooldown 1.82s at eff 1.00 (2.304s at eff 0.30). Nominal DPS 13.2 at st.dmg 10 / eff 1.00 (2.4x st.dmg per second). Range 1150u (capped at 95% of the visible radius when zoomed in).
 Craft: difficulty 5, exactly 7 components; 1x Core/Weapon + 1x Tiger Beetle / Assassin Bug part. Efficiency = max(0.30, (0.60 + 0.30 x average component tier [+0.5 if core]) x (1 - 0.05 x (difficulty - 1))).
 Behaviour: Hypervelocity slug that pierces the enemy line — but not plating. 1500u hitscan beam: 2.4x st.dmg per part, 12 pierce, ignores energy shields but not hull shells.
 
 --- Gravity Bomb (gravity) ---
-Type: shock. Per projectile: 2.8x st.dmg. Per trigger/beam-part: 2.8x st.dmg. Cooldown 3.2s at eff 1.00 (4.05s at eff 0.30). Nominal DPS 8.8 at st.dmg 10 / eff 1.00 (2.8x st.dmg per second). Range 800u (capped at 95% of the visible radius when zoomed in).
+Type: shock. Per projectile: 2.8x st.dmg. Per trigger/beam-part: 2.8x st.dmg. Cooldown 3.2s at eff 1.00 (4.051s at eff 0.30). Nominal DPS 8.8 at st.dmg 10 / eff 1.00 (2.8x st.dmg per second). Range 800u (capped at 95% of the visible radius when zoomed in).
 Craft: difficulty 5, exactly 7 components; 1x Core/Body + 1x Dung Beetle / Atlas Moth part. Efficiency = max(0.30, (0.60 + 0.30 x average component tier [+0.5 if core]) x (1 - 0.05 x (difficulty - 1))).
 Behaviour: Collapses a gravity well that drags enemies in, then implodes. Drops a 230u gravity well for 1.15s, pulling enemies in, then 2.8x st.dmg in 270u.
 
 --- Mine Layer (mines) ---
-Type: explosive. Per projectile: 2.5x st.dmg. Per trigger/beam-part: 2.5x st.dmg. Cooldown 1.1s at eff 1.00 (1.39s at eff 0.30). Nominal DPS 22.7 at st.dmg 10 / eff 1.00 (2.5x st.dmg per second). Range 800u (capped at 95% of the visible radius when zoomed in).
+Type: explosive. Per projectile: 2.5x st.dmg. Per trigger/beam-part: 2.5x st.dmg. Cooldown 1.1s at eff 1.00 (1.392s at eff 0.30). Nominal DPS 22.7 at st.dmg 10 / eff 1.00 (2.5x st.dmg per second). Range 800u (capped at 95% of the visible radius when zoomed in).
 Craft: difficulty 2, exactly 4 components; 1x Plate/Weapon + 1x Weevil / Scarab part. Efficiency = max(0.30, (0.60 + 0.30 x average component tier [+0.5 if core]) x (1 - 0.05 x (difficulty - 1))).
 Behaviour: Drops proximity mines behind you that shred anything that follows. Drops a 150u proximity mine behind the ship; 0.7s arm time, 26s life, 2.5x st.dmg blast.
 
 --- Swarm Drones (drones) ---
-Type: kinetic. Per projectile: 0.4x st.dmg. Per trigger/beam-part: 0.8x st.dmg. Cooldown 0.55s at eff 1.00 (0.7s at eff 0.30). Nominal DPS 14.5 at st.dmg 10 / eff 1.00 (0.8x st.dmg per second). Range undefinedu (capped at 95% of the visible radius when zoomed in).
+Type: kinetic. Per projectile: 0.4x st.dmg. Per trigger/beam-part: 0.8x st.dmg. Cooldown 0.55s at eff 1.00 (0.696s at eff 0.30). Nominal DPS 14.5 at st.dmg 10 / eff 1.00 (0.8x st.dmg per second). Range 720u (capped at 95% of the visible radius when zoomed in).
 Craft: difficulty 4, exactly 6 components; 1x Wing/Core + 1x Honeybee / Yellowjacket / Hornet part. Efficiency = max(0.30, (0.60 + 0.30 x average component tier [+0.5 if core]) x (1 - 0.05 x (difficulty - 1))).
 Behaviour: Deploys two orbiting drones that fire at nearby enemies. Deploys two orbiting drones; each fires a 0.4x st.dmg kinetic round every 0.55s at 720u.
 
 --- Venom Injector (venom) ---
-Type: corrosive. Per projectile: 0.45x st.dmg. Per trigger/beam-part: 0.9x st.dmg. Cooldown 0.35s at eff 1.00 (0.44s at eff 0.30). Nominal DPS 25.7 at st.dmg 10 / eff 1.00 (0.9x st.dmg per second). Range 560u (capped at 95% of the visible radius when zoomed in).
+Type: corrosive. Per projectile: 0.45x st.dmg. Per trigger/beam-part: 0.9x st.dmg. Cooldown 0.35s at eff 1.00 (0.443s at eff 0.30). Nominal DPS 25.7 at st.dmg 10 / eff 1.00 (0.9x st.dmg per second). Range 560u (capped at 95% of the visible radius when zoomed in).
 Craft: difficulty 3, exactly 5 components; 1x Limb/Weapon + 1x Assassin Bug / Wasp / Mosquito part. Efficiency = max(0.30, (0.60 + 0.30 x average component tier [+0.5 if core]) x (1 - 0.05 x (difficulty - 1))).
 Behaviour: Fast darts that inject a stacking venom that eats enemies from inside. Two darts per trigger, each 0.45x st.dmg and 3.2x eff stacking venom damage-over-time.
 
 --- Sonic Disruptor (sonic) ---
-Type: shock. Per projectile: 0.6x st.dmg. Per trigger/beam-part: 0.6x st.dmg. Cooldown 1.6s at eff 1.00 (2.03s at eff 0.30). Nominal DPS 3.8 at st.dmg 10 / eff 1.00 (0.6x st.dmg per second). Range 470u (capped at 95% of the visible radius when zoomed in).
+Type: shock. Per projectile: 0.6x st.dmg. Per trigger/beam-part: 0.6x st.dmg. Cooldown 1.6s at eff 1.00 (2.025s at eff 0.30). Nominal DPS 3.8 at st.dmg 10 / eff 1.00 (0.6x st.dmg per second). Range 470u (capped at 95% of the visible radius when zoomed in).
 Craft: difficulty 4, exactly 6 components; 1x Wing/Core + 1x Cicada / Katydid / Locust part. Efficiency = max(0.30, (0.60 + 0.30 x average component tier [+0.5 if core]) x (1 - 0.05 x (difficulty - 1))).
 Behaviour: Cone of concussive sound that stuns and shoves everything in front of you. Cone ±0.8 rad, 540u: 0.6x st.dmg to every part and 1.5s stun; enemies with hull shells are skipped.
 
 --- Cluster Rockets (cluster) ---
-Type: explosive. Per projectile: 1.7x st.dmg. Per trigger/beam-part: 4.76x st.dmg. Cooldown 2.2s at eff 1.00 (2.78s at eff 0.30). Nominal DPS 21.6 at st.dmg 10 / eff 1.00 (4.76x st.dmg per second). Range 950u (capped at 95% of the visible radius when zoomed in).
+Type: explosive. Per projectile: 1.7x st.dmg. Per trigger/beam-part: 4.76x st.dmg. Cooldown 2.2s at eff 1.00 (2.785s at eff 0.30). Nominal DPS 21.6 at st.dmg 10 / eff 1.00 (4.76x st.dmg per second). Range 950u (capped at 95% of the visible radius when zoomed in).
 Craft: difficulty 5, exactly 7 components; 1x Weapon/Shield + 1x Bombardier Beetle / Rhinoceros Beetle part. Efficiency = max(0.30, (0.60 + 0.30 x average component tier [+0.5 if core]) x (1 - 0.05 x (difficulty - 1))).
 Behaviour: Rockets that burst into a shower of bomblets on impact. Rocket deals 1.7x st.dmg, then splits into 4 bomblets at 0.45x the rocket damage each (0.765x st.dmg per bomblet).
 
@@ -807,4 +807,4 @@ Shield Down: at 0 shield HP a bubble disappears for 4s, then returns at 40% capa
 Destroyed parts: each dead part can drop a component; weapons and shield generators detonate for 1.8x eDmg to the player (other parts 1.3x) and damage enemies in the blast.
 Boss: the Snake is the only boss (217 parts, body wave, 294u radius at T0; no reflective shield). At most one is alive; it spawns in the mythical core and never counts as a normal resident. SNAKE_ENABLED is false in this build, so the dedicated core pass is dormant even though the encounter code exists.
 
-End of compendium · build 2.0.2
+End of compendium · build 2.0.3

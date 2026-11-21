@@ -431,19 +431,28 @@ export function render(g: Game, ctx: CanvasRenderingContext2D) {
   /* ---- player ---- */
   if (!pl.dead) drawPlayer(g, ctx, z, t);
 
-  /* ---- particles ---- */
+  /* ---- particles ----
+   * Small sparks are point sprites: one fillRect each, no path construction.
+   * At far zoom that is the whole effect budget; close-up particles keep their
+   * triangles/diamonds/hexes. Styles are cached because a burst shares a colour
+   * across dozens of particles, and setting strokeStyle/fillStyle is not free. */
+  ctx.lineWidth = 1.5 / z;
+  let lastStroke = "", lastFill = "";
   for (const q of g.particles) {
     if (q.x < vx0 || q.x > vx1 || q.y < vy0 || q.y > vy1) continue;
-    const a = clamp(q.life / q.max, 0, 1);
-    ctx.globalAlpha = a;
-    ctx.strokeStyle = q.color; ctx.fillStyle = q.color;
-    ctx.lineWidth = 1.5 / z;
+    const a = q.life / q.max;
+    if (a <= 0.05) continue;
     const s = q.size * (0.4 + 0.6 * a);
-    if (z < 0.1) {
-      const px = Math.max(0.8, s * z);
+    const screen = s * z;
+    ctx.globalAlpha = a;
+    if (screen < 2.5 || z < 0.16) {
+      const px = Math.max(1, screen);
+      if (q.color !== lastFill) { ctx.fillStyle = q.color; lastFill = q.color; }
       ctx.fillRect(q.x - px / 2 / z, q.y - px / 2 / z, px / z, px / z);
       continue;
     }
+    if (q.color !== lastStroke) { ctx.strokeStyle = q.color; lastStroke = q.color; }
+    if (q.fill && q.color !== lastFill) { ctx.fillStyle = q.color; lastFill = q.color; }
     ctx.beginPath();
     switch (q.shape) {
       case 0: for (let i = 0; i < 3; i++) { const an = q.rot + (i / 3) * TAU; const px = q.x + Math.cos(an) * s, py = q.y + Math.sin(an) * s; if (i) ctx.lineTo(px, py); else ctx.moveTo(px, py); } ctx.closePath(); break;

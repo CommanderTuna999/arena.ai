@@ -259,6 +259,8 @@ export class Game {
   bullets: Bullet[] = [];
   eprojs: EProj[] = [];
   particles: Particle[] = [];
+  /** recycled particle records; avoids allocating thousands of short-lived objects */
+  private pPool: Particle[] = [];
   puddles: Puddle[] = [];
   rings: Ring[] = [];
   debris: Debris[] = [];
@@ -936,11 +938,28 @@ export class Game {
 
   /* ---------------- particles & fx ---------------- */
   addParticle(x: number, y: number, vx: number, vy: number, color: string, size: number, life: number, shape: number, fill = true) {
-    if (this.particles.length > 1500) return;
-    this.particles.push({ x, y, vx, vy, rot: Math.random() * TAU, vr: (Math.random() - 0.5) * 10, life, max: life, size, shape, color, fill });
+    /* Off-screen sparks are invisible and cost render time when the camera pans
+     * back over them, so reject them before allocating a record. */
+    const z = Math.max(0.04, this.cam.z);
+    const cullX = (this.w * 0.5) / z + 120;
+    const cullY = (this.h * 0.5) / z + 120;
+    if (this.w > 0 && this.h > 0 && (Math.abs(x - this.cam.x) > cullX || Math.abs(y - this.cam.y) > cullY)) return;
+    const cap = z < 0.18 ? 900 : 1500;
+    if (this.particles.length >= cap) return;
+    let q = this.pPool.pop();
+    if (q) {
+      q.x = x; q.y = y; q.vx = vx; q.vy = vy; q.rot = Math.random() * TAU; q.vr = (Math.random() - 0.5) * 10;
+      q.life = life; q.max = life; q.size = size; q.shape = shape; q.color = color; q.fill = fill;
+    } else {
+      q = { x, y, vx, vy, rot: Math.random() * TAU, vr: (Math.random() - 0.5) * 10, life, max: life, size, shape, color, fill };
+    }
+    this.particles.push(q);
   }
   burst(x: number, y: number, color: string, count: number, size: number, speed: number) {
-    for (let i = 0; i < count; i++) {
+    /* At far zoom sparks collapse to 1px points; spawning the full close-up
+     * count just adds fill-rate work for pixels nobody can distinguish. */
+    const n = this.cam.z < 0.18 ? Math.ceil(count * 0.55) : count;
+    for (let i = 0; i < n; i++) {
       const a = Math.random() * TAU, s = speed * (0.3 + Math.random() * 0.9);
       this.addParticle(x, y, Math.cos(a) * s, Math.sin(a) * s, color, size * (0.5 + Math.random()), 0.5 + Math.random() * 0.7, Math.floor(Math.random() * 5), Math.random() < 0.5);
     }
@@ -3078,7 +3097,14 @@ export class Game {
     for (let i = this.particles.length - 1; i >= 0; i--) {
       const q = this.particles[i];
       q.life -= dt;
-      if (q.life <= 0) { this.particles.splice(i, 1); continue; }
+      if (q.life <= 0) {
+        /* swap-pop: order is irrelevant to particles, and this avoids shifting
+         * the whole 1,000+ element array every time a spark expires. */
+        const last = this.particles.pop()!;
+        if (i < this.particles.length) this.particles[i] = last;
+        if (this.pPool.length < 1800) this.pPool.push(q);
+        continue;
+      }
       q.x += q.vx * dt; q.y += q.vy * dt; q.rot += q.vr * dt;
       const f = Math.exp(-2.2 * dt);
       q.vx *= f; q.vy *= f;

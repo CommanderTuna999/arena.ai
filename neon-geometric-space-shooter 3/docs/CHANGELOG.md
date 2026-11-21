@@ -3,6 +3,20 @@
 Everything below is implemented in the current build. Numbers are the actual constants used by
 the simulation, not design targets.
 
+## 0. v2.0.3 — particle budget pass
+
+### Particle lifecycle
+- `pPool` recycles `Particle` records instead of allocating a fresh object for every spark.
+- Expired particles use a swap-pop (`particles[i] = particles[last]; pop()`), not `splice(i, 1)`.
+- `addParticle` rejects any spark outside the camera rectangle plus a 120u margin. The live cap is 900 particles at `cam.z < 0.18` and 1,500 otherwise.
+- `burst` emits 55% of its normal count at `cam.z < 0.18`.
+
+### Particle rendering
+- Below 2.5 screen pixels (or at `z < 0.16`), particles render as a single `fillRect` point sprite; larger close-up particles keep their triangle/diamond/hex/line shapes.
+- `strokeStyle` and `fillStyle` are cached between particles with the same colour. `lineWidth` is set once per frame instead of per particle.
+- Particles whose remaining alpha is <= 0.05 are skipped.
+- Off-screen particles were already culled in the render loop; the spawn-side cull stops them from entering the array in the first place.
+
 ## 0. v2.0.2 — kinetic shields, quieter inner rings and the stat compendium
 
 ### Base cannon and kinetic shields

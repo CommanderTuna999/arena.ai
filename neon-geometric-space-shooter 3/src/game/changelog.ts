@@ -8,7 +8,7 @@
  *   CHANGELOG and mirror the details in docs/CHANGELOG.md.
  */
 
-export const VERSION = "2.0.2";
+export const VERSION = "2.0.3";
 
 export interface ChangeEntry {
   version: string;
@@ -19,6 +19,17 @@ export interface ChangeEntry {
 }
 
 export const CHANGELOG: ChangeEntry[] = [
+  {
+    version: "2.0.3",
+    date: "21 Nov 2026",
+    title: "Particle budget pass",
+    points: [
+      "Particles are now pooled and recycled, and expired sparks are removed with a swap-pop instead of shifting the whole array. A busy fight no longer allocates and discards thousands of throwaway records.",
+      "Sparks spawned outside the camera view are rejected immediately, the live budget drops from 1,500 to 900 at far zoom, and bursts emit 45% fewer sparks there. Close-up effects keep their full count.",
+      "Small particles are drawn as one-pixel point sprites rather than three-, four- and six-sided paths. Particles under 2.5 screen pixels, or any particle at far zoom, take the cheap path; large close-up pieces keep their full shapes.",
+      "Particle stroke/fill styles are cached between adjacent sparks, so a same-coloured burst no longer changes canvas state for every particle.",
+    ],
+  },
   {
     version: "2.0.2",
     date: "21 Nov 2026",
