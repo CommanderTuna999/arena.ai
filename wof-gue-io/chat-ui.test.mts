@@ -30,7 +30,10 @@ try {
  assert(!input.disabled);assert(screen.getByRole('button',{name:'SEND'}));
  // The automatic retry creates a new socket. Its history triggers outbox send.
  const ws=Socket.instances.at(-1)!;
- await act(async()=>{ws.open();ws.message({type:'history',messages:[],protocol:2});});
+ await act(async()=>{ws.open();ws.message({type:'history',messages:[]});});
+ assert.equal(ws.sent.length,0,'old server cannot receive or corrupt queued messages');
+ assert(screen.getByText('SERVER UPDATE NEEDED'));
+ await act(async()=>ws.message({type:'history',messages:[],protocol:2}));
  assert.equal(ws.sent.length,1);const sent=JSON.parse(ws.sent[0]);assert.equal(sent.text,'Offline hello');
  await act(async()=>ws.message({type:'message',message:{id:'server-1',clientId:sent.clientId,name:'Pilot',text:'Offline hello',time:1}}));
  assert(!screen.queryByText('(queued)'));assert(screen.getByText('Offline hello'));
