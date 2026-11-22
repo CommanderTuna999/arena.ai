@@ -1,3 +1,7 @@
+## 0.3. v2.29.8 — Chat focus and colours
+
+- Your own chat messages are coloured differently, including queued and recent messages. Clicking outside the typing field releases keyboard focus so movement works again.
+
 ## 0.3. v2.29.7 — Component storage
 
 - Removed the gameplay component-storage limit and refunded existing Cargo Bay upgrade costs. Auto-sell still works when enabled.

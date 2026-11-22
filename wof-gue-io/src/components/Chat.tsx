@@ -11,6 +11,13 @@ const url = process.env.NEXT_PUBLIC_WOF_CHAT_URL || 'wss://wofgue-io.onrender.co
 const messageId = () => typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
   ? crypto.randomUUID() : `chat_${Date.now()}_${Math.random().toString(36).slice(2)}${Math.random().toString(36).slice(2)}`;
 const storage = () => { try { return window.localStorage; } catch { return null; } };
+const OWN_MESSAGE_KEY = 'wof-chat-own-ids-v1';
+const readOwnIds = (): string[] => {
+  try {
+    const ids: unknown = JSON.parse(storage()?.getItem(OWN_MESSAGE_KEY) || '[]');
+    return Array.isArray(ids) ? ids.filter((id): id is string => typeof id === 'string' && /^[A-Za-z0-9_-]{8,100}$/.test(id)).slice(-200) : [];
+  } catch { return []; }
+};
 
 /** Chat is independent of the unfinished multiplayer combat simulation. */
 export default function Chat({ game, notices }: { game: Game; notices: Toast[] }) {
@@ -27,6 +34,7 @@ export default function Chat({ game, notices }: { game: Game; notices: Toast[] }
   const input = useRef<HTMLInputElement>(null), end = useRef<HTMLDivElement>(null);
   const socket = useRef<WebSocket | null>(null);
   const seen = useRef(new Set<number>());
+  const ownIds = useRef(new Set<string>());
   const [status, setStatus] = useState<'offline' | 'connecting' | 'online' | 'updating'>('offline');
   const wake = () => {
     setFaded(false);
@@ -44,6 +52,15 @@ export default function Chat({ game, notices }: { game: Game; notices: Toast[] }
     if (manuallyCollapsed.current) setUnread(n => n + count);
     else { expandedRef.current = true; setExpanded(true); wake(); }
   };
+  useEffect(() => {
+    // Canvas mousedown prevents the browser's normal focus change. Blur in the
+    // capture phase before that happens, without cancelling the click itself.
+    const leaveInput = (event: PointerEvent) => {
+      if (input.current && event.target !== input.current && document.activeElement === input.current) input.current.blur();
+    };
+    document.addEventListener('pointerdown', leaveInput, true);
+    return () => document.removeEventListener('pointerdown', leaveInput, true);
+  }, []);
   useEffect(() => {
     const shortcut = (e: KeyboardEvent) => {
       const target = e.target;
@@ -66,6 +83,7 @@ export default function Chat({ game, notices }: { game: Game; notices: Toast[] }
   useEffect(() => { end.current?.scrollIntoView({ block: 'nearest' }); }, [messages, pending]);
   useEffect(() => {
     const queue = new ChatOutbox(storage()); outbox.current = queue; setPending(queue.list());
+    ownIds.current = new Set([...readOwnIds(), ...queue.list().map(m => m.id)]);
     let closed = false, attempted = false, ready = false, protocol = 1, lastSend = 0;
     let retry: ReturnType<typeof setTimeout> | undefined;
     let inFlight: { id: string; at: number } | null = null;
@@ -114,7 +132,7 @@ export default function Chat({ game, notices }: { game: Game; notices: Toast[] }
           if (data.type === 'ack' && typeof data.clientId === 'string') {
             const delivered = queue.list().find(m => m.id === data.clientId);
             acknowledge(data.clientId);
-            if (delivered) setMessages(prev => [...prev, { ...delivered, id: `sent-${delivered.id}` }].slice(-60));
+            if (delivered) setMessages(prev => [...prev, { ...delivered, clientId: delivered.id, id: `sent-${delivered.id}` }].slice(-60));
           }
         } catch { /* Ignore malformed frames. */ }
       };
@@ -127,7 +145,11 @@ export default function Chat({ game, notices }: { game: Game; notices: Toast[] }
   const submit = (e: React.FormEvent) => {
     e.preventDefault(); const clean = text.trim(); if (!clean) return;
     const queue = outbox.current ?? (outbox.current = new ChatOutbox(storage()));
-    if (!queue.enqueue(messageId(), game.save.name || 'Pilot', clean, Date.now())) { setQueueError('Queue full; wait for messages to send.'); return; }
+    const id = messageId();
+    if (!queue.enqueue(id, game.save.name || 'Pilot', clean, Date.now())) { setQueueError('Queue full; wait for messages to send.'); return; }
+    ownIds.current.add(id);
+    while (ownIds.current.size > 200) ownIds.current.delete(ownIds.current.values().next().value!);
+    try { storage()?.setItem(OWN_MESSAGE_KEY, JSON.stringify([...ownIds.current])); } catch { /* memory-only when storage is blocked */ }
     setPending(queue.list()); setText(''); setQueueError(''); wake();
   };
   if (!expanded) return <button type="button" onClick={() => open(true)} aria-label={`Open chat${unread ? `, ${unread} unread` : ''}`} className="absolute bottom-4 left-4 z-[70] rounded border border-cyan-200/30 bg-[#050e16] px-3 py-2 text-xs font-bold text-cyan-200">CHAT{unread > 0 && <span className="ml-2 rounded-full bg-cyan-300 px-1.5 text-black">{unread}</span>}</button>;
@@ -135,8 +157,11 @@ export default function Chat({ game, notices }: { game: Game; notices: Toast[] }
     <div aria-hidden={faded} onMouseMove={wake} onFocus={wake} className={`rounded-t border border-cyan-200/30 bg-[#050e16]/95 p-2 shadow-lg transition-opacity duration-500 ${faded ? 'pointer-events-none opacity-0' : 'pointer-events-auto opacity-100'}`}>
       <div className="mb-1 flex justify-between text-[10px] font-bold tracking-widest text-cyan-200/70"><span>CHAT</span><span className="flex items-center gap-2"><span title={status === 'offline' ? 'Connection failed; retrying. Check the website address and network.' : undefined}>{status === 'online' ? 'ONLINE' : status === 'connecting' ? 'CONNECTING' : status === 'updating' ? 'SERVER UPDATE NEEDED' : 'OFFLINE · RETRYING'}</span><button type="button" aria-label="Collapse chat" tabIndex={faded ? -1 : 0} onClick={() => { manuallyCollapsed.current = true; expandedRef.current = false; setExpanded(false); }} className="rounded border border-white/30 px-1 text-white">−</button></span></div>
       <div aria-live="polite" className="h-24 overflow-y-auto break-words text-white/80">
-        {messages.map(m => <div key={m.id}><span className={m.local ? 'font-bold text-yellow-200' : 'font-bold text-cyan-200'}>{m.name}: </span>{m.text}</div>)}
-        {pending.map(m => <div key={`queued-${m.id}`}><span className="font-bold text-cyan-200">{m.name}: </span>{m.text} <span className="text-yellow-200/80">(queued)</span></div>)}
+        {messages.map(m => {
+          const own = !!m.clientId && ownIds.current.has(m.clientId);
+          return <div key={m.id} data-chat-owner={own ? 'self' : m.local ? 'event' : 'other'} className={own ? 'text-emerald-100' : undefined}><span className={m.local ? 'font-bold text-yellow-200' : own ? 'font-bold text-emerald-300' : 'font-bold text-cyan-200'}>{m.name}: </span>{m.text}</div>;
+        })}
+        {pending.map(m => <div key={`queued-${m.id}`} data-chat-owner="self" className="text-emerald-100"><span className="font-bold text-emerald-300">{m.name}: </span>{m.text} <span className="text-yellow-200/80">(queued)</span></div>)}
         <div ref={end} />
       </div>
     </div>
