@@ -682,7 +682,7 @@ const SPECIES: SpeciesDef[] = [
     id: "spider", hp: 19, dmg: 50, name: "Widow Spider", hue: 272, flying: false, speed: 140, turn: 2.8, ranged: true, keep: 300, muzzle: 2.2,
     armed: { gun: false, missile: true, shield: false }, pack: [1, 1, 1, 1, 1, 1],
     abilities: [
-      { type: "shoot", name: "Web", minTier: 0, wind: 0.5, dmg: 0.4, n: 1, speed: 380, life: 2, size: 14, slow: 0.4, slowT: 3, poison: 0.2, kind: "web", minP: 120, maxS: 2, maxP: 900, webDrop: true },
+      { type: "shoot", name: "Web", minTier: 0, wind: 0.5, dmg: 0.4, n: 1, speed: 380, life: 2, size: 7, slow: 0.4, slowT: 3, poison: 0.2, kind: "web", minP: 120, maxS: 2, maxP: 900, webDrop: true },
       { type: "shoot", name: "Web Volley", minTier: 0, wind: 0.5, dmg: 0.3, n: 3, spread: 0.2, speed: 680, life: 1.5, size: 7, kind: "web", minP: 120, maxS: 2, maxP: 900, tether: true },
       { type: "grab", name: "Bite", minTier: 4, wind: 0.4, dmg: 1.67, chompCd: 1, hold: 3, maxS: 3, maxP: 500, lunge: 950 },
       { type: "pull", name: "Pull", minTier: 4, wind: 0.5, dmg: 17, speed: 760, minP: 250, maxS: 2, maxP: 900 },

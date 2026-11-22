@@ -1,14 +1,14 @@
 import { clamp, fmtNum } from "./math";
 
 /* ---------- world constants ---------- */
-export const WORLD_R = 16000;
+export const WORLD_R = 48000;
 /* The base drifts around the outer ring every run: the x/y below are only the
  * initial fallback, Game.placeBase() moves it before the player spawns. */
 /* turretR is the siege cannon's reach; aggroR (10% beyond it) is the base's
  * defence-alert radius and the band enemies are retained in while chasing the
  * player through it. Enemies never target the base itself. smallR is the
  * point-defence reach of the six hex turrets on the base ring. */
-export const BASE = { x: 0, y: 15000, r: 260, dock: 175, safe: 950, turretR: 1600, aggroR: 1760, smallR: 850 };
+export const BASE = { x: 24000, y: 12000, r: 260, dock: 175, safe: 950, turretR: 1600, aggroR: 1760, smallR: 850 };
 /** radius band the base may occupy — the outer (common) ring only */
 export const BASE_RING = { min: 13900, max: 15300 };
 /** structural integrity of the base; high-tier enemies chew through this fast */
@@ -23,7 +23,7 @@ export const W_SLOTS = [
 ] as const;
 export const SHIP_R = 15;
 /** distance-from-centre thresholds: tier = index of first threshold the distance is under (mythical first) */
-export const ZONE_EDGES = [2200, 4800, 7800, 10600, 13200]; // mythical, legendary, epic, rare, uncommon, else common
+export const ZONE_EDGES = [5250, 11250, 18000, 24000, 26250]; // mythical, legendary, epic, rare, uncommon, else common
 
 export function zoneTier(distFromCentre: number) {
   for (let i = 0; i < ZONE_EDGES.length; i++) if (distFromCentre < ZONE_EDGES[i]) return 5 - i;
@@ -140,7 +140,7 @@ export const UPGRADE_BY_ID: Record<string, UpgradeDef> = Object.fromEntries(UPGR
  * Chassis prices are paid twice over — credits and a component bill. Tier 1 guns ask
  * for a handful of common parts of a named kind plus one uncommon core, so the hull
  * you scrap for a new gun is a shopping list, not a pile. */
-export type CannonTrackId = "dmg" | "rate" | "crit" | "critDmg" | "pen" | "acc" | "speed" | "barrels";
+export type CannonTrackId = "dmg" | "rate" | "crit" | "critDmg" | "pen" | "acc" | "speed" | "barrels" | "armorDmg" | "energyChance" | "chargeRate" | "beamWidth";
 
 export interface CannonTrack {
   id: CannonTrackId;
@@ -303,7 +303,7 @@ export const CANNONS: CannonDef[] = [
       { kind: "core", tier: 1, count: 5, label: "core" },
       { kind: "core", tier: 3, count: 1, label: "core" },
     ],
-    tracks: ["crit", "critDmg", "pen", "dmg", "rate"], costMul: 2.6, requires: "skewer",
+    tracks: ["crit", "critDmg", "pen", "dmg", "armorDmg", "energyChance"], costMul: 2.6, requires: "skewer",
     muzzles: [{ x: 46, y: 0 }], kick: 50, heat: 0, heatMax: 1, heatSpread: 1,
     look: { len: 50, bore: 4.0, hue: 204, style: "lance" },
   },
@@ -340,7 +340,7 @@ export const CANNONS: CannonDef[] = [
       { kind: "core", tier: 3, count: 6, label: "core" },
       { kind: "weapon", tier: 4, count: 1, name: "scorpion", label: "scorpion weapon" },
     ],
-    tracks: ["crit", "critDmg", "pen", "dmg", "rate"], costMul: 3.0, requires: "skewer",
+    tracks: ["crit", "critDmg", "pen", "dmg", "chargeRate", "beamWidth"], costMul: 3.0, requires: "skewer",
     muzzles: [{ x: 44, y: 0 }], kick: 220, heat: 0, heatMax: 1, heatSpread: 1,
     look: { len: 48, bore: 4.4, hue: 280, style: "lance" },
   },
@@ -357,6 +357,10 @@ export const CANNON_TRACKS: CannonTrack[] = [
   { id: "acc", name: "Accuracy", desc: "Tightens the spray pattern.", max: 15, base: 40, growth: 1.45 },
   { id: "speed", name: "Projectile Speed", desc: "Faster rounds: less lead on a moving target.", max: 12, base: 55, growth: 1.45 },
   { id: "barrels", name: "Barrels", desc: "A second barrel. Rounds alternate between the two, so each barrel fires at half the rate and the gun runs cooler for longer.", max: 1, base: 6000, growth: 1 },
+  { id: "armorDmg", name: "Armour Damage", desc: "Extra damage dealt to armour plating.", max: 10, base: 80, growth: 1.5 },
+  { id: "energyChance", name: "Energy Shot Chance", desc: "Chance each shot throws an energy bolt that bypasses enemy shielding.", max: 10, base: 120, growth: 1.5 },
+  { id: "chargeRate", name: "Charge Rate", desc: "The beam charges faster the longer it is held.", max: 10, base: 90, growth: 1.5 },
+  { id: "beamWidth", name: "Beam Width", desc: "A wider energy beam, striking more of the target.", max: 8, base: 110, growth: 1.5 },
 ];
 export const CANNON_TRACK_BY_ID: Record<string, CannonTrack> = Object.fromEntries(CANNON_TRACKS.map((t) => [t.id, t]));
 /** the tracks a chassis actually carries, in display order */
@@ -381,6 +385,14 @@ export const cannonCritMul = (lv?: Record<string, number>) => 2 + 0.25 * lvl(lv,
 export const cannonPierce = (lv?: Record<string, number>) => lvl(lv, "pen");
 /** rounds thrown per trigger: two at most, per the sheet's "Barrels (2)" */
 export const cannonBarrels = (lv?: Record<string, number>) => 1 + Math.min(1, lvl(lv, "barrels"));
+/** extra damage vs armour plating: a multiplier above 1 (1 + 12% a level) */
+export const cannonArmorDmg = (lv?: Record<string, number>) => 1 + 0.12 * lvl(lv, "armorDmg");
+/** chance a shot throws an energy bolt that bypasses shielding (Skewer MK2) */
+export const cannonEnergyChance = (lv?: Record<string, number>) => clamp(0.25 + 0.05 * lvl(lv, "energyChance"), 0, 0.95);
+/** how fast the charge beam builds (Mediator): a multiplier on charge speed */
+export const cannonChargeRate = (lv?: Record<string, number>) => 1 + 0.1 * lvl(lv, "chargeRate");
+/** how wide the energy beam strikes (Mediator): a multiplier on beam thickness */
+export const cannonBeamWidth = (lv?: Record<string, number>) => 1 + 0.18 * lvl(lv, "beamWidth");
 /** round speed at the current projectile-speed level */
 export const cannonSpeed = (c: CannonDef, lv?: Record<string, number>) => c.speed * Math.pow(1.08, lvl(lv, "speed"));
 /** muzzle spread in radians; the accuracy track tightens it by 10% a level */
@@ -409,6 +421,10 @@ export function cannonTrackValue(c: CannonDef, id: CannonTrackId, level: number)
     case "acc": return `${((cannonSpread(c, one) * 180) / Math.PI).toFixed(1)}° spread`;
     case "speed": return `${fmtNum(Math.round(cannonSpeed(c, one)))} u/s`;
     case "barrels": return `${cannonBarrels(one)} barrels`;
+    case "armorDmg": return `+${Math.round((cannonArmorDmg(one) - 1) * 100)}% vs armour`;
+    case "energyChance": return `${Math.round(cannonEnergyChance(one) * 100)}% energy shot`;
+    case "chargeRate": return `${cannonChargeRate(one).toFixed(2)}x charge`;
+    case "beamWidth": return `${cannonBeamWidth(one).toFixed(2)}x wide`;
   }
 }
 
@@ -418,7 +434,7 @@ export const partBillText = (b: PartBill) =>
   `${b.count}× ${RARITIES[clamp(b.tier, 0, RARITIES.length - 1)].name} ${b.label}`;
 /** does this component satisfy that bill line? */
 export const partBillMatch = (x: Comp, b: PartBill) =>
-  x.kind === b.kind && x.tier === b.tier && (!b.name || x.name.toLowerCase().includes(b.name.toLowerCase()));
+  x.kind === b.kind && x.tier >= b.tier && (!b.name || x.name.toLowerCase().includes(b.name.toLowerCase()));
 
 export const cannonOwned = (s: SaveData, id: string) => id === CANNONS[0].id || !!s.cannon?.owned?.includes(id);
 /** what is standing between the pilot and this chassis (null = buildable).
@@ -437,23 +453,33 @@ export function cannonBillProblem(s: SaveData, c: CannonDef, freeParts = false, 
   }
   if (s.credits < c.credits) return `Needs ${fmtNum(c.credits)} credits`;
   if (freeParts) return null;
-  for (const b of c.parts) {
-    const have = s.inventory.filter((x) => partBillMatch(x, b)).length;
-    if (have < b.count) return `Needs ${partBillText(b)}`;
+  for (let i = 0; i < c.parts.length; i++) {
+    const parts = c.parts.slice(0, i + 1);
+    if (cannonBillPicks(s, { ...c, parts }).length < parts.reduce((n, b) => n + b.count, 0)) return `Needs ${partBillText(c.parts[i])}`;
   }
   return null;
 }
 /** the inventory ids a chassis purchase would consume: cheapest of each bill line first */
 export function cannonBillPicks(s: SaveData, c: CannonDef): string[] {
-  const out: string[] = [];
-  for (const b of c.parts) {
-    const picks = s.inventory
-      .filter((x) => partBillMatch(x, b) && !out.includes(x.id))
-      .sort((a, z) => a.value - z.value)
-      .slice(0, b.count);
-    for (const p of picks) out.push(p.id);
-  }
-  return out;
+  // Match individual bill slots to distinct inventory items. Augmenting paths
+  // handle overlapping named/generic and minimum-rarity requirements correctly.
+  const slots = c.parts.flatMap((b) => Array.from({ length: b.count }, () => b));
+  const items = [...s.inventory].sort((a, b) => a.tier - b.tier || a.value - b.value);
+  const assigned = new Map<string, number>();
+  const match = (slot: number, seen: Set<string>): boolean => {
+    for (const item of items) {
+      if (seen.has(item.id) || !partBillMatch(item, slots[slot])) continue;
+      seen.add(item.id);
+      const previous = assigned.get(item.id);
+      if (previous === undefined || match(previous, seen)) {
+        assigned.set(item.id, slot);
+        return true;
+      }
+    }
+    return false;
+  };
+  for (let i = 0; i < slots.length; i++) match(i, new Set());
+  return [...assigned.keys()];
 }
 
 export const UP_CATS: { id: UpCat; name: string; color: string }[] = [
@@ -907,6 +933,10 @@ export interface Stats {
   heatDmg: number; heatSpread: number; overheat: number;
   /** charge cannon (Mediator): hold to build, release to fire a beam */
   charge: boolean; chargeTime: number; chargeDmg: number;
+  /** Skewer MK2: extra damage vs armour plating, and energy-shot bypass chance */
+  armorDmg: number; energyChance: number;
+  /** Mediator: charge-speed multiplier and beam-width multiplier */
+  chargeRate: number; beamWidth: number;
   hull: number; regen: number; armor: number; reactive: number; thorn: number; poisonResist: number;
   shieldMax: number; shieldRegen: number; shieldDelay: number; reflect: boolean;
   dodge: number; kinetic: number; novaOnHit: number; nullField: number;
@@ -1019,6 +1049,10 @@ export function computeStats(s: SaveData): Stats {
     charge: !!cannon.charge,
     chargeTime: cannon.chargeTime ?? 1,
     chargeDmg: cannon.chargeDmg ?? 1,
+    armorDmg: cannonArmorDmg(cl),
+    energyChance: cannonEnergyChance(cl),
+    chargeRate: cannonChargeRate(cl),
+    beamWidth: cannonBeamWidth(cl),
     hull,
     regen,
     armor,

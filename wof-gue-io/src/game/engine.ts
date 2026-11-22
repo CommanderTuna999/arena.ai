@@ -1,6 +1,7 @@
+import { MAP_CELL, MAP_GRID, MAP_RADIUS, walkable } from "./world";
 import { TAU, angDiff, clamp, distToPoly, hash2, lerp, mulberry32, pointInPoly } from "./math";
 import {
-  ABILITY_BY_ID, BASE, BASE_MAX_HP, BASE_RING, BASE_TAKE, CANNONS, CANNON_BY_ID, CANNON_TRACKS, CANNON_TRACK_BY_ID,
+  ABILITY_BY_ID, BASE, BASE_MAX_HP, BASE_TAKE, CANNONS, CANNON_BY_ID, CANNON_TRACKS, CANNON_TRACK_BY_ID,
   DMG_MUL, KIND_CAT, KIND_DROP_RATE, RARITIES, RECIPE_BY_ID, SHIP_R, UPGRADES, WORLD_R, W_SLOTS, COMMON_CORE_RATE, COMMON_UNCOMMON_RATE, cannonBillPicks, cannonBillProblem,
   cannonDmg, cannonOwned, cannonRate, cannonTrackCost,
   compMass, compValue, computeStats, craftEfficiency,
@@ -139,7 +140,6 @@ const SNAKE_ENABLED = false;
 const BOSS_SP = SNAKE_ENABLED ? SPECIES_LIST.findIndex((s) => s.boss) : -1;
 
 /** last base position this browser session, so consecutive runs never overlap */
-let lastBasePos: { x: number; y: number } | null = null;
 
 /* ---------------- entity types ---------------- */
 export interface Act { i: number; def: AbilityDef; t: number; ph: number; hit: boolean; dir: number; fired: boolean; chompT?: number; spin?: number; beamAng?: number[] }
@@ -241,7 +241,7 @@ export interface Puddle { x: number; y: number; r: number; life: number; max: nu
 export interface Ring { x: number; y: number; r: number; max: number; speed: number; dmg: number; hit: boolean; color: string; hurts: boolean }
 export interface DebrisPiece { poly: number[]; stroke: string; fill: string }
 export interface Debris { x: number; y: number; vx: number; vy: number; rot: number; vr: number; life: number; max: number; pieces: DebrisPiece[] }
-export interface Beam { x1: number; y1: number; x2: number; y2: number; life: number; color?: string }
+export interface Beam { x1: number; y1: number; x2: number; y2: number; life: number; color?: string; width?: number }
 export interface LComp { id: number; c: Comp; x: number; y: number; vx: number; vy: number; a: number; va: number; r: number; hooks: number[]; stress: number; ttl: number; born: number; srcId: number }
 export interface RopeNode { x: number; y: number; px: number; py: number }
 export interface Harpoon {
@@ -369,10 +369,15 @@ function pickSpecies(x: number, y: number, rng: () => number, zone: number) {
 
 const uid = () => Math.random().toString(36).slice(2, 10);
 const clampWorld = (x: number, y: number): [number, number] => {
-  const d = Math.hypot(x, y);
-  if (d <= WORLD_R - 40) return [x, y];
-  const k = (WORLD_R - 40) / (d || 1);
-  return [x * k, y * k];
+  if (walkable(x, y)) return [x, y];
+  let bestX = BASE.x, bestY = BASE.y, best = Infinity;
+  for (let row = 0; row < MAP_GRID.length; row++) for (let col = 0; col < MAP_GRID.length; col++) {
+    if (MAP_GRID[row][col] !== "1") continue;
+    const px = (col + 0.5) * MAP_CELL - MAP_RADIUS, py = (row + 0.5) * MAP_CELL - MAP_RADIUS;
+    const d = (px - x) ** 2 + (py - y) ** 2;
+    if (d < best) { best = d; bestX = px; bestY = py; }
+  }
+  return [bestX, bestY];
 };
 
 export class Game {
@@ -484,15 +489,9 @@ export class Game {
    *  It never lands in an inner zone (that would put the shop next to mythicals)
    *  and always stays clear of the world edge. */
   private placeBase() {
-    let x = BASE.x, y = BASE.y;
-    for (let tries = 0; tries < 60; tries++) {
-      const a = Math.random() * TAU;
-      const rr = BASE_RING.min + Math.random() * (BASE_RING.max - BASE_RING.min);
-      x = Math.cos(a) * rr; y = Math.sin(a) * rr;
-      if (!lastBasePos || Math.hypot(x - lastBasePos.x, y - lastBasePos.y) > 3000) break;
-    }
+    // The broad lower-right opening in the supplied map.
+    const x = 24000, y = 12000;
     BASE.x = x; BASE.y = y;
-    lastBasePos = { x, y };
     this.cam.x = x;
     this.cam.y = y - 120;
   }
@@ -1467,7 +1466,7 @@ export class Game {
   private spawnChunk(cx: number, cy: number, key: string, budget = Infinity) {
     const rng = mulberry32(hash2(cx, cy, 77));
     const ccx = (cx + 0.5) * CH, ccy = (cy + 0.5) * CH;
-    if (Math.hypot(ccx, ccy) > WORLD_R + 300) return;
+    if (Math.abs(ccx) > WORLD_R || Math.abs(ccy) > WORLD_R) return;
     const zt = zoneTier(Math.hypot(ccx, ccy));
     /* the one-time world seed keeps the rarity-band density curve: an epic
      * chunk is ~12% as likely to hold a resident as an outer chunk, a legendary
@@ -1488,7 +1487,7 @@ export class Game {
       const x = cx * CH + rng() * CH, y = cy * CH + rng() * CH;
       const d = Math.hypot(x, y);
       const rolls = [rng(), rng(), rng(), rng()];
-      if (d > WORLD_R - 250) continue;
+      if (!walkable(x, y)) continue;
       if (Math.hypot(x - BASE.x, y - BASE.y) < BASE.safe + 350) continue;
       if (Math.hypot(x - this.player.x, y - this.player.y) < 1200) continue;
       const z2 = zoneTier(d);
@@ -1499,6 +1498,7 @@ export class Game {
       for (let k = 0; k < pack; k++) {
         if (this.enemies.length >= HARD_MAX || made >= budget) break;
         const ox = k === 0 ? 0 : Math.cos(k * 2.4) * (80 + k * 40), oy = k === 0 ? 0 : Math.sin(k * 2.4) * (80 + k * 40);
+        if (!walkable(x + ox, y + oy)) continue;
         this.enemies.push(this.makeEnemy(spi, tier, x + ox, y + oy, key, hash2(cx + k, cy + i, 5)));
         made++;
       }
@@ -1506,6 +1506,7 @@ export class Game {
     // a snake prowls the mythical core: at most one at a time
     if (zt >= 5 && BOSS_SP >= 0 && rng() < 0.55 && !this.bossAlive()) {
       const bx = cx * CH + rng() * CH, by = cy * CH + rng() * CH;
+      if (!walkable(bx, by)) return;
       const boss = this.makeEnemy(BOSS_SP, 5, bx, by, key, hash2(cx, cy, 999));
       boss.aggro = true;
       this.enemies.push(boss);
@@ -1525,7 +1526,7 @@ export class Game {
     const lim = Math.ceil((WORLD_R + CH) / CH);
     for (let cx = -lim; cx <= lim; cx++) for (let cy = -lim; cy <= lim; cy++) {
       const ccx = (cx + 0.5) * CH, ccy = (cy + 0.5) * CH;
-      if (Math.hypot(ccx, ccy) > WORLD_R + 300) continue;
+      if (!walkable(ccx, ccy)) continue;
       keys.push(`${cx},${cy}`);
     }
     const rng = mulberry32(hash2(7919, 104729, 17));
@@ -1566,7 +1567,7 @@ export class Game {
         const a = Math.random() * TAU;
         const d = clamp(viewR * 1.25, 700, 2100) + Math.random() * 500;
         const x = p.x + Math.cos(a) * d, y = p.y + Math.sin(a) * d;
-        if (Math.hypot(x, y) > WORLD_R - 250) continue;
+        if (!walkable(x, y)) continue;
         if (Math.hypot(x - BASE.x, y - BASE.y) < BASE.safe + 350) continue;
         const z2 = zoneTier(Math.hypot(x, y));
         const tier = Math.max(0, z2 - (Math.random() < 0.55 ? 0 : 1));
@@ -1593,7 +1594,7 @@ export class Game {
         const a = Math.random() * TAU;
         const d = base * (0.8 + Math.random() * 0.4);
         const x = p.x + Math.cos(a) * d, y = p.y + Math.sin(a) * d;
-        if (Math.hypot(x, y) > WORLD_R - 250) continue;
+        if (!walkable(x, y)) continue;
         if (Math.hypot(x - BASE.x, y - BASE.y) < BASE.safe + 350) continue;
         const z2 = zoneTier(Math.hypot(x, y));
         const key = `${Math.floor(x / CH)},${Math.floor(y / CH)}`;
@@ -2072,7 +2073,7 @@ export class Game {
    * size of the spider: it slows the ship and poisons it while it lasts. */
   private dropWeb(src: Enemy | null, x: number, y: number, r: number) {
     const S = src?.S ?? 1;
-    const rad = Math.max(r, S * 1.4);
+    const rad = 3 * Math.max(r * 2, S * 1.4);
     this.puddles.push({ x, y, r: rad, life: 7, max: 7, arm: 0.4, dps: (src?.eDmg ?? 16) * 0.25, slow: 0.5, hue: src?.spd.hue ?? 272, poison: (src?.eDmg ?? 16) * 0.2, web: true });
     this.ringFx(x, y, rad, `hsl(${src?.spd.hue ?? 272} 80% 70%)`, 500);
   }
@@ -2914,7 +2915,8 @@ export class Game {
     if (!e.act || e.act.def.type === "charge") { /* turning handled by act for others */ }
     const turnRate = e.turn * turnMul;
     if (!e.act) e.a += clamp(angDiff(e.a, faceTo), -turnRate * dt, turnRate * dt);
-    e.x += e.vx * dt; e.y += e.vy * dt;
+    if (walkable(e.x + e.vx * dt, e.y)) e.x += e.vx * dt; else e.vx = 0;
+    if (walkable(e.x, e.y + e.vy * dt)) e.y += e.vy * dt; else e.vy = 0;
 
     // contact with player
     if (!p.dead && dist < e.radius + SHIP_R + 30 && !this.inSafe()) {
@@ -3158,7 +3160,7 @@ export class Game {
     }
     return best;
   }
-  private beam(x: number, y: number, ang: number, len: number, dmg: number, pierce: number, bypass = false, src: DmgSrc = "laser", color = "#baffff") {
+  private beam(x: number, y: number, ang: number, len: number, dmg: number, pierce: number, bypass = false, src: DmgSrc = "laser", color = "#baffff", width = 1, armorMul = 1) {
     const st = this.stats;
     const hits = new Set<number>();
     const cos = Math.cos(ang), sin = Math.sin(ang);
@@ -3170,9 +3172,9 @@ export class Game {
       for (const e of cands) {
         const dx = bx - e.x, dy = by - e.y;
         const reach = Math.max(e.radius, e.shieldReach);
-        if (dx * dx + dy * dy > (reach + 6) * (reach + 6)) continue;
+        if (dx * dx + dy * dy > (reach + 18 * width) * (reach + 18 * width)) continue;
         if (e.shells.length && (bx - e.x) * (bx - e.x) + (by - e.y) * (by - e.y) < e.shellR * e.shellR && this.plateAt(e, bx, by)) {
-          this.shellHit(e, dmg, "laser", false, bx, by);
+          this.shellHit(e, dmg * armorMul, src, false, bx, by);
           endLen = d;
           break outer;
         }
@@ -3189,18 +3191,25 @@ export class Game {
           }
         }
         const ca = Math.cos(e.a), sa = Math.sin(e.a);
-        const p = this.partAt(e, dx * ca + dy * sa, -dx * sa + dy * ca);
+        let p = this.partAt(e, dx * ca + dy * sa, -dx * sa + dy * ca);
+        if (!p && width > 1) {
+          const half = 18 * width;
+          for (let off = -half; off <= half && !p; off += 8) {
+            const ox = -sin * off, oy = cos * off;
+            p = this.partAt(e, (dx + ox) * ca + (dy + oy) * sa, -(dx + ox) * sa + (dy + oy) * ca);
+          }
+        }
         if (!p) continue;
         const key = e.id * 100000 + p.id;
         if (hits.has(key)) continue;
         hits.add(key);
         let dm = dmg * (1 + e.melt);
-        this.damagePart(e, p, dm, bx, by);
+        this.damagePart(e, p, dm * (p.kind === "armor" ? armorMul : 1), bx, by, src);
         pierced++;
         if (pierced > pierce) { endLen = d; break outer; }
       }
     }
-    this.beams.push({ x1: x, y1: y, x2: x + cos * endLen, y2: y + sin * endLen, life: 0.12, color });
+    this.beams.push({ x1: x, y1: y, x2: x + cos * endLen, y2: y + sin * endLen, life: 0.12, color, width: (src === "laser" && color === "#e9d5ff" ? 24 : 5) * width });
   }
 
   /** Heavy cannon: an instant line to the first thing it meets, not a slug. */
@@ -3251,31 +3260,45 @@ export class Game {
    *  cannon is only data: dmg, rate and barrels for rounds, crit for seams,
    *  pierce for how deep a round cuts, spread for the spray, and a hitscan flag
    *  for guns that draw a line instead of throwing a slug. */
+  private mediatorBeamTime = 0;
+  private mediatorBeamDamage = 0;
   private firePlayer(dt: number) {
     const p = this.player, st = this.stats;
-    if (p.dead) return;
+    if (p.dead) { this.mediatorBeamTime = 0; return; }
+    if (!st.charge) this.mediatorBeamTime = 0;
     const want = this.input.lmb || this.input.keys.has("Space");
     p.fireCd -= dt;
+    if (this.mediatorBeamTime > 0 && st.charge && !this.inSafe()) {
+      const step = Math.min(dt, this.mediatorBeamTime);
+      this.mediatorBeamTime -= step;
+      const m = st.muzzles[0] ?? { x: 14, y: 0 };
+      const x = p.x + Math.cos(p.a) * m.x - Math.sin(p.a) * m.y;
+      const y = p.y + Math.sin(p.a) * m.x + Math.cos(p.a) * m.y;
+      this.beam(x, y, p.a, st.bulletRange, this.mediatorBeamDamage * step, st.pierce, false, "laser", "#e9d5ff", st.beamWidth);
+      return;
+    }
     const base = p.a;
     /* the Mediator charges its beam: hold the trigger to build charge, release
      * to fire a devastating beam whose damage scales with how long it was held */
     if (st.charge) {
       if (want && p.fireCd <= 0 && !this.inSafe()) {
         p.charging = true;
-        p.charge = Math.min(1, p.charge + dt / st.chargeTime);
+        p.charge = Math.min(1, p.charge + dt * st.chargeRate / st.chargeTime);
       } else if (p.charging) {
         p.charging = false;
         const mz = st.muzzles.length ? st.muzzles : [{ x: 14, y: 0 }];
         const m = { x: p.x + Math.cos(base) * mz[0].x - Math.sin(base) * mz[0].y, y: p.y + Math.sin(base) * mz[0].x + Math.cos(base) * mz[0].y };
-        const dmg = st.dmg * (0.35 + 0.65 * p.charge) * st.chargeDmg * this.dmgMul();
+        const crit = Math.random() < st.crit;
+        const dmg = st.dmg * (0.35 + 0.65 * p.charge) * st.chargeDmg * this.dmgMul() * (crit ? st.critMul : 1);
         const col = "#e9d5ff";
-        this.beam(m.x, m.y, base, st.bulletRange, dmg, st.pierce, true, "laser", col);
+        this.mediatorBeamDamage = dmg;
+        this.mediatorBeamTime = 3;
         this.burst(m.x, m.y, col, 18, 7, 420);
         this.ringFx(m.x, m.y, 70, col, 500);
         this.shake = Math.max(this.shake, 14 + 10 * p.charge);
         p.vx -= Math.cos(base) * st.kick; p.vy -= Math.sin(base) * st.kick;
         p.charge = 0;
-        p.fireCd = 0.7;
+        p.fireCd = 3.7;
       } else {
         p.charge = Math.max(0, p.charge - dt * 0.5);
       }
@@ -3309,10 +3332,10 @@ export class Game {
         const skewer2 = st.cannonId === "skewer2";
         let chargeShot = false;
         if (fencer) { p.fenceShots++; chargeShot = p.fenceShots % 5 === 0; }
-        const energyShot = skewer2 && !chargeShot && Math.random() < 0.25;
+        const energyShot = skewer2 && !chargeShot && Math.random() < st.energyChance;
         const dShot = chargeShot ? dmg * 12.5 : dmg;
         const col = (energyShot || chargeShot) ? "#c4a6ff" : crit ? "#fff3b0" : "#e6fbff";
-        this.beam(m0.x, m0.y, base, st.bulletRange, dShot, chargeShot ? st.pierce + 2 : st.pierce, energyShot, energyShot ? "laser" : "kinetic", col);
+        this.beam(m0.x, m0.y, base, st.bulletRange, dShot, chargeShot ? st.pierce + 2 : st.pierce, energyShot, energyShot ? "laser" : "kinetic", col, 1, skewer2 ? st.armorDmg : 1);
         this.burst(m0.x, m0.y, col, chargeShot ? 20 : crit ? 12 : 7, chargeShot ? 8 : 5.5, chargeShot ? 480 : 340);
         this.ringFx(m0.x, m0.y, chargeShot ? 90 : crit ? 60 : 40, col, chargeShot ? 600 : 420);
         this.shake = Math.max(this.shake, chargeShot ? 12 : crit ? 6 : 3.5);
@@ -4027,14 +4050,10 @@ export class Game {
         }
       }
       maxSp = Math.max(maxSp, 1);
-      p.x += p.vx * dt; p.y += p.vy * dt;
-      const rd = Math.hypot(p.x, p.y);
-      if (rd > WORLD_R - 30) {
-        const nx = p.x / rd, ny = p.y / rd;
-        p.x = nx * (WORLD_R - 30); p.y = ny * (WORLD_R - 30);
-        const vn = p.vx * nx + p.vy * ny;
-        if (vn > 0) { p.vx -= nx * vn; p.vy -= ny * vn; }
-      }
+      const oldX = p.x, oldY = p.y;
+      const nextX = oldX + p.vx * dt, nextY = oldY + p.vy * dt;
+      if (walkable(nextX, oldY)) p.x = nextX; else p.vx = 0;
+      if (walkable(p.x, nextY)) p.y = nextY; else p.vy = 0;
       /* energy panels are walls with teeth: the wall stops the hull every frame,
        * and contact discharges into it when the shock is off cooldown */
       if (!this.inSafe()) this.shieldContact(p);

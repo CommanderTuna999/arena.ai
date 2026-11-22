@@ -1,3 +1,12 @@
+## 0.3. v2.18.0 — new map and tier-2 cannon upgrades
+
+- Replaced the circular arena with a connected corridor map based on the supplied layout. Its walkable area is approximately five times the old arena; the base is in the lower open region.
+- Skewer MK2 has critical chance, critical damage, penetration, damage, additional armour damage and energy shot chance tracks. Fencer MK1 has critical chance, critical damage, penetration and damage. Mediator has critical chance, critical damage, penetration, damage, charge rate and beam width.
+- Mediator releases a sustained three-second energy beam, with critical damage, charge speed and beam width affecting combat.
+- Halved the large spider web projectile and tripled the radius of its deployed web.
+- Component bills accept the required rarity or higher, with distinct components allocated to each bill slot.
+- Drops: approximately 5% per non-core part at the enemy's rarity; 90% per core (55% for common enemies). For non-core parts from common enemies, an uncommon roll is tried first at 30%; only if that fails is the 5% common roll attempted. Salvage bonuses modify these rates.
+
 ## 0.3. v2.17.0 — tier-2 cannons, faster enemy rounds, the moth's domain and its shield
 
 - **Tier-2 cannon tree complete** (`data.ts`, `engine.ts`): all three branch off **Skewer MK1**.

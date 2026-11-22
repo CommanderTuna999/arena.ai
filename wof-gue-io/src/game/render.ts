@@ -1,3 +1,4 @@
+import { MAP_GRID, MAP_CELL, MAP_RADIUS } from "./world";
 import { TAU, clamp, fmtNum } from "./math";
 import { BASE, CANNON_BY_ID, CANNONS, CAT_NAME, KIND_CAT, RARITIES, SHIP_R, W_SLOTS, WEAPON_RANGE, WEAPON_TINT, WORLD_R, ZONE_EDGES } from "./data";
 import { N_ROPE, legHealthy, plateGrow, type Enemy, type Game, type LComp } from "./engine";
@@ -75,16 +76,17 @@ export function render(g: Game, ctx: CanvasRenderingContext2D) {
     ctx.beginPath(); ctx.arc(0, 0, r, 0, TAU); ctx.stroke();
   });
   ctx.setLineDash([]);
-  ctx.fillStyle = "rgba(3,0,8,0.82)";
-  ctx.beginPath();
-  ctx.rect(vx0 - 2000, vy0 - 2000, vx1 - vx0 + 4000, vy1 - vy0 + 4000);
-  ctx.arc(0, 0, WORLD_R, 0, TAU, true);
-  ctx.fill("evenodd");
-  ctx.strokeStyle = "#ff3d73";
-  ctx.lineWidth = 6 / z;
-  ctx.shadowColor = "#ff3d73"; ctx.shadowBlur = 24;
-  ctx.beginPath(); ctx.arc(0, 0, WORLD_R, 0, TAU); ctx.stroke();
-  ctx.shadowBlur = 0;
+  // The dark regions are solid terrain; draw only the visible map tiles.
+  const x0 = Math.max(0, Math.floor((vx0 + MAP_RADIUS) / MAP_CELL));
+  const x1 = Math.min(MAP_GRID.length - 1, Math.floor((vx1 + MAP_RADIUS) / MAP_CELL));
+  const y0 = Math.max(0, Math.floor((vy0 + MAP_RADIUS) / MAP_CELL));
+  const y1 = Math.min(MAP_GRID.length - 1, Math.floor((vy1 + MAP_RADIUS) / MAP_CELL));
+  ctx.fillStyle = "#11121b";
+  for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
+    if (MAP_GRID[y][x] === "0") ctx.fillRect(x * MAP_CELL - MAP_RADIUS, y * MAP_CELL - MAP_RADIUS, MAP_CELL + 1, MAP_CELL + 1);
+  }
+  ctx.strokeStyle = "#ff3d73"; ctx.lineWidth = 4 / z;
+  ctx.strokeRect(-MAP_RADIUS, -MAP_RADIUS, MAP_RADIUS * 2, MAP_RADIUS * 2);
 
   drawBase(g, ctx, z, t);
 
@@ -580,8 +582,12 @@ export function render(g: Game, ctx: CanvasRenderingContext2D) {
   for (const bm of g.beams) {
     const c = bm.color ?? "#baffff";
     ctx.globalAlpha = clamp(bm.life / 0.12, 0, 1);
-    ctx.strokeStyle = c; ctx.lineWidth = 5; ctx.shadowColor = c; ctx.shadowBlur = 18;
+    ctx.strokeStyle = c; ctx.lineWidth = bm.width ?? 5; ctx.shadowColor = c; ctx.shadowBlur = 18;
     ctx.beginPath(); ctx.moveTo(bm.x1, bm.y1); ctx.lineTo(bm.x2, bm.y2); ctx.stroke();
+    if ((bm.width ?? 0) > 10) {
+      ctx.strokeStyle = "#fff"; ctx.lineWidth = (bm.width ?? 1) * 0.3;
+      ctx.beginPath(); ctx.moveTo(bm.x1, bm.y1); ctx.lineTo(bm.x2, bm.y2); ctx.stroke();
+    }
     ctx.globalAlpha = 1;
   }
   ctx.shadowBlur = 0;
@@ -2025,15 +2031,13 @@ function drawMinimap(g: Game, ctx: CanvasRenderingContext2D) {
   const R = S / 2;
   const k = R / WORLD_R;
   ctx.save();
-  ctx.beginPath(); ctx.arc(cx, cy, R, 0, TAU); ctx.clip();
+  ctx.beginPath(); ctx.rect(cx - R, cy - R, S, S); ctx.clip();
   ctx.fillStyle = "rgba(4,8,20,0.8)"; ctx.fillRect(cx - R, cy - R, S, S);
-  const edges = [WORLD_R, ...ZONE_EDGES];
-  for (let i = 0; i < edges.length; i++) {
-    ctx.fillStyle = RARITIES[i].color + "1c";
-    ctx.beginPath(); ctx.arc(cx, cy, edges[i] * k, 0, TAU); ctx.fill();
+  const cell = S / MAP_GRID.length;
+  ctx.fillStyle = "rgba(145,185,202,0.38)";
+  for (let y = 0; y < MAP_GRID.length; y++) for (let x = 0; x < MAP_GRID.length; x++) {
+    if (MAP_GRID[y][x] === "1") ctx.fillRect(cx - R + x * cell, cy - R + y * cell, cell + 0.3, cell + 0.3);
   }
-  ctx.strokeStyle = "rgba(255,255,255,0.12)"; ctx.lineWidth = 1;
-  for (const r of ZONE_EDGES) { ctx.beginPath(); ctx.arc(cx, cy, r * k, 0, TAU); ctx.stroke(); }
   // enemies
   ctx.fillStyle = "rgba(255,255,255,0.45)";
   for (const e of g.enemies) ctx.fillRect(cx + e.x * k - 0.8, cy + e.y * k - 0.8, 1.6, 1.6);
@@ -2053,7 +2057,7 @@ function drawMinimap(g: Game, ctx: CanvasRenderingContext2D) {
   ctx.restore();
   ctx.restore();
   ctx.strokeStyle = "rgba(125,249,255,0.7)"; ctx.lineWidth = 2;
-  ctx.beginPath(); ctx.arc(cx, cy, R, 0, TAU); ctx.stroke();
+  ctx.strokeRect(cx - R, cy - R, S, S);
 }
 
 function drawBaseArrow(g: Game, ctx: CanvasRenderingContext2D) {

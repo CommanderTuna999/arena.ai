@@ -8,7 +8,7 @@
  *   CHANGELOG and mirror the details in docs/CHANGELOG.md.
  */
 
-export const VERSION = "2.17.0";
+export const VERSION = "2.18.0";
 
 export interface ChangeEntry {
   version: string;
@@ -19,6 +19,19 @@ export interface ChangeEntry {
 }
 
 export const CHANGELOG: ChangeEntry[] = [
+  {
+    version: "2.18.0",
+    date: "20 Nov 2026",
+    title: "New map and tier-2 cannon upgrades",
+    points: [
+      "The arena is now a much larger connected map with corridors and open regions, based on the supplied layout. The base sits in the lower open region.",
+      "Skewer MK2 gains armour damage and energy shot chance upgrades; Fencer keeps critical chance, critical damage, penetration and damage; Mediator gains charge rate and beam width upgrades.",
+      "Mediator now fires a sustained three-second energy beam, with critical hits and upgradeable width and charge speed.",
+      "The large spider web projectile is half as large; its deployed web covers three times its former radius.",
+      "Cannon component requirements accept the specified rarity or any higher rarity, without reusing a component across requirements.",
+      "Drop rates: non-core components have about a 5% chance at the enemy's rarity; cores have a 90% chance, or 55% on common enemies. For non-core parts from common enemies, an uncommon roll is tried first at 30%; only if that fails is the 5% common roll attempted. Salvage bonuses modify these rates.",
+    ],
+  },
   {
     version: "2.17.0",
     date: "20 Nov 2026",

@@ -1,0 +1,34 @@
+import assert from "node:assert/strict";
+import { CANNON_BY_ID, BASE, cannonBillPicks, partBillMatch, newSave, computeStats } from "./src/game/data";
+import { MAP_GRID, MAP_CELL, MAP_RADIUS, walkable } from "./src/game/world";
+import { Game } from "./src/game/engine";
+
+assert.deepEqual(CANNON_BY_ID.skewer2.tracks, ["crit", "critDmg", "pen", "dmg", "armorDmg", "energyChance"]);
+assert.deepEqual(CANNON_BY_ID.fencer.tracks, ["crit", "critDmg", "pen", "dmg"]);
+assert.deepEqual(CANNON_BY_ID.mediator.tracks, ["crit", "critDmg", "pen", "dmg", "chargeRate", "beamWidth"]);
+const part = (id: string, tier: number, name = "Head") => ({ id, tier, name, kind: "segment", value: tier }) as any;
+const bill = (tier: number, name?: string) => ({ tier, kind: "segment", count: 1, label: "segment", name }) as any;
+assert(partBillMatch(part("high", 5), bill(0)));
+assert(!partBillMatch(part("low", 0), bill(1)));
+const save = newSave(); save.inventory = [part("head", 5), part("body", 5, "Body")];
+const cannon = { ...CANNON_BY_ID.skewer2, parts: [bill(4), bill(3, "Head")] };
+assert.equal(cannonBillPicks(save, cannon).length, 2, "overlapping bills need distinct matched components");
+save.inventory = [part("head", 5)];
+assert.equal(cannonBillPicks(save, cannon).length, 1, "one component cannot satisfy two requirements");
+assert(walkable(BASE.x, BASE.y));
+const cells = MAP_GRID.flatMap((row, y) => [...row].map((v, x) => ({ v, x, y }))).filter(c => c.v === "1");
+const startX = Math.floor((BASE.x + MAP_RADIUS) / MAP_CELL), startY = Math.floor((BASE.y + MAP_RADIUS) / MAP_CELL);
+const seen = new Set([`${startX},${startY}`]); const queue = [[startX, startY]];
+for (let i = 0; i < queue.length; i++) { const [x,y] = queue[i]; for (const [nx,ny] of [[x+1,y],[x-1,y],[x,y+1],[x,y-1]]) { const k = `${nx},${ny}`; if (MAP_GRID[ny]?.[nx] === "1" && !seen.has(k)) { seen.add(k); queue.push([nx,ny]); } } }
+assert.equal(seen.size, cells.length, "all walkable map cells are connected to the base");
+const ratio = cells.length * MAP_CELL ** 2 / (Math.PI * 16000 ** 2);
+assert(ratio > 4.8 && ratio < 5.2, `walkable area ratio ${ratio}`);
+const g = new Game(newSave(), "test") as any;
+g.save.cannon.id = "mediator"; g.save.cannon.lv.mediator = { chargeRate: 2, beamWidth: 2 }; g.stats = computeStats(g.save);
+g.player.x = BASE.x + 2000; g.player.y = BASE.y; g.input.lmb = true; g.player.fireCd = 0;
+for (let i=0;i<20;i++) g.firePlayer(0.05);
+assert(g.player.charge > 0.99, "charge rate applies");
+g.input.lmb = false; g.firePlayer(0.05);
+for (let i=0;i<10;i++) g.firePlayer(0.05);
+assert(g.beams.length >= 9 && g.beams.at(-1).width > 24, "sustained, widened beam is drawn");
+console.log("r52 regression checks passed");
