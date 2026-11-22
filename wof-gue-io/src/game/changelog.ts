@@ -8,7 +8,7 @@
  *   CHANGELOG and mirror the details in docs/CHANGELOG.md.
  */
 
-export const VERSION = "2.29.2";
+export const VERSION = "2.29.3";
 
 export interface ChangeEntry {
   version: string;
@@ -19,39 +19,40 @@ export interface ChangeEntry {
 }
 
 export const CHANGELOG: ChangeEntry[] = [
-  { version: "2.29.2", date: "20 Nov 2026", title: "Core contact", points: ["Enemy cores no longer deal contact or body-attack damage; other enemy parts and attacks still can."] },
-  { version: "2.29.1", date: "20 Nov 2026", title: "Map and admin fixes", points: ["Removed the camera rectangle from the map. Infinite Damage now deals infinite damage to hit parts and armour instead of 100 times damage."] },
-  { version: "2.29.0", date: "20 Nov 2026", title: "Map controls", points: ["Press M to glide to a large map, then a focused local minimap, then the default map. Removed enemy markers and changed the player marker to a green dot."] },
-  { version: "2.28.1", date: "20 Nov 2026", title: "Chat controls", points: ["Removed floating damage numbers. Chat opens on a new message or with slash or Enter; collapse it to a button with an unread count."] },
+  { version: "2.29.3", date: "22 Nov 2026", title: "Changelog dates", points: ["Corrected release dates from version 2.12 onward."] },
+  { version: "2.29.2", date: "22 Nov 2026", title: "Core contact", points: ["Enemy cores no longer deal contact or body-attack damage; other enemy parts and attacks still can."] },
+  { version: "2.29.1", date: "22 Nov 2026", title: "Map and admin fixes", points: ["Removed the camera rectangle from the map. Infinite Damage now deals infinite damage to hit parts and armour instead of 100 times damage."] },
+  { version: "2.29.0", date: "22 Nov 2026", title: "Map controls", points: ["Press M to glide to a large map, then a focused local minimap, then the default map. Removed enemy markers and changed the player marker to a green dot."] },
+  { version: "2.28.1", date: "22 Nov 2026", title: "Chat controls", points: ["Removed floating damage numbers. Chat opens on a new message or with slash or Enter; collapse it to a button with an unread count."] },
   {
-    version: "2.28.0", date: "20 Nov 2026", title: "Chat groundwork and tree layering",
+    version: "2.28.0", date: "22 Nov 2026", title: "Chat groundwork and tree layering",
     points: ["Fixed cannon tree popup layering and added a chat panel with local Ultra announcements.", "Added a separate deployable chat service; shared multiplayer combat is not yet implemented, and online chat requires server configuration."],
   },
   {
-    version: "2.27.1", date: "20 Nov 2026", title: "Sharper salvage",
+    version: "2.27.1", date: "22 Nov 2026", title: "Sharper salvage",
     points: ["Large dropped components now render sharply at their actual screen resolution; oversized pieces use vector drawing instead of stretched low-resolution images."],
   },
   {
-    version: "2.27.0", date: "20 Nov 2026", title: "Combat feedback",
+    version: "2.27.0", date: "22 Nov 2026", title: "Combat feedback",
     points: ["Added colour-coded floating damage numbers, including critical hit indicators, with rapid damage grouped to keep fights readable.", "Removed rarity colours from the map and made cannon-tree popups fully opaque."],
   },
   {
-    version: "2.26.0", date: "20 Nov 2026", title: "Performance and scale",
+    version: "2.26.0", date: "22 Nov 2026", title: "Performance and scale",
     points: ["Cached salvage artwork and spatially indexed enemy separation; enemy parts remain visible at every zoom.", "Ultra bodies destroy lower rarities without rewards. Bestiary art shares a world scale, armour is thinner, and wall collision respects the player hull and smaller enemy hitboxes."],
   },
   {
-    version: "2.25.2", date: "20 Nov 2026", title: "Ultra scaling",
+    version: "2.25.2", date: "22 Nov 2026", title: "Ultra scaling",
     points: ["Ultra normal-piece health and damage are each 135× their mythical values. Armour remains 16× average Ultra normal-piece health."],
   },
   {
-    version: "2.25.1", date: "20 Nov 2026", title: "Ultra visual and notice fixes",
+    version: "2.25.1", date: "22 Nov 2026", title: "Ultra visual and notice fixes",
     points: [
       "Ultra enemies keep their normal species colours. Ultra rarity components are black with a subtle white gradient, without an enchantment glint.",
       "Ultra spawn and defeat announcements now appear clearly above the interface in the bottom-left for ten seconds.",
     ],
   },
   {
-    version: "2.25.0", date: "20 Nov 2026", title: "Ultra rarity",
+    version: "2.25.0", date: "22 Nov 2026", title: "Ultra rarity",
     points: [
       "Ultra enemies have 13.5× mythical piece health, 16× normal-piece armour health and 3× mythical size. They replace 0.5% of mythical spawns.",
       "Ultra pieces have a black enchantment glint. They guarantee mythical salvage, with a 2% Ultra piece chance and 10% Ultra core chance.",
@@ -60,7 +61,7 @@ export const CHANGELOG: ChangeEntry[] = [
     ],
   },
   {
-    version: "2.24.0", date: "20 Nov 2026", title: "New map and Ultra zone",
+    version: "2.24.0", date: "22 Nov 2026", title: "New map and Ultra zone",
     points: [
       "The supplied map replaces the old maze, with the base in the top-left and rarity increasing toward the bottom-right.",
       "The bottom-right Ultra zone currently spawns mostly mythical enemies, with some legendary enemies; Ultra enemy and component tiers are not yet available.",
@@ -68,32 +69,32 @@ export const CHANGELOG: ChangeEntry[] = [
     ],
   },
   {
-    version: "2.23.2", date: "20 Nov 2026", title: "Mediator sparks",
+    version: "2.23.2", date: "22 Nov 2026", title: "Mediator sparks",
     points: ["The Mediator sheds violet energy shards and pale sparks from its muzzle while firing."],
   },
   {
-    version: "2.23.1", date: "20 Nov 2026", title: "Mediator handling",
+    version: "2.23.1", date: "22 Nov 2026", title: "Mediator handling",
     points: [
       "Removed the Mediator charge bar while keeping its charging animation and 70-to-10-second charge progression.",
       "The Mediator's sustained beam turns much more slowly and its initial and continuous recoil are tripled.",
     ],
   },
   {
-    version: "2.23.0", date: "20 Nov 2026", title: "Thicker walls and Mediator charge",
+    version: "2.23.0", date: "22 Nov 2026", title: "Thicker walls and Mediator charge",
     points: [
       "Maze walls are roughly five times thicker, with rounded corners and connected routes. Mythical terrain remains approximately three times the other rarity areas combined.",
       "Mediator displays its charge percentage while held. Full charge now takes 70 seconds without upgrades, falling to 10 seconds at maximum charge-rate level; longer charging increases beam damage.",
     ],
   },
   {
-    version: "2.22.0", date: "20 Nov 2026", title: "Connected walls and balanced rarity zones",
+    version: "2.22.0", date: "22 Nov 2026", title: "Connected walls and balanced rarity zones",
     points: [
       "The original maze now has thick connected walls, branching passages and a fully connected walkable area.",
       "The mythical zone now covers approximately three times the walkable area of all other rarity zones combined, with room for future rarities.",
     ],
   },
   {
-    version: "2.21.0", date: "20 Nov 2026", title: "Original labyrinth and Mediator polish",
+    version: "2.21.0", date: "22 Nov 2026", title: "Original labyrinth and Mediator polish",
     points: [
       "Replaced the traced map with an original, larger connected labyrinth. The mythical region occupies most of the map, leaving space for future rarities.",
       "The cannon tree is smaller and its prerequisite connections are drawn continuously without horizontal scrolling.",
@@ -101,14 +102,14 @@ export const CHANGELOG: ChangeEntry[] = [
     ],
   },
   {
-    version: "2.20.0", date: "20 Nov 2026", title: "Expanded world and rarity zones",
+    version: "2.20.0", date: "22 Nov 2026", title: "Expanded world and rarity zones",
     points: [
       "The reference-inspired world is larger and contains dozens of additional walls, while all walkable regions remain connected to the base.",
       "Rarity increases with distance from the base, from common through mythical. The minimap now colours the actual zones, with space for future rarity tiers.",
     ],
   },
   {
-    version: "2.19.0", date: "20 Nov 2026", title: "Combat and session fixes",
+    version: "2.19.0", date: "22 Nov 2026", title: "Combat and session fixes",
     points: [
       "Lunar moth rotating lasers deal seven times their previous damage.",
       "Fencer MK1 now visibly charges before firing its fifth attack as an energy shot with strong recoil.",
@@ -120,7 +121,7 @@ export const CHANGELOG: ChangeEntry[] = [
   },
   {
     version: "2.18.0",
-    date: "20 Nov 2026",
+    date: "22 Nov 2026",
     title: "New map and tier-2 cannon upgrades",
     points: [
       "The arena is now a much larger connected map with corridors and open regions, based on the supplied layout. The base sits in the lower open region.",
@@ -133,7 +134,7 @@ export const CHANGELOG: ChangeEntry[] = [
   },
   {
     version: "2.17.0",
-    date: "20 Nov 2026",
+    date: "22 Nov 2026",
     title: "Tier-2 cannons, faster enemy rounds, the moth's domain and its shield",
     points: [
       "The tier-2 cannon tree is complete per the design sheet, all branching off Skewer MK1: Skewer MK2 (a 1200-damage hitscan lance with a 25% chance each shot to throw an energy shot that bypasses enemy shielding), Fencer MK1 (a rapid 200-damage jab on a 0.3s interval; every fifth landed shot unleashes a charged 2.5k energy shot), and Mediator MK1 (hold the trigger to charge a devastating 4k energy beam, then release it for massive recoil).",
@@ -149,7 +150,7 @@ export const CHANGELOG: ChangeEntry[] = [
   },
   {
     version: "2.16.0",
-    date: "20 Nov 2026",
+    date: "22 Nov 2026",
     title: "Contact attacks break their own shields, full-aggro guns and tier-2 cannons",
     points: [
       "A dragonfly (and any future body whose attack reaches the ship by contact) now retracts its frontal shields for the whole of a grab, sting, charge or swing, so the pincer cannot be blocked by the dragonfly's own shield wall. The retract is a body-level timer that the contact ability keeps topped up.",
@@ -162,7 +163,7 @@ export const CHANGELOG: ChangeEntry[] = [
   },
   {
     version: "2.15.1",
-    date: "20 Nov 2026",
+    date: "22 Nov 2026",
     title: "Ability behaviour: webs, pincers, stings and lasers",
     points: [
       "The spider's Web Volley fires three small webs each tethered to the spider by a visible silken string; a hit reels the ship back to the spider instead of the spider lunging. The large Web now lands on the floor and expands into a real spider-web zone the size of the spider that slows and poisons the ship.",
@@ -172,7 +173,7 @@ export const CHANGELOG: ChangeEntry[] = [
   },
   {
     version: "2.15.0",
-    date: "20 Nov 2026",
+    date: "21 Nov 2026",
     title: "Enemy abilities, bestiary drops and cannon quality of life",
     points: [
       "Four enemies gained their full ability kits: the dragonfly now dashes, sprays, chomps and unleashes a shockwave; the scorpion pincer-grabs and tail-stings; the spider webs, volleys, bites and pulls; and the moth fires shot bursts, rotating lasers, homing missiles and opens a three-minute moon Domain that scales its damage and health from 3x to 10x by phase.",
@@ -185,7 +186,7 @@ export const CHANGELOG: ChangeEntry[] = [
   },
   {
     version: "2.14.1",
-    date: "20 Nov 2026",
+    date: "21 Nov 2026",
     title: "Enemy attachment damage and cannon overheat",
     points: [
       "Enemy weapon attachments now match the sheet's per-projectile damage: basic cannon 0.5x, scatter 1.2x, rotary 0.2x, laser 1.0x, heavy rail 17x.",
@@ -195,7 +196,7 @@ export const CHANGELOG: ChangeEntry[] = [
   },
   {
     version: "2.14.0",
-    date: "20 Nov 2026",
+    date: "21 Nov 2026",
     title: "Balance changes",
     points: [
       "Balanced some stuff ig",
@@ -203,7 +204,7 @@ export const CHANGELOG: ChangeEntry[] = [
   },
   {
     version: "2.13.1",
-    date: "20 Nov 2026",
+    date: "21 Nov 2026",
     title: "Plating that fits the body, and a proper twin",
     points: [
       "Armour is priced off the body it is bolted to now: every plate is a multiple of the average piece on that insect, climbing with rarity - 4x at rare, 5.5x epic, 7x legendary, 9x mythical, with common and uncommon continuing the ramp at 2.5x and 3.25x.",
@@ -213,7 +214,7 @@ export const CHANGELOG: ChangeEntry[] = [
   },
   {
     version: "2.13.0",
-    date: "20 Nov 2026",
+    date: "21 Nov 2026",
     title: "Guns you can see, and barrels you can feel",
     points: [
       "Every chassis has a picture in the CANNON tree now, drawn from the same data the hull uses: fat bolt thrower, long lance, three spigots, or a genuine twin.",
@@ -227,7 +228,7 @@ export const CHANGELOG: ChangeEntry[] = [
   },
   {
     version: "2.12.1",
-    date: "20 Nov 2026",
+    date: "21 Nov 2026",
     title: "Bills made of bits you actually find",
     points: [
       "Chassis bills are legs, common cores, heads and antennae now, with legs making up most of every bill. Skewer: 2 legs, an antenna, a head and an uncommon core. Peashooter: 2 legs, a common core and an uncommon core. Workhorse: 2 legs, a head, a common core and an uncommon core.",
@@ -237,7 +238,7 @@ export const CHANGELOG: ChangeEntry[] = [
   },
   {
     version: "2.12.0",
-    date: "20 Nov 2026",
+    date: "21 Nov 2026",
     title: "Three guns, and shields that push back",
     points: [
       "The cannon tree reads bottom-up from the free Stinger, and the tier 1 row is no longer a placeholder: the Skewer, the Peashooter and the Workhorse are in service.",

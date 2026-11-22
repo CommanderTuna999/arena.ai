@@ -1,3 +1,7 @@
+## 0.3. v2.29.3 — Changelog dates
+
+- Corrected the displayed release dates from v2.12 onward: v2.12.0 through v2.15.0 are dated 21 November, and later versions are dated 22 November.
+
 ## 0.3. v2.29.2 — Core contact
 
 - Enemy cores no longer deal contact or body-attack damage; other enemy parts and attacks still can.
