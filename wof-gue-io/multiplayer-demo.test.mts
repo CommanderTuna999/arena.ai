@@ -27,8 +27,8 @@ try{
  // frames and paint calls; it is not a screenshot or real-browser test.
  const {JSDOM}=await import('jsdom');const script=await fetch(`${base}/demo.js`).then(r=>r.text());
  const dom=new JSDOM('<canvas></canvas><span id="status"></span>',{url:base,runScripts:'outside-only',pretendToBeVisual:true});
- const win=dom.window;let polygons=0;let browserError:unknown=null;win.addEventListener('error',e=>{browserError=e.error;e.preventDefault();});
- const paint=new Proxy({closePath(){polygons++},createRadialGradient(){return {addColorStop(){}}},createLinearGradient(){return {addColorStop(){}}}}, {get:(target,key)=>key in target?(target as any)[key]:()=>{},set:(target,key,value)=>{(target as any)[key]=value;return true;}});
+ const win=dom.window;let polygons=0, clears=0;let browserError:unknown=null;win.addEventListener('error',e=>{browserError=e.error;e.preventDefault();});
+ const paint=new Proxy({closePath(){polygons++},clearRect(){clears++},createRadialGradient(){return {addColorStop(){}}},createLinearGradient(){return {addColorStop(){}}}}, {get:(target,key)=>key in target?(target as any)[key]:()=>{},set:(target,key,value)=>{(target as any)[key]=value;return true;}});
  (win.HTMLCanvasElement.prototype as any).getContext=()=>paint;
  (win as any).fetch=(url:string,options:any)=>fetch(new URL(url,base),options);
  (win as any).structuredClone=structuredClone;
@@ -37,7 +37,11 @@ try{
  win.eval(script);
  await new Promise<void>((resolve,reject)=>{const timer=setTimeout(()=>{clearInterval(check);reject(Error('browser demo did not render: '+String(browserError)+' status='+win.document.querySelector('#status')?.textContent));},7000);const check=setInterval(()=>{const text=win.document.querySelector('#status')?.textContent||'';if(text.includes('3 pilots') && polygons>2){clearTimeout(timer);clearInterval(check);resolve();}},20)});
  assert(polygons>2,'actual demo canvas calls draw for ships and enemy polygons');assert.equal(browserError,null,'original game renderer should finish without throwing');
+ const beforeDisconnectPolygons=polygons, beforeDisconnectClears=clears;
  browserSocket!.terminate();
+ await new Promise(resolve=>setTimeout(resolve,250));
+ assert(polygons>beforeDisconnectPolygons,'last scene keeps painting while disconnected');
+ assert.equal(clears,beforeDisconnectClears,'disconnect does not flash a blank canvas');
  await new Promise<void>((resolve,reject)=>{const timer=setTimeout(()=>{clearInterval(check);reject(Error('browser did not reconnect: '+win.document.querySelector('#status')?.textContent));},12000);const check=setInterval(()=>{if(browserConnections>=2 && (win.document.querySelector('#status')?.textContent||'').includes('3 pilots')){clearTimeout(timer);clearInterval(check);resolve();}},50)});
  assert(browserConnections>=2,'browser reconnects with a fresh guest session');
  win.dispatchEvent(new win.Event('pagehide'));win.close();

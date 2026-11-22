@@ -1,3 +1,8 @@
+## 0.3. v2.29.19 — Harpoons and multiplayer test
+
+- Harpoons prioritise the component hovered at launch.
+- Improved multiplayer test playback and connection diagnostics.
+
 ## 0.3. v2.29.18 — Multiplayer test performance
 
 - Reduced multiplayer test snapshot bandwidth and rendering overhead.

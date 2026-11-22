@@ -247,7 +247,7 @@ export interface LComp { id: number; c: Comp; x: number; y: number; vx: number; 
 export interface RopeNode { x: number; y: number; px: number; py: number }
 export interface Harpoon {
   slot: number; state: 0 | 1 | 2 | 3; hx: number; hy: number; hvx: number; hvy: number; nodes: RopeNode[];
-  len: number; hp: number; maxHp: number; comp: LComp | null; travelled: number; cool: number; taut: number; ang: number;
+  len: number; hp: number; maxHp: number; comp: LComp | null; target?: LComp | null; targetX?: number; targetY?: number; travelled: number; cool: number; taut: number; ang: number;
 }
 export interface Other { id: string; name: string; x: number; y: number; a: number; tx: number; ty: number; ta: number; seen: number }
 export interface Toast { id: number; msg: string; color: string; t: number }
@@ -1088,7 +1088,13 @@ export class Game {
     h.ang = ang;
     h.hx = p.x + Math.cos(ang) * 16; h.hy = p.y + Math.sin(ang) * 16;
     h.hvx = Math.cos(ang) * sp + p.vx * 0.4; h.hvy = Math.sin(ang) * sp + p.vy * 0.4;
-    h.travelled = 0; h.comp = null; h.hp = this.stats.hHp; h.maxHp = this.stats.hHp; h.len = 30; h.taut = 0;
+    h.travelled = 0; h.comp = null; h.target = this.compUnderCursor();
+    if (h.target) {
+      const dx = mx - h.target.x, dy = my - h.target.y;
+      const ca = Math.cos(-h.target.a), sa = Math.sin(-h.target.a);
+      h.targetX = dx * ca - dy * sa; h.targetY = dx * sa + dy * ca;
+    }
+    h.hp = this.stats.hHp; h.maxHp = this.stats.hHp; h.len = 30; h.taut = 0;
     const px = -Math.sin(ang), py = Math.cos(ang);
     for (let i = 0; i < N_ROPE; i++) {
       const n = h.nodes[i];
@@ -1103,12 +1109,13 @@ export class Game {
   }
   private retract(h: Harpoon) {
     this.unhook(h);
+    h.target = null;
     h.state = 3;
   }
   private snapHarpoon(h: Harpoon, why: string) {
     for (let i = 0; i < N_ROPE; i += 2) this.addParticle(h.nodes[i].x, h.nodes[i].y, (Math.random() - 0.5) * 240, (Math.random() - 0.5) * 240, i % 4 === 0 ? "#ff5d73" : "#7df9ff", 5, 0.7, 4);
     this.unhook(h);
-    h.state = 0; h.cool = 2;
+    h.target = null; h.state = 0; h.cool = 2;
     this.shake = Math.max(this.shake, 5);
     this.toast(why, "#ff8a8a");
   }
@@ -1150,23 +1157,44 @@ export class Game {
       if (h.state === 0) continue;
       if (p.dead) { this.retract(h); }
       if (h.state === 1) {
-        h.hx += h.hvx * dt; h.hy += h.hvy * dt;
-        h.travelled += Math.hypot(h.hvx, h.hvy) * dt;
+        if (h.target && !this.comps.includes(h.target)) h.target = null;
+        const oldX = h.hx, oldY = h.hy;
+        if (h.target) {
+          // Lock the piece selected at launch. Ignore intervening pieces and
+          // follow its current position so moving salvage remains selectable.
+          const ca = Math.cos(h.target.a), sa = Math.sin(h.target.a);
+          const tx = h.target.x + (h.targetX ?? 0) * ca - (h.targetY ?? 0) * sa;
+          const ty = h.target.y + (h.targetX ?? 0) * sa + (h.targetY ?? 0) * ca;
+          const dx = tx - h.hx, dy = ty - h.hy;
+          const dist = Math.hypot(dx, dy);
+          const travel = Math.min(dist, st.hSpeed * dt, Math.max(0, st.hRange - h.travelled));
+          if (dist > 0) { h.hx += dx / dist * travel; h.hy += dy / dist * travel; }
+          h.travelled += travel;
+        } else {
+          h.hx += h.hvx * dt; h.hy += h.hvy * dt;
+          h.travelled += Math.hypot(h.hvx, h.hvy) * dt;
+        }
         let hit: LComp | null = null;
-        for (const c of this.comps) {
-          const dx = h.hx - c.x, dy = h.hy - c.y;
+        const candidates = h.target ? [h.target] : this.comps;
+        for (const c of candidates) {
+          // Test the closest point on the travelled segment to avoid tunnelling
+          // through a small component during a long frame.
+          const vx = h.hx - oldX, vy = h.hy - oldY, length2 = vx * vx + vy * vy;
+          const fraction = length2 ? clamp(((c.x-oldX)*vx + (c.y-oldY)*vy) / length2, 0, 1) : 0;
+          const dx = oldX + vx * fraction - c.x, dy = oldY + vy * fraction - c.y;
           if (dx * dx + dy * dy > (c.r + 14) * (c.r + 14)) continue;
           const ca = Math.cos(-c.a), sa = Math.sin(-c.a);
           const lx = dx * ca - dy * sa, ly = dx * sa + dy * ca;
-          if (distToPoly(lx, ly, c.c.poly) < 12) { hit = c; break; }
+          const endX = h.hx - c.x, endY = h.hy - c.y;
+          if (distToPoly(lx, ly, c.c.poly) < 12 || distToPoly(endX * ca - endY * sa, endX * sa + endY * ca, c.c.poly) < 12) { hit = c; break; }
         }
         const d = Math.hypot(h.hx - p.x, h.hy - p.y);
         if (hit) {
-          h.state = 2; h.comp = hit; hit.hooks.push(h.slot);
+          h.state = 2; h.comp = hit; h.target = null; hit.hooks.push(h.slot);
           h.len = clamp(d, 60, st.hRange);
           this.shake = Math.max(this.shake, 3);
           for (let i = 0; i < 8; i++) this.addParticle(hit.x, hit.y, (Math.random() - 0.5) * 200, (Math.random() - 0.5) * 200, "#7df9ff", 5, 0.5, 4);
-        } else if (h.travelled > st.hRange) h.state = 3;
+        } else if (h.travelled >= st.hRange) { h.target = null; h.state = 3; }
         this.stepRope(h, Math.max(3, (d * 1.12 + 20) / (N_ROPE - 1)));
       } else if (h.state === 2) {
         const c = h.comp;

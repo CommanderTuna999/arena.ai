@@ -18,7 +18,7 @@ peer.bufferedAmount=101;transport.advance(12000);transport.advance(27000);assert
 const {packGeometry,unpackGeometry}=await import('./source/src/game/multiplayer/demo-geometry');
 const {deflateRawSync}=await import('node:zlib');
 const first=packGeometry(view,new Map());const restoredFirst=unpackGeometry(first.world,new Map());assert(restoredFirst);assert.deepEqual(restoredFirst.world,view);
-const damaged=structuredClone(view);damaged.enemies[0].parts[0].hp-=1;
+const damaged=structuredClone(view);const changed=damaged.enemies[0].parts[0];changed.hp-=1;changed.maxHp+=10;changed.alive=false;changed.hurt=.5;changed.barT=.2;changed.muzzle+=1;changed.shieldHp-=1;changed.shieldDown=.4;changed.shieldHit=.1;changed.cd=.3;changed.beam=.6;
 const second=packGeometry(damaged,first.cache);const wirePart=second.world.enemies[0].parts[0];assert(!('poly' in wirePart));assert(!('links' in wirePart));
 const restored=unpackGeometry(second.world,restoredFirst.cache);assert(restored);assert.deepEqual(restored.world,damaged,'dynamic damage changes while geometry survives');
 assert.equal(unpackGeometry(second.world,new Map()),null,'missing geometry requires reconnect rather than rendering incorrect data');
@@ -34,3 +34,10 @@ wire.onmessage({data:JSON.stringify({type:'world-snapshot',sequence:0,geometryCa
 wire.onmessage({data:JSON.stringify({type:'world-snapshot',sequence:1,geometryCache:1,world:{...second.world,time:2}})});
 assert.deepEqual(wireClient.snapshot()!.enemies[0].parts,damaged.enemies[0].parts,'client restores compressed geometry and current damage');wireClient.disconnect();
 const idleWorld=new Game(newSave(),'idle'), idle=new CombatHarness(idleWorld,4,false,undefined,undefined,true);idle.step(.03,100);assert.equal(idleWorld.t,0,'empty disposable world does no simulation');
+const {DemoPlayback}=await import('./source/src/game/multiplayer/demo-playback');
+const playback=new DemoPlayback(.18);let last=-Infinity;
+// Late and irregular arrivals used to rewind the interpolation target every time
+// the delayed playhead had caught up to a previous server snapshot.
+for(const [serverTime,wall] of [[1,0],[1,200],[1.133,201],[1.133,250],[1.3,400],[1.3,500],[1.433,505]] as const){
+ const next=playback.sample(serverTime,wall);assert(next>=last,'playback never rewinds');assert(next<=serverTime,'playback never extrapolates');last=next;
+}

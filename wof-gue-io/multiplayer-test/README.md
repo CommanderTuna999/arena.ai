@@ -13,4 +13,6 @@ The test is accessed at the service's own HTTPS URL. It has bounded guest sessio
 
 The browser retries disconnected sessions with backoff; reconnecting creates a new temporary guest. Under congestion, the server skips obsolete snapshots and closes clients only after a sustained backlog. These measures do not guarantee a smooth connection on a loaded or sleeping instance.
 
-The test omits unchanged enemy polygon/link data after first delivery on each ordered connection; invisible enemies are evicted and sent in full if they return. The world pauses simulation while it has no guests. This is an experimental demo protocol, not production replication.
+The test omits unchanged enemy part geometry and visual metadata after first delivery on each ordered connection; invisible enemies are evicted and sent in full if they return. The world pauses simulation while it has no guests. This is an experimental demo protocol, not production replication.
+
+The overlay shows approximate browser FPS and time between observed world updates; the latter is not network ping. Playback is monotonic and retains the last scene while reconnecting.

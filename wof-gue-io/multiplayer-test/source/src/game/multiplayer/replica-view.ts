@@ -21,10 +21,10 @@ export class ReplicaView {
     this.game.cam.z = .38;
   }
   resize(w: number, h: number, dpr: number) { this.game.resize(w,h,dpr); }
-  apply(world: WorldSnapshot, pilots: Pilot[], enemies: EnemyView[], pilotId: string): boolean {
+  apply(world: WorldSnapshot, pilots: Pilot[], enemies: EnemyView[], pilotId: string, renderTime = world.time): boolean {
     const me=pilots.find(p=>p.id===pilotId);if(!me)return false;
     const g=this.game;
-    g.t=world.time;
+    g.t=renderTime;
     Object.assign(g.player,{x:me.x,y:me.y,a:me.angle,hp:me.hp,shield:me.shield,dead:me.dead});
     g.cam.x=me.x;g.cam.y=me.y;
     g.others=pilots.filter(p=>p.id!==pilotId).map(p=>({id:p.id,name:p.name,x:p.x,y:p.y,a:p.angle,tx:p.x,ty:p.y,ta:p.angle,seen:world.time} satisfies Other));

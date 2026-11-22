@@ -1,0 +1,14 @@
+import assert from 'node:assert/strict';
+import { Game, type LComp } from './src/game/engine';
+import { newSave, type Comp } from './src/game/data';
+const g=new Game(newSave(),'pilot');g.player.x=0;g.player.y=0;g.player.vx=0;g.player.vy=0;g.cam.x=0;g.cam.y=0;g.cam.z=1;g.resize(1000,800,1);
+const make=(id:number,x:number):LComp=>({id,c:{id:String(id),species:'Moth',name:'Wing',kind:'wing',tier:1,poly:[-20,-20,20,-20,20,20,-20,20],area:100,mass:8,hue:10,value:20} satisfies Comp,x,y:0,vx:0,vy:0,a:0,va:0,r:29,hooks:[],stress:0,ttl:100,born:0,srcId:id});
+const near=make(1,100),target=make(2,250);g.comps=[near,target];g.input.mx=750;g.input.my=400;assert.equal(g.compUnderCursor(),target);
+(g as any).fireHarpoon();const h=g.harpoons[0];assert.equal(h.target,target);for(let i=0;i<20&&h.state===1;i++)(g as any).updateHarpoons(.02);assert.equal(h.comp,target);assert.deepEqual(near.hooks,[]);assert.deepEqual(target.hooks,[0]);
+(g as any).retract(h);h.state=0;h.cool=0;g.input.mx=900;g.input.my=400;(g as any).fireHarpoon();assert.equal(h.target,null);for(let i=0;i<20&&h.state===1;i++)(g as any).updateHarpoons(.02);assert.equal(h.comp,near,'no hovered piece retains ordinary collision');
+(g as any).retract(h);h.state=0;h.cool=0;g.comps=[near,target];g.input.mx=750;(g as any).fireHarpoon();g.comps=[near];for(let i=0;i<20&&h.state===1;i++)(g as any).updateHarpoons(.02);assert.equal(h.comp,near,'disappearing target falls back to normal collision');
+(g as any).retract(h);h.state=0;h.cool=0;g.stats.hRange=120;g.comps=[near,target];g.input.mx=750;(g as any).fireHarpoon();for(let i=0;i<20&&h.state===1;i++)(g as any).updateHarpoons(.02);assert.equal(h.state,3);assert.equal(h.comp,null,'target beyond range is not pulled from afar');
+(g as any).retract(h);h.state=0;h.cool=0;g.stats.hRange=380;
+const offset=make(9,250);offset.c.poly=[30,-20,70,-20,70,20,30,20];offset.r=73;g.comps=[near,offset];g.input.mx=800;g.input.my=400;
+(g as any).fireHarpoon();assert.equal(h.target,offset);offset.y=20;offset.a=.2;for(let i=0;i<20&&h.state===1;i++)(g as any).updateHarpoons(.02);assert.equal(h.comp,offset,'aim point follows a moving, rotated and off-centre polygon');
+console.log('Harpoons prioritize selected components, respect range and fall back if target disappears');

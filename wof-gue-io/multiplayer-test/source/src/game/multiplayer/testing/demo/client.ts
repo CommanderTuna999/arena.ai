@@ -1,11 +1,14 @@
 import { ExperimentalWorldClient } from '../../world-client';
 import { ReplicaView } from '../../replica-view';
+import { DemoPlayback } from '../../demo-playback';
 import { render } from '../../../render';
 const canvas=document.querySelector('canvas')!,ctx=canvas.getContext('2d')!,status=document.querySelector('#status')!;
 const replica=new ReplicaView();
 let client=new ExperimentalWorldClient(url=>new WebSocket(url),15000,window.location.origin,true);
 let stopped=false, connecting=false, retryTimer: ReturnType<typeof setTimeout> | null=null, attempts=0;
-let sequence=0,mouseX=innerWidth/2,mouseY=innerHeight/2,fire=false,latestTime=0,receivedAt=0;
+let sequence=0,mouseX=innerWidth/2,mouseY=innerHeight/2,fire=false;
+let displayClient: ExperimentalWorldClient | null=null, playback=new DemoPlayback();
+let frames=0,fps=0,fpsStarted=performance.now(),lastViewTime=-1,lastArrival=0,updateGap=0;
 const keys=new Set<string>();
 function resize(){const d=Math.min(devicePixelRatio||1,1.5);canvas.width=Math.round(innerWidth*d);canvas.height=Math.round(innerHeight*d);ctx.setTransform(d,0,0,d,0,0);replica.resize(innerWidth,innerHeight,d);}
 window.addEventListener('resize',resize);resize();
@@ -15,15 +18,22 @@ canvas.addEventListener('mousemove',e=>{mouseX=e.clientX;mouseY=e.clientY});canv
 const send=setInterval(()=>{if(client.state!=='online')return;const aim=Math.atan2(mouseY-innerHeight/2,mouseX-innerWidth/2);client.sendInput({seq:sequence++,forward:keys.has('KeyW'),backward:keys.has('KeyS'),left:keys.has('KeyA'),right:keys.has('KeyD'),boost:keys.has('ShiftLeft'),fire:fire||keys.has('Space'),aim});},50);
 function draw(){
  requestAnimationFrame(draw);
- ctx.clearRect(0,0,innerWidth,innerHeight);ctx.fillStyle='#040b12';ctx.fillRect(0,0,innerWidth,innerHeight);
- const view=client.renderSnapshot() as any;if(client.state==='closed'){status.textContent='Disconnected — reconnecting…';scheduleReconnect();return;}if(!view){status.textContent=`${client.state}…`;return;}
- if(view.time!==latestTime){latestTime=view.time;receivedAt=performance.now();}
- const sampled=client.sample(Math.min(latestTime,latestTime-.18+Math.max(0,(performance.now()-receivedAt)/1000))) as any;
+ const now=performance.now();frames++;
+ if(now-fpsStarted>=1000){fps=Math.round(frames*1000/(now-fpsStarted));frames=0;fpsStarted=now;}
+ const current=client.renderSnapshot();
+ if(current && displayClient!==client){displayClient=client;playback=new DemoPlayback();lastViewTime=-1;lastArrival=0;updateGap=0;}
+ if(current && current.time!==lastViewTime){if(lastArrival)updateGap=Math.round(now-lastArrival);lastArrival=now;lastViewTime=current.time;}
+ if(client.state==='closed'){status.textContent='Disconnected — reconnecting…';scheduleReconnect();}
+ else if(client.state!=='online' || !current) status.textContent=`${client.state}…`;
+ const shown=displayClient, view=shown?.renderSnapshot() as any;
+ if(!view || !shown?.pilotId){ctx.setTransform(1,0,0,1,0,0);ctx.fillStyle='#040b12';ctx.fillRect(0,0,canvas.width,canvas.height);return;}
+ const renderTime=playback.sample(view.time,now);
+ const sampled=shown.sample(renderTime) as any;
  const pilotPositions=new Map(sampled.pilots.map((p:any)=>[p.id,p]));
  const pilots=view.pilots.map((p:any)=>({...p,...pilotPositions.get(p.id) as any}));
- const me=pilots.find((p:any)=>p.id===client.pilotId);if(!me)return;
- attempts=0;status.textContent=`${sampled.pilots.length} pilot${sampled.pilots.length===1?'':'s'} nearby · ${sampled.enemies.length} enemies · temporary demo`;
- if(replica.apply(view,pilots,sampled.enemies,client.pilotId!)) render(replica.game,ctx);
+ const me=pilots.find((p:any)=>p.id===shown.pilotId);if(!me)return;
+ if(client===shown && client.state==='online'){attempts=0;status.textContent=`${sampled.pilots.length} pilot${sampled.pilots.length===1?'':'s'} nearby · ${sampled.enemies.length} enemies · ${fps || "…"} FPS · updates ${updateGap || "…"} ms`;}
+ if(replica.apply(view,pilots,sampled.enemies,shown.pilotId,renderTime)) render(replica.game,ctx);
 }
 function scheduleReconnect(){
  if(stopped || connecting || retryTimer)return;
@@ -37,7 +47,7 @@ async function connect(){
   const res=await fetch('/session',{cache:'no-store'});if(!res.ok)throw Error('Session unavailable');
   const {ticket}=await res.json();if(stopped)return;
   client=new ExperimentalWorldClient(url=>new WebSocket(url),15000,window.location.origin,true);
-  sequence=0;latestTime=0;receivedAt=0;keys.clear();fire=false;
+  sequence=0;keys.clear();fire=false;
   const url=new URL('/world',location.href);url.protocol=location.protocol==='https:'?'wss:':'ws:';
   client.connect(url.toString(),ticket);
  }catch{status.textContent='Connection unavailable — retrying…';client.disconnect();}
