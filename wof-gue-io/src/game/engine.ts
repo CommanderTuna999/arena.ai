@@ -3300,8 +3300,8 @@ export class Game {
       const y = p.y + Math.sin(p.a) * m.x + Math.cos(p.a) * m.y;
       this.beam(x, y, p.a, st.bulletRange, this.mediatorBeamDamage * step, st.pierce, false, "laser", "#e9d5ff", st.beamWidth);
       // Sustained thrust from the beam, not just a one-off firing kick.
-      p.vx -= Math.cos(p.a) * 950 * step;
-      p.vy -= Math.sin(p.a) * 950 * step;
+      p.vx -= Math.cos(p.a) * 2850 * step;
+      p.vy -= Math.sin(p.a) * 2850 * step;
       return;
     }
     const base = p.a;
@@ -3337,7 +3337,7 @@ export class Game {
         this.burst(m.x, m.y, col, 18, 7, 420);
         this.ringFx(m.x, m.y, 70, col, 500);
         this.shake = Math.max(this.shake, 14 + 10 * p.charge);
-        p.vx -= Math.cos(base) * st.kick; p.vy -= Math.sin(base) * st.kick;
+        p.vx -= Math.cos(base) * st.kick * 3; p.vy -= Math.sin(base) * st.kick * 3;
         p.charge = 0;
         p.fireCd = 3.7;
       } else {
@@ -4101,7 +4101,9 @@ export class Game {
       if (!this.inSafe()) this.shieldContact(p);
       const [mx, my] = this.mouseWorld();
       const want = Math.atan2(my - p.y, mx - p.x);
-      p.a += clamp(angDiff(p.a, want), -14 * dt, 14 * dt);
+      // The sustained Mediator beam is deliberately difficult to steer.
+      const turnRate = st.charge && this.mediatorBeamTime > 0 && !this.inSafe() ? 1.4 : 14;
+      p.a += clamp(angDiff(p.a, want), -turnRate * dt, turnRate * dt);
 
       // status
       p.hitT += dt;

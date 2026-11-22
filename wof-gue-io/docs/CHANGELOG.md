@@ -1,3 +1,8 @@
+## 0.3. v2.23.1 — Mediator handling
+
+- Removed the charge progress bar; the charging animation remains.
+- Mediator's sustained beam turns at one tenth the normal turning rate. Initial and continuous recoil are tripled.
+
 ## 0.3. v2.23.0 — thicker walls and Mediator charge
 
 - Rebuilt the connected maze with walls approximately five times thicker and softened corners. The mythical-to-other walkable area ratio remains approximately 3:1.

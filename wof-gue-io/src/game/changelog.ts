@@ -8,7 +8,7 @@
  *   CHANGELOG and mirror the details in docs/CHANGELOG.md.
  */
 
-export const VERSION = "2.23.0";
+export const VERSION = "2.23.1";
 
 export interface ChangeEntry {
   version: string;
@@ -19,6 +19,13 @@ export interface ChangeEntry {
 }
 
 export const CHANGELOG: ChangeEntry[] = [
+  {
+    version: "2.23.1", date: "20 Nov 2026", title: "Mediator handling",
+    points: [
+      "Removed the Mediator charge bar while keeping its charging animation and 70-to-10-second charge progression.",
+      "The Mediator's sustained beam turns much more slowly and its initial and continuous recoil are tripled.",
+    ],
+  },
   {
     version: "2.23.0", date: "20 Nov 2026", title: "Thicker walls and Mediator charge",
     points: [
