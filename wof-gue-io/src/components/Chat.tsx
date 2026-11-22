@@ -27,7 +27,7 @@ export default function Chat({ game, notices }: { game: Game; notices: Toast[] }
   const input = useRef<HTMLInputElement>(null), end = useRef<HTMLDivElement>(null);
   const socket = useRef<WebSocket | null>(null);
   const seen = useRef(new Set<number>());
-  const [status, setStatus] = useState<'offline' | 'connecting' | 'online'>('offline');
+  const [status, setStatus] = useState<'offline' | 'connecting' | 'online' | 'updating'>('offline');
   const wake = () => {
     setFaded(false);
     if (fadeTimer.current) clearTimeout(fadeTimer.current);
@@ -76,7 +76,7 @@ export default function Chat({ game, notices }: { game: Game; notices: Toast[] }
     };
     const pump = () => {
       const ws = socket.current, now = Date.now(), first = queue.list()[0];
-      if (!ready || !ws || ws.readyState !== WebSocket.OPEN || !first || now - lastSend < 1300) return;
+      if (!ready || protocol !== 2 || !ws || ws.readyState !== WebSocket.OPEN || !first || now - lastSend < 1300) return;
       if (inFlight && inFlight.id === first.id && now - inFlight.at < 4000) return;
       try {
         ws.send(JSON.stringify({ type: 'chat', clientId: first.id, name: first.name, text: first.text }));
@@ -96,7 +96,7 @@ export default function Chat({ game, notices }: { game: Game; notices: Toast[] }
         try {
           const data = JSON.parse(event.data);
           if (data.type === 'history' && Array.isArray(data.messages)) {
-            protocol = data.protocol === 2 ? 2 : 1; ready = true;
+            protocol = data.protocol === 2 ? 2 : 1; ready = true; if (protocol !== 2) setStatus('updating');
             for (const message of data.messages) if (typeof message?.clientId === 'string') acknowledge(message.clientId);
             setMessages(prev => [...prev.filter(m => m.local), ...data.messages].slice(-60));
             pump();
@@ -133,7 +133,7 @@ export default function Chat({ game, notices }: { game: Game; notices: Toast[] }
   if (!expanded) return <button type="button" onClick={() => open(true)} aria-label={`Open chat${unread ? `, ${unread} unread` : ''}`} className="absolute bottom-4 left-4 z-[70] rounded border border-cyan-200/30 bg-[#050e16] px-3 py-2 text-xs font-bold text-cyan-200">CHAT{unread > 0 && <span className="ml-2 rounded-full bg-cyan-300 px-1.5 text-black">{unread}</span>}</button>;
   return <section className="pointer-events-none absolute bottom-4 left-4 z-[70] w-[min(22rem,85vw)] text-xs" aria-label="Chat">
     <div aria-hidden={faded} onMouseMove={wake} onFocus={wake} className={`rounded-t border border-cyan-200/30 bg-[#050e16]/95 p-2 shadow-lg transition-opacity duration-500 ${faded ? 'pointer-events-none opacity-0' : 'pointer-events-auto opacity-100'}`}>
-      <div className="mb-1 flex justify-between text-[10px] font-bold tracking-widest text-cyan-200/70"><span>CHAT</span><span className="flex items-center gap-2"><span title={status === 'offline' ? 'Connection failed; retrying. Check the website address and network.' : undefined}>{status === 'online' ? 'ONLINE' : status === 'connecting' ? 'CONNECTING' : 'OFFLINE · RETRYING'}</span><button type="button" aria-label="Collapse chat" tabIndex={faded ? -1 : 0} onClick={() => { manuallyCollapsed.current = true; expandedRef.current = false; setExpanded(false); }} className="rounded border border-white/30 px-1 text-white">−</button></span></div>
+      <div className="mb-1 flex justify-between text-[10px] font-bold tracking-widest text-cyan-200/70"><span>CHAT</span><span className="flex items-center gap-2"><span title={status === 'offline' ? 'Connection failed; retrying. Check the website address and network.' : undefined}>{status === 'online' ? 'ONLINE' : status === 'connecting' ? 'CONNECTING' : status === 'updating' ? 'SERVER UPDATE NEEDED' : 'OFFLINE · RETRYING'}</span><button type="button" aria-label="Collapse chat" tabIndex={faded ? -1 : 0} onClick={() => { manuallyCollapsed.current = true; expandedRef.current = false; setExpanded(false); }} className="rounded border border-white/30 px-1 text-white">−</button></span></div>
       <div aria-live="polite" className="h-24 overflow-y-auto break-words text-white/80">
         {messages.map(m => <div key={m.id}><span className={m.local ? 'font-bold text-yellow-200' : 'font-bold text-cyan-200'}>{m.name}: </span>{m.text}</div>)}
         {pending.map(m => <div key={`queued-${m.id}`}><span className="font-bold text-cyan-200">{m.name}: </span>{m.text} <span className="text-yellow-200/80">(queued)</span></div>)}
