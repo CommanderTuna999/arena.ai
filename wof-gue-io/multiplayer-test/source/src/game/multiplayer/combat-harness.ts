@@ -19,6 +19,9 @@ export class CombatHarness {
   }
   step(dt: number, nowMs: number): void {
     if (!Number.isFinite(dt) || dt <= 0 || dt > .05 || !Number.isFinite(nowMs)) throw new Error('Invalid combat step');
+    // In this disposable guest demo, freeze the world when nobody is present.
+    // Production worlds may require persistent timers and must not use this shortcut.
+    if (this.discardRewards && this.roster.size === 0) return;
     this.world.t += dt;
     if (!this.discardRewards) for (const pilot of this.roster.contexts()) this.dropChances.set(pilot.pid, pilot.stats.dropChance);
     this.roster.step(dt, nowMs);

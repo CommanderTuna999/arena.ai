@@ -18,7 +18,7 @@ function draw(){
  ctx.clearRect(0,0,innerWidth,innerHeight);ctx.fillStyle='#040b12';ctx.fillRect(0,0,innerWidth,innerHeight);
  const view=client.renderSnapshot() as any;if(client.state==='closed'){status.textContent='Disconnected — reconnecting…';scheduleReconnect();return;}if(!view){status.textContent=`${client.state}…`;return;}
  if(view.time!==latestTime){latestTime=view.time;receivedAt=performance.now();}
- const sampled=client.sample(Math.min(latestTime,latestTime-.08+Math.max(0,(performance.now()-receivedAt)/1000))) as any;
+ const sampled=client.sample(Math.min(latestTime,latestTime-.18+Math.max(0,(performance.now()-receivedAt)/1000))) as any;
  const pilotPositions=new Map(sampled.pilots.map((p:any)=>[p.id,p]));
  const pilots=view.pilots.map((p:any)=>({...p,...pilotPositions.get(p.id) as any}));
  const me=pilots.find((p:any)=>p.id===client.pilotId);if(!me)return;

@@ -41,17 +41,17 @@ export class ReplicaView {
       g.enemies.push({...e,sp,spd:SPECIES_LIST[sp],a:e.angle,S:e.size,parts,shields,
         dist:Math.hypot(e.x-me.x,e.y-me.y),dead:false} as unknown as Enemy);
     }
+    const byEnemy=new Map(g.enemies.map(e=>[e.id,e]));
+    g.bullets=world.bullets.map(b=>({...b} as unknown as Bullet));
+    g.eprojs=world.enemyProjectiles.map(p=>({...p,r:p.radius,src:p.srcId===undefined?null:byEnemy.get(p.srcId)??null} as unknown as EProj));
+    g.puddles=world.puddles.map(p=>({...p,r:p.radius} as unknown as Puddle));
+    g.rings=world.rings.map(r=>({...r,r:r.radius} as unknown as Ring));
     }
     const positions = new Map(enemies.map(e=>[e.id,e]));
     for (const e of g.enemies) {
       const pos=positions.get(e.id); if (!pos) continue;
       e.x=pos.x; e.y=pos.y; e.a=pos.angle; e.dist=Math.hypot(e.x-me.x,e.y-me.y);
     }
-    const byEnemy=new Map(g.enemies.map(e=>[e.id,e]));
-    g.bullets=world.bullets.map(b=>({...b} as unknown as Bullet));
-    g.eprojs=world.enemyProjectiles.map(p=>({...p,r:p.radius,src:p.srcId===undefined?null:byEnemy.get(p.srcId)??null} as unknown as EProj));
-    g.puddles=world.puddles.map(p=>({...p,r:p.radius} as unknown as Puddle));
-    g.rings=world.rings.map(r=>({...r,r:r.radius} as unknown as Ring));
     return true;
   }
 }

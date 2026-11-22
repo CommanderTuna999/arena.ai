@@ -1,5 +1,6 @@
 import { PilotRoom } from './pilot-room';
 import { interestSnapshot } from './interest';
+import { packGeometry, type Geometry } from './demo-geometry';
 
 /** Transport-neutral, EXPERIMENTAL pilot/combat-test protocol. A real server must
  * authenticate, bind an account to the connection, rate limit handshakes and
@@ -13,9 +14,10 @@ export interface PilotPeer {
 export class PilotTransport {
   private readonly peers = new Map<PilotPeer, string>();
   private snapshotSequence = 0;
+  private readonly geometry = new Map<PilotPeer, Geometry>();
   private readonly congestedSince = new Map<PilotPeer, number>();
   private lastBroadcastMs = -Infinity;
-  constructor(private readonly room: PilotRoom, private readonly maxBufferedBytes = 65536, private readonly interestRadius = 20_000, private readonly broadcastIntervalMs = 0) {
+  constructor(private readonly room: PilotRoom, private readonly maxBufferedBytes = 65536, private readonly interestRadius = 20_000, private readonly broadcastIntervalMs = 0, private readonly compactGeometry = false) {
     if (!Number.isFinite(broadcastIntervalMs) || broadcastIntervalMs < 0) throw new Error('Invalid broadcast interval');
     if (!Number.isSafeInteger(maxBufferedBytes) || maxBufferedBytes < 1 || !Number.isFinite(interestRadius) || interestRadius <= 0 || interestRadius > 100_000) throw new Error('Invalid transport limits');
   }
@@ -29,7 +31,7 @@ export class PilotTransport {
   detach(peer: PilotPeer): void {
     const id = this.peers.get(peer);
     if (id === undefined) return;
-    this.peers.delete(peer); this.congestedSince.delete(peer); this.room.leave(id);
+    this.peers.delete(peer); this.congestedSince.delete(peer); this.geometry.delete(peer); this.room.leave(id);
   }
   receive(peer: PilotPeer, text: string, nowMs: number): boolean {
     const id = this.peers.get(peer);
@@ -62,7 +64,11 @@ export class PilotTransport {
         if (shared) {
           const view = interestSnapshot(shared, pilotId, this.interestRadius);
           if (!view) { peer.close(1011, 'Pilot missing'); this.detach(peer); }
-          else peer.send(JSON.stringify({ type: 'world-snapshot', sequence, world: view }));
+          else if (this.compactGeometry) {
+            const packed = packGeometry(view, this.geometry.get(peer) ?? new Map());
+            peer.send(JSON.stringify({ type: 'world-snapshot', sequence, geometryCache: 1, world: packed.world }));
+            this.geometry.set(peer, packed.cache);
+          } else peer.send(JSON.stringify({ type: 'world-snapshot', sequence, world: view }));
         } else peer.send(pilotMessage!);
       } catch { this.detach(peer); try { peer.close(1011, 'Send failed'); } catch {} }
     }

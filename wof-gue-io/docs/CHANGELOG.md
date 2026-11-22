@@ -1,3 +1,7 @@
+## 0.3. v2.29.18 — Multiplayer test performance
+
+- Reduced multiplayer test snapshot bandwidth and rendering overhead.
+
 ## 0.3. v2.29.17 — Component magnet
 
 - The component magnet collects eligible items immediately; the pull animation is cosmetic.

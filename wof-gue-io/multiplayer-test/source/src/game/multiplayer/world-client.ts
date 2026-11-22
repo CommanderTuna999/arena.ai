@@ -1,5 +1,6 @@
 import { parseInput, type PlayerInput } from './input';
 import { SnapshotBuffer, type RenderBody } from './snapshot-buffer';
+import { unpackGeometry, type Geometry } from './demo-geometry';
 
 type Body = RenderBody & { [key: string]: unknown };
 type View = { time: number; pilots: Body[]; enemies: Body[]; [key: string]: unknown };
@@ -19,9 +20,12 @@ export class ExperimentalWorldClient {
   private lastSequence = -1;
   private inputSequence = -1;
   private latestView: View | null = null;
-  private readonly pilotFrames = new SnapshotBuffer<Body>();
-  private readonly enemyFrames = new SnapshotBuffer<Body>();
+  private geometry: Geometry = new Map();
+  private readonly pilotFrames: SnapshotBuffer<Body>;
+  private readonly enemyFrames: SnapshotBuffer<Body>;
   constructor(private readonly factory: SocketFactory = url => new WebSocket(url), private readonly timeoutMs = 5000, private readonly demoOrigin?: string, private readonly compactHistory = false) {
+    this.pilotFrames = new SnapshotBuffer<Body>(32, compactHistory);
+    this.enemyFrames = new SnapshotBuffer<Body>(32, compactHistory);
     if (!Number.isSafeInteger(timeoutMs) || timeoutMs < 1 || timeoutMs > 60000) throw new Error('Invalid handshake timeout');
   }
   connect(url: string, ticket: string): void {
@@ -50,17 +54,19 @@ export class ExperimentalWorldClient {
         this.pilotId=data.pilotId; this.state='online'; if (this.timer) clearTimeout(this.timer); this.timer=null; return;
       }
       if (this.state !== 'online' || data?.type !== 'world-snapshot' || !Number.isSafeInteger(data.sequence) || data.sequence <= this.lastSequence || !data.world || typeof data.world !== 'object') return;
-      const world=data.world as View;
+      const unpacked = data.geometryCache === 1 ? unpackGeometry(data.world, this.geometry) : null;
+      if (data.geometryCache === 1 && !unpacked) { this.disconnect(); return; }
+      const world=(unpacked?.world ?? data.world) as View;
       if (!Array.isArray(world.pilots) || !Array.isArray(world.enemies) || !world.pilots.some(p=>p?.id===this.pilotId)) return;
       // Validate both sets before mutating either history: a malformed snapshot
       // must not advance the stream or create inconsistent animation buffers.
-      const validation = new SnapshotBuffer<Body>(2);
       const compact = (b: Body): Body => ({id:b.id, x:b.x, y:b.y, angle:b.angle});
       const pilots={sequence:data.sequence,time:world.time,bodies:this.compactHistory ? world.pilots.map(compact) : world.pilots};
       const enemies={sequence:data.sequence,time:world.time,bodies:this.compactHistory ? world.enemies.map(compact) : world.enemies};
-      if (!validation.push(pilots)) return; validation.clear(); if (!validation.push(enemies)) return;
+      if (!SnapshotBuffer.valid(pilots) || !SnapshotBuffer.valid(enemies)) return;
       if (this.latestView && world.time <= this.latestView.time) return;
       if (!this.pilotFrames.push(pilots) || !this.enemyFrames.push(enemies)) { this.disconnect(); return; }
+      if (unpacked) this.geometry = unpacked.cache;
       this.lastSequence=data.sequence; this.latestView=this.compactHistory ? world : structuredClone(world);
     };
     socket.onerror = () => this.disconnect();

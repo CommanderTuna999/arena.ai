@@ -1,13 +1,16 @@
 import assert from 'node:assert/strict';import {WebSocket} from 'ws';import {once} from 'node:events';import {spawn,spawnSync} from 'node:child_process';import {existsSync} from 'node:fs';import {createServer} from 'node:net';
 const probe=createServer();probe.listen(0,'127.0.0.1');await once(probe,'listening');const port=(probe.address() as any).port;await new Promise<void>(r=>probe.close(()=>r()));
 const base=`http://127.0.0.1:${port}`,origin=base;const clients:WebSocket[]=[];
-const bundled=!!process.env.DEMO_BUNDLED || !existsSync('src/game/multiplayer/testing/demo/server.ts');
+// The deployed demo is the isolated snapshot, not the unfinished workspace prototype.
+const bundled=process.env.DEMO_SOURCE !== '1' || !existsSync('src/game/multiplayer/testing/demo/server.ts');
 if(bundled && !existsSync('multiplayer-test/dist/server.cjs')) { const built=spawnSync('node',['multiplayer-test/build.cjs'],{stdio:'inherit'}); assert.equal(built.status,0,'build isolated multiplayer test'); }
 const child=spawn(bundled ? 'node' : 'node_modules/.bin/tsx',bundled ? ['multiplayer-test/start.cjs'] : ['src/game/multiplayer/testing/demo/server.ts'],{env:{...process.env,PORT:String(port)},stdio:['ignore','pipe','pipe']});
 child.stderr!.on('data',d=>process.stderr.write(d));
 await Promise.race([new Promise<void>((resolve,reject)=>{child.stdout!.on('data',d=>{if(String(d).includes('listening'))resolve();});child.on('exit',()=>reject(Error('demo server exited')));}),new Promise((_,reject)=>setTimeout(()=>reject(Error('demo server startup timeout')),10000))]);
-function until(socket:WebSocket,fn:(v:any)=>boolean,timeout=10000){return new Promise<any>((resolve,reject)=>{const t=setTimeout(()=>{socket.off('message',on);reject(Error('timeout waiting for demo snapshot'));},timeout);function on(raw:any){const msg=JSON.parse(raw.toString());if(fn(msg)){clearTimeout(t);socket.off('message',on);resolve(msg);}}socket.on('message',on);});}
-async function join(){const response=await fetch(`${base}/session`);assert(response.ok);const {ticket}=await response.json() as any;const ws=new WebSocket(`ws://127.0.0.1:${port}/world`,{origin});clients.push(ws);await once(ws,'open');const welcome=until(ws,m=>m.type==='welcome');ws.send(JSON.stringify({type:'authenticate',ticket}));const id=(await welcome).pilotId;return {ws,id};}
+const {unpackGeometry}=await import('./multiplayer-test/source/src/game/multiplayer/demo-geometry');
+const decoded = new WeakMap<WebSocket, any>();
+function until(socket:WebSocket,fn:(v:any)=>boolean,timeout=10000){return new Promise<any>((resolve,reject)=>{const t=setTimeout(()=>{socket.off('message',on);reject(Error('timeout waiting for demo snapshot'));},timeout);function on(raw:any){const rawMessage=JSON.parse(raw.toString());const msg=rawMessage.type==='world-snapshot' ? decoded.get(socket) : rawMessage;if(msg && fn(msg)){clearTimeout(t);socket.off('message',on);resolve(msg);}}socket.on('message',on);});}
+async function join(){const response=await fetch(`${base}/session`);assert(response.ok);const {ticket}=await response.json() as any;const ws=new WebSocket(`ws://127.0.0.1:${port}/world`,{origin});clients.push(ws);let cache:any=new Map();ws.on('message',raw=>{const m=JSON.parse(raw.toString());if(m.type==='world-snapshot'){if(m.geometryCache===1){const result=unpackGeometry(m.world,cache);assert(result,'ordered demo geometry must be complete');cache=result.cache;m.world=result.world;}decoded.set(ws,m);}});await once(ws,'open');const welcome=until(ws,m=>m.type==='welcome');ws.send(JSON.stringify({type:'authenticate',ticket}));const id=(await welcome).pilotId;return {ws,id};}
 try{
  const one=await join(),two=await join();
  const hasWorld=(m:any)=>m.type==='world-snapshot'&&m.world.pilots.length===2&&m.world.enemies.length>0;

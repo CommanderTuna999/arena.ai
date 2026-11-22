@@ -15,3 +15,22 @@ const transport=new PilotTransport(mockRoom,100,3500,0);assert(transport.attach(
 peer.bufferedAmount=101;transport.advance(1000);transport.advance(10000);assert.equal(sent,1);assert.equal(closed,0);
 peer.bufferedAmount=0;transport.advance(11000);assert.equal(sent,2,'fresh snapshot after recovery');
 peer.bufferedAmount=101;transport.advance(12000);transport.advance(27000);assert.equal(closed,1,'persistent backlog is bounded');
+const {packGeometry,unpackGeometry}=await import('./source/src/game/multiplayer/demo-geometry');
+const {deflateRawSync}=await import('node:zlib');
+const first=packGeometry(view,new Map());const restoredFirst=unpackGeometry(first.world,new Map());assert(restoredFirst);assert.deepEqual(restoredFirst.world,view);
+const damaged=structuredClone(view);damaged.enemies[0].parts[0].hp-=1;
+const second=packGeometry(damaged,first.cache);const wirePart=second.world.enemies[0].parts[0];assert(!('poly' in wirePart));assert(!('links' in wirePart));
+const restored=unpackGeometry(second.world,restoredFirst.cache);assert(restored);assert.deepEqual(restored.world,damaged,'dynamic damage changes while geometry survives');
+assert.equal(unpackGeometry(second.world,new Map()),null,'missing geometry requires reconnect rather than rendering incorrect data');
+const empty=packGeometry({...view,enemies:[]},second.cache);assert.equal(empty.cache.size,0);const reentered=packGeometry(view,empty.cache);assert(reentered.world.enemies[0].parts[0].poly,'enemy re-entry sends geometry again');
+const originalBytes=Buffer.byteLength(JSON.stringify(damaged)), compactBytes=Buffer.byteLength(JSON.stringify(second.world));
+console.log(`Example snapshot geometry: ${originalBytes} -> ${compactBytes} JSON bytes; deflated ${deflateRawSync(JSON.stringify(damaged)).length} -> ${deflateRawSync(JSON.stringify(second.world)).length} bytes`);
+const {SnapshotBuffer}=await import('./source/src/game/multiplayer/snapshot-buffer');
+const flat=new SnapshotBuffer<any>(2,true),body={id:'a',x:1,y:2,angle:0};assert(flat.push({sequence:0,time:1,bodies:[body]}));body.x=99;const copy=flat.sample(1);assert.equal(copy[0].x,1);copy[0].x=20;assert.equal(flat.sample(1)[0].x,1);
+
+let wire:any={readyState:1,send(){},close(){},onopen:null,onmessage:null,onerror:null,onclose:null};
+const wireClient=new ExperimentalWorldClient(()=>wire,5000,'https://example.com',true);wireClient.connect('wss://example.com/world','ticket');wire.onopen();wire.onmessage({data:JSON.stringify({type:'welcome',pilotId:'a'})});
+wire.onmessage({data:JSON.stringify({type:'world-snapshot',sequence:0,geometryCache:1,world:{...first.world,time:1}})});
+wire.onmessage({data:JSON.stringify({type:'world-snapshot',sequence:1,geometryCache:1,world:{...second.world,time:2}})});
+assert.deepEqual(wireClient.snapshot()!.enemies[0].parts,damaged.enemies[0].parts,'client restores compressed geometry and current damage');wireClient.disconnect();
+const idleWorld=new Game(newSave(),'idle'), idle=new CombatHarness(idleWorld,4,false,undefined,undefined,true);idle.step(.03,100);assert.equal(idleWorld.t,0,'empty disposable world does no simulation');
