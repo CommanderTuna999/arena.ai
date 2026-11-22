@@ -2,7 +2,7 @@
  * Player accounts, client side.
  *
  * The game prefers real accounts: when the host has a database, /api/auth/*
- * stores the callsign and a scrypt hash server-side and a signed cookie keeps
+ * stores the username and a scrypt hash server-side and a signed cookie keeps
  * the session. Without a database (static export, a plain `next start`, the
  * hosted build with no Postgres attached) the exact same login form creates
  * accounts in this browser instead, hashed with PBKDF2 so the plaintext
@@ -160,8 +160,8 @@ export type AuthResult = { ok: true; session: Session } | { ok: false; error: st
 const MESSAGES: Record<string, string> = {
   "bad-name": "3-16 characters, letters, numbers, _ . or - only.",
   "bad-pass": "Passwords need at least 6 characters.",
-  taken: "That callsign is taken.",
-  "bad-login": "Wrong callsign or password.",
+  taken: "That username is taken.",
+  "bad-login": "Wrong username or password.",
   "no-db": "Accounts are not available here.",
   offline: "Could not reach the server.",
 };

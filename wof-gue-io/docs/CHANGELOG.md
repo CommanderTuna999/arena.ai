@@ -1,3 +1,7 @@
+## 0.3. v2.29.15 — Username wording
+
+- Account and settings labels now use username.
+
 ## 0.3. v2.29.14 — Multiplayer test performance
 
 - Reduced multiplayer test bandwidth and processing overhead.
@@ -575,7 +579,7 @@ Applied from the owner's design sheet; every value and where it lives is recorde
   means `persist()` writes to a module-level object instead of `localStorage`, `pushServer()` and
   `beaconSave()` return immediately, and `/api/save` is never called. The title screen's store has
   the same split (`volatileStore`), so toggling settings as a guest changes nothing on disk.
-- Settings → CALLSIGN is disabled while signed out (`nameLocked`), with a one-line hint.
+- Settings → USERNAME is disabled while signed out (`nameLocked`), with a one-line hint.
 - Accounts are unchanged and still autosave: `persist()` every 5 s, `pushServer()` every 20 s, on
   leaving the run, and on tab close via `sendBeacon`.
 
@@ -593,14 +597,14 @@ Applied from the owner's design sheet; every value and where it lives is recorde
 ### Cloud path proof
 - `src/server/auth-store.ts` holds the account/save SQL against any Postgres, and
   `cloud-path.test.mts` runs it on an in-memory Postgres (`pg-mem`): table creation, unique
-  callsigns, password validation, login, wrong password, save round-trip through `jsonb` and the
+  usernames, password validation, login, wrong password, save round-trip through `jsonb` and the
   upsert all pass. Attaching `DATABASE_URL` to the Vercel project is the only step left for
   cross-device accounts and saves.
 
 ## 12. v2.5.0 — accounts, neon ladybug, real name on the tab
 
 ### Accounts
-- `src/server/auth.ts` + `/api/auth/{register,login,logout,me}`: callsigns are unique (case-insensitive
+- `src/server/auth.ts` + `/api/auth/{register,login,logout,me}`: usernames are unique (case-insensitive
   `name_key`), passwords are `scrypt` hashes with a 16-byte per-user salt, and comparison is constant-time.
   The session is a `wof_session` cookie: http-only, sameSite=lax, 30 days, HMAC-SHA256 signed payload
   (`AUTH_SECRET`, falling back to a dev secret), `secure` in production.
@@ -614,7 +618,7 @@ Applied from the owner's design sheet; every value and where it lives is recorde
   locally and the server row is keyed by the user id. `/api/save` now ignores the request id when a
   session cookie is present, so a signed-in player can only read and write their own save.
   `adoptGuestSave()` seeds a new account from the guest slot so signing up never loses progress.
-- The title screen shows a small `@callsign / LOG OUT` chip top-right, or `LOG IN` when signed out; the
+- The title screen shows a small `@username / LOG OUT` chip top-right, or `LOG IN` when signed out; the
   ACCOUNT modal holds the LOG IN / CREATE ACCOUNT form. In-game the handle rides next to AUTO in the top
   strip.
 
@@ -1264,7 +1268,7 @@ Applied from the owner's design sheet; every value and where it lives is recorde
 
 - **Title screen is the loading screen.** `WOFGUE.IO` is the whole design: a very large, tightly
   tracked wordmark (`clamp(2.9rem, 14.5vw, 10.5rem)`) with a neon glow, modelled on florr.io's
-  full-screen logo. There is no callsign label and no tagline — only the wordmark, the name field,
+  full-screen logo. There is no username label and no tagline — only the wordmark, the name field,
   PLAY, the SETTINGS / CHANGELOG links and the version at the bottom.
 - **Neon grid backdrop** (`Backdrop.tsx`, a canvas): the same 100u/500u grid the game draws, at
   92/460 screen pixels with a slow drift, a cyan central glow and a vignette. Small geometric
@@ -1275,11 +1279,11 @@ Applied from the owner's design sheet; every value and where it lives is recorde
 
 ## 41. Title screen, settings, changelog and versioning (v1.1)
 
-- **Wofgue.io start screen** (`/`): the title, a callsign field on top (pre-filled when a name is
+- **Wofgue.io start screen** (`/`): the title, a username field on top (pre-filled when a name is
   already saved, empty on a fresh browser), a full-width **PLAY** button, **SETTINGS** and
   **CHANGELOG** buttons side by side, and the version number in small text at the bottom.
   The game itself is still `/play`; the in-game `⌂` returns here.
-- **Play requires a callsign.** An empty name focuses the field and shows "Enter a callsign to play."
+- **Play requires a username.** An empty name focuses the field and shows "Enter a username to play."
   The name is stored in the local save and pushed to the shared map as before.
 - **Real settings panel** (`src/components/SettingsPanel.tsx`), shared by the title screen and the
   in-game gear button (`⚙`, bottom right) and the Base → SYSTEM tab. It contains every setting:
@@ -1289,7 +1293,7 @@ Applied from the owner's design sheet; every value and where it lives is recorde
   | Automatic crafted weapons | `autoFire` | `true` | Crafted weapons fire on their own (B still toggles) |
   | Component hover info | `showCompInfo` | `true` | Name / rarity / value / mass card under the cursor |
   | Auto-sell docked components | `autoSell` | `false` | Sell on arrival instead of storing |
-  | Callsign | `name` | `""` | Shown to other pilots, max 16 characters |
+  | Username | `name` | `""` | Shown to other pilots, max 16 characters |
   | Save code | — | — | Export to clipboard, or paste + restore |
   | Reset all progress | — | — | Two-step confirm, wipes the local save |
 
@@ -1400,11 +1404,11 @@ floor may place one at the edge of the screen).
   reel-in, with load and cable-integrity slices.
 - The base panel title is an icon; the base prompt is a hex button; `SHIP DESTROYED` is now
   `CORE DESTROYED` and "rebuilding at hangar" is "reforming at the base".
-- Copy switched away from ship language ("craft", "base", "integrity", "callsign").
+- Copy switched away from ship language ("craft", "base", "integrity", "username").
 
 ## 48. Website and save codes
 
-- `/` is now the Wofgue.io title screen (callsign, PLAY, SETTINGS, CHANGELOG, version); the old
+- `/` is now the Wofgue.io title screen (username, PLAY, SETTINGS, CHANGELOG, version); the old
   feature grid, how-to-play and controls-table site is gone, and save-code entry lives in SETTINGS.
 - The game moved to **`/play`**; the in-game `⌂` button returns to it.
 - **Save code format:** `NH1-<checksum base36>-<base64 JSON>`; checksum is a 31× rolling hash mod

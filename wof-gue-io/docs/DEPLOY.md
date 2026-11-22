@@ -40,7 +40,7 @@ Saves follow the **account**, not the browser, but only when the project has a d
 
 1. Vercel → project **wofgue.io** → **Storage** → **Create Database** → pick the Postgres/Neon
    integration (free tier is enough) → connect it to this project.
-   - **Neon Auth: no.** Sign-in is already handled by `/api/auth/*` with our own callsign + password
+   - **Neon Auth: no.** Sign-in is already handled by `/api/auth/*` with our own username + password
      hashes, so a second identity provider would only duplicate it.
    - **Realtime / Data API: no.** Saves are a single row the owner writes a few times a minute;
      nothing subscribes to changes. The app speaks plain Postgres over `pg`.

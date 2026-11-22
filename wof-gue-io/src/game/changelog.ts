@@ -8,7 +8,7 @@
  *   CHANGELOG and mirror the details in docs/CHANGELOG.md.
  */
 
-export const VERSION = "2.29.14";
+export const VERSION = "2.29.15";
 
 export interface ChangeEntry {
   version: string;
@@ -19,6 +19,7 @@ export interface ChangeEntry {
 }
 
 export const CHANGELOG: ChangeEntry[] = [
+  { version: "2.29.15", date: "22 Nov 2026", title: "Username wording", points: ["Account and settings labels now use username."] },
   { version: "2.29.14", date: "22 Nov 2026", title: "Multiplayer test performance", points: ["Reduced multiplayer test bandwidth and processing overhead."] },
   { version: "2.29.13", date: "22 Nov 2026", title: "Multiplayer test", points: ["Multiplayer test."] },
   { version: "2.29.12", date: "22 Nov 2026", title: "Chat focus and guest notice", points: ["Pressing Enter on an empty chat field stops typing without closing chat.", "The title screen clarifies that guests must log in to save progress."] },
@@ -338,7 +339,7 @@ export const CHANGELOG: ChangeEntry[] = [
     date: "21 Nov 2026",
     title: "Accounts, a neon ladybug and a proper name",
     points: [
-      "Log in with a callsign and a password. The title screen carries a small ACCOUNT chip: create an account once, then sign in from then on.",
+      "Log in with a username and a password. The title screen carries a small ACCOUNT chip: create an account once, then sign in from then on.",
       "Every account gets its own save slot, so two pilots can share one browser without overwriting each other. Progress already made as a guest is carried into a new account on its first login instead of being thrown away.",
       "Passwords are never stored as text. On a host with a database the server keeps a salted scrypt hash and a signed, http-only cookie holds the session; on a host without one the same login runs in the browser with PBKDF2, so the form works everywhere.",
       "The browser tab now reads wofgue.io on every page, and the site icon is a neon ladybug instead of the framework default.",
@@ -653,7 +654,7 @@ export const CHANGELOG: ChangeEntry[] = [
     points: [
       "Title screen rebuilt: a huge WOFGUE.IO wordmark over the game's neon grid.",
       "Small geometric insects drift across the title background.",
-      "Removed the callsign label and the tagline — just the name field and Play.",
+      "Removed the username label and the tagline — just the name field and Play.",
       "Every zone now spawns at the same rate; the population cap is 36.",
       "Deeper zones feel emptier only because their enemies are far larger.",
     ],
@@ -663,7 +664,7 @@ export const CHANGELOG: ChangeEntry[] = [
     date: "20 Nov 2026",
     title: "Title screen, settings and hover info",
     points: [
-      "New title screen: Wofgue.io, callsign entry, Play, settings and changelog.",
+      "New title screen: Wofgue.io, username entry, Play, settings and changelog.",
       "Real settings panel (title screen and in-game) with every option in one place.",
       "Hover a loose component to see its name, rarity, value and mass — toggleable.",
       "The snake boss is disabled for now.",

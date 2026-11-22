@@ -63,11 +63,11 @@ if (!a.ok) throw new Error("stop");
 const id = a.user.id;
 
 const dup = await store.createAccount(D, "pilot", "different1");
-assert(!dup.ok && dup.error === "taken", "duplicate callsign rejected (case-insensitive)");
+assert(!dup.ok && dup.error === "taken", "duplicate username rejected (case-insensitive)");
 const shortPass = await store.createAccount(D, "Other", "123");
 assert(!shortPass.ok && shortPass.error === "bad-pass", "short password rejected");
 const badName = await store.createAccount(D, "no spaces here", "hunter22");
-assert(!badName.ok && badName.error === "bad-name", "invalid callsign rejected");
+assert(!badName.ok && badName.error === "bad-name", "invalid username rejected");
 
 const good = await store.verifyAccount(D, "PILOT", "hunter22");
 assert(good.ok && good.user.id === id, "login works, case-insensitive");

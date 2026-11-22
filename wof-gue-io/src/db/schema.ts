@@ -8,7 +8,7 @@ export const players = pgTable("players", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
-/** Logins. `name_key` is the lowercased callsign so names are unique. */
+/** Logins. `name_key` is the lowercased username so names are unique. */
 export const users = pgTable("users", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),

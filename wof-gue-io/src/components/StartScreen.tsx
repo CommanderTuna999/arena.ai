@@ -99,7 +99,7 @@ function activateKey(key: string, guest: boolean) {
   listeners.forEach((l) => l());
 }
 
-/** Wofgue.io title screen: callsign, Play, settings and changelog. */
+/** Wofgue.io title screen: username, Play, settings and changelog. */
 export default function StartScreen() {
   const router = useRouter();
   const save = useSyncExternalStore(subscribe, currentSave, () => SERVER_SAVE);

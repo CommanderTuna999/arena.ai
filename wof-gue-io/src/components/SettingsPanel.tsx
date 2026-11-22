@@ -12,7 +12,7 @@ export interface SettingsPanelProps {
   onShowRanges: (v: boolean) => void;
   onAutoSell: (v: boolean) => void;
   onName: (v: string) => void;
-  /** Guests cannot choose a callsign: the field is shown read-only. */
+  /** Guests cannot choose a username: the field is shown read-only. */
   nameLocked?: boolean;
   onReset: () => void;
   onRestore: (s: SaveData) => void;
@@ -30,7 +30,7 @@ export default function SettingsPanel({ save, onAutoFire, onShowCompInfo, onShow
 
   const commitName = () => {
     onName(name.trim().slice(0, 16));
-    setNote({ ok: true, msg: "Callsign saved." });
+    setNote({ ok: true, msg: "Username saved." });
   };
   const exportCode = async () => {
     const c = encodeSave(save);
@@ -56,7 +56,7 @@ export default function SettingsPanel({ save, onAutoFire, onShowCompInfo, onShow
   return (
     <div className="space-y-4 text-sm">
       <section>
-        <div className="mb-1.5 text-[10px] font-bold tracking-[0.28em] text-white/45">CALLSIGN</div>
+        <div className="mb-1.5 text-[10px] font-bold tracking-[0.28em] text-white/45">USERNAME</div>
         <div className="flex gap-2">
           <input
             value={nameLocked ? "Guest" : name}
@@ -70,7 +70,7 @@ export default function SettingsPanel({ save, onAutoFire, onShowCompInfo, onShow
             <button onClick={commitName} className="rounded-sm border border-cyan-300/60 px-3 text-xs font-bold text-cyan-200 transition hover:bg-cyan-400/20">SAVE</button>
           )}
         </div>
-        {nameLocked && <div className="mt-1.5 text-[10px] tracking-[0.16em] text-white/30">LOG IN TO PICK A CALLSIGN AND KEEP PROGRESS</div>}
+        {nameLocked && <div className="mt-1.5 text-[10px] tracking-[0.16em] text-white/30">LOG IN TO PICK A USERNAME AND KEEP PROGRESS</div>}
       </section>
 
       <section className="space-y-1.5">

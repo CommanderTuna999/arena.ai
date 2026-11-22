@@ -6,7 +6,7 @@ import {
   type AuthResult, type Session,
 } from "@/game/accounts";
 
-/** Callsign + password. One form, two verbs, no ceremony. */
+/** Username + password. One form, two verbs, no ceremony. */
 export default function AuthPanel({ onDone }: { onDone: (session: Session) => void }) {
   const [mode, setMode] = useState<"login" | "create">("login");
   const [name, setName] = useState("");
@@ -59,7 +59,7 @@ export default function AuthPanel({ onDone }: { onDone: (session: Session) => vo
         onSubmit={(e) => { e.preventDefault(); void submit(); }}
       >
         <label className="flex flex-col gap-1.5">
-          <span className="text-[10px] font-bold tracking-[0.28em] text-cyan-200/70">CALLSIGN</span>
+          <span className="text-[10px] font-bold tracking-[0.28em] text-cyan-200/70">USERNAME</span>
           <input
             ref={nameRef}
             value={name}
