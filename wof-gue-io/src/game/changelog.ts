@@ -8,7 +8,7 @@
  *   CHANGELOG and mirror the details in docs/CHANGELOG.md.
  */
 
-export const VERSION = "2.29.8";
+export const VERSION = "2.29.9";
 
 export interface ChangeEntry {
   version: string;
@@ -19,6 +19,7 @@ export interface ChangeEntry {
 }
 
 export const CHANGELOG: ChangeEntry[] = [
+  { version: "2.29.9", date: "22 Nov 2026", title: "Chat, map and contact", points: ["Chat highlights your messages in white and Enter sends and closes chat.", "The minimap starts focused; fixed shallow enemy contact damage."] },
   { version: "2.29.8", date: "22 Nov 2026", title: "Chat focus and colours", points: ["Your chat messages use their own colours; clicking outside the typing field returns control to the game."] },
   { version: "2.29.7", date: "22 Nov 2026", title: "Component storage", points: ["Removed the component storage slot limit and refunded Cargo Bay upgrades.", "A brief warning on entry flags large inventories that may slow the game or exceed browser storage."] },
   { version: "2.29.6", date: "22 Nov 2026", title: "Chat and Lunar Moth", points: ["Chat can queue messages while offline and fades after five seconds of inactivity; new messages reveal it again.", "Fixed chat message sanitization and renamed Lunar Moth while preserving existing components and recipes."] },

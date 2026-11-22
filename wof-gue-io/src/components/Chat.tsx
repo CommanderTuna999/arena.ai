@@ -142,15 +142,18 @@ export default function Chat({ game, notices }: { game: Game; notices: Toast[] }
     connect();
     return () => { closed = true; ready = false; clearInterval(interval); if (retry) clearTimeout(retry); if (fadeTimer.current) clearTimeout(fadeTimer.current); socket.current?.close(); socket.current = null; outbox.current = null; };
   }, []);
-  const submit = (e: React.FormEvent) => {
-    e.preventDefault(); const clean = text.trim(); if (!clean) return;
+  const closeChat = () => {
+    input.current?.blur(); manuallyCollapsed.current = true; expandedRef.current = false; setExpanded(false);
+  };
+  const submit = (e: React.SyntheticEvent, close = false) => {
+    e.preventDefault(); const clean = text.trim(); if (!clean) { if (close) closeChat(); return; }
     const queue = outbox.current ?? (outbox.current = new ChatOutbox(storage()));
     const id = messageId();
     if (!queue.enqueue(id, game.save.name || 'Pilot', clean, Date.now())) { setQueueError('Queue full; wait for messages to send.'); return; }
     ownIds.current.add(id);
     while (ownIds.current.size > 200) ownIds.current.delete(ownIds.current.values().next().value!);
     try { storage()?.setItem(OWN_MESSAGE_KEY, JSON.stringify([...ownIds.current])); } catch { /* memory-only when storage is blocked */ }
-    setPending(queue.list()); setText(''); setQueueError(''); wake();
+    setPending(queue.list()); setText(''); setQueueError(''); if (close) closeChat(); else wake();
   };
   if (!expanded) return <button type="button" onClick={() => open(true)} aria-label={`Open chat${unread ? `, ${unread} unread` : ''}`} className="absolute bottom-4 left-4 z-[70] rounded border border-cyan-200/30 bg-[#050e16] px-3 py-2 text-xs font-bold text-cyan-200">CHAT{unread > 0 && <span className="ml-2 rounded-full bg-cyan-300 px-1.5 text-black">{unread}</span>}</button>;
   return <section className="pointer-events-none absolute bottom-4 left-4 z-[70] w-[min(22rem,85vw)] text-xs" aria-label="Chat">
@@ -159,14 +162,14 @@ export default function Chat({ game, notices }: { game: Game; notices: Toast[] }
       <div aria-live="polite" className="h-24 overflow-y-auto break-words text-white/80">
         {messages.map(m => {
           const own = !!m.clientId && ownIds.current.has(m.clientId);
-          return <div key={m.id} data-chat-owner={own ? 'self' : m.local ? 'event' : 'other'} className={own ? 'text-emerald-100' : undefined}><span className={m.local ? 'font-bold text-yellow-200' : own ? 'font-bold text-emerald-300' : 'font-bold text-cyan-200'}>{m.name}: </span>{m.text}</div>;
+          return <div key={m.id} data-chat-owner={own ? 'self' : m.local ? 'event' : 'other'} className={own ? 'text-white' : undefined}><span className={m.local ? 'font-bold text-yellow-200' : own ? 'font-bold text-white' : 'font-bold text-cyan-200'}>{m.name}: </span>{m.text}</div>;
         })}
-        {pending.map(m => <div key={`queued-${m.id}`} data-chat-owner="self" className="text-emerald-100"><span className="font-bold text-emerald-300">{m.name}: </span>{m.text} <span className="text-yellow-200/80">(queued)</span></div>)}
+        {pending.map(m => <div key={`queued-${m.id}`} data-chat-owner="self" className="text-white"><span className="font-bold text-white">{m.name}: </span>{m.text} <span className="text-yellow-200/80">(queued)</span></div>)}
         <div ref={end} />
       </div>
     </div>
-    <form onSubmit={submit} onMouseMove={wake} onFocus={wake} className="pointer-events-auto flex gap-1 rounded-b border border-cyan-200/30 bg-[#050e16]/95 p-2">
-      <input ref={input} value={text} onChange={e => { setText(e.target.value); setQueueError(''); wake(); }} onFocus={() => { game.blur(); wake(); }} maxLength={180} placeholder={status === 'online' ? 'Message…' : 'Message (queued until online)…'} aria-label="Chat message" className="min-w-0 flex-1 rounded border border-white/20 bg-black px-2 py-1 text-white" />
+    <form onSubmit={e => submit(e)} onMouseMove={wake} onFocus={wake} className="pointer-events-auto flex gap-1 rounded-b border border-cyan-200/30 bg-[#050e16]/95 p-2">
+      <input ref={input} value={text} onChange={e => { setText(e.target.value); setQueueError(''); wake(); }} onFocus={() => { game.blur(); wake(); }} maxLength={180} placeholder="Press enter or / to open chat" onKeyDown={e => { if (e.key === 'Enter' && !e.nativeEvent.isComposing) submit(e, true); }} aria-label="Chat message" className="min-w-0 flex-1 rounded border border-white/20 bg-black px-2 py-1 text-white" />
       <button type="submit" disabled={!text.trim()} className="rounded border border-cyan-300/50 px-2 py-1 text-cyan-200 disabled:opacity-40">SEND</button>
     </form>
     {queueError && <p role="alert" className="pointer-events-auto rounded bg-[#050e16] px-2 text-yellow-200">{queueError}</p>}

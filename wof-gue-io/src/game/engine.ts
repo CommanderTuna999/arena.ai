@@ -388,7 +388,7 @@ export class Game {
   w = 800; h = 600; dpr = 1;
   cam = { x: BASE.x, y: BASE.y - 120, z: 1 };
   zoom = 1;
-  mapMode: 0 | 1 | 2 = 0; // full minimap, expanded map, local minimap
+  mapMode: 0 | 1 | 2 = 2; // full minimap, expanded map, local minimap
   mapAnimation = { size: 0, x: 0, y: 0, scale: 1, focusX: 0, focusY: 0, last: 0 };
   t = 0;
   rev = 0;
@@ -2994,12 +2994,14 @@ export class Game {
     // contact with player
     if (!p.dead && dist < e.radius + SHIP_R + 30 && !this.inSafe()) {
       if (this.touching(e, 0, true)) {
+        // Check before separation moves a shallow overlap outside the polygon.
+        const damagingContact = e.contactCd <= 0 && this.touching(e, 0);
         const k = dist || 1;
         const nx = p.x + (dx / k) * 140 * dt, ny = p.y + (dy / k) * 140 * dt;
         if (circleWalkable(nx, p.y, SHIP_R)) p.x = nx;
         if (circleWalkable(p.x, ny, SHIP_R)) p.y = ny;
         p.vx += (dx / k) * 600 * dt; p.vy += (dy / k) * 600 * dt;
-        if (e.contactCd <= 0 && this.touching(e, 0)) { e.contactCd = 0.7; this.hurtPlayer(e.eDmg * 0.25, { kb: 200, kbx: dx / k, kby: dy / k }); }
+        if (damagingContact) { e.contactCd = 0.7; this.hurtPlayer(e.eDmg * 0.25, { kb: 200, kbx: dx / k, kby: dy / k }); }
       }
     }
   }
