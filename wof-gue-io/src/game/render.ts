@@ -213,20 +213,21 @@ export function render(g: Game, ctx: CanvasRenderingContext2D) {
     }
   }
 
+  // These components have already been awarded; their flight is cosmetic only.
+  for (const flight of g.magnetFlights) {
+    const c = flight.comp;
+    if (c.x + c.r < vx0 || c.x - c.r > vx1 || c.y + c.r < vy0 || c.y - c.r > vy1) continue;
+    drawComp(g, ctx, c, z, t);
+    ctx.strokeStyle = `rgba(255,225,77,${0.3 * flight.life / flight.max})`;
+    ctx.lineWidth = 1.2 / z; ctx.setLineDash([8 / z, 10 / z]); ctx.lineDashOffset = -t * 40 / z;
+    ctx.beginPath(); ctx.moveTo(c.x, c.y); ctx.lineTo(g.player.x, g.player.y); ctx.stroke();
+    ctx.setLineDash([]); ctx.lineDashOffset = 0;
+  }
+
   /* credit coins are HUD animation; see drawCreditFlights() */
 
   /* ---- magnet field ---- */
   if (g.stats.magnet > 0) {
-    const mpl = g.player;
-    for (const c of g.comps) {
-      if (c.hooks.length || c.c.mass > 7) continue;
-      const d = Math.hypot(c.x - mpl.x, c.y - mpl.y);
-      if (d > g.stats.magnetRange) continue;
-      ctx.strokeStyle = `rgba(255,225,77,${0.06 + 0.28 * (1 - d / g.stats.magnetRange)})`;
-      ctx.lineWidth = 1.2 / z; ctx.setLineDash([8 / z, 10 / z]); ctx.lineDashOffset = -t * 40 / z;
-      ctx.beginPath(); ctx.moveTo(c.x, c.y); ctx.lineTo(mpl.x, mpl.y); ctx.stroke();
-      ctx.setLineDash([]); ctx.lineDashOffset = 0;
-    }
     ctx.strokeStyle = "rgba(255,225,77,0.05)"; ctx.lineWidth = 1 / z;
     ctx.beginPath(); ctx.arc(g.player.x, g.player.y, g.stats.magnetRange, 0, TAU); ctx.stroke();
   }

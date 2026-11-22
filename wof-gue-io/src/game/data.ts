@@ -603,7 +603,7 @@ export const RECIPES: Recipe[] = [
   /* ---------------- optics / utility ---------------- */
   { id: "lens", name: "Wide-Field Optics", slot: "optics", difficulty: 2, n: 4, need: { cats: ["wing", "core"], count: 1 }, desc: "Unlocks mouse-wheel zoom out. Better efficiency zooms further." },
   { id: "recall", name: "Recall Beacon", slot: "utility", difficulty: 4, n: 6, need: { cats: ["core"], count: 1 }, desc: "Press T to channel a teleport back to base." },
-  { id: "magnet", name: "Component Magnet", slot: "utility", difficulty: 3, n: 5, need: { cats: ["core", "body"], count: 1 }, species: { names: ["Worker Ant", "Honeybee"], count: 1 }, desc: "Passively drags light loose components (mass 7 or less) toward your craft from a wide radius." },
+  { id: "magnet", name: "Component Magnet", slot: "utility", difficulty: 3, n: 5, need: { cats: ["core", "body"], count: 1 }, species: { names: ["Worker Ant", "Honeybee"], count: 1 }, desc: "Instantly collects light loose components (mass 7 or less) within a wide radius." },
 
   /* ---------------- active abilities (Z / X / C / V / F) ---------------- */
   { id: "ab_emp", name: "EMP Burst", slot: "ability", difficulty: 3, n: 5, need: { cats: ["core", "shield"], count: 1 }, species: { names: ["Cicada", "Firefly"], count: 1 }, desc: "Discharges an electromagnetic ring that stuns every enemy around you." },

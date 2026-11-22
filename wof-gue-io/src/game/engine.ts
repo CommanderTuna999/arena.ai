@@ -24,7 +24,7 @@ import { ABILITY_INTERVALS, GUN_SPECS, LASER_RAMP, LASER_RAMP_MIN, SPECIES_LIST,
  *                      fly straight into the HUD counter and pay out when they land —
  *                      there is nothing to pick up.
  *   Loose cargo      : only light parts (mass <= 7) can be handled without machinery —
- *                      the magnet drags them and the ship scoops them up on contact.
+ *                      the magnet collects them in range and the ship scoops them on contact.
  *                      Anything heavier needs the harpoon and a tow back to the base
  *                      dock, and refuses both the magnet and the scoop.
  *   Crafted weapons  : fully automatic; damage = st.dmg * multiplier * efficiency.
@@ -98,7 +98,7 @@ export const plateGrow = (r: number, layers: number) =>
  * a fixed chunk so they stay a genuine end-game threat. */
 const SHELL_DMG = 2_500_000;
 const MYTHIC_SHELL_FRAC = 0.55;
-/** Only parts this light can be dragged by the magnet or scooped on contact. */
+/** Only parts this light can be collected by the magnet or scooped on contact. */
 const PICKUP_MASS = 7;
 /* How far a bug notices the player, per rarity (common -> mythical). A big body
  * adds a little reach on top; the leash is only a hair longer than the notice
@@ -406,6 +406,8 @@ export class Game {
   debris: Debris[] = [];
   beams: Beam[] = [];
   comps: LComp[] = [];
+  /** Cosmetic copies only; the real components are already collected. */
+  magnetFlights: { comp: LComp; life: number; max: number }[] = [];
   creditDrops: CreditDrop[] = [];
   /** screen position of the HUD credit counter; credit coins fly here */
   creditHud = { x: 40, y: 210 };
@@ -1189,6 +1191,14 @@ export class Game {
   private updateComps(dt: number) {
     const p = this.player, st = this.stats;
     p.tow = 1;
+    for (let i = this.magnetFlights.length - 1; i >= 0; i--) {
+      const flight = this.magnetFlights[i];
+      flight.life -= dt;
+      if (flight.life <= 0) { this.magnetFlights.splice(i, 1); continue; }
+      const fraction = Math.min(1, dt / (flight.life + dt));
+      flight.comp.x += (p.x - flight.comp.x) * fraction;
+      flight.comp.y += (p.y - flight.comp.y) * fraction;
+    }
     for (let i = this.comps.length - 1; i >= 0; i--) {
       const c = this.comps[i];
       c.ttl -= dt;
@@ -1227,19 +1237,22 @@ export class Game {
           else c.hooks.pop();
         }
       } else {
-        if (st.magnet > 0 && c.c.mass <= PICKUP_MASS) {
-          const dx = p.x - c.x, dy = p.y - c.y, d = Math.hypot(dx, dy);
-          if (d < st.magnetRange && d > 1) {
-            const f = 780 * (1 - d / st.magnetRange);
-            c.vx += (dx / d) * f * dt; c.vy += (dy / d) * f * dt;
-          }
+        const distance = Math.hypot(p.x - c.x, p.y - c.y);
+        if (st.magnet > 0 && c.c.mass <= PICKUP_MASS && distance < st.magnetRange) {
+          this.comps.splice(i, 1);
+          // Award before animating: the cosmetic flight cannot be picked up,
+          // hooked, expired or awarded a second time.
+          this.dockComp(c);
+          if (distance > SHIP_R + c.r + 12 && this.magnetFlights.length < 100)
+            this.magnetFlights.push({ comp: { ...c, hooks: [] }, life: 0.35, max: 0.35 });
+          continue;
         }
         const damp = Math.exp(-1.3 * dt);
         c.vx *= damp; c.vy *= damp;
         c.stress = 0;
         /* Light salvage is scooped up on contact: no harpoon, no tow. Heavy
          * pieces still need a cable and the base dock. */
-        if (c.c.mass <= PICKUP_MASS && Math.hypot(p.x - c.x, p.y - c.y) < SHIP_R + c.r + 12) {
+        if (c.c.mass <= PICKUP_MASS && distance < SHIP_R + c.r + 12) {
           this.comps.splice(i, 1);
           this.dockComp(c);
           continue;

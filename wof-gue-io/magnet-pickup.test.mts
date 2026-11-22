@@ -1,0 +1,17 @@
+import assert from 'node:assert/strict';
+import { Game, type LComp } from './src/game/engine';
+import { BASE, newSave, type Comp } from './src/game/data';
+const game=new Game(newSave(),'pilot');
+game.player.x=BASE.x+5000;game.player.y=BASE.y+5000;
+game.stats.magnet=1;game.stats.magnetRange=500;
+const make=(id:number,dx:number,mass=1,hooks:number[]=[]):LComp=>({id,c:{id:String(id),species:'Moth',name:'Moth Wing',kind:'wing',tier:1,poly:[0,0,1,1],area:3,mass,hue:10,value:20} satisfies Comp,x:game.player.x+dx,y:game.player.y,vx:0,vy:0,a:0,va:0,r:10,hooks,stress:0,ttl:30,born:0,srcId:1});
+const near=make(1,300),outside=make(2,600),heavy=make(3,250,8),hooked=make(4,200,1,[0]);
+game.comps=[near,outside,heavy,hooked];
+(game as any).updateComps(.016);
+assert.deepEqual(game.save.inventory.map(c=>c.id),['1']);assert(!game.comps.includes(near));assert(game.comps.includes(outside)&&game.comps.includes(heavy)&&game.comps.includes(hooked));
+assert.equal(game.magnetFlights.length,1);assert.notEqual(game.magnetFlights[0].comp,near);
+(game as any).updateComps(.2);assert.equal(game.save.inventory.length,1);assert(game.magnetFlights[0].comp.x<near.x);
+(game as any).updateComps(.2);assert.equal(game.magnetFlights.length,0);assert.equal(game.save.inventory.length,1);
+game.save.autoSell=true;game.comps=[make(5,300)];const credits=game.save.credits;(game as any).updateComps(.016);assert(game.save.credits>credits);assert.equal(game.save.inventory.length,1);
+game.stats.magnet=0;const close=make(6,1),far=make(7,300);game.comps=[close,far];game.save.autoSell=false;(game as any).updateComps(.016);assert(game.comps.includes(far));assert(!game.comps.includes(close));assert.equal(game.save.inventory.at(-1)?.id,'6');
+console.log('Instant magnet pickup, cosmetic flight, auto-sell and pickup restrictions passed');
