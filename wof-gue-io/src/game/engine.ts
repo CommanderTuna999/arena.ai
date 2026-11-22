@@ -324,7 +324,7 @@ export interface Hud {
   creditPop: { v: number; s: number };
   harp: { state: number; load: number; hp: number }[]; toasts: Toast[]; ultraNotices: Toast[]; nearBase: boolean;
   tp: { has: boolean; ch: number; cd: number; max: number }; dead: boolean; respawn: number; x: number; y: number;
-  online: number; zoomOn: boolean; inv: number; cargo: number; hold: number; rev: number; zoom: number; fps: number;
+  online: number; zoomOn: boolean; inv: number; hold: number; rev: number; zoom: number; fps: number;
   abilities: HudAbility[]; admin: AdminState; lock: boolean; autoFire: boolean; overdrive: boolean;
   discovery: { name: string; t: number } | null;
   baseHp: number; baseMaxHp: number; baseLost: boolean; baseLostT: number; baseNear: boolean; baseUnderAttack: boolean;
@@ -471,6 +471,7 @@ export class Game {
   private fpsAcc = 0;
   private fpsN = 0;
   private lastServerSave = 0;
+  private localSaveWarningShown = false;
 
   constructor(save: SaveData, pid: string) {
     this.save = save;
@@ -851,7 +852,15 @@ export class Game {
     if (!this.dirty && !force) return;
     this.dirty = false;
     if (this.persistent) {
-      try { localStorage.setItem(this.localSaveKey, JSON.stringify(this.save)); } catch { /* ignore */ }
+      try { localStorage.setItem(this.localSaveKey, JSON.stringify(this.save)); this.localSaveWarningShown = false; }
+      catch {
+        // Never silently discard unsaved changes when browser storage is full.
+        this.dirty = true;
+        if (!this.localSaveWarningShown) {
+          this.localSaveWarningShown = true;
+          this.toast("Browser save failed: storage may be full", "#ff6b81");
+        }
+      }
     }
     this.saveSink?.(this.save);
   }
@@ -859,7 +868,10 @@ export class Game {
     if (!this.persistent) return;
     this.lastServerSave = Date.now();
     try {
-      await fetch("/api/save", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ id: this.pid, name: this.save.name || "Pilot", save: this.save }), keepalive: true });
+      const body = JSON.stringify({ id: this.pid, name: this.save.name || "Pilot", save: this.save });
+      // Browsers cap keepalive request bodies near 64 KiB. Normal autosaves
+      // must still work once the inventory grows beyond that threshold.
+      await fetch("/api/save", { method: "POST", headers: { "content-type": "application/json" }, body, keepalive: new Blob([body]).size < 60000 });
     } catch { /* offline is fine */ }
   }
   beaconSave() {
@@ -1265,10 +1277,10 @@ export class Game {
   private dockComp(c: LComp) {
     const comp = c.c;
     for (let i = 0; i < 14; i++) this.addParticle(c.x, c.y, (Math.random() - 0.5) * 300, (Math.random() - 0.5) * 300, "#7dffb4", 6, 0.8, Math.floor(Math.random() * 4));
-    if (this.save.autoSell || this.save.inventory.length >= this.stats.cargo) {
+    if (this.save.autoSell) {
       const v = Math.round(comp.value * this.stats.sellMul);
       this.save.credits += v; this.save.earned += v;
-      this.toast(`${this.save.autoSell ? "Sold" : "Cargo full - sold"} ${comp.name} +${v}`, "#ffd24d");
+      this.toast(`Sold ${comp.name} +${v}`, "#ffd24d");
     } else {
       this.save.inventory.push(comp);
       this.toast(`Stored ${comp.name}`, "#7dffb4");
@@ -4407,7 +4419,7 @@ export class Game {
       harp: this.harpoons.map((h) => ({ state: h.state, load: h.comp ? h.comp.c.mass / (h.comp.hooks.length * st.hStr) : 0, hp: h.hp / h.maxHp })),
       toasts: [...this.toasts], ultraNotices: [...this.ultraNotices], nearBase: this.nearBase(),
       tp: { has: st.tpTime > 0, ch: p.tpT > 0 ? 1 - p.tpT / st.tpTime : 0, cd: p.tpCd, max: st.tpCd },
-      dead: p.dead, respawn: p.respawn, x: p.x, y: p.y, online: this.online, zoomOn: st.zoomMin < 1, inv: this.save.inventory.length, cargo: st.cargo,
+      dead: p.dead, respawn: p.respawn, x: p.x, y: p.y, online: this.online, zoomOn: st.zoomMin < 1, inv: this.save.inventory.length,
       hold: this.input.rHold / 0.6, rev: this.rev, zoom: this.zoom, fps: this.fps,
       discovery: this.discovery ? { name: this.discovery.name, t: this.discovery.t } : null,
       baseHp: this.baseHp, baseMaxHp: this.baseMaxHp, baseLost: this.baseLost, baseLostT: this.baseLostT,

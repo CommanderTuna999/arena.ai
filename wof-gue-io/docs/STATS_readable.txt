@@ -1744,7 +1744,7 @@ SCAVENGER DRONES (max 10)
 RARITY SCANNER (max 8)
 +5L% luck
 
-CARGO BAY (max 8)
-24 + 12L slots
+COMPONENT STORAGE
+No gameplay slot limit
 
 END OF COMPENDIUM

@@ -136,7 +136,6 @@ export const UPGRADES: UpgradeDef[] = [
   { id: "value", name: "Salvage Contracts", cat: "salvage", desc: "Credits received when selling components.", max: 20, base: 50, growth: 1.5, fmt: (l) => `x${(1 + 0.25 * l).toFixed(2)}` },
   { id: "drops", name: "Scavenger Drones", cat: "salvage", desc: "Increases the chance of pieces dropping components.", max: 10, base: 60, growth: 1.55, fmt: (l) => `x${(1 + 0.25 * l).toFixed(2)} drop` },
   { id: "luck", name: "Rarity Scanner", cat: "salvage", desc: "Better rarity rolls on dropped components.", max: 8, base: 100, growth: 1.7, fmt: (l) => `+${l * 5}% luck` },
-  { id: "cargo", name: "Cargo Bay", cat: "salvage", desc: "Storage capacity for components.", max: 8, base: 80, growth: 1.7, fmt: (l) => `${24 + 12 * l} slots` },
 ];
 
 export const UPGRADE_BY_ID: Record<string, UpgradeDef> = Object.fromEntries(UPGRADES.map((u) => [u.id, u]));
@@ -827,6 +826,10 @@ export function migrate(raw: unknown): SaveData {
    * v2.11 and earlier kept one flat level map for the fitted gun. Both fold into
    * the per-cannon tree, and only tracks the chassis actually carries survive. */
   const legacy = r.upgrades ?? {};
+  // Cargo Bay is obsolete. Refund its original purchase costs exactly once:
+  // migrated saves no longer contain the cargo level.
+  const oldCargo = Number.isInteger(legacy.cargo) ? Math.max(0, Math.min(8, legacy.cargo)) : 0;
+  const cargoRefund = Array.from({ length: oldCargo }, (_, level) => Math.round(80 * Math.pow(1.7, level))).reduce((a, b) => a + b, 0);
   const saved = r.cannon as unknown as { id?: string; owned?: string[]; lv?: Record<string, unknown> } | undefined;
   const cannon: CannonSave = { id: CANNONS[0].id, owned: [CANNONS[0].id], lv: {} };
   if (saved) {
@@ -865,6 +868,7 @@ export function migrate(raw: unknown): SaveData {
     ...r,
     v: 2,
     cannon,
+    credits: (Number.isFinite(r.credits) ? r.credits! : d.credits) + cargoRefund,
     upgrades: Object.fromEntries(Object.entries(legacy).filter(([k]) => UPGRADE_BY_ID[k])),
     inventory: Array.isArray(r.inventory)
       ? r.inventory.map((c) => c && c.species === "World Serpent" ? { ...c, species: "Snake" } : c && c.species === "Luna Moth" ? { ...c, species: "Lunar Moth", name: typeof c.name === "string" ? c.name.replace(/^Luna Moth\b/, "Lunar Moth") : c.name } : c)
@@ -952,7 +956,7 @@ export interface Stats {
   dodge: number; kinetic: number; novaOnHit: number; nullField: number;
   thrust: number; accel: number; boostMul: number; boostRegen: number; hasBoost: boolean;
   hCount: number; hStr: number; hRange: number; hHp: number; hSpeed: number; towRelief: number;
-  sellMul: number; dropChance: number; luck: number; cargo: number;
+  sellMul: number; dropChance: number; luck: number;
   zoomMin: number; tpTime: number; tpCd: number;
   magnet: number; magnetRange: number;
   weapons: { rid: string; eff: number }[];
@@ -1091,7 +1095,6 @@ export function computeStats(s: SaveData): Stats {
     sellMul: 1 + 0.25 * L("value"),
     dropChance: 1 + 0.25 * L("drops"),
     luck: 0.05 * L("luck"),
-    cargo: 24 + 12 * L("cargo"),
     zoomMin,
     tpTime,
     tpCd,

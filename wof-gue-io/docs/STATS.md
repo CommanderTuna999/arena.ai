@@ -803,7 +803,7 @@ Winch Motor (hspeed) | 8 | Launch speed, reel speed and less towing drag. 1140 u
 Salvage Contracts (value) | 20 | Credits received when selling components. x1.25 at L1, x6.00 at max | 50 x 1.5^level credits
 Scavenger Drones (drops) | 10 | Multiplier for pieces dropping components. x1.25 drop at L1, x3.50 drop at max | 60 x 1.55^level credits
 Rarity Scanner (luck) | 8 | Better rarity rolls on dropped components. +5% luck at L1, +40% luck at max | 100 x 1.7^level credits
-Cargo Bay (cargo) | 8 | Storage capacity for components. 36 slots at L1, 120 slots at max | 80 x 1.7^level credits
+Component storage has no gameplay slot limit.
 
 Harpoon: up to 1 + Launcher Bays harpoons; cable load 5 x 1.42^level; range 380 + 60 x level; cable HP 40 x 1.35^level; launch/reel speed 1,000 + 140 x level; towing relief 6% x Winch Motor level.
 

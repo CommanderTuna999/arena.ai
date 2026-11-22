@@ -1,3 +1,8 @@
+## 0.3. v2.29.7 — Component storage
+
+- Removed the gameplay component-storage limit and refunded existing Cargo Bay upgrade costs. Auto-sell still works when enabled.
+- A brief warning on joining flags large inventories that could slow the game or exceed browser storage. Larger cloud saves no longer use the browser keepalive size limit.
+
 ## 0.3. v2.29.6 — Chat and Lunar Moth
 
 - Chat queues offline messages locally, retries when connected, and fades its message panel after five seconds of inactivity. Incoming messages reveal the expanded panel again.

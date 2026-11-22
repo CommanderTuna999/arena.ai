@@ -15,6 +15,7 @@ import { SPECIES_LIST } from "@/game/enemies";
 import { MAP_GRID, MAP_RADIUS, isUltraZone } from "@/game/world";
 import SettingsPanel from "@/components/SettingsPanel";
 import Chat from "@/components/Chat";
+import { StorageWarning } from "@/components/StorageWarning";
 import RecipeIcon from "@/components/RecipeIcon";
 import Bestiary, { BeeIcon } from "@/components/Bestiary";
 import { guestName, readGuestSave, resolveSession, saveKeyFor, writeGuestSave } from "@/game/accounts";
@@ -242,6 +243,7 @@ export default function GameClient() {
       {!hud && <div className="absolute inset-0 grid place-items-center text-xl tracking-[0.4em] text-cyan-300">LOADING SAVE…</div>}
       {hud && game && <Hud_ hud={hud} creditRef={creditRef} onOpen={() => { game.blur(); setAdminOpen(false); setMenu(true); }} onHelp={() => setHelp(true)} onAdmin={() => { game.blur(); setMenu(false); setAdminOpen(true); }} onToggleAuto={() => game.toggleAutoFire()} onSettings={() => { game.blur(); setSettingsOpen(true); }} onBestiary={() => { game.blur(); setBestiaryOpen(true); }} onHome={goHome} account={account} />}
       {hud && game && <Chat game={game} notices={hud.ultraNotices} />}
+      {game && <StorageWarning count={game.save.inventory.length} />}
       {hud && game && adminOpen && <AdminPanel game={game} hud={hud} onClose={() => setAdminOpen(false)} />}
       {hud && game && menu && <Hangar game={game} hud={hud} onClose={() => setMenu(false)} />}
       {game && bestiaryOpen && <Bestiary bestiary={game.save.bestiary ?? {}} onClose={() => { setBestiaryOpen(false); game.blur(); }} />}
@@ -555,7 +557,7 @@ function CompIcon({ c, size = 44 }: { c: Comp; size?: number }) {
 
 function Hangar({ game, hud, onClose }: { game: Game; hud: Hud; onClose: () => void }) {
   const [tab, setTab] = useState<Tab>("upgrades");
-  const tabs: [Tab, string][] = [["cannon", "CANNON"], ["upgrades", "UPGRADES"], ["craft", "CRAFTING"], ["storage", `STORAGE ${hud.inv}/${hud.cargo}`], ["loadout", "LOADOUT"], ["settings", "SYSTEM"]];
+  const tabs: [Tab, string][] = [["cannon", "CANNON"], ["upgrades", "UPGRADES"], ["craft", "CRAFTING"], ["storage", `STORAGE ${hud.inv}`], ["loadout", "LOADOUT"], ["settings", "SYSTEM"]];
   return (
     <div className="absolute inset-0 z-40 grid place-items-center bg-black/60 p-2 sm:p-6">
       <div className="flex h-full max-h-[760px] w-full max-w-5xl flex-col rounded-md border border-cyan-300/60 bg-[#060a18]/97 shadow-[0_0_50px_rgba(77,255,210,0.2)]">
@@ -1152,7 +1154,7 @@ function Storage({ game }: { game: Game }) {
   return (
     <div>
       <div className="mb-3 flex flex-wrap items-center gap-2 rounded-sm border border-white/15 bg-white/[0.03] p-2 text-xs">
-        <span>Storage {inv.length}/{game.stats.cargo}</span>
+        <span>Storage {inv.length}</span>
         <span className="text-white/40">|</span>
         <span>Sell everything up to</span>
         <select value={below} onChange={(e) => setBelow(Number(e.target.value))} className="rounded-sm border border-white/20 bg-black px-1 py-0.5">

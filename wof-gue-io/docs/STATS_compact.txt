@@ -251,6 +251,6 @@ Enemy turrets (epic+): gun 900u 1.35s 0.4x 560u/s; rotary 700u 0.16s 0.05x 720u/
 9. BASE CANNON AND UPGRADES
 Cannon Damage max 30: 10 x 1.2^L per shot. Fire Rate max 12: 4+0.7L shots/s. Extra Barrels max 4: 1+L shots. Targeting Matrix max 10: 5+4L% crit for 2.5x. Base-cannon pierce, plate, core and splash upgrades are gone; only weapon recipes add those now.
 Hull Plating max 30: 100 x 1.22^L HP. Nano Repair max 10: 0.5L%/s. Reactive Armour max 14: -3.5L% damage. Energy Shield Core max 25: 60 x 1.28^(L-1) at L1+. Inertial Dampers max 6: 12L% slow/pull resist. Thrusters max 12: 450+40L. Handling max 10: 1,500+200L accel. Afterburner max 8: x(1.7+0.1(L-1)) burst at L1+.
-Launcher Bays max 3: 1+L harpoons. Cable Strength max 16: 5 x 1.42^L. Launcher Range max 10: 380+60L. Cable Armouring max 12: 40 x 1.35^L HP. Winch max 8: 1,000+140L u/s. Salvage Contracts max 20: x(1+0.25L) credits. Scavenger Drones max 10: 30+4L% drop. Rarity Scanner max 8: +5L% luck. Cargo Bay max 8: 24+12L slots. Cost = base x growth^level credits.
+Launcher Bays max 3: 1+L harpoons. Cable Strength max 16: 5 x 1.42^L. Launcher Range max 10: 380+60L. Cable Armouring max 12: 40 x 1.35^L HP. Winch max 8: 1,000+140L u/s. Salvage Contracts max 20: x(1+0.25L) credits. Scavenger Drones max 10: 30+4L% drop. Rarity Scanner max 8: +5L% luck. Component storage has no gameplay slot limit. Cost = base x growth^level credits.
 
 END OF COMPENDIUM

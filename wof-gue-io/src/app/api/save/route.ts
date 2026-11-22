@@ -24,7 +24,7 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   try {
     const text = await req.text();
-    if (text.length > 400_000) return Response.json({ ok: false, error: "too large" }, { status: 413 });
+    if (new TextEncoder().encode(text).byteLength > 4_000_000) return Response.json({ ok: false, error: "too large" }, { status: 413 });
     const body = JSON.parse(text) as { id?: string; name?: string; save?: { kills?: number } };
     const signed = await currentUser();
     const id = signed ? signed.id : body.id;
