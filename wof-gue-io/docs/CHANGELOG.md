@@ -1,3 +1,7 @@
+## 0.3. v2.29.2 — Core contact
+
+- Enemy cores no longer deal contact or body-attack damage; other enemy parts and attacks still can.
+
 ## 0.3. v2.29.1 — Map and admin fixes
 
 - Removed the camera rectangle from the map. Infinite Damage now deals infinite damage to hit parts and armour instead of 100 times damage.

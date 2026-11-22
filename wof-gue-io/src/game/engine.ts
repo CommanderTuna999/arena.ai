@@ -2717,15 +2717,15 @@ export class Game {
       }
     }
   }
-  /** is the player's ship touching a solid part of this enemy? */
-  private touching(e: Enemy, extra = 0) {
+  /** The core is solid for movement, but cannot inflict contact damage. */
+  private touching(e: Enemy, extra = 0, includeCore = false) {
     const p = this.player;
     const dx = p.x - e.x, dy = p.y - e.y;
     if (dx * dx + dy * dy > (e.radius + SHIP_R + 20) * (e.radius + SHIP_R + 20)) return false;
     const ca = Math.cos(e.a), sa = Math.sin(e.a);
     const lx = dx * ca + dy * sa, ly = -dx * sa + dy * ca;
     for (const q of e.parts) {
-      if (!q.alive || q.kind === "wing" || q.kind === "leg") continue;
+      if (!q.alive || q.kind === "wing" || q.kind === "leg" || (!includeCore && q.kind === "core")) continue;
       let x = lx, y = ly;
       if (q.g >= 0) { const g = e.groups[q.g]; const c = Math.cos(-g.ang), s = Math.sin(-g.ang); const ddx = lx - g.px, ddy = ly - g.py; x = g.px + ddx * c - ddy * s; y = g.py + ddx * s + ddy * c; }
       if (q.seg >= 0 && e.bend) y -= this.bendOff(e, q);
@@ -2981,13 +2981,13 @@ export class Game {
 
     // contact with player
     if (!p.dead && dist < e.radius + SHIP_R + 30 && !this.inSafe()) {
-      if (this.touching(e, 0)) {
+      if (this.touching(e, 0, true)) {
         const k = dist || 1;
         const nx = p.x + (dx / k) * 140 * dt, ny = p.y + (dy / k) * 140 * dt;
         if (circleWalkable(nx, p.y, SHIP_R)) p.x = nx;
         if (circleWalkable(p.x, ny, SHIP_R)) p.y = ny;
         p.vx += (dx / k) * 600 * dt; p.vy += (dy / k) * 600 * dt;
-        if (e.contactCd <= 0) { e.contactCd = 0.7; this.hurtPlayer(e.eDmg * 0.25, { kb: 200, kbx: dx / k, kby: dy / k }); }
+        if (e.contactCd <= 0 && this.touching(e, 0)) { e.contactCd = 0.7; this.hurtPlayer(e.eDmg * 0.25, { kb: 200, kbx: dx / k, kby: dy / k }); }
       }
     }
   }

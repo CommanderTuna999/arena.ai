@@ -1,0 +1,15 @@
+import assert from 'node:assert/strict';
+import { Game } from './src/game/engine';
+import { newSave } from './src/game/data';
+const g = new Game(newSave(), 'test') as any;
+const e = g.makeEnemy(0, 0, 5000, 5000, 'test', 11);
+const core = e.parts[e.coreId];
+for (const q of e.parts) if (q !== core) q.alive = false;
+const [x,y] = g.partWorld(e,core); g.player.x = x; g.player.y = y;
+assert.equal(g.touching(e, 0), false, 'core cannot trigger damage');
+assert.equal(g.touching(e, 0, true), true, 'core remains solid');
+const body = e.parts.find((q: any) => q !== core && q.kind !== 'wing' && q.kind !== 'leg');
+assert(body); body.alive = true;
+const [bx,by] = g.partWorld(e, body); g.player.x=bx; g.player.y=by;
+assert.equal(g.touching(e, 0), true, 'other parts still make contact');
+console.log('Core contact checks passed');
