@@ -8,7 +8,7 @@
  *   CHANGELOG and mirror the details in docs/CHANGELOG.md.
  */
 
-export const VERSION = "2.20.0";
+export const VERSION = "2.22.0";
 
 export interface ChangeEntry {
   version: string;
@@ -19,6 +19,21 @@ export interface ChangeEntry {
 }
 
 export const CHANGELOG: ChangeEntry[] = [
+  {
+    version: "2.22.0", date: "20 Nov 2026", title: "Connected walls and balanced rarity zones",
+    points: [
+      "The original maze now has thick connected walls, branching passages and a fully connected walkable area.",
+      "The mythical zone now covers approximately three times the walkable area of all other rarity zones combined, with room for future rarities.",
+    ],
+  },
+  {
+    version: "2.21.0", date: "20 Nov 2026", title: "Original labyrinth and Mediator polish",
+    points: [
+      "Replaced the traced map with an original, larger connected labyrinth. The mythical region occupies most of the map, leaving space for future rarities.",
+      "The cannon tree is smaller and its prerequisite connections are drawn continuously without horizontal scrolling.",
+      "Mediator now has a segmented charging animation and a crisp layered energy beam. Continuous recoil pushes the ship backwards and restricts movement while firing.",
+    ],
+  },
   {
     version: "2.20.0", date: "20 Nov 2026", title: "Expanded world and rarity zones",
     points: [

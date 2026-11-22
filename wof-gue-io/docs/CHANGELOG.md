@@ -1,3 +1,14 @@
+## 0.3. v2.22.0 — connected walls and balanced rarity zones
+
+- Rebuilt the original maze with thick connected wall networks, branches and connected walkable corridors.
+- Adjusted rarity bands so mythical covers approximately three times the combined walkable area of the other zones.
+
+## 0.3. v2.21.0 — original labyrinth and Mediator polish
+
+- Replaced the traced map with an original, larger connected partition labyrinth. Its large mythical region leaves room for future rarities; zones increase in rarity with distance from the base.
+- Cannon-tree nodes fit without horizontal scrolling and prerequisite connectors share aligned coordinates.
+- Mediator has a segmented charging animation, crisp layered beam, continuous recoil and restricted movement while firing.
+
 ## 0.3. v2.20.0 — expanded world and rarity zones
 
 - Enlarged the reference-inspired map and added 48 interior wall segments. Every walkable cell remains reachable from the base.

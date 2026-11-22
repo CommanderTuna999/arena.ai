@@ -30,5 +30,5 @@ for (let i=0;i<20;i++) g.firePlayer(0.05);
 assert(g.player.charge > 0.99, "charge rate applies");
 g.input.lmb = false; g.firePlayer(0.05);
 for (let i=0;i<10;i++) g.firePlayer(0.05);
-assert(g.beams.length >= 9 && g.beams.at(-1).width > 24, "sustained, widened beam is drawn");
+assert(g.beams.length === 1 && g.beams.at(-1).mediator && g.beams.at(-1).width > 24, "sustained, widened beam is drawn");
 console.log("r52 regression checks passed");

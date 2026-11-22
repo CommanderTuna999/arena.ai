@@ -699,15 +699,15 @@ function CannonTree({ game }: { game: Game }) {
             if (owned) { game.selectCannon(c.id); setMsg(null); }
           }}
           title={owned ? `${c.name} — click to fit` : c.name}
-          className={`flex w-full flex-col items-center gap-0.5 rounded-sm border px-1 pb-1 pt-1.5 transition duration-150 ${
+          className={`flex h-[52px] w-full flex-col items-center justify-center gap-0 rounded-sm border px-0.5 transition duration-150 ${
             selected ? "border-yellow-300/80 bg-yellow-300/10 shadow-[0_0_20px_rgba(255,225,77,0.22)]"
               : owned ? "border-cyan-300/50 bg-cyan-400/5 hover:border-cyan-200/80 hover:bg-cyan-400/10"
                 : dim ? "border-white/10 bg-black/30 opacity-35 grayscale"
                   : "border-white/20 bg-black/40 hover:border-white/45 hover:bg-white/5"
           } ${isOpen ? "scale-[1.05]" : ""}`}
         >
-          <CannonIcon c={c} className="h-7 w-14 shrink-0" />
-          <span className={`w-full truncate text-center text-[10px] font-black leading-tight tracking-wide ${selected ? "text-yellow-100" : owned ? "text-cyan-100" : "text-white/80"}`}>
+          <CannonIcon c={c} className="h-5 w-10 shrink-0" />
+          <span className={`w-full truncate text-center text-[9px] font-black leading-tight tracking-wide ${selected ? "text-yellow-100" : owned ? "text-cyan-100" : "text-white/80"}`}>
             {c.name}
           </span>
           <span className="text-[7px] font-black tracking-[0.16em]">
@@ -774,24 +774,26 @@ function CannonTree({ game }: { game: Game }) {
     );
   };
 
-  const branch = (c: CannonDef, ancestors: Set<string>): ReactNode => {
-    if (ancestors.has(c.id)) return null;
+  // Allocate equal-width leaf slots, then centre each prerequisite over its
+  // actual children. One SVG draws all connectors in the same coordinate space.
+  type TreePoint = { c: CannonDef; x: number; depth: number; children: string[] };
+  const points: TreePoint[] = [];
+  let leaves = 0, deepest = 0;
+  const layout = (c: CannonDef, depth: number, ancestors: Set<string>): number => {
     const next = new Set(ancestors).add(c.id);
     const children = CANNONS.filter((child) => child.requires === c.id && !next.has(child.id));
-    return <div key={c.id} className="flex min-w-[125px] flex-col items-center">
-      {children.length > 0 && <>
-        <div className="flex w-full items-end justify-center gap-2">
-          {children.map((child) => <div key={child.id} className="relative flex flex-1 flex-col items-center">
-            {branch(child, next)}
-            <div className="h-4 w-px bg-cyan-300/35" />
-          </div>)}
-        </div>
-        {children.length > 1 && <div className="h-px bg-cyan-300/35" style={{ width: `${100 * (children.length - 1) / children.length}%` }} />}
-        <div className="h-4 w-px bg-cyan-300/35" />
-      </>}
-      <div className="w-[125px]">{node(c, true, "mid")}</div>
-    </div>;
+    deepest = Math.max(deepest, depth);
+    const xs = children.map((child) => layout(child, depth + 1, next));
+    const x = xs.length ? (xs[0] + xs[xs.length - 1]) / 2 : leaves++ + 0.5;
+    points.push({ c, x, depth, children: children.map((child) => child.id) });
+    return x;
   };
+  CANNONS.filter((c) => !c.requires || !CANNON_BY_ID[c.requires]).forEach((c) => layout(c, 0, new Set()));
+  const pointX = (p: TreePoint) => p.x / Math.max(leaves, 1) * 1000;
+  const pointY = (p: TreePoint) => 10 + (deepest - p.depth) * 76;
+  const height = 62 + deepest * 76;
+  const byId = new Map(points.map((p) => [p.c.id, p]));
+
   return (
     <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)]">
       {/* ---- the tree ---- */}
@@ -800,10 +802,19 @@ function CannonTree({ game }: { game: Game }) {
           <div className="text-[10px] font-bold tracking-[0.22em] text-cyan-200/60">CANNON TREE</div>
         </div>
         {msg && <div className="mb-1 rounded-sm border border-red-400/40 bg-red-500/10 px-2 py-1 text-[11px] text-red-200">{msg}</div>}
-        <div className="overflow-x-auto pt-1 pb-2">
-          <div className="flex min-w-max justify-center gap-4">
-            {CANNONS.filter((c) => !c.requires || !CANNON_BY_ID[c.requires]).map((c) => branch(c, new Set()))}
-          </div>
+        <div className="relative mt-2 w-full" style={{ height }}>
+          <svg className="pointer-events-none absolute inset-0 h-full w-full" viewBox={`0 0 1000 ${height}`} preserveAspectRatio="none" aria-hidden="true">
+            {points.flatMap((p) => p.children.map((id) => {
+              const child = byId.get(id); if (!child) return null;
+              const x1 = pointX(p), x2 = pointX(child);
+              const y1 = pointY(p), y2 = pointY(child) + 52;
+              const mid = (y1 + y2) / 2;
+              return <path key={`${p.c.id}-${id}`} d={`M ${x1} ${y1} V ${mid} H ${x2} V ${y2}`} fill="none" stroke="rgba(103,232,249,.42)" vectorEffect="non-scaling-stroke" />;
+            }))}
+          </svg>
+          {points.map((p) => <div key={p.c.id} className="absolute" style={{ left: `${pointX(p) / 10}%`, top: pointY(p), width: `${Math.min(100 / Math.max(leaves, 1) - 0.7, 22)}%`, transform: "translateX(-50%)" }}>
+            {node(p.c, true, p.x < 1.5 ? "left" : p.x > leaves - 1.5 ? "right" : "mid")}
+          </div>)}
         </div>
       </div>
 

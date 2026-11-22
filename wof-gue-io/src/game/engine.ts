@@ -241,7 +241,7 @@ export interface Puddle { x: number; y: number; r: number; life: number; max: nu
 export interface Ring { x: number; y: number; r: number; max: number; speed: number; dmg: number; hit: boolean; color: string; hurts: boolean }
 export interface DebrisPiece { poly: number[]; stroke: string; fill: string }
 export interface Debris { x: number; y: number; vx: number; vy: number; rot: number; vr: number; life: number; max: number; pieces: DebrisPiece[] }
-export interface Beam { x1: number; y1: number; x2: number; y2: number; life: number; color?: string; width?: number }
+export interface Beam { x1: number; y1: number; x2: number; y2: number; life: number; color?: string; width?: number; mediator?: boolean }
 export interface LComp { id: number; c: Comp; x: number; y: number; vx: number; vy: number; a: number; va: number; r: number; hooks: number[]; stress: number; ttl: number; born: number; srcId: number }
 export interface RopeNode { x: number; y: number; px: number; py: number }
 export interface Harpoon {
@@ -491,7 +491,7 @@ export class Game {
    *  and always stays clear of the world edge. */
   private placeBase() {
     // The broad lower-right opening in the supplied map.
-    const x = 30000, y = 15000;
+    const x = 48000, y = 48000;
     BASE.x = x; BASE.y = y;
     this.cam.x = x;
     this.cam.y = y - 120;
@@ -3228,7 +3228,9 @@ export class Game {
         if (pierced > pierce) { endLen = d; break outer; }
       }
     }
-    this.beams.push({ x1: x, y1: y, x2: x + cos * endLen, y2: y + sin * endLen, life: 0.12, color, width: (src === "laser" && color === "#e9d5ff" ? 24 : 5) * width });
+    const mediator = src === "laser" && color === "#e9d5ff";
+    if (mediator) this.beams = this.beams.filter((b) => !b.mediator);
+    this.beams.push({ x1: x, y1: y, x2: x + cos * endLen, y2: y + sin * endLen, life: mediator ? 0.06 : 0.12, color, width: (mediator ? 24 : 5) * width, mediator });
   }
 
   /** Heavy cannon: an instant line to the first thing it meets, not a slug. */
@@ -3287,7 +3289,7 @@ export class Game {
     const p = this.player, st = this.stats;
     if (p.dead) { this.mediatorBeamTime = 0; this.fencerCharge = 0; return; }
     if (st.cannonId !== "fencer" || this.inSafe()) this.fencerCharge = 0;
-    if (!st.charge) this.mediatorBeamTime = 0;
+    if (!st.charge || this.inSafe()) { this.mediatorBeamTime = 0; if (!st.charge) { p.charging = false; p.charge = 0; } }
     const want = this.input.lmb || this.input.keys.has("Space");
     p.fireCd -= dt;
     if (this.mediatorBeamTime > 0 && st.charge && !this.inSafe()) {
@@ -3297,6 +3299,9 @@ export class Game {
       const x = p.x + Math.cos(p.a) * m.x - Math.sin(p.a) * m.y;
       const y = p.y + Math.sin(p.a) * m.x + Math.cos(p.a) * m.y;
       this.beam(x, y, p.a, st.bulletRange, this.mediatorBeamDamage * step, st.pierce, false, "laser", "#e9d5ff", st.beamWidth);
+      // Sustained thrust from the beam, not just a one-off firing kick.
+      p.vx -= Math.cos(p.a) * 950 * step;
+      p.vy -= Math.sin(p.a) * 950 * step;
       return;
     }
     const base = p.a;
@@ -4065,7 +4070,7 @@ export class Game {
       if (wantBoost) p.boost = Math.max(0, p.boost - 50 * dt);
       else p.boost = Math.min(100, p.boost + st.boostRegen * dt);
       if (p.slowT > 0) { p.slowT -= dt; if (p.slowT <= 0) p.slowF = 1; }
-      let maxSp = st.thrust * p.slowF * p.tow * (wantBoost ? st.boostMul : 1);
+      let maxSp = st.thrust * p.slowF * p.tow * (wantBoost ? st.boostMul : 1) * (this.mediatorBeamTime > 0 && st.charge ? 0.45 : 1);
       const rate = Math.min(1, (st.accel / Math.max(200, maxSp)) * dt);
       p.vx += (ax * maxSp - p.vx) * rate;
       p.vy += (ay * maxSp - p.vy) * rate;

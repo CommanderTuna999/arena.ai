@@ -580,14 +580,22 @@ export function render(g: Game, ctx: CanvasRenderingContext2D) {
   }
   ctx.shadowBlur = 0;
   for (const bm of g.beams) {
+    if (bm.mediator) {
+      // Hard-edged concentric rails read as an energy beam, without a blurry glow.
+      ctx.save(); ctx.globalAlpha = clamp(bm.life / 0.06, 0, 1); ctx.shadowBlur = 0; ctx.lineCap = "butt";
+      const line = (color: string, width: number) => {
+        ctx.strokeStyle = color; ctx.lineWidth = width;
+        ctx.beginPath(); ctx.moveTo(bm.x1, bm.y1); ctx.lineTo(bm.x2, bm.y2); ctx.stroke();
+      };
+      const width = bm.width ?? 24;
+      line("#6e46c8", width * 1.2); line("#c99bff", width * 0.78); line("#f7ecff", width * 0.3);
+      ctx.fillStyle = "#ffffff"; ctx.beginPath(); ctx.arc(bm.x1, bm.y1, width * 0.38, 0, TAU); ctx.fill();
+      ctx.restore(); continue;
+    }
     const c = bm.color ?? "#baffff";
     ctx.globalAlpha = clamp(bm.life / 0.12, 0, 1);
     ctx.strokeStyle = c; ctx.lineWidth = bm.width ?? 5; ctx.shadowColor = c; ctx.shadowBlur = 18;
     ctx.beginPath(); ctx.moveTo(bm.x1, bm.y1); ctx.lineTo(bm.x2, bm.y2); ctx.stroke();
-    if ((bm.width ?? 0) > 10) {
-      ctx.strokeStyle = "#fff"; ctx.lineWidth = (bm.width ?? 1) * 0.3;
-      ctx.beginPath(); ctx.moveTo(bm.x1, bm.y1); ctx.lineTo(bm.x2, bm.y2); ctx.stroke();
-    }
     ctx.globalAlpha = 1;
   }
   ctx.shadowBlur = 0;
@@ -1621,6 +1629,21 @@ function drawPlayer(g: Game, ctx: CanvasRenderingContext2D, z: number, t: number
   }
   drawShipShape(ctx, p.flash > 0 ? "#ff6b81" : "#7df9ff", 1, z, t);
   drawCannon(g, ctx, z, t);
+  if (st.cannonId === "mediator" && p.charging && p.charge > 0) {
+    // Converging segmented rings and orbiting sparks build into a sharp core.
+    const q = clamp(p.charge, 0, 1), mx = st.muzzles[0]?.x ?? 44;
+    ctx.save(); ctx.translate(mx, 0); ctx.shadowBlur = 0;
+    const radius = 21 + 13 * (1 - q);
+    ctx.lineWidth = 2 + q * 2; ctx.strokeStyle = "#bc92ff";
+    for (let i = 0; i < 3; i++) {
+      const a = t * 3 + i * TAU / 3;
+      ctx.beginPath(); ctx.arc(0, 0, radius, a, a + 0.8 + q * 0.8); ctx.stroke();
+      ctx.fillStyle = "#f6eaff"; ctx.beginPath(); ctx.arc(Math.cos(-t * 4 + i * TAU / 3) * radius, Math.sin(-t * 4 + i * TAU / 3) * radius, 2.5 + q * 2, 0, TAU); ctx.fill();
+    }
+    ctx.fillStyle = "#8254dd"; ctx.beginPath(); ctx.arc(0, 0, 7 + q * 11, 0, TAU); ctx.fill();
+    ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(0, 0, 2 + q * 6, 0, TAU); ctx.fill();
+    ctx.restore();
+  }
 
   /* ---- fitted hardware ---- */
   const armor = equipped(g, "armor");

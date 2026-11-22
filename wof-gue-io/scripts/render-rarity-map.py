@@ -35,7 +35,7 @@ labels=['COMMON','UNCOMMON','RARE','EPIC','LEGENDARY','MYTHICAL']
 for i,name in enumerate(labels):
  y=154+i*62;d.rounded_rectangle((x,y,x+25,y+25),radius=4,fill=colors[i]);d.text((x+38,y-1),name,font=B(15),fill='#f2f5fa')
  low=0 if i==0 else edges[i-1]; high=edges[i] if i<len(edges) else None
- dist=f'{low//1000}k–{high//1000}k units' if high else f'{low//1000}k+ units'
+ dist=f'{low/1000:.1f}k–{high/1000:.1f}k units' if high else f'{low/1000:.1f}k+ units'
  d.text((x+38,y+21),dist,font=F(12),fill='#a9bdcb')
 d.text((x,550),'BASE',font=B(16),fill='#ffffff');d.text((x,578),'White ring marks the start.\nDark areas are walls.\n\nRarity bands are distance-based;\nindividual enemy rarities can vary.\n\nThe far reaches leave room for\nfuture rarity tiers.',font=F(13),fill='#a9bdcb',spacing=5)
 output=root/'docs/rarity-map.png';output.parent.mkdir(exist_ok=True);im.save(output,optimize=True)
