@@ -1,3 +1,8 @@
+## 0.3. v2.23.0 — thicker walls and Mediator charge
+
+- Rebuilt the connected maze with walls approximately five times thicker and softened corners. The mythical-to-other walkable area ratio remains approximately 3:1.
+- Mediator displays charge progress as a percentage. Full charge takes 70 seconds unupgraded, decreasing by six seconds per charge-rate upgrade to 10 seconds at level 10; beam damage scales with charge.
+
 ## 0.3. v2.22.0 — connected walls and balanced rarity zones
 
 - Rebuilt the original maze with thick connected wall networks, branches and connected walkable corridors.

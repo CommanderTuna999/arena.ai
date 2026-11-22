@@ -8,7 +8,7 @@
  *   CHANGELOG and mirror the details in docs/CHANGELOG.md.
  */
 
-export const VERSION = "2.22.0";
+export const VERSION = "2.23.0";
 
 export interface ChangeEntry {
   version: string;
@@ -19,6 +19,13 @@ export interface ChangeEntry {
 }
 
 export const CHANGELOG: ChangeEntry[] = [
+  {
+    version: "2.23.0", date: "20 Nov 2026", title: "Thicker walls and Mediator charge",
+    points: [
+      "Maze walls are roughly five times thicker, with rounded corners and connected routes. Mythical terrain remains approximately three times the other rarity areas combined.",
+      "Mediator displays its charge percentage while held. Full charge now takes 70 seconds without upgrades, falling to 10 seconds at maximum charge-rate level; longer charging increases beam damage.",
+    ],
+  },
   {
     version: "2.22.0", date: "20 Nov 2026", title: "Connected walls and balanced rarity zones",
     points: [

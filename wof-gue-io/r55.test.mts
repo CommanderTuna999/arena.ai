@@ -12,7 +12,7 @@ const walls = MAP_GRID.reduce((n,row)=>n+[...row].filter(c=>c==='0').length,0);
 assert.equal(wallSeen.size,walls,'all walls belong to one connected network');
 const g = new Game(newSave(),'test') as any; g.save.cannon.id='mediator'; g.stats=computeStats(g.save);
 g.player.x=BASE.x-3000; g.player.y=BASE.y; g.player.a=0; g.player.vx=0;
-g.input.lmb=true; for(let i=0;i<20;i++)g.firePlayer(.05);
+g.input.lmb=true; for(let i=0;i<1401;i++)g.firePlayer(.05);
 g.input.lmb=false;g.firePlayer(.05);
 const first=g.player.vx;for(let i=0;i<10;i++)g.firePlayer(.05);
 assert(g.player.vx < first - 300, 'recoil continues pushing while the beam fires');

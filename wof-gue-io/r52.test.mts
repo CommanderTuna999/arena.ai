@@ -26,7 +26,7 @@ assert(ratio > 6.5, `walkable area ratio ${ratio}`);
 const g = new Game(newSave(), "test") as any;
 g.save.cannon.id = "mediator"; g.save.cannon.lv.mediator = { chargeRate: 2, beamWidth: 2 }; g.stats = computeStats(g.save);
 g.player.x = BASE.x + 2000; g.player.y = BASE.y; g.input.lmb = true; g.player.fireCd = 0;
-for (let i=0;i<20;i++) g.firePlayer(0.05);
+for (let i=0;i<1161;i++) g.firePlayer(0.05);
 assert(g.player.charge > 0.99, "charge rate applies");
 g.input.lmb = false; g.firePlayer(0.05);
 for (let i=0;i<10;i++) g.firePlayer(0.05);

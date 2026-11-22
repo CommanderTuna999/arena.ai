@@ -3289,7 +3289,7 @@ export class Game {
     const p = this.player, st = this.stats;
     if (p.dead) { this.mediatorBeamTime = 0; this.fencerCharge = 0; return; }
     if (st.cannonId !== "fencer" || this.inSafe()) this.fencerCharge = 0;
-    if (!st.charge || this.inSafe()) { this.mediatorBeamTime = 0; if (!st.charge) { p.charging = false; p.charge = 0; } }
+    if (!st.charge || this.inSafe()) { this.mediatorBeamTime = 0; p.charging = false; p.charge = 0; }
     const want = this.input.lmb || this.input.keys.has("Space");
     p.fireCd -= dt;
     if (this.mediatorBeamTime > 0 && st.charge && !this.inSafe()) {

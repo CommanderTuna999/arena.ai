@@ -23,7 +23,7 @@ export const W_SLOTS = [
 export const SHIP_R = 15;
 /** Minimum distance from the base for each successive rarity band.
  * Keep thresholds data-driven so future rarities can extend the map. */
-export const ZONE_EDGES = [15886, 24955, 33714, 42265, 53852];
+export const ZONE_EDGES = [12015, 18350, 24060, 29652, 39069];
 export function zoneTier(distanceFromBase: number) {
   return ZONE_EDGES.reduce((tier, edge) => tier + (distanceFromBase >= edge ? 1 : 0), 0);
 }
@@ -332,7 +332,7 @@ export const CANNONS: CannonDef[] = [
      * the longer the hold, the harder the shot, and the recoil shoves the ship
      * hard backwards */
     dmg: 4000, interval: 0.5, speed: 0, range: 2600, hitscan: true,
-    charge: true, chargeTime: 1, chargeDmg: 1,
+    charge: true, chargeTime: 70, chargeDmg: 1,
     credits: 15000,
     parts: [
       { kind: "weapon", tier: 3, count: 7, label: "weapon" },
@@ -360,7 +360,7 @@ export const CANNON_TRACKS: CannonTrack[] = [
   { id: "barrels", name: "Barrels", desc: "A second barrel. Rounds alternate between the two, so each barrel fires at half the rate and the gun runs cooler for longer.", max: 1, base: 6000, growth: 1 },
   { id: "armorDmg", name: "Armour Damage", desc: "Extra damage dealt to armour plating.", max: 10, base: 80, growth: 1.5 },
   { id: "energyChance", name: "Energy Shot Chance", desc: "Chance each shot throws an energy bolt that bypasses enemy shielding.", max: 10, base: 120, growth: 1.5 },
-  { id: "chargeRate", name: "Charge Rate", desc: "The beam charges faster the longer it is held.", max: 10, base: 90, growth: 1.5 },
+  { id: "chargeRate", name: "Charge Rate", desc: "Reduces full charge time from 70 seconds to 10 seconds at maximum level.", max: 10, base: 90, growth: 1.5 },
   { id: "beamWidth", name: "Beam Width", desc: "A wider energy beam, striking more of the target.", max: 8, base: 110, growth: 1.5 },
 ];
 export const CANNON_TRACK_BY_ID: Record<string, CannonTrack> = Object.fromEntries(CANNON_TRACKS.map((t) => [t.id, t]));
@@ -391,7 +391,7 @@ export const cannonArmorDmg = (lv?: Record<string, number>) => 1 + 0.12 * lvl(lv
 /** chance a shot throws an energy bolt that bypasses shielding (Skewer MK2) */
 export const cannonEnergyChance = (lv?: Record<string, number>) => clamp(0.25 + 0.05 * lvl(lv, "energyChance"), 0, 0.95);
 /** how fast the charge beam builds (Mediator): a multiplier on charge speed */
-export const cannonChargeRate = (lv?: Record<string, number>) => 1 + 0.1 * lvl(lv, "chargeRate");
+export const cannonChargeRate = (lv?: Record<string, number>) => 70 / (70 - 6 * clamp(lvl(lv, "chargeRate"), 0, 10));
 /** how wide the energy beam strikes (Mediator): a multiplier on beam thickness */
 export const cannonBeamWidth = (lv?: Record<string, number>) => 1 + 0.18 * lvl(lv, "beamWidth");
 /** round speed at the current projectile-speed level */
@@ -424,7 +424,7 @@ export function cannonTrackValue(c: CannonDef, id: CannonTrackId, level: number)
     case "barrels": return `${cannonBarrels(one)} barrels`;
     case "armorDmg": return `+${Math.round((cannonArmorDmg(one) - 1) * 100)}% vs armour`;
     case "energyChance": return `${Math.round(cannonEnergyChance(one) * 100)}% energy shot`;
-    case "chargeRate": return `${cannonChargeRate(one).toFixed(2)}x charge`;
+    case "chargeRate": return `${(70 / cannonChargeRate(one)).toFixed(0)}s to full`;
     case "beamWidth": return `${cannonBeamWidth(one).toFixed(2)}x wide`;
   }
 }

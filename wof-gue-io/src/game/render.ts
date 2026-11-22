@@ -1612,6 +1612,19 @@ function drawPlayer(g: Game, ctx: CanvasRenderingContext2D, z: number, t: number
   }
 
   const p = g.player, st = g.stats;
+  if (st.cannonId === "mediator" && p.charging) {
+    const q = clamp(p.charge, 0, 1), width = 116 / z, height = 7 / z;
+    const x = p.x - width / 2, y = p.y - 59 / z;
+    ctx.save(); ctx.shadowBlur = 0;
+    ctx.fillStyle = "rgba(4,7,18,0.9)"; ctx.fillRect(x - 2 / z, y - 2 / z, width + 4 / z, height + 4 / z);
+    ctx.fillStyle = "#38245b"; ctx.fillRect(x, y, width, height);
+    ctx.fillStyle = "#cf9dff"; ctx.fillRect(x, y, width * q, height);
+    ctx.strokeStyle = "#e7d4ff"; ctx.lineWidth = 1 / z; ctx.strokeRect(x, y, width, height);
+    ctx.font = `${11 / z}px ui-monospace, monospace`; ctx.textAlign = "center";
+    ctx.fillStyle = "#f3e9ff";
+    ctx.fillText(`CHARGE ${Math.floor(q * 100)}%`, p.x, y - 6 / z);
+    ctx.restore();
+  }
   ctx.save();
   ctx.translate(p.x, p.y); ctx.rotate(p.a);
   /* directional ion wash: the construct drifts, it does not have a bow */
