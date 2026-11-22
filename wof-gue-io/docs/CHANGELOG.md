@@ -1,3 +1,8 @@
+## 0.3. v2.28.0 — Chat groundwork and tree layering
+
+- Fixed cannon tree popup layering so other nodes cannot draw over its opaque background.
+- Added a chat panel for local Ultra notices and a standalone WebSocket chat service. Online chat requires deployment/configuration; shared multiplayer combat is not yet implemented.
+
 ## 0.3. v2.27.1 — Sharper salvage
 
 - Increased cached component resolution and render very large pieces as vectors instead of stretching low-resolution images.

@@ -11,5 +11,6 @@ const e=g.enemies[0];g.killEnemy(e,e.x,e.y);assert(g.hud().ultraNotices.some((n:
 const render=readFileSync('src/game/render.ts','utf8'), bestiary=readFileSync('src/components/Bestiary.tsx','utf8'), ui=readFileSync('src/components/GameClient.tsx','utf8');
 assert(!render.includes('A moving diagonal enchantment sheen'));assert(render.includes('hurt ? "rgba(255,255,255,0.85)" : p.fill'));
 assert(bestiary.includes('fill={seen ? p.fill : "#05070c"}'));
-assert(ui.includes('hud.ultraNotices.map')&&ui.includes('z-[70]')&&ui.includes('aria-live="polite"'));
+assert(ui.includes('<Chat game={game} notices={hud.ultraNotices}'));
+const chat=readFileSync('src/components/Chat.tsx','utf8'); assert(chat.includes('aria-live="polite"') && chat.includes('Local event'));
 console.log('Ultra colour and notification checks passed');

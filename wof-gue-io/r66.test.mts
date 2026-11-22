@@ -1,0 +1,30 @@
+import assert from 'node:assert/strict';
+import { spawn } from 'node:child_process';
+import { createServer } from 'node:net';
+import { once } from 'node:events';
+import WebSocket from 'ws';
+import { readFileSync } from 'node:fs';
+const probe = createServer(); probe.listen(0,'127.0.0.1'); await once(probe,'listening');
+const port=(probe.address() as any).port; await new Promise<void>(r=>probe.close(()=>r()));
+const child=spawn(process.execPath,['multiplayer-server/chat-server.mjs'],{env:{...process.env,PORT:String(port),ALLOWED_ORIGINS:'https://wofgue.io'},stdio:['ignore','pipe','pipe']});
+try {
+  await Promise.race([new Promise<void>((resolve,reject)=>{child.stdout!.on('data',data=>{if(String(data).includes('listening'))resolve();}); child.once('exit',()=>reject(new Error('server exited')));}),new Promise((_,reject)=>setTimeout(()=>reject(new Error('startup timeout')),5000))]);
+  const health=await fetch(`http://127.0.0.1:${port}/health`).then(x=>x.json()) as any;
+  assert.equal(health.multiplayerCombat,false);
+  const url=`ws://127.0.0.1:${port}/chat`;
+  const a=new WebSocket(url,{origin:'https://wofgue.io'}),b=new WebSocket(url,{origin:'https://wofgue.io'});
+  const ah=once(a,'message'), bh=once(b,'message'); await Promise.all([ah,bh]);
+  const am=once(a,'message'),bm=once(b,'message');
+  a.send(JSON.stringify({type:'chat',name:'Pilot',text:'hello world'}));
+  const [ar]=await am, [br]=await bm;
+  const x=JSON.parse(ar.toString()), y=JSON.parse(br.toString());
+  assert.equal(x.message.text,'hello world'); assert.equal(x.message.id,y.message.id);
+  const c=new WebSocket(url,{origin:'https://wofgue.io'}); const [history]=await once(c,'message');
+  assert.equal(JSON.parse(history.toString()).messages[0].text,'hello world');
+  const bad=new WebSocket(url,{origin:'https://evil.invalid'}); bad.on('error',()=>{}); await new Promise<void>(resolve => bad.on('close', () => resolve()));
+  a.close(); b.close(); c.close();
+  const ui=readFileSync('src/components/GameClient.tsx','utf8');
+  assert(ui.includes('zIndex: open === p.c.id ? 100 : 1'));
+  assert(ui.includes('backgroundColor: "#050e16"'));
+  console.log('Chat broadcast, origin, history and popup checks passed');
+} finally {child.kill();}

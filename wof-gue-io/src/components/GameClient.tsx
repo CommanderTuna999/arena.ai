@@ -14,6 +14,7 @@ import { clamp, fmtNum } from "@/game/math";
 import { SPECIES_LIST } from "@/game/enemies";
 import { MAP_GRID, MAP_RADIUS, isUltraZone } from "@/game/world";
 import SettingsPanel from "@/components/SettingsPanel";
+import Chat from "@/components/Chat";
 import RecipeIcon from "@/components/RecipeIcon";
 import Bestiary, { BeeIcon } from "@/components/Bestiary";
 import { guestName, readGuestSave, resolveSession, saveKeyFor, writeGuestSave } from "@/game/accounts";
@@ -240,9 +241,7 @@ export default function GameClient() {
       <div className="pointer-events-none fixed inset-0" style={{ background: "radial-gradient(ellipse at center, transparent 55%, rgba(0,0,10,0.65) 100%)" }} />
       {!hud && <div className="absolute inset-0 grid place-items-center text-xl tracking-[0.4em] text-cyan-300">LOADING SAVE…</div>}
       {hud && game && <Hud_ hud={hud} creditRef={creditRef} onOpen={() => { game.blur(); setAdminOpen(false); setMenu(true); }} onHelp={() => setHelp(true)} onAdmin={() => { game.blur(); setMenu(false); setAdminOpen(true); }} onToggleAuto={() => game.toggleAutoFire()} onSettings={() => { game.blur(); setSettingsOpen(true); }} onBestiary={() => { game.blur(); setBestiaryOpen(true); }} onHome={goHome} account={account} />}
-      {hud && <div aria-live="polite" className="pointer-events-none absolute bottom-4 left-4 z-[70] flex max-w-[min(34rem,85vw)] flex-col items-start gap-1.5">
-        {hud.ultraNotices.map((notice) => <div key={notice.id} className="rounded-sm border border-white/60 px-3 py-1.5 text-sm font-black text-black shadow-lg" style={{ background: "linear-gradient(110deg, #ffffff, #cccccc 55%, #999999)" }}>{notice.msg}</div>)}
-      </div>}
+      {hud && game && <Chat game={game} notices={hud.ultraNotices} />}
       {hud && game && adminOpen && <AdminPanel game={game} hud={hud} onClose={() => setAdminOpen(false)} />}
       {hud && game && menu && <Hangar game={game} hud={hud} onClose={() => setMenu(false)} />}
       {game && bestiaryOpen && <Bestiary bestiary={game.save.bestiary ?? {}} onClose={() => { setBestiaryOpen(false); game.blur(); }} />}
@@ -728,7 +727,7 @@ function CannonTree({ game }: { game: Game }) {
               down ? "top-full pt-1" : "bottom-full pb-1"
             }`}
           >
-            <div className={`rounded-sm border bg-[#050e16] p-2 shadow-[0_14px_44px_rgba(0,0,0,0.8)] ${selected ? "border-yellow-300/60" : owned ? "border-cyan-300/50" : "border-white/25"}`}>
+            <div className={`rounded-sm border p-2 shadow-[0_14px_44px_rgba(0,0,0,0.8)] ${selected ? "border-yellow-300/60" : owned ? "border-cyan-300/50" : "border-white/25"}`} style={{ backgroundColor: "#050e16" }}>
               <div className="flex items-center gap-1.5">
                 <CannonIcon c={c} className="h-6 w-12 shrink-0" />
                 <span className={`min-w-0 flex-1 truncate text-[12px] font-black ${selected ? "text-yellow-100" : "text-white"}`}>{c.name}</span>
@@ -802,7 +801,7 @@ function CannonTree({ game }: { game: Game }) {
   return (
     <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)]">
       {/* ---- the tree ---- */}
-      <div className="rounded-sm border border-white/10 bg-white/[0.02] p-3">
+      <div className="relative z-20 rounded-sm border border-white/10 bg-white/[0.02] p-3">
         <div className="mb-1 flex items-baseline justify-between">
           <div className="text-[10px] font-bold tracking-[0.22em] text-cyan-200/60">CANNON TREE</div>
         </div>
@@ -817,7 +816,7 @@ function CannonTree({ game }: { game: Game }) {
               return <path key={`${p.c.id}-${id}`} d={`M ${x1} ${y1} V ${mid} H ${x2} V ${y2}`} fill="none" stroke="rgba(103,232,249,.42)" vectorEffect="non-scaling-stroke" />;
             }))}
           </svg>
-          {points.map((p) => <div key={p.c.id} className="absolute" style={{ left: `${pointX(p) / 10}%`, top: pointY(p), width: `${Math.min(100 / Math.max(leaves, 1) - 0.7, 22)}%`, transform: "translateX(-50%)" }}>
+          {points.map((p) => <div key={p.c.id} className="absolute" style={{ left: `${pointX(p) / 10}%`, top: pointY(p), width: `${Math.min(100 / Math.max(leaves, 1) - 0.7, 22)}%`, transform: "translateX(-50%)", zIndex: open === p.c.id ? 100 : 1 }}>
             {node(p.c, true, p.x < 1.5 ? "left" : p.x > leaves - 1.5 ? "right" : "mid")}
           </div>)}
         </div>

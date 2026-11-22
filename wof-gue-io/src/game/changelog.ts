@@ -8,7 +8,7 @@
  *   CHANGELOG and mirror the details in docs/CHANGELOG.md.
  */
 
-export const VERSION = "2.27.1";
+export const VERSION = "2.28.0";
 
 export interface ChangeEntry {
   version: string;
@@ -19,6 +19,10 @@ export interface ChangeEntry {
 }
 
 export const CHANGELOG: ChangeEntry[] = [
+  {
+    version: "2.28.0", date: "20 Nov 2026", title: "Chat groundwork and tree layering",
+    points: ["Fixed cannon tree popup layering and added a chat panel with local Ultra announcements.", "Added a separate deployable chat service; shared multiplayer combat is not yet implemented, and online chat requires server configuration."],
+  },
   {
     version: "2.27.1", date: "20 Nov 2026", title: "Sharper salvage",
     points: ["Large dropped components now render sharply at their actual screen resolution; oversized pieces use vector drawing instead of stretched low-resolution images."],
