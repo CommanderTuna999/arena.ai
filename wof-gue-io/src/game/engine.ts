@@ -187,6 +187,11 @@ export interface Enemy {
   baseEDmg: number;
   /** original part maxHp values, restored when the domain closes */
   domainOrig: number[];
+  /** the moth's heal-shield bubble: seconds left, current hp, max hp */
+  buffT: number; buffHp: number; buffMax: number;
+  /** domain decorative-ring throttle: counts down so the domain does not paint
+   *  a new expanding ring every single frame (that was the lag) */
+  domainFxT: number;
   tags: Record<string, number>; shields: ShieldInfo[]; weaponParts: number[]; shieldParts: number[];
   dist: number; contactCd: number; /** cooldown on the "get off my hull" swat */ swatCd: number; hasChange: boolean;
   dot: number; dotT: number; melt: number; slowT: number; slowF: number;
@@ -299,6 +304,11 @@ export interface Player {
    *  cool-down a jammed gun is stuck in (seconds left, 0 = ready) */
   recoil: number; heat: number; muzzle: number; muzzleFlash: number; barrelRec: number[];
   jam: number;
+  /** the Mediator's charge beam: how charged the hold is (0..1) and whether the
+   *  trigger is currently held to build it */
+  charge: number; charging: boolean;
+  /** the Fencer's combo: shots fired, so every fifth is a charged energy shot */
+  fenceShots: number;
   /** per-mount aim angle, relative to the hull (set by the auto-targeting pass) */
   wAim: number[];
   tpT: number; tpCd: number; tow: number; thrust: number;
@@ -402,6 +412,8 @@ export class Game {
   toasts: Toast[] = [];
   /** newly discovered species banner, shown at the top of the screen */
   discovery: { name: string; t: number } | null = null;
+  /** a domain-expansion cutscene: t counts down from dur while it plays */
+  cutscene: { t: number; dur: number; hue: number; x: number; y: number } | null = null;
   chunks = new Set<string>();
   shake = 0;
   tintHue = 190;
@@ -458,7 +470,7 @@ export class Game {
     this.player = {
       x: BASE.x, y: BASE.y - 200, vx: 0, vy: 0, a: -Math.PI / 2, hp: this.stats.hull, shield: this.stats.shieldMax, boost: 100, boosting: false,
       slowF: 1, slowT: 0, poison: 0, poisonT: 0, pull: null, dead: false, respawn: 0, fireCd: 0, wCd: [0, 0, 0], wAim: W_SLOTS.map((s) => s.rest), hitT: 99, shieldT: 0,
-      recoil: 0, heat: 0, muzzle: 0, muzzleFlash: 0, barrelRec: [], jam: 0,
+      recoil: 0, heat: 0, muzzle: 0, muzzleFlash: 0, barrelRec: [], jam: 0, charge: 0, charging: false, fenceShots: 0,
       flash: 0, thornCd: 0, tpT: 0, tpCd: 0, tow: 1, thrust: 0,
       barrier: 0, barrierMax: 0, barrierT: 0, overT: 0, nullCd: 0,
     };
@@ -533,7 +545,7 @@ export class Game {
       const [tx, ty] = clampWorld(Math.cos(a) * (WORLD_R - 900), Math.sin(a) * (WORLD_R - 900));
       p.x = tx; p.y = ty; p.vx = p.vy = 0;
       p.dead = false; p.respawn = 0; p.hp = this.stats.hull; p.shield = this.stats.shieldMax;
-      p.recoil = 0; p.heat = 0; p.muzzle = 0; p.muzzleFlash = 0; p.barrelRec.length = 0; p.jam = 0;
+      p.recoil = 0; p.heat = 0; p.muzzle = 0; p.muzzleFlash = 0; p.barrelRec.length = 0; p.jam = 0; p.charge = 0; p.charging = false; p.fenceShots = 0;
       p.slowF = 1; p.slowT = 0; p.poison = 0; p.poisonT = 0; p.pull = null;
       this.cam.x = tx; this.cam.y = ty;
       this.toast("TEST RANGE — NO SPAWNS", "#ff7ad9");
@@ -1444,7 +1456,7 @@ export class Game {
       speed: spd.speed * (1 + 0.04 * tier), turn: (spd.turn * TIER_TURN[clamp(tier, 0, 5)]) / (1 + b.radius / (b.size * 6)), mobility: 1, legCount: b.legCount, wingCount: b.wingCount, turnFrac: 1, legPlate: tier >= 4 ? tier - 3 : 0, crippledLegs: [], shieldReach: shieldParts.reduce((m, id) => Math.max(m, b.parts[id].shieldR), 0),
       abil, abilCd: abil.map(() => 1 + Math.random() * 3), gap: 1, act: null, stun: 0, wander: { x, y, t: 0 }, roleGroups,
       walk: Math.random() * 6, dead: false, eDmg: spd.dmg * DMG_MUL[tier], keep: spd.keep + b.radius * 0.9, strafe: Math.random() < 0.5 ? 1 : -1, strafeT: 2,
-      provoked: 0, mgHeat: 0, mgCool: 0, domainT: 0, domainMul: 1, baseEDmg: spd.dmg * DMG_MUL[tier], domainOrig: [], tags, shields: [], weaponParts, shieldParts, dist: 9999, bdist: 9999, contactCd: 0, swatCd: 0, hasChange: false, gen: 0, shieldDownT: 0,
+      provoked: 0, mgHeat: 0, mgCool: 0, domainT: 0, domainMul: 1, baseEDmg: spd.dmg * DMG_MUL[tier], domainOrig: [], buffT: 0, buffHp: 0, buffMax: 0, domainFxT: 0, tags, shields: [], weaponParts, shieldParts, dist: 9999, bdist: 9999, contactCd: 0, swatCd: 0, hasChange: false, gen: 0, shieldDownT: 0,
       dmgTaken: 0, baseDmg: 0,
       dot: 0, dotT: 0, melt: 0, slowT: 0, slowF: 1,
       shells: Array.from({ length: shellN }, () => ({ hp: shellMax, max: shellMax })),
@@ -1643,6 +1655,17 @@ export class Game {
   }
   damagePart(e: Enemy, p: Part, dmg: number, wx: number, wy: number, src: DmgSrc = "kinetic", fromBase = false) {
     void src;
+    /* the moth's heal-shield bubble absorbs incoming damage while it is up, so
+     * the body underneath takes the remainder (or nothing, while it holds) */
+    if (e.buffT > 0 && e.buffHp > 0) {
+      const absorbed = Math.min(dmg, e.buffHp);
+      if (absorbed > 0) {
+        e.buffHp -= absorbed;
+        dmg -= absorbed;
+        this.burst(wx || p.cx, wy || p.cy, `hsl(${e.spd.hue},100%,70%)`, 4, 3, 180);
+      }
+      if (e.buffHp <= 0) { e.buffT = 0; this.ringFx(e.x, e.y, e.radius * 2, `hsl(${e.spd.hue},100%,60%)`, 500); }
+    }
     this.trackDamage(e, Math.min(dmg, Math.max(0, p.hp)), fromBase);
     p.hp -= dmg; p.hurt = 0.1; p.barT = 3.5; e.barT = 4;
     e.aggro = true;
@@ -1995,7 +2018,7 @@ export class Game {
     }
     p.hp -= d;
     if (o.poison) { p.poison = Math.max(p.poison, o.poison * (1 - st.poisonResist)); p.poisonT = 4; }
-    if (o.kb) { const k = o.kb * (1 - st.dampers); p.vx += (o.kbx ?? 0) * k; p.vy += (o.kby ?? 0) * k; }
+    if (o.kb) { const k = o.kb; p.vx += (o.kbx ?? 0) * k; p.vy += (o.kby ?? 0) * k; }
     if (!o.dot) {
       p.flash = 0.18;
       this.shake = Math.max(this.shake, clamp(d / (st.hull * 0.1) * 4, 2, 14));
@@ -2024,10 +2047,9 @@ export class Game {
     this.cam.x = p.x; this.cam.y = p.y;
   }
   applySlow(f: number, t: number) {
-    const r = this.stats.dampers;
-    const ff = 1 - (1 - f) * (1 - r);
-    this.player.slowF = Math.min(this.player.slowF, ff);
-    this.player.slowT = Math.max(this.player.slowT, t * (1 - r * 0.5));
+    /* inertial dampers are gone: every snare and slow lands at full strength */
+    this.player.slowF = Math.min(this.player.slowF, f);
+    this.player.slowT = Math.max(this.player.slowT, t);
   }
 
   /* ---------------- projectiles ---------------- */
@@ -2035,8 +2057,10 @@ export class Game {
     const speed = o.speed ?? d.speed ?? 500;
     const type = o.type ?? d.kind ?? "bolt";
     /* projectiles read too small at a distance: scale the whole bill up so
-     * every shot is clearly visible (collision scales with it too). */
-    const size = (d.size ?? 6) * (1 + 0.14 * src.tier) * 5;
+     * every shot is clearly visible (collision scales with it too). Missiles
+     * stay deliberately small - twenty of them, fast and trailing, read as a
+     * swarm rather than a wall of pods. */
+    const size = (d.size ?? 6) * (1 + 0.14 * src.tier) * (type === "missile" ? 1.5 : 5);
     this.eprojs.push({
       x, y, vx: Math.cos(ang) * speed, vy: Math.sin(ang) * speed, life: o.life ?? d.life ?? 2, dmg: src.eDmg * d.dmg * (o.dmgMul ?? 1), r: size,
       hue: src.spd.hue, type, homing: d.homing ?? 0, slow: d.slow ?? 0, slowT: d.slowT ?? 1.5, poison: d.poison ? src.eDmg * d.poison : 0,
@@ -2064,7 +2088,7 @@ export class Game {
         const na = cur + clamp(angDiff(cur, want), -pr.homing * dt, pr.homing * dt);
         const sp = Math.min(pr.speed, Math.hypot(pr.vx, pr.vy) + 260 * dt);
         pr.vx = Math.cos(na) * sp; pr.vy = Math.sin(na) * sp;
-        if (Math.random() < 0.6) this.addParticle(pr.x, pr.y, 0, 0, "#ffb04d", 3, 0.3, 3, false);
+        if (Math.random() < 0.6) this.addParticle(pr.x, pr.y, 0, 0, `hsl(${pr.hue},100%,66%)`, 3, 0.3, 3, false);
       } else if (pr.homing > 0) {
         const want = Math.atan2(ty - pr.y, tx - pr.x), cur = Math.atan2(pr.vy, pr.vx);
         const na = cur + clamp(angDiff(cur, want), -pr.homing * dt, pr.homing * dt);
@@ -2251,10 +2275,20 @@ export class Game {
           const spread = d.spread ?? 0.3;
           for (let i = 0; i < n; i++) {
             const off = n === 1 ? 0 : -spread / 2 + (spread * i) / (n - 1);
+            let sx = mx, sy = my, ang = base + off;
+            /* an orbiting volley (the moth's missiles) summons its shots in a
+             * ring around the body instead of from one muzzle, so they do not
+             * pile up on top of each other */
+            if (d.orbit) {
+              const a2 = (i / n) * TAU + (Math.random() - 0.5) * 0.25;
+              sx = e.x + Math.cos(a2) * e.radius * 0.9;
+              sy = e.y + Math.sin(a2) * e.radius * 0.9;
+              ang = Math.atan2(p.y - sy, p.x - sx);
+            }
             const o: { life: number; tether?: boolean; webDrop?: boolean; tx?: number; ty?: number } = { life: d.life ?? ((d.maxP ?? 800) + 200) / sp };
             if (d.tether) o.tether = true;
             if (d.webDrop) { o.webDrop = true; o.tx = p.x; o.ty = p.y; }
-            this.spawnProj(e, mx, my, base + off, d, o);
+            this.spawnProj(e, sx, sy, ang, d, o);
           }
           this.burst(mx, my, `hsl(${e.spd.hue},100%,70%)`, 5, 3, 160);
         }
@@ -2496,8 +2530,11 @@ export class Game {
           e.domainT = DUR;
           e.domainMul = 3;
           this.ringFx(e.x, e.y, e.radius * 3, `hsl(${e.spd.hue},100%,60%)`, 1200);
-          this.shake = Math.max(this.shake, 12);
-          this.toast("DOMAIN OPENED", `hsl(${e.spd.hue},100%,70%)`);
+          this.shake = Math.max(this.shake, 26);
+          this.toast("DOMAIN EXPANSION", `hsl(${e.spd.hue},100%,78%)`);
+          /* a JJK-style cutscene: a hard flash, a slow push-in on the moth and
+           * the domain's name, so the expansion reads as a set piece */
+          this.cutscene = { t: 2.4, dur: 2.4, hue: e.spd.hue, x: e.x, y: e.y };
         }
         if (a.fired && e.domainT > 0) {
           e.domainT = (e.domainT ?? 0) - dt;
@@ -2518,8 +2555,14 @@ export class Game {
           const mothHeal = 0.01 * (1 + phase * 2) * mothMax * dt;
           const alive = e.parts.filter((q) => q.alive);
           if (alive.length) { const q = alive[Math.floor(Math.random() * alive.length)]; q.hp = Math.min(q.maxHp, q.hp + mothHeal); }
-          /* domain visual: a dark ring closing in as the moon fills */
-          this.ringFx(e.x, e.y, e.radius * 2 + phase * 400, `hsl(${e.spd.hue},60%,20%)`, 1000);
+          /* domain visual: a dark ring closing in as the moon fills. Throttled
+           * to a few per second - painting one every frame for three minutes
+           * was the domain's lag. */
+          e.domainFxT -= dt;
+          if (e.domainFxT <= 0) {
+            e.domainFxT = 0.18;
+            this.ringFx(e.x, e.y, e.radius * 2 + phase * 400, `hsl(${e.spd.hue},60%,20%)`, 1000);
+          }
         }
         if (e.domainT <= 0 && a.fired) {
           /* the domain closes: restore the moth's original health */
@@ -2527,6 +2570,29 @@ export class Game {
           e.domainOrig = [];
           e.domainT = 0; e.domainMul = 1; e.eDmg = e.baseEDmg; done();
         }
+        break;
+      }
+      case "heal": {
+        /* the moth summons a purple shield bubble around itself and feeds off it:
+         * the bubble holds a share of its max health and the moth regenerates
+         * while the bubble is up. The bubble also absorbs incoming damage. */
+        if (!a.fired && a.t >= d.wind) {
+          a.fired = true;
+          const maxHp = e.parts.reduce((a2, q) => a2 + q.maxHp, 0) + e.shells.reduce((a2, sh) => a2 + sh.max, 0);
+          e.buffMax = (d.shieldHp ?? 0.05) * maxHp;
+          e.buffHp = e.buffMax;
+          e.buffT = d.shieldDur ?? 6;
+          this.ringFx(e.x, e.y, e.radius * 2.4, `hsl(${e.spd.hue},100%,70%)`, 500);
+          this.toast("SHIELD", `hsl(${e.spd.hue},100%,70%)`);
+        }
+        if (a.fired && e.buffT > 0) {
+          e.buffT -= dt;
+          const mothMax = e.parts.reduce((a2, q) => a2 + q.maxHp, 0) + e.shells.reduce((a2, sh) => a2 + sh.max, 0);
+          const heal = (d.shieldHeal ?? 0.05) * mothMax * dt;
+          const alive = e.parts.filter((q) => q.alive);
+          if (alive.length) { const q = alive[Math.floor(Math.random() * alive.length)]; q.hp = Math.min(q.maxHp, q.hp + heal); }
+        }
+        if (e.buffT <= 0 && a.fired) { e.buffHp = 0; e.buffMax = 0; done(); }
         break;
       }
     }
@@ -3191,7 +3257,29 @@ export class Game {
     const want = this.input.lmb || this.input.keys.has("Space");
     p.fireCd -= dt;
     const base = p.a;
-    if (want && p.fireCd <= 0 && p.jam <= 0 && !this.inSafe()) {
+    /* the Mediator charges its beam: hold the trigger to build charge, release
+     * to fire a devastating beam whose damage scales with how long it was held */
+    if (st.charge) {
+      if (want && p.fireCd <= 0 && !this.inSafe()) {
+        p.charging = true;
+        p.charge = Math.min(1, p.charge + dt / st.chargeTime);
+      } else if (p.charging) {
+        p.charging = false;
+        const mz = st.muzzles.length ? st.muzzles : [{ x: 14, y: 0 }];
+        const m = { x: p.x + Math.cos(base) * mz[0].x - Math.sin(base) * mz[0].y, y: p.y + Math.sin(base) * mz[0].x + Math.cos(base) * mz[0].y };
+        const dmg = st.dmg * (0.35 + 0.65 * p.charge) * st.chargeDmg * this.dmgMul();
+        const col = "#e9d5ff";
+        this.beam(m.x, m.y, base, st.bulletRange, dmg, st.pierce, true, "laser", col);
+        this.burst(m.x, m.y, col, 18, 7, 420);
+        this.ringFx(m.x, m.y, 70, col, 500);
+        this.shake = Math.max(this.shake, 14 + 10 * p.charge);
+        p.vx -= Math.cos(base) * st.kick; p.vy -= Math.sin(base) * st.kick;
+        p.charge = 0;
+        p.fireCd = 0.7;
+      } else {
+        p.charge = Math.max(0, p.charge - dt * 0.5);
+      }
+    } else if (want && p.fireCd <= 0 && p.jam <= 0 && !this.inSafe()) {
       p.fireCd = 1 / (st.rate * (p.overT > 0 ? 1.8 : 1));
       const over = p.overT > 0 ? 2.2 : 1;
       const crit = st.crit > 0 && Math.random() < st.crit;
@@ -3213,12 +3301,21 @@ export class Game {
       };
       const m0 = at(0);
       if (st.hitscan) {
-        /* the Skewer: a hard line, drawn from the muzzle to whatever it stops in */
-        const col = crit ? "#fff3b0" : "#e6fbff";
-        this.beam(m0.x, m0.y, base, st.bulletRange, dmg, st.pierce, false, "kinetic", col);
-        this.burst(m0.x, m0.y, col, crit ? 12 : 7, 5.5, 340);
-        this.ringFx(m0.x, m0.y, crit ? 60 : 40, col, 420);
-        this.shake = Math.max(this.shake, crit ? 6 : 3.5);
+        /* the Skewer: a hard line, drawn from the muzzle to whatever it stops in.
+         * The Fencer counts its jabs and every fifth unleashes a charged energy
+         * shot that hits far harder. The Skewer MK2 occasionally throws an
+         * energy shot that ignores enemy shielding */
+        const fencer = st.cannonId === "fencer";
+        const skewer2 = st.cannonId === "skewer2";
+        let chargeShot = false;
+        if (fencer) { p.fenceShots++; chargeShot = p.fenceShots % 5 === 0; }
+        const energyShot = skewer2 && !chargeShot && Math.random() < 0.25;
+        const dShot = chargeShot ? dmg * 12.5 : dmg;
+        const col = (energyShot || chargeShot) ? "#c4a6ff" : crit ? "#fff3b0" : "#e6fbff";
+        this.beam(m0.x, m0.y, base, st.bulletRange, dShot, chargeShot ? st.pierce + 2 : st.pierce, energyShot, energyShot ? "laser" : "kinetic", col);
+        this.burst(m0.x, m0.y, col, chargeShot ? 20 : crit ? 12 : 7, chargeShot ? 8 : 5.5, chargeShot ? 480 : 340);
+        this.ringFx(m0.x, m0.y, chargeShot ? 90 : crit ? 60 : 40, col, chargeShot ? 600 : 420);
+        this.shake = Math.max(this.shake, chargeShot ? 12 : crit ? 6 : 3.5);
       } else {
         for (let i = 0; i < n; i++) {
           /* spread is per round, and a cooking barrel throws wider */
@@ -3889,6 +3986,7 @@ export class Game {
     const dt = Math.min(dtRaw, 0.05);
     this.t += dt;
     if (this.discovery) { this.discovery.t -= dt; if (this.discovery.t <= 0) this.discovery = null; }
+    if (this.cutscene) { this.cutscene.t -= dt; if (this.cutscene.t <= 0) this.cutscene = null; }
     this.fpsAcc += dtRaw; this.fpsN++;
     if (this.fpsAcc > 0.5) { this.fps = Math.round(this.fpsN / this.fpsAcc); this.fpsAcc = 0; this.fpsN = 0; }
     const p = this.player, st = this.stats, k = this.input.keys;
@@ -3918,7 +4016,14 @@ export class Game {
         else {
           const dx = pe.x - p.x, dy = pe.y - p.y, d = Math.hypot(dx, dy) || 1;
           if (d < pe.radius * 0.5) p.pull = null;
-          else { const f = 1100 * (1 - st.dampers); p.vx += (dx / d) * f * dt; p.vy += (dy / d) * f * dt; }
+          else {
+            /* a direct reel: the ship is walked toward the spider at a fixed
+             * speed, so thrust and inertia cannot resist it - inertial dampers
+             * are gone and the pull is not a suggestion */
+            const reel = 1700;
+            p.x += (dx / d) * reel * dt;
+            p.y += (dy / d) * reel * dt;
+          }
         }
       }
       maxSp = Math.max(maxSp, 1);

@@ -234,35 +234,48 @@ export function render(g: Game, ctx: CanvasRenderingContext2D) {
     drawEnemy(g, ctx, e, z, t);
   }
 
-  /* ---- open domains: the moth's dark moon arena ---- */
+  /* ---- open domains: the moth's dark moon arena (a JJK-style void) ---- */
   for (const e of g.enemies) {
     if (e.domainT <= 0) continue;
     const phase = clamp(1 - e.domainT / (e.act?.def.dur ?? 180), 0, 1);
-    const R = e.radius * (2.2 + phase * 2.6);
+    const R = e.radius * (2.4 + phase * 3.0);
     ctx.save();
-    /* a dark translucent disc: the world inside the domain dims and takes on
-     * the moth's hue, so the player feels the arena closing in */
-    ctx.fillStyle = `hsla(${e.spd.hue},70%,12%,${0.28 + 0.22 * phase})`;
+    /* a black void: the world inside the domain is swallowed into a deep
+     * purple-black disc, so the player feels the arena close off around them */
+    ctx.fillStyle = `hsla(${e.spd.hue},70%,7%,${0.82 + 0.12 * phase})`;
     ctx.beginPath(); ctx.arc(e.x, e.y, R, 0, TAU); ctx.fill();
-    /* a shimmering ring at the domain's edge */
-    ctx.strokeStyle = `hsla(${e.spd.hue},80%,60%,${0.35 + 0.35 * phase})`;
-    ctx.lineWidth = 5 / z; ctx.shadowColor = `hsl(${e.spd.hue} 80% 65%)`; ctx.shadowBlur = 22;
+    /* a pulsing glowing rim at the domain's edge */
+    ctx.strokeStyle = `hsla(${e.spd.hue},100%,62%,${0.45 + 0.45 * phase})`;
+    ctx.lineWidth = 6 / z; ctx.shadowColor = `hsl(${e.spd.hue} 100% 65%)`; ctx.shadowBlur = 26;
     ctx.beginPath(); ctx.arc(e.x, e.y, R, 0, TAU); ctx.stroke();
-    /* the shadowy moon: a glowing orb that swells and brightens with the phase */
-    const mr = e.radius * (0.9 + phase * 1.4);
-    const my = e.y - e.radius * (2.2 + phase * 1.6);
-    const mg = ctx.createRadialGradient(e.x, my, mr * 0.2, e.x, my, mr);
-    mg.addColorStop(0, `hsla(${e.spd.hue},90%,80%,${0.85})`);
-    mg.addColorStop(0.6, `hsla(${e.spd.hue},80%,55%,${0.5})`);
-    mg.addColorStop(1, `hsla(${e.spd.hue},80%,40%,0)`);
-    ctx.shadowBlur = 30;
+    ctx.shadowBlur = 0;
+    /* the moon: a huge glowing orb with a watchful face, swelling with the
+     * phase - it is the domain's heart and it is always watching */
+    const mr = e.radius * (1.1 + phase * 1.5);
+    const my = e.y - e.radius * (2.4 + phase * 1.8);
+    const mg = ctx.createRadialGradient(e.x, my, mr * 0.1, e.x, my, mr * 1.15);
+    mg.addColorStop(0, `hsla(${e.spd.hue},100%,86%,${0.95})`);
+    mg.addColorStop(0.55, `hsla(${e.spd.hue},90%,58%,${0.7})`);
+    mg.addColorStop(0.85, `hsla(${e.spd.hue},80%,34%,${0.5})`);
+    mg.addColorStop(1, `hsla(${e.spd.hue},80%,20%,0)`);
     ctx.fillStyle = mg;
-    ctx.beginPath(); ctx.arc(e.x, my, mr, 0, TAU); ctx.fill();
-    /* cratered moon surface */
-    ctx.fillStyle = `hsla(${e.spd.hue},25%,18%,${0.5 + 0.3 * phase})`;
-    ctx.beginPath(); ctx.arc(e.x - mr * 0.3, my - mr * 0.2, mr * 0.22, 0, TAU); ctx.fill();
-    ctx.beginPath(); ctx.arc(e.x + mr * 0.25, my + mr * 0.1, mr * 0.16, 0, TAU); ctx.fill();
-    ctx.beginPath(); ctx.arc(e.x + mr * 0.05, my - mr * 0.35, mr * 0.12, 0, TAU); ctx.fill();
+    ctx.beginPath(); ctx.arc(e.x, my, mr * 1.15, 0, TAU); ctx.fill();
+    /* the moon's face: two glowing eyes that open wider as the phase climbs */
+    const eyeR = mr * (0.1 + 0.06 * phase);
+    const eyeY = my + mr * 0.05;
+    const open = 0.4 + 0.6 * phase;
+    for (const ex of [-mr * 0.34, mr * 0.34]) {
+      ctx.fillStyle = `hsla(${e.spd.hue},100%,92%,${0.95})`;
+      ctx.shadowColor = `hsl(${e.spd.hue} 100% 80%)`; ctx.shadowBlur = 18;
+      ctx.beginPath(); ctx.ellipse(e.x + ex, eyeY, eyeR, eyeR * open, 0, 0, TAU); ctx.fill();
+    }
+    ctx.shadowBlur = 0;
+    /* craters across the moon's face */
+    ctx.fillStyle = `hsla(${e.spd.hue},40%,22%,${0.5 + 0.3 * phase})`;
+    for (let i = 0; i < 5; i++) {
+      const ca = i * 1.25 + 0.4;
+      ctx.beginPath(); ctx.arc(e.x + Math.cos(ca) * mr * 0.5, my + Math.sin(ca) * mr * 0.4, mr * (0.12 + 0.04 * i), 0, TAU); ctx.fill();
+    }
     ctx.restore();
   }
 
@@ -391,15 +404,21 @@ export function render(g: Game, ctx: CanvasRenderingContext2D) {
       ctx.lineWidth = 2 / z; ctx.setLineDash([8 / z, 6 / z]);
       ctx.beginPath(); ctx.moveTo(pr.x, pr.y); ctx.lineTo(pr.src.x, pr.src.y); ctx.stroke(); ctx.setLineDash([]);
     }
-    const col = pr.type === "missile" ? "#ffb04d" : `hsl(${pr.hue},100%,68%)`;
+    const col = pr.type === "missile" ? `hsl(${pr.hue},100%,68%)` : `hsl(${pr.hue},100%,68%)`;
     ctx.shadowColor = col; ctx.shadowBlur = pr.r * z > 2 ? 12 : 0;
     ctx.fillStyle = col; ctx.strokeStyle = col;
     ctx.lineWidth = 2 / z;
     const ang = Math.atan2(pr.vy, pr.vx);
     switch (pr.type) {
       case "missile": {
+        /* a fast purple dart with a streaming trail behind it */
+        const tl = Math.min(160, (pr.speed ?? 600) * 0.16);
+        ctx.globalAlpha = 0.45; ctx.lineWidth = Math.max(1.5, pr.r * 0.5) / z;
+        ctx.beginPath(); ctx.moveTo(pr.x, pr.y); ctx.lineTo(pr.x - Math.cos(ang) * tl, pr.y - Math.sin(ang) * tl); ctx.stroke();
+        ctx.globalAlpha = 1;
         ctx.save(); ctx.translate(pr.x, pr.y); ctx.rotate(ang);
-        ctx.beginPath(); ctx.moveTo(pr.r * 1.4, 0); ctx.lineTo(-pr.r, -pr.r * 0.7); ctx.lineTo(-pr.r * 0.5, 0); ctx.lineTo(-pr.r, pr.r * 0.7); ctx.closePath(); ctx.fill();
+        ctx.beginPath(); ctx.moveTo(pr.r * 1.6, 0); ctx.lineTo(-pr.r, -pr.r * 0.7); ctx.lineTo(-pr.r * 0.4, 0); ctx.lineTo(-pr.r, pr.r * 0.7); ctx.closePath(); ctx.fill();
+        ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(pr.r * 0.5, 0, pr.r * 0.32, 0, TAU); ctx.fill();
         ctx.restore(); break;
       }
       case "orb": case "bolt": {
@@ -675,6 +694,35 @@ export function render(g: Game, ctx: CanvasRenderingContext2D) {
    * ring at the top, and a slow pulse when it is jammed and cooling */
   drawHeatVignette(g, ctx);
   if (hoveredComp) drawCompTooltip(g, ctx, hoveredComp);
+  drawCutscene(g, ctx);
+}
+
+/** the moth's domain-expansion cutscene: a hard violet flash, a slow push-in
+ *  on the moth, and the domain's name streaking across the screen */
+function drawCutscene(g: Game, ctx: CanvasRenderingContext2D) {
+  const cs = g.cutscene;
+  if (!cs) return;
+  const k = 1 - cs.t / cs.dur;            /* 0 → 1 across the cutscene */
+  const w = g.w, h = g.h;
+  ctx.save();
+  /* a violet flash that fades, then a slow push-in on the moth */
+  ctx.globalAlpha = clamp(1 - k * 1.6, 0, 1) * 0.55;
+  ctx.fillStyle = `hsl(${cs.hue} 100% 70%)`;
+  ctx.fillRect(0, 0, w, h);
+  ctx.globalAlpha = 1;
+  /* the domain name, streaking in and holding */
+  const inA = clamp(k * 3 - 1, 0, 1);
+  const outA = clamp(1 - k * 2.4, 0, 1);
+  const a = Math.min(inA, outA);
+  ctx.globalAlpha = a;
+  ctx.textAlign = "center";
+  const fs = Math.round(46 * (g.dpr ?? 1));
+  ctx.font = `900 ${fs}px ui-monospace, monospace`;
+  ctx.shadowColor = `hsl(${cs.hue} 100% 65%)`; ctx.shadowBlur = 30;
+  ctx.fillStyle = `hsl(${cs.hue} 100% 88%)`;
+  ctx.fillText("DOMAIN EXPANSION", w / 2, h * 0.42);
+  ctx.globalAlpha = 1; ctx.shadowBlur = 0;
+  ctx.restore();
 }
 
 /** The cannon's heat, drawn as a screen-edge glow so the player feels the gun
@@ -1877,6 +1925,21 @@ function drawEnemy(g: Game, ctx: CanvasRenderingContext2D, e: Enemy, z: number, 
       ctx.beginPath(); ctx.moveTo(e.x + Math.cos(an) * (e.radius + 12), e.y + Math.sin(an) * (e.radius + 12));
       ctx.lineTo(e.x + Math.cos(an) * (e.radius + 20), e.y + Math.sin(an) * (e.radius + 20)); ctx.stroke();
     }
+  }
+
+  // the moth's heal-shield bubble: a pulsing purple dome that shields and feeds it
+  if (!simple && sr > 30 && e.buffT > 0 && e.buffMax > 0) {
+    const bf = clamp(e.buffHp / Math.max(1, e.buffMax), 0, 1);
+    const br = e.radius * 1.5 + Math.sin(t * 6) * 4;
+    ctx.save();
+    ctx.globalAlpha = 0.18 + 0.22 * bf;
+    ctx.fillStyle = `hsl(${e.spd.hue} 100% 60%)`;
+    ctx.beginPath(); ctx.arc(e.x, e.y, br, 0, TAU); ctx.fill();
+    ctx.globalAlpha = 0.5 + 0.4 * bf;
+    ctx.strokeStyle = `hsl(${e.spd.hue} 100% 75%)`; ctx.lineWidth = 2.5 / z;
+    ctx.shadowColor = `hsl(${e.spd.hue} 100% 70%)`; ctx.shadowBlur = 14;
+    ctx.beginPath(); ctx.arc(e.x, e.y, br, 0, TAU); ctx.stroke();
+    ctx.restore();
   }
 
   // shields: each generator projects one panel, an arc of the hull ring or a bar on it

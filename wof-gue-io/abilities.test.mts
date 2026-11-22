@@ -41,8 +41,9 @@ assert(spider.abilities.map((a) => a.name).join(",") === "Web,Web Volley,Bite,Pu
 assert(spider.abilities[3].minTier === 4, "spider: pull legendary+");
 
 const moth = SPECIES_LIST[idx[3]];
-assert(moth.abilities.map((a) => a.name).join(",") === "Shot Burst,Rotating Lasers,Missiles,Domain", `moth abilities: ${moth.abilities.map((a) => a.name).join(",")}`);
-assert(moth.abilities[3].minTier === 5 && moth.abilities[3].type === "domain", "moth: domain mythic+");
+assert(moth.abilities.map((a) => a.name).join(",") === "Shot Burst,Rotating Lasers,Missiles,Shield,Domain", `moth abilities: ${moth.abilities.map((a) => a.name).join(",")}`);
+assert(moth.abilities[3].type === "heal" && moth.abilities[3].name === "Shield", "moth: heal-shield ability");
+assert(moth.abilities[4].minTier === 5 && moth.abilities[4].type === "domain", "moth: domain mythic+");
 
 /* ---- every ability's reach must cover the enemy's stand-off distance ---- */
 /* ranged enemies kite at keep = spd.keep + radius*0.9; if an ability's max

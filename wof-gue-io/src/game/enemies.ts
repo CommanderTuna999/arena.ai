@@ -117,11 +117,11 @@ export const GUN_SPECS: Record<GunKind, GunSpec> = {
    * very large and very slow round, the scatter a large slow spread, the rotary
    * a fast small one that has to cool for ten seconds, the rail a hitscan slug
    * out to the body's own aggro range, and the laser a held tracking beam. */
-  gun:     { name: "Gun Turret",     range: 900,  cd: 1.35, dmg: 0.5,  speed: 300,  r: 14, life: 3.2,  hue: 8,   type: "bolt" },
-  minigun: { name: "Rotary Gun",     range: 700,  cd: 0.16, dmg: 0.2,  speed: 720,  r: 3,  life: 0.9,  hue: 48,  spread: 0.16, type: "bolt", burst: 10, cool: 10 },
-  scatter: { name: "Scatter Cannon", range: 700,  cd: 2.6,  dmg: 1.2,  speed: 420,  r: 9,  life: 1.4,  hue: 32,  pellets: 7, spread: 0.5, type: "pellet" },
-  heavy:   { name: "Heavy Rail Cannon", range: 1200, cd: 5.0, dmg: 17, speed: 950, r: 12, life: 1.7,  hue: 356, type: "slug", recoil: 260, hitscan: true, aggroRange: true },
-  laser:   { name: "Laser Emitter",  range: 1000, cd: 2.4,  dmg: 1.0,  speed: 1500, r: 6,  life: 0.45, hue: 188, energy: true, type: "laser", track: true },
+  gun:     { name: "Gun Turret",     range: 900,  cd: 1.35, dmg: 0.5,  speed: 720,  r: 14, life: 3.2,  hue: 8,   type: "bolt" },
+  minigun: { name: "Rotary Gun",     range: 700,  cd: 0.16, dmg: 0.2,  speed: 1500, r: 3,  life: 0.9,  hue: 48,  spread: 0.16, type: "bolt", burst: 10, cool: 10 },
+  scatter: { name: "Scatter Cannon", range: 700,  cd: 2.6,  dmg: 1.2,  speed: 980,  r: 9,  life: 1.4,  hue: 32,  pellets: 7, spread: 0.5, type: "pellet" },
+  heavy:   { name: "Heavy Rail Cannon", range: 1200, cd: 5.0, dmg: 17, speed: 2100, r: 12, life: 1.7,  hue: 356, type: "slug", recoil: 260, hitscan: true, aggroRange: true },
+  laser:   { name: "Laser Emitter",  range: 1000, cd: 2.4,  dmg: 1.0,  speed: 2600, r: 6,  life: 0.45, hue: 188, energy: true, type: "laser", track: true },
 };
 
 /** base ability cooldown by rarity tier, per the sheet's 17/12/8/3/1.75/1s */
@@ -132,7 +132,7 @@ export const LASER_RAMP = 3;
 /** the beam's damage multiplier when it first touches down, and at full ramp */
 export const LASER_RAMP_MIN = 0.35;
 
-export type AbilityType = "swing" | "charge" | "shoot" | "nova" | "ring" | "pull" | "spit" | "cloud" | "summon" | "blink" | "drain" | "grab" | "beam" | "domain" | "sting";
+export type AbilityType = "swing" | "charge" | "shoot" | "nova" | "ring" | "pull" | "spit" | "cloud" | "summon" | "blink" | "drain" | "grab" | "beam" | "domain" | "sting" | "heal";
 export type ProjType = "bolt" | "missile" | "web" | "orb" | "wave" | "hook" | "glob" | "pellet" | "slug" | "laser";
 export interface AbilityDef {
   type: AbilityType;
@@ -174,10 +174,18 @@ export interface AbilityDef {
   webDrop?: boolean;
   /** shoot: the web is tethered to the spider and reels the ship in on hit */
   tether?: boolean;
+  /** shoot: spawn the shots in a ring around the body instead of from one muzzle */
+  orbit?: boolean;
   /** beam: how many beams to fire */
   beams?: number;
   /** beam: rotation speed in rad/s */
   beamSpin?: number;
+  /** heal: fraction of the body's max hp the summoned shield bubble holds */
+  shieldHp?: number;
+  /** heal: fraction of max hp per second the body regenerates while the bubble is up */
+  shieldHeal?: number;
+  /** heal: seconds the shield bubble lasts */
+  shieldDur?: number;
 }
 
 export interface Mount {
@@ -714,7 +722,8 @@ const SPECIES: SpeciesDef[] = [
     abilities: [
       { type: "shoot", name: "Shot Burst", minTier: 0, wind: 0.4, dmg: 2, n: 5, spread: 1.2, speed: 600, life: 1.2, size: 5, kind: "bolt", maxS: 2, maxP: 800 },
       { type: "beam", name: "Rotating Lasers", minTier: 3, wind: 0.6, dmg: 1, beams: 4, beamSpin: 1.5, dur: 4, maxS: 4, maxP: 200 },
-      { type: "shoot", name: "Missiles", minTier: 4, wind: 0.6, dmg: 3, n: 20, spread: 0.3, speed: 480, life: 3, size: 9, homing: 2.5, kind: "missile", maxS: 2, maxP: 900 },
+      { type: "shoot", name: "Missiles", minTier: 4, wind: 0.6, dmg: 3, n: 20, spread: 0.3, speed: 1000, life: 3, size: 5, homing: 3.2, kind: "missile", orbit: true, maxS: 2, maxP: 900 },
+      { type: "heal", name: "Shield", minTier: 0, wind: 1.2, dmg: 0, shieldHp: 0.05, shieldHeal: 0.05, shieldDur: 6, maxS: 0, maxP: 0 },
       { type: "domain", name: "Domain", minTier: 5, wind: 1.0, dmg: 0.1, dur: 180, maxS: 5, maxP: 200 },
     ],
     build(b, t) {

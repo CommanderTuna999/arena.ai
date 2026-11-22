@@ -16,7 +16,7 @@ const sheet: Record<string, number> = { gun: 0.5, minigun: 0.2, scatter: 1.2, he
 for (const [kind, mult] of Object.entries(sheet)) {
   assert(Math.abs(GUN_SPECS[kind as GunKind].dmg - mult) < 1e-9, `${GUN_SPECS[kind as GunKind].name}: ${mult}x per projectile (sheet)`);
 }
-assert(GUN_SPECS.gun.r === 14 && GUN_SPECS.gun.speed === 300, "the basic cannon's round is very large and very slow");
+assert(GUN_SPECS.gun.r === 14 && GUN_SPECS.gun.speed === 720, "the basic cannon's round is large and fast");
 assert(GUN_SPECS.scatter.pellets === 7 && GUN_SPECS.scatter.r === 9, "the scatter throws 7 large pellets");
 assert(GUN_SPECS.minigun.burst === 10 && GUN_SPECS.minigun.cool === 10, "the rotary gun cools down for 10s after its burst");
 assert(GUN_SPECS.heavy.hitscan === true && GUN_SPECS.heavy.aggroRange === true, "the heavy rail is hitscan out to the body's aggro");

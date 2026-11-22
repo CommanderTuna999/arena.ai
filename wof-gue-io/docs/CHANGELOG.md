@@ -1,3 +1,39 @@
+## 0.3. v2.17.0 — tier-2 cannons, faster enemy rounds, the moth's domain and its shield
+
+- **Tier-2 cannon tree complete** (`data.ts`, `engine.ts`): all three branch off **Skewer MK1**.
+  **Skewer MK2** — a 1200-damage hitscan lance with a **25% chance each shot to throw an energy shot
+  that bypasses enemy shielding**. **Fencer MK1** — a rapid 200-damage jab on a 0.3s interval;
+  **every fifth landed shot unleashes a charged 2.5k energy shot** (a `fenceShots` counter on the
+  player; the combo shot is taller pierce and a bigger blast). **Mediator MK1** — **hold the trigger
+  to charge** a devastating energy beam (builds to 1.0 over `chargeTime`), then **release to fire**
+  at `dmg * (0.35 + 0.65*charge) * chargeDmg` with a large muzzle burst, ring, shake and recoil.
+  No tier-2 weapons exist for Peashooter or Workhorse — the sheet only branches T2 off Skewer MK1.
+- **Tier-1 crafting recipes per the sheet** (`data.ts`): the **antenna, head and core requirements
+  are now uncommon**. Skewer MK1 = 2 common legs, 1 uncommon antenna, 1 common head, 2 uncommon
+  cores, 500 credits. Peashooter MK1 = 2 common legs, 2 uncommon cores, 300 credits. Workhorse MK1
+  = 2 common legs, 1 uncommon head, 1 uncommon core, 500 credits.
+- **Enemy projectiles much faster** (`enemies.ts`): all `GUN_SPECS` speeds raised — gun 300→720,
+  minigun 720→1500, scatter 420→980, heavy 950→2100, laser 1500→2600.
+- **Inertial Dampers removed** (`data.ts`, `engine.ts`): dropped from `UPGRADES`, `Stats`,
+  `computeStats`, `hurtPlayer` knockback resistance and `applySlow` resistance — knockback and
+  slows now land at full strength.
+- **Spider pull is unresistable** (`engine.ts`): the pull is now a **direct positional reel** — the
+  ship is walked toward the spider at a fixed 1700 u/s via positional offsets, so thrust and inertia
+  cannot fight it. Cancels only on death, expiry, safe zone, or reaching the spider's body.
+- **Moth missiles** (`enemies.ts`, `engine.ts`, `render.ts`): now **smaller, much faster purple
+  darts** (speed 1000), **summoned in a ring around the moth** instead of overlapping at one point,
+  each leaving a **streaming purple trail**.
+- **Domain lag fixed** (`engine.ts`): an `Enemy.domainFxT` throttles the domain's per-frame `ringFx`
+  to one every 0.18s.
+- **Moon and domain rebuilt in the JJK style** (`render.ts`): the domain is now a **black void** with
+  a **glowing pulsing rim** and a **large moon with glowing watchful eyes** that open wider with the
+  phase and craters. A **JJK-style cutscene** plays on domain expansion: a **violet flash** and the
+  **"DOMAIN EXPANSION"** title streaking across the screen (`Game.cutscene`, `drawCutscene`).
+- **Moth's purple Shield ability works** (`enemies.ts`, `engine.ts`, `render.ts`): the moth summons a
+  **purple shield bubble** holding **5% of its max health**; incoming damage is **absorbed into the
+  bubble** (`buffHp`) while it is up, and the moth **regenerates 5%/s** of its max health while the
+  bubble persists (6s duration). A pulsing radial fill + glowing stroke renders the dome.
+
 ## 0.2. v2.16.0 — contact attacks break their own shields, full-aggro guns and tier-2 cannons
 
 - **Contact attacks retract their own shields** (`engine.ts`): a dragonfly (and any future body whose
@@ -15,9 +51,8 @@
   additionally rolls an uncommon-tier component at 30%**. The old `rollTier` roll is gone.
 - **Overheat vignette only on overheating guns** (`render.ts`): `drawHeatVignette` returns early unless
   `overheat > 0`, so chassis that never jam no longer flash the screen-edge warning.
-- **Three tier-2 cannons** (`data.ts`): **Skewer MK2** (longer, harder-hitting hitscan lance),
-  **Peashooter MK2** (tighter, faster spray) and **Workhorse MK2** (hotter, harder-hitting twin), each
-  `requires` its tier-1 predecessor. **Tier-1 crafting recipe check**: `homing` (cd 1.70→1.8) and
+- **Tier-2 cannon tree begun** (`data.ts`): the tier-2 row is built out per the design sheet (see
+  v2.17.0 for the full trio). **Tier-1 crafting recipe check**: `homing` (cd 1.70→1.8) and
   `rail` (cd 1.82→1.4) are the slightly-altered tier-1 recipes.
 - **Cannon tree helper text removed** (`GameClient.tsx`): the "hover a node for its numbers…" and "A
   button greys out…" paragraphs are gone.

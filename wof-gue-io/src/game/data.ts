@@ -112,7 +112,6 @@ export const UPGRADES: UpgradeDef[] = [
   { id: "regen", name: "Nano Repair", cat: "hull", desc: "Hull regenerates every second.", max: 10, base: 55, growth: 1.5, fmt: (l) => `${(0.5 * l).toFixed(1)}%/s` },
   { id: "armor", name: "Reactive Armour", cat: "hull", desc: "Flat percentage damage reduction.", max: 14, base: 70, growth: 1.55, fmt: (l) => `-${(3.5 * l).toFixed(1)}% dmg` },
   { id: "shield", name: "Energy Shield Core", cat: "hull", desc: "A recharging shield layer. Level 1 unlocks it.", max: 25, base: 90, growth: 1.45, fmt: (l) => (l ? `${fmtNum(60 * Math.pow(1.22, l - 1))} shield` : "locked") },
-  { id: "dampers", name: "Inertial Dampers", cat: "hull", desc: "Resist slows, snares and pulls from enemies.", max: 6, base: 80, growth: 1.65, fmt: (l) => `${12 * l}% resist` },
 
   { id: "thrust", name: "Thrusters", cat: "mobility", desc: "Top speed.", max: 12, base: 40, growth: 1.5, fmt: (l) => `${450 + 40 * l} u/s` },
   { id: "handling", name: "Handling Jets", cat: "mobility", desc: "Acceleration and agility.", max: 10, base: 45, growth: 1.45, fmt: (l) => `${1500 + 200 * l} accel` },
@@ -219,6 +218,13 @@ export interface CannonDef {
   /** seconds of forced cooling once the gauge fills; absent means the gun can
    *  never overheat. */
   overheat?: number;
+  /** charge cannon: hold the fire button to build charge, release to fire a
+   *  devastating beam whose damage scales with how long it was held. */
+  charge?: boolean;
+  /** seconds of holding needed to reach full charge */
+  chargeTime?: number;
+  /** the charged beam's damage is this multiple of the chassis's base damage */
+  chargeDmg?: number;
   look: CannonLook;
   /** tracks this chassis owns, in display order */
   tracks: CannonTrackId[];
@@ -243,9 +249,9 @@ export const CANNONS: CannonDef[] = [
     credits: 500,
     parts: [
       { kind: "leg", tier: 0, count: 2, label: "leg" },
-      { kind: "spike", tier: 0, count: 1, name: "Antenna", label: "antenna" },
+      { kind: "spike", tier: 1, count: 1, name: "Antenna", label: "antenna" },
       { kind: "segment", tier: 0, count: 1, name: "Head", label: "head" },
-      { kind: "core", tier: 0, count: 6, label: "core" },
+      { kind: "core", tier: 1, count: 2, label: "core" },
     ],
     tracks: ["crit", "critDmg", "pen", "dmg"], costMul: 2.4, requires: "sting",
     muzzles: [{ x: 37, y: 0 }], kick: 34, heat: 0.34, heatMax: 1, heatSpread: 1,
@@ -258,7 +264,7 @@ export const CANNONS: CannonDef[] = [
     credits: 300,
     parts: [
       { kind: "leg", tier: 0, count: 2, label: "leg" },
-      { kind: "core", tier: 0, count: 6, label: "core" },
+      { kind: "core", tier: 1, count: 2, label: "core" },
     ],
     tracks: ["acc", "speed", "dmg", "crit", "critDmg"], costMul: 1, requires: "sting",
     muzzles: [{ x: 16, y: 0 }], kick: 3, heat: 0.012, heatMax: 1, heatSpread: 1,
@@ -273,8 +279,8 @@ export const CANNONS: CannonDef[] = [
     credits: 500,
     parts: [
       { kind: "leg", tier: 0, count: 2, label: "leg" },
-      { kind: "segment", tier: 0, count: 1, name: "Head", label: "head" },
-      { kind: "core", tier: 0, count: 5, label: "core" },
+      { kind: "segment", tier: 1, count: 1, name: "Head", label: "head" },
+      { kind: "core", tier: 1, count: 1, label: "core" },
     ],
     tracks: ["dmg", "rate", "pen", "barrels"], costMul: 1.6, requires: "sting",
     /* a genuine twin: one round per trigger, alternating barrels, always */
@@ -284,49 +290,59 @@ export const CANNONS: CannonDef[] = [
   },
   {
     id: "skewer2", name: "Skewer MK2", tier: 2,
-    desc: "The rail that taught the MK1 to pierce.",
-    dmg: 520, interval: 1.1, speed: 0, range: 3000, hitscan: true,
-    credits: 1200,
+    desc: "Pretty accurate, now with more piercing.",
+    /* a longer, harder-hitting lance: it still draws a hard hitscan line, but it
+     * chews through armour and occasionally throws an energy shot that ignores
+     * enemy shielding */
+    dmg: 1200, interval: 2, speed: 0, range: 3000, hitscan: true,
+    credits: 7000,
     parts: [
-      { kind: "leg", tier: 0, count: 2, label: "leg" },
-      { kind: "spike", tier: 0, count: 1, name: "Antenna", label: "antenna" },
-      { kind: "segment", tier: 0, count: 1, name: "Head", label: "head" },
-      { kind: "core", tier: 0, count: 8, label: "core" },
+      { kind: "leg", tier: 3, count: 4, label: "leg" },
+      { kind: "spike", tier: 3, count: 1, name: "Antenna", label: "antenna" },
+      { kind: "segment", tier: 3, count: 1, name: "Head", label: "head" },
+      { kind: "core", tier: 1, count: 5, label: "core" },
+      { kind: "core", tier: 3, count: 1, label: "core" },
     ],
     tracks: ["crit", "critDmg", "pen", "dmg", "rate"], costMul: 2.6, requires: "skewer",
-    muzzles: [{ x: 42, y: 0 }], kick: 40, heat: 0.4, heatMax: 1, heatSpread: 1,
-    look: { len: 46, bore: 3.6, hue: 200, style: "lance" },
+    muzzles: [{ x: 46, y: 0 }], kick: 50, heat: 0, heatMax: 1, heatSpread: 1,
+    look: { len: 50, bore: 4.0, hue: 204, style: "lance" },
   },
   {
-    id: "peashooter2", name: "Peashooter MK2", tier: 2,
-    desc: "Tighter, faster, and it never runs out of pellets.",
-    dmg: 48, interval: 0.085, speed: 520, range: 820, spread: 0.18,
-    credits: 900,
+    id: "fencer", name: "Fencer MK1", tier: 2,
+    desc: "A few stabs, then bigger stab.",
+    /* rapid hitscan jabs; every fifth round lands a charged energy shot that
+     * hits far harder */
+    dmg: 200, interval: 0.3, speed: 0, range: 2400, hitscan: true,
+    credits: 10000,
     parts: [
-      { kind: "leg", tier: 0, count: 2, label: "leg" },
-      { kind: "core", tier: 0, count: 8, label: "core" },
+      { kind: "weapon", tier: 3, count: 5, label: "weapon" },
+      { kind: "spike", tier: 3, count: 2, name: "Antenna", label: "antenna" },
+      { kind: "armor", tier: 3, count: 3, label: "plate" },
+      { kind: "core", tier: 3, count: 3, label: "core" },
     ],
-    tracks: ["acc", "speed", "dmg", "crit", "critDmg"], costMul: 1.2, requires: "peashooter",
-    muzzles: [{ x: 18, y: 0 }], kick: 4, heat: 0.014, heatMax: 1, heatSpread: 1,
-    look: { len: 18, bore: 3.8, hue: 150, style: "spray" },
+    tracks: ["crit", "critDmg", "pen", "dmg"], costMul: 2.4, requires: "skewer",
+    muzzles: [{ x: 42, y: 0 }], kick: 12, heat: 0, heatMax: 1, heatSpread: 1,
+    look: { len: 40, bore: 3.0, hue: 150, style: "lance" },
   },
   {
-    id: "workhorse2", name: "Workhorse MK2", tier: 2,
-    desc: "The twin that learned to run hotter and hit harder.",
-    /* chews harder the hotter it gets and wanders the closer it is to cooking:
-     * 80 a round cold, 300 at a full gauge, then three and a half seconds of
-     * cooling */
-    dmg: 80, interval: 0.5, speed: 800, range: 1000, spread: 0.04,
-    credits: 1200,
+    id: "mediator", name: "Mediator MK1", tier: 2,
+    desc: "Very impartial.",
+    /* hold the fire button to charge a devastating energy beam, then release it:
+     * the longer the hold, the harder the shot, and the recoil shoves the ship
+     * hard backwards */
+    dmg: 4000, interval: 0.5, speed: 0, range: 2600, hitscan: true,
+    charge: true, chargeTime: 1, chargeDmg: 1,
+    credits: 15000,
     parts: [
-      { kind: "leg", tier: 0, count: 2, label: "leg" },
-      { kind: "segment", tier: 0, count: 1, name: "Head", label: "head" },
-      { kind: "core", tier: 0, count: 8, label: "core" },
+      { kind: "weapon", tier: 3, count: 7, label: "weapon" },
+      { kind: "wing", tier: 3, count: 5, label: "wing" },
+      { kind: "segment", tier: 4, count: 1, name: "Head", label: "head" },
+      { kind: "core", tier: 3, count: 6, label: "core" },
+      { kind: "weapon", tier: 4, count: 1, name: "scorpion", label: "scorpion weapon" },
     ],
-    tracks: ["dmg", "rate", "pen", "barrels"], costMul: 1.8, requires: "workhorse",
-    muzzles: [{ x: 28, y: -6 }, { x: 28, y: 6 }], kick: 18, heat: 0.1,
-    heatMax: 300 / 80, heatSpread: 4, overheat: 3.5,
-    look: { len: 30, bore: 5.0, hue: 40, style: "twin" },
+    tracks: ["crit", "critDmg", "pen", "dmg", "rate"], costMul: 3.0, requires: "skewer",
+    muzzles: [{ x: 44, y: 0 }], kick: 220, heat: 0, heatMax: 1, heatSpread: 1,
+    look: { len: 48, bore: 4.4, hue: 280, style: "lance" },
   },
 ];
 export const CANNON_BY_ID: Record<string, CannonDef> = Object.fromEntries(CANNONS.map((c) => [c.id, c]));
@@ -889,8 +905,10 @@ export interface Stats {
   /** how heat changes the gun: damage and spread multipliers at a full gauge,
    *  and the forced cool-down in seconds (0 = this gun never jams) */
   heatDmg: number; heatSpread: number; overheat: number;
+  /** charge cannon (Mediator): hold to build, release to fire a beam */
+  charge: boolean; chargeTime: number; chargeDmg: number;
   hull: number; regen: number; armor: number; reactive: number; thorn: number; poisonResist: number;
-  shieldMax: number; shieldRegen: number; shieldDelay: number; reflect: boolean; dampers: number;
+  shieldMax: number; shieldRegen: number; shieldDelay: number; reflect: boolean;
   dodge: number; kinetic: number; novaOnHit: number; nullField: number;
   thrust: number; accel: number; boostMul: number; boostRegen: number; hasBoost: boolean;
   hCount: number; hStr: number; hRange: number; hHp: number; hSpeed: number; towRelief: number;
@@ -998,6 +1016,9 @@ export function computeStats(s: SaveData): Stats {
     heatDmg: cannon.heatMax ?? 1,
     heatSpread: cannon.heatSpread ?? 1,
     overheat: cannon.overheat ?? 0,
+    charge: !!cannon.charge,
+    chargeTime: cannon.chargeTime ?? 1,
+    chargeDmg: cannon.chargeDmg ?? 1,
     hull,
     regen,
     armor,
@@ -1008,7 +1029,6 @@ export function computeStats(s: SaveData): Stats {
     shieldRegen,
     shieldDelay,
     reflect,
-    dampers: 0.12 * L("dampers"),
     dodge,
     kinetic,
     novaOnHit,

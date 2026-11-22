@@ -29,16 +29,15 @@ assert(tier1.length === 3, `three tier 1 chassis (${tier1.map((c) => c.name).joi
 assert(tier1.every((c) => c.requires === "sting"), "every tier 1 chassis requires the Stinger");
 assert(tier1.every((c) => c.name !== "" && c.desc.length > 6), "every tier 1 chassis has a name and a description");
 
-/* --- bills: common legs, heads and a pile of common cores, straight off the sheet --- */
-const ALLOWED = new Set(["leg", "core", "segment", "spike"]);
-const cores = (c: (typeof tier1)[number]) => c.parts.filter((b) => b.kind === "core").reduce((n, b) => n + b.count, 0);
+/* --- bills: the sheet's tier 1 recipes, verbatim (antenna/head/cores can be uncommon) --- */
+const ALLOWED = new Set(["leg", "core", "segment", "spike", "weapon", "armor", "wing"]);
+const bill = (id: string) => CANNON_BY_ID[id].parts;
+assert(bill("skewer").map((b) => [b.kind, b.tier, b.count]).map((x) => x.join("")).join(",") === "leg02,spike11,segment01,core12", "Skewer MK1: 2 common legs, 1 uncommon antenna, 1 common head, 2 uncommon cores");
+assert(bill("peashooter").map((b) => [b.kind, b.tier, b.count]).map((x) => x.join("")).join(",") === "leg02,core12", "Peashooter MK1: 2 common legs, 2 uncommon cores");
+assert(bill("workhorse").map((b) => [b.kind, b.tier, b.count]).map((x) => x.join("")).join(",") === "leg02,segment11,core11", "Workhorse MK1: 2 common legs, 1 uncommon head, 1 uncommon core");
 for (const c of tier1) {
-  const commons = c.parts.filter((b) => b.tier === 0);
-  const commonCount = commons.reduce((n, b) => n + b.count, 0);
-  assert(commons.length === c.parts.length, `${c.name}: the whole bill is common parts (no rare materials)`);
-  assert(commons.every((b) => ALLOWED.has(b.kind)), `${c.name}: every line is a leg, core, head or antenna (${commons.map((b) => b.label).join(", ")})`);
-  assert(commons.some((b) => b.kind === "leg" && b.count === 2), `${c.name}: two common legs`);
-  assert(cores(c) >= 5, `${c.name}: cores are the bulk of the bill (${cores(c)})`);
+  assert(c.parts.every((b) => ALLOWED.has(b.kind)), `${c.name}: every bill line is a leg, core, head or antenna`);
+  assert(c.parts.some((b) => b.kind === "leg" && b.tier === 0 && b.count === 2), `${c.name}: two common legs`);
   assert(c.credits === (c.id === "peashooter" ? 300 : 500), `${c.name}: ${c.credits} credits on top of the parts`);
 }
 assert(tier1.every((c) => c.parts.every((b) => !("species" in b))), "no bill line names a species");
@@ -82,13 +81,13 @@ const nameProb = g.buyCannonChassis("skewer");
 assert(!!nameProb && /antenna|head|core/i.test(nameProb), `a body segment and a spike do not stand in for a head and an antenna (${nameProb})`);
 g.save.inventory = [
   comp("leg", 0, "l1"), comp("leg", 0, "l2"), comp("leg", 0, "l3"),
-  comp("spike", 0, "an1", "Worker Ant Antenna"), comp("spike", 0, "sp1", "Tail Spike"),
+  comp("spike", 1, "an1", "Worker Ant Antenna"), comp("spike", 0, "sp1", "Tail Spike"),
   comp("segment", 0, "h1", "Mantis Head"), comp("segment", 0, "s1", "Body Segment"),
-  ...Array.from({ length: 7 }, (_, i) => comp("core", 0, `k${i}`)),
+  comp("core", 1, "k0"), comp("core", 1, "k1"),
 ];
-assert(g.buyCannonChassis("skewer") === null, "2 legs, an antenna, a head and six common cores build the Skewer");
+assert(g.buyCannonChassis("skewer") === null, "2 legs, an uncommon antenna, a head and two uncommon cores build the Skewer");
 const left = g.save.inventory.map((c: Comp) => c.id).sort().join();
-assert(left === "k6,l3,s1,sp1", `exactly the bill is consumed (left: ${left})`);
+assert(left === "l3,s1,sp1", `exactly the bill is consumed (left: ${left})`);
 assert(g.save.credits === 500, `500 credits were spent (left ${g.save.credits})`);
 assert(cannonOwned(g.save, "skewer") && g.save.cannon.id === "skewer", "the new chassis is owned and fitted");
 
@@ -97,8 +96,8 @@ const gt = new Game(newSave(), "t") as any;
 gt.save.credits = 100000;
 gt.save.inventory = [
   comp("leg", 0, "t1"), comp("leg", 0, "t2"), comp("leg", 0, "t3"), comp("leg", 0, "t4"),
-  ...Array.from({ length: 12 }, (_, i) => comp("core", 0, `t${10 + i}`)),
-  comp("segment", 0, "t9", "Mantis Head"),
+  ...Array.from({ length: 12 }, (_, i) => comp("core", 1, `t${10 + i}`)),
+  comp("segment", 1, "t9", "Mantis Head"),
 ];
 assert(gt.buyCannonChassis("peashooter") === null, "the Peashooter can be bought while tier 1 is empty");
 const second = gt.buyCannonChassis("workhorse");

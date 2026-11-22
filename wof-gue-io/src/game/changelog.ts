@@ -8,7 +8,7 @@
  *   CHANGELOG and mirror the details in docs/CHANGELOG.md.
  */
 
-export const VERSION = "2.16.0";
+export const VERSION = "2.17.0";
 
 export interface ChangeEntry {
   version: string;
@@ -20,6 +20,22 @@ export interface ChangeEntry {
 
 export const CHANGELOG: ChangeEntry[] = [
   {
+    version: "2.17.0",
+    date: "20 Nov 2026",
+    title: "Tier-2 cannons, faster enemy rounds, the moth's domain and its shield",
+    points: [
+      "The tier-2 cannon tree is complete per the design sheet, all branching off Skewer MK1: Skewer MK2 (a 1200-damage hitscan lance with a 25% chance each shot to throw an energy shot that bypasses enemy shielding), Fencer MK1 (a rapid 200-damage jab on a 0.3s interval; every fifth landed shot unleashes a charged 2.5k energy shot), and Mediator MK1 (hold the trigger to charge a devastating 4k energy beam, then release it for massive recoil).",
+      "The tier-1 crafting recipes now match the sheet: the antenna, head and core requirements are uncommon, so Skewer MK1, Peashooter MK1 and Workhorse MK1 each need their uncommon components to build.",
+      "Enemy projectiles are much faster across the board - the basic gun round, minigun, scatter, heavy rail and laser all now track the ship with far less lead time.",
+      "The Inertial Dampers upgrade is gone; knockback and slows now land at full strength.",
+      "The spider's pull is now an unresistable direct reel - the ship is walked toward the spider at a fixed speed, so thrust and inertia cannot fight it.",
+      "The moth's missiles are now smaller, much faster purple darts summoned in a ring around the moth (instead of overlapping at one point), each leaving a streaming trail.",
+      "The moon and its domain are rebuilt in the JJK style: a black void with a glowing rim and a large watchful moon whose eyes open wider with the phase. A JJK-style cutscene plays on domain expansion, flashing violet and streaking the words DOMAIN EXPANSION across the screen.",
+      "The domain's per-frame effects are throttled, fixing the lag it caused.",
+      "The moth's purple Shield ability now works: it summons a shield bubble holding 5% of its max health, absorbs incoming damage into the bubble, and regenerates the moth's hull while the bubble is up.",
+    ],
+  },
+  {
     version: "2.16.0",
     date: "20 Nov 2026",
     title: "Contact attacks break their own shields, full-aggro guns and tier-2 cannons",
@@ -28,7 +44,7 @@ export const CHANGELOG: ChangeEntry[] = [
       "Every enemy weapon now reaches the body's full aggro range, and an aggroed body keeps firing at the ship even when the ship is past that range - the range is the reach, not a firing gate. Unaggroed enemies snap to attention the instant they take their first damage.",
       "Drop rates are now tier-driven: every non-core component drops at about 5% at the enemy's own rarity, the core drops at 90% (55% on a common body), and a common body additionally rolls an uncommon-tier component at 30% - farming commons is the way up the rarity ladder.",
       "The overheat screen edge-glow now only appears on a chassis that can actually overheat, so guns that never jam no longer flash the warning.",
-      "Three tier-2 cannons join the tree: Skewer MK2 (a longer, harder-hitting hitscan lance), Peashooter MK2 (a tighter, faster spray) and Workhorse MK2 (a hotter, harder-hitting twin), each requiring its tier-1 predecessor.",
+      "The tier-2 cannon tree is built out per the design sheet (see 2.17.0 for the full trio).",
       "The cannon tree's stray helper paragraphs are gone; the nodes speak for themselves.",
     ],
   },
