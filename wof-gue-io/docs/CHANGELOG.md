@@ -1,3 +1,7 @@
+## 0.3. v2.29.13 — Multiplayer test
+
+- Multiplayer test.
+
 ## 0.3. v2.29.12 — Chat focus and guest notice
 
 - Empty Enter releases chat typing focus without closing the panel. The title screen explains that guests must log in to save progress.

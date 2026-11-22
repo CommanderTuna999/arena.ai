@@ -8,7 +8,7 @@
  *   CHANGELOG and mirror the details in docs/CHANGELOG.md.
  */
 
-export const VERSION = "2.29.12";
+export const VERSION = "2.29.13";
 
 export interface ChangeEntry {
   version: string;
@@ -19,6 +19,7 @@ export interface ChangeEntry {
 }
 
 export const CHANGELOG: ChangeEntry[] = [
+  { version: "2.29.13", date: "22 Nov 2026", title: "Multiplayer test", points: ["Multiplayer test."] },
   { version: "2.29.12", date: "22 Nov 2026", title: "Chat focus and guest notice", points: ["Pressing Enter on an empty chat field stops typing without closing chat.", "The title screen clarifies that guests must log in to save progress."] },
   { version: "2.29.11", date: "22 Nov 2026", title: "Chat Enter fix", points: ["Sending a chat message with Enter keeps chat open; pressing Enter with an empty field closes it."] },
   { version: "2.29.10", date: "22 Nov 2026", title: "Red barriers", points: ["Solid map walls now appear as glowing red barriers; collision is unchanged."] },

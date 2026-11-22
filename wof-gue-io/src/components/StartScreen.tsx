@@ -198,7 +198,7 @@ export default function StartScreen() {
               onClick={() => setAuthOpen(true)}
               title="Log in to pick a name and keep your progress"
               aria-label="Currently playing as a Guest. Login to save progress"
-              className="min-h-11 w-full cursor-pointer border-b border-white/10 bg-transparent px-2 text-center text-sm text-white/60 transition hover:text-white"
+              className="min-h-11 w-full cursor-pointer whitespace-nowrap border-b border-white/10 bg-transparent px-1 text-center text-[clamp(8px,2.55vw,11px)] text-white/60 transition hover:text-white"
             >
               Currently playing as a Guest. Login to save progress
             </button>
@@ -211,6 +211,10 @@ export default function StartScreen() {
           >
             PLAY
           </button>
+          <a href="https://wofgue-io-multiplayer-2.onrender.com/" target="_blank" rel="noopener noreferrer"
+            className="mt-3 w-full rounded-sm border border-yellow-300/50 bg-yellow-300/10 px-2 py-2 text-center text-xs font-bold tracking-wider text-yellow-200 transition hover:bg-yellow-300/20">
+            MULTIPLAYER TEST <span className="font-normal tracking-normal text-yellow-100/70">· guest only, no saves</span>
+          </a>
 
           <div className="mt-5 flex items-center gap-3">
             <button
