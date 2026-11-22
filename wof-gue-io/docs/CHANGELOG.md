@@ -1,3 +1,7 @@
+## 0.3. v2.29.10 — Red barriers
+
+- Changed solid map walls to glowing red barriers without changing their collision.
+
 ## 0.3. v2.29.9 — Chat, map and contact
 
 - Own chat messages are white; Enter sends and closes chat, and the input explains the shortcuts.

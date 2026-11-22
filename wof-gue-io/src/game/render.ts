@@ -38,6 +38,34 @@ function hexPath(ctx: CanvasRenderingContext2D, x: number, y: number, r: number,
   ctx.closePath();
 }
 
+/** Paint only visible blocked tiles and their exposed collision edges. The map
+ * itself remains unchanged: the glowing rim is exactly on the walkable boundary. */
+export function drawBarrierTerrain(ctx: CanvasRenderingContext2D, x0: number, x1: number, y0: number, y1: number, z: number, t: number) {
+  const edges: [number, number, number, number][] = [];
+  ctx.save();
+  ctx.fillStyle = "#210a12";
+  for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
+    if (MAP_GRID[y][x] !== "0") continue;
+    const left = x * MAP_CELL - MAP_RADIUS, top = y * MAP_CELL - MAP_RADIUS;
+    const right = left + MAP_CELL, bottom = top + MAP_CELL;
+    ctx.fillRect(left, top, MAP_CELL + 1, MAP_CELL + 1);
+    if (MAP_GRID[y - 1]?.[x] === "1") edges.push([left, top, right, top]);
+    if (MAP_GRID[y + 1]?.[x] === "1") edges.push([left, bottom, right, bottom]);
+    if (MAP_GRID[y]?.[x - 1] === "1") edges.push([left, top, left, bottom]);
+    if (MAP_GRID[y]?.[x + 1] === "1") edges.push([right, top, right, bottom]);
+  }
+  if (edges.length) {
+    ctx.beginPath();
+    for (const [x1, y1, x2, y2] of edges) { ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); }
+    // Layered strokes avoid expensive per-tile blur and scale consistently on screen.
+    const pulse = 0.8 + 0.2 * Math.sin(t * 1.7);
+    ctx.strokeStyle = `rgba(255, 30, 55, ${0.15 * pulse})`; ctx.lineWidth = 22 / z; ctx.stroke();
+    ctx.strokeStyle = `rgba(255, 45, 62, ${0.38 * pulse})`; ctx.lineWidth = 9 / z; ctx.stroke();
+    ctx.strokeStyle = `rgba(255, 130, 135, ${0.9 * pulse})`; ctx.lineWidth = 2.5 / z; ctx.stroke();
+  }
+  ctx.restore();
+}
+
 export function render(g: Game, ctx: CanvasRenderingContext2D) {
   const { w, h, dpr, cam } = g;
   const z = cam.z;
@@ -69,15 +97,12 @@ export function render(g: Game, ctx: CanvasRenderingContext2D) {
   for (let y = Math.floor(vy0 / 500) * 500; y < vy1; y += 500) { ctx.moveTo(vx0, y); ctx.lineTo(vx1, y); }
   ctx.stroke();
 
-  // The dark regions are solid terrain; draw only the visible map tiles.
+  // The barrier follows the same tile boundaries used by collision.
   const x0 = Math.max(0, Math.floor((vx0 + MAP_RADIUS) / MAP_CELL));
   const x1 = Math.min(MAP_GRID.length - 1, Math.floor((vx1 + MAP_RADIUS) / MAP_CELL));
   const y0 = Math.max(0, Math.floor((vy0 + MAP_RADIUS) / MAP_CELL));
   const y1 = Math.min(MAP_GRID.length - 1, Math.floor((vy1 + MAP_RADIUS) / MAP_CELL));
-  ctx.fillStyle = "#11121b";
-  for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
-    if (MAP_GRID[y][x] === "0") ctx.fillRect(x * MAP_CELL - MAP_RADIUS, y * MAP_CELL - MAP_RADIUS, MAP_CELL + 1, MAP_CELL + 1);
-  }
+  drawBarrierTerrain(ctx, x0, x1, y0, y1, z, t);
   ctx.strokeStyle = "#ff3d73"; ctx.lineWidth = 4 / z;
   ctx.strokeRect(-MAP_RADIUS, -MAP_RADIUS, MAP_RADIUS * 2, MAP_RADIUS * 2);
 
