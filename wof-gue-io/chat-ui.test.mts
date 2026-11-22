@@ -51,8 +51,8 @@ try {
  assert(screen.getByText('Offline hello').className.includes('text-white'));
  input.focus(); fireEvent.keyDown(input,{key:'Enter',code:'Enter'}); assert(screen.getByRole('button',{name:'Open chat'}),'Enter with empty input closes chat');
  fireEvent.keyDown(window,{key:'/',code:'Slash'}); await act(async()=>{await new Promise(r=>setTimeout(r,5));});
- const reopened=screen.getByRole('textbox',{name:'Chat message'});fireEvent.change(reopened,{target:{value:'Enter sends and closes'}});fireEvent.keyDown(reopened,{key:'Enter',code:'Enter'});assert(screen.getByRole('button',{name:'Open chat'}));
- fireEvent.click(screen.getByRole('button',{name:'Open chat'}));
+ const reopened=screen.getByRole('textbox',{name:'Chat message'});fireEvent.change(reopened,{target:{value:'Enter sends and stays open'}});fireEvent.keyDown(reopened,{key:'Enter',code:'Enter'});assert.equal((screen.getByRole('textbox',{name:'Chat message'}) as HTMLInputElement).value,'');assert(screen.getByRole('textbox',{name:'Chat message'}),'sending with Enter keeps chat open');
+ fireEvent.pointerDown(dom.window.document.body);
  fireEvent.keyDown(window,{key:'Enter',code:'Enter'}); assert(screen.getByRole('button',{name:'Open chat'}),'Enter also closes expanded chat when not typing');
  fireEvent.click(screen.getByRole('button',{name:'Open chat'}));
  fireEvent.click(screen.getByRole('button',{name:'Collapse chat'}));

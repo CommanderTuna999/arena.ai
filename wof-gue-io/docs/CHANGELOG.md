@@ -1,3 +1,7 @@
+## 0.3. v2.29.11 — Chat Enter fix
+
+- Sending a chat message with Enter keeps chat open; Enter on an empty field closes it.
+
 ## 0.3. v2.29.10 — Red barriers
 
 - Changed solid map walls to glowing red barriers without changing their collision.

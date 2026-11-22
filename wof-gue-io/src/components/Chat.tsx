@@ -155,7 +155,7 @@ export default function Chat({ game, notices }: { game: Game; notices: Toast[] }
     ownIds.current.add(id);
     while (ownIds.current.size > 200) ownIds.current.delete(ownIds.current.values().next().value!);
     try { storage()?.setItem(OWN_MESSAGE_KEY, JSON.stringify([...ownIds.current])); } catch { /* memory-only when storage is blocked */ }
-    setPending(queue.list()); setText(''); setQueueError(''); if (close) closeChat(); else wake();
+    setPending(queue.list()); setText(''); setQueueError(''); wake();
   };
   if (!expanded) return <button type="button" onClick={() => open(true)} aria-label={`Open chat${unread ? `, ${unread} unread` : ''}`} className="absolute bottom-4 left-4 z-[70] rounded border border-cyan-200/30 bg-[#050e16] px-3 py-2 text-xs font-bold text-cyan-200">CHAT{unread > 0 && <span className="ml-2 rounded-full bg-cyan-300 px-1.5 text-black">{unread}</span>}</button>;
   return <section className="pointer-events-none absolute bottom-4 left-4 z-[70] w-[min(22rem,85vw)] text-xs" aria-label="Chat">

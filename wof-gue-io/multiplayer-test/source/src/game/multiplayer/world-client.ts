@@ -1,0 +1,81 @@
+import { parseInput, type PlayerInput } from './input';
+import { SnapshotBuffer, type RenderBody } from './snapshot-buffer';
+
+type Body = RenderBody & { [key: string]: unknown };
+type View = { time: number; pilots: Body[]; enemies: Body[]; [key: string]: unknown };
+type WireSocket = Pick<WebSocket, 'readyState' | 'send' | 'close' | 'onopen' | 'onmessage' | 'onerror' | 'onclose'>;
+type SocketFactory = (url: string) => WireSocket;
+export type WorldClientState = 'idle' | 'connecting' | 'authenticating' | 'online' | 'closed';
+
+/** Experimental authenticated client for the loopback test service only.
+ * Never use in the shipped game: public TLS service, account ticket issuance,
+ * complete snapshots, interpolation/rendering integration, reconnection,
+ * secure saves and authoritative combat remain unfinished. */
+export class ExperimentalWorldClient {
+  state: WorldClientState = 'idle';
+  pilotId: string | null = null;
+  private socket: WireSocket | null = null;
+  private timer: ReturnType<typeof setTimeout> | null = null;
+  private lastSequence = -1;
+  private inputSequence = -1;
+  private latestView: View | null = null;
+  private readonly pilotFrames = new SnapshotBuffer<Body>();
+  private readonly enemyFrames = new SnapshotBuffer<Body>();
+  constructor(private readonly factory: SocketFactory = url => new WebSocket(url), private readonly timeoutMs = 5000, private readonly demoOrigin?: string) {
+    if (!Number.isSafeInteger(timeoutMs) || timeoutMs < 1 || timeoutMs > 60000) throw new Error('Invalid handshake timeout');
+  }
+  connect(url: string, ticket: string): void {
+    if (this.state !== 'idle' || typeof ticket !== 'string' || ticket.length < 1 || ticket.length > 1024) throw new Error('Invalid connection');
+    const endpoint = new URL(url);
+    // Only loopback is permitted in this prototype, even if an attacker can
+    // influence configuration. The real deployment needs an audited TLS URL.
+    const loopback = endpoint.protocol === 'ws:' && ['127.0.0.1','localhost','[::1]'].includes(endpoint.hostname);
+    const socketOrigin = `${endpoint.protocol === 'wss:' ? 'https:' : 'http:'}//${endpoint.host}`;
+    const sameOriginDemo = !!this.demoOrigin && socketOrigin === this.demoOrigin && ['ws:', 'wss:'].includes(endpoint.protocol);
+    if ((!loopback && !sameOriginDemo) || endpoint.username || endpoint.password || endpoint.pathname !== '/world' || endpoint.search || endpoint.hash) throw new Error('Experimental client requires loopback or same-origin demo');
+    this.state = 'connecting';
+    let socket: WireSocket;
+    try { socket = this.factory(url); } catch (error) { this.state = 'closed'; throw error; }
+    this.socket = socket;
+    this.timer = setTimeout(() => this.disconnect(), this.timeoutMs);
+    socket.onopen = () => {
+      if (this.socket !== socket || this.state !== 'connecting') return;
+      this.state = 'authenticating';
+      try { socket.send(JSON.stringify({ type:'authenticate', ticket })); } catch { this.disconnect(); }
+    };
+    socket.onmessage = event => {
+      if (this.socket !== socket || typeof event.data !== 'string' || event.data.length > 2_000_000) return;
+      let data: any; try { data=JSON.parse(event.data); } catch { return; }
+      if (this.state === 'authenticating' && data?.type === 'welcome' && typeof data.pilotId === 'string' && /^[A-Za-z0-9_-]{1,80}$/.test(data.pilotId)) {
+        this.pilotId=data.pilotId; this.state='online'; if (this.timer) clearTimeout(this.timer); this.timer=null; return;
+      }
+      if (this.state !== 'online' || data?.type !== 'world-snapshot' || !Number.isSafeInteger(data.sequence) || data.sequence <= this.lastSequence || !data.world || typeof data.world !== 'object') return;
+      const world=data.world as View;
+      if (!Array.isArray(world.pilots) || !Array.isArray(world.enemies) || !world.pilots.some(p=>p?.id===this.pilotId)) return;
+      // Validate both sets before mutating either history: a malformed snapshot
+      // must not advance the stream or create inconsistent animation buffers.
+      const validation = new SnapshotBuffer<Body>(2);
+      const pilots={sequence:data.sequence,time:world.time,bodies:world.pilots};
+      const enemies={sequence:data.sequence,time:world.time,bodies:world.enemies};
+      if (!validation.push(pilots)) return; validation.clear(); if (!validation.push(enemies)) return;
+      if (this.latestView && world.time <= this.latestView.time) return;
+      if (!this.pilotFrames.push(pilots) || !this.enemyFrames.push(enemies)) { this.disconnect(); return; }
+      this.lastSequence=data.sequence; this.latestView=structuredClone(world);
+    };
+    socket.onerror = () => this.disconnect();
+    socket.onclose = () => { if (this.socket === socket) this.disconnect(); };
+  }
+  sendInput(frame: unknown): boolean {
+    if (this.state !== 'online' || !this.socket || this.socket.readyState !== 1) return false;
+    const input: PlayerInput | null = parseInput(frame,this.inputSequence);
+    if (!input) return false;
+    try { this.socket.send(JSON.stringify({ type:'input',frame:input })); this.inputSequence=input.seq; return true; } catch { this.disconnect(); return false; }
+  }
+  snapshot(): View | null { return this.latestView ? structuredClone(this.latestView) : null; }
+  sample(time: number): { pilots: Body[]; enemies: Body[] } { return { pilots:this.pilotFrames.sample(time), enemies:this.enemyFrames.sample(time) }; }
+  disconnect(): void {
+    if (this.timer) clearTimeout(this.timer); this.timer=null;
+    const socket=this.socket; this.socket=null; this.state='closed';
+    if (socket) { socket.onopen=null; socket.onmessage=null; socket.onerror=null; socket.onclose=null; try { socket.close(); } catch {} }
+  }
+}
