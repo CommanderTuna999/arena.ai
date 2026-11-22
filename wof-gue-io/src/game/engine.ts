@@ -397,7 +397,6 @@ export class Game {
   bullets: Bullet[] = [];
   eprojs: EProj[] = [];
   particles: Particle[] = [];
-  damageNumbers: { x: number; y: number; amount: number; kind: string; crit: boolean; born: number; last: number }[] = [];
   /** recycled particle records; avoids allocating thousands of short-lived objects */
   private pPool: Particle[] = [];
   puddles: Puddle[] = [];
@@ -1372,15 +1371,6 @@ export class Game {
     return this.shieldInfoAt(e, x, y)?.part ?? null;
   }
 
-  private damageNumber(x: number, y: number, amount: number, kind: string, crit = false) {
-    if (!Number.isFinite(amount) || amount <= 0) return;
-    // Group rapid ticks to stay readable and avoid a per-frame text flood.
-    const prior = this.damageNumbers.find(n => n.kind === kind && n.crit === crit && this.t - n.last < 0.16 && this.t - n.born < 0.35 && (n.x - x) ** 2 + (n.y - y) ** 2 < 10000);
-    if (prior) { prior.amount += amount; prior.last = this.t; return; }
-    if (this.damageNumbers.length >= 80) this.damageNumbers.shift();
-    this.damageNumbers.push({ x, y, amount, kind, crit, born: this.t, last: this.t });
-  }
-
   /** plating takes the hit instead of the body. Returns true if it absorbed it. */
   private shellHit(e: Enemy, dmg: number, src: DmgSrc, fromBase = false, hx?: number, hy?: number, crit = false) {
     const layer = e.shells[e.shells.length - 1];
@@ -1398,7 +1388,6 @@ export class Game {
     /* Plate Breaker buys extra bite against the slabs, not just the armour parts */
     const dealt = dmg * (SHELL_TAKE[src] ?? 0.3);
     const before = layer.hp;
-    this.damageNumber(hx ?? e.x, hy ?? e.y, Math.min(dealt, Math.max(0, before)), src, crit);
     this.trackDamage(e, Math.min(dealt, Math.max(0, before)), fromBase);
     layer.hp -= dealt;
     e.shellHit = 0.12;
@@ -1705,9 +1694,6 @@ export class Game {
     return e.baseDmg > 0 && e.baseDmg * 2 > e.dmgTaken;
   }
   damagePart(e: Enemy, p: Part, dmg: number, wx: number, wy: number, src: DmgSrc = "kinetic", fromBase = false, crit = false) {
-    const displayDamage = Math.min(dmg, Math.max(0, p.hp) + (e.buffT > 0 ? Math.max(0, e.buffHp) : 0));
-    const [hitX, hitY] = (wx !== 0 || wy !== 0) ? [wx, wy] : this.partWorld(e, p);
-    this.damageNumber(hitX, hitY, displayDamage, src, crit);
     /* the moth's heal-shield bubble absorbs incoming damage while it is up, so
      * the body underneath takes the remainder (or nothing, while it holds) */
     if (e.buffT > 0 && e.buffHp > 0) {
@@ -2076,7 +2062,6 @@ export class Game {
     }
     let d = dmg * (1 - st.armor) * (1 - st.reactive);
     if (st.kinetic > 0 && p.shield > 0 && !o.energy) d *= 1 - st.kinetic;
-    this.damageNumber(p.x, p.y - 30, Math.min(d, p.hp + p.shield + p.barrier), o.dot ? "dot" : o.energy ? "incomingEnergy" : "incoming");
     p.hitT = 0; p.shieldT = st.shieldDelay;
     if (p.barrier > 0) { const a = Math.min(p.barrier, d); p.barrier -= a; d -= a; }
     const shieldBefore = p.shield;
@@ -4165,7 +4150,6 @@ export class Game {
     if (this.paused) { this.blur(); return; }
     const dt = Math.min(dtRaw, 0.05);
     this.t += dt;
-    this.damageNumbers = this.damageNumbers.filter(n => this.t - n.born < 1.1);
     if (this.discovery) { this.discovery.t -= dt; if (this.discovery.t <= 0) this.discovery = null; }
     if (this.cutscene) { this.cutscene.t -= dt; if (this.cutscene.t <= 0) this.cutscene = null; }
     this.fpsAcc += dtRaw; this.fpsN++;

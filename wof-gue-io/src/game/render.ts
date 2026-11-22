@@ -693,7 +693,6 @@ export function render(g: Game, ctx: CanvasRenderingContext2D) {
 
   /* ---- screen space HUD in canvas ---- */
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  drawDamageNumbers(g, ctx, cx, cy, z);
   drawCreditFlights(g, ctx);
   drawMinimap(g, ctx);
   drawBaseArrow(g, ctx);
@@ -2088,28 +2087,6 @@ function drawBars(g: Game, ctx: CanvasRenderingContext2D, e: Enemy, z: number) {
       }
     }
   }
-}
-
-const DAMAGE_COLORS: Record<string, string> = {
-  kinetic: "#f3f8ff", laser: "#c995ff", shock: "#70efff", explosive: "#ff9e51",
-  missile: "#ffcf5a", dot: "#82f58b", incoming: "#ff617a", incomingEnergy: "#df80ff",
-};
-function drawDamageNumbers(g: Game, ctx: CanvasRenderingContext2D, cx: number, cy: number, z: number) {
-  ctx.save(); ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.lineJoin = "round";
-  for (const n of g.damageNumbers) {
-    const age = g.t - n.born, f = Math.max(0, 1 - age / 1.1);
-    const x = (n.x - cx) * z + g.w / 2, y = (n.y - cy) * z + g.h / 2 - age * 40;
-    if (x < -100 || x > g.w + 100 || y < -50 || y > g.h + 50) continue;
-    const size = n.crit ? 24 : 17;
-    ctx.font = `900 ${size}px system-ui, sans-serif`;
-    ctx.globalAlpha = Math.min(1, f * 3);
-    ctx.lineWidth = n.crit ? 5 : 4; ctx.strokeStyle = "#080a16";
-    ctx.fillStyle = DAMAGE_COLORS[n.kind] ?? DAMAGE_COLORS.kinetic;
-    ctx.shadowColor = ctx.fillStyle; ctx.shadowBlur = n.crit ? 13 : 5;
-    const label = `${n.crit ? "✦ " : ""}${fmtNum(n.amount)}${n.crit ? " CRIT" : ""}`;
-    ctx.strokeText(label, x, y); ctx.fillText(label, x, y);
-  }
-  ctx.restore();
 }
 
 let minimapTerrain: HTMLCanvasElement | null = null;

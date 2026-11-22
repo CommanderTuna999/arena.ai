@@ -1,3 +1,7 @@
+## 0.3. v2.28.1 — Chat controls
+
+- Removed floating damage numbers. Chat opens on a new message or with slash or Enter; collapse it to a button with an unread count.
+
 ## 0.3. v2.28.0 — Chat groundwork and tree layering
 
 - Fixed cannon tree popup layering so other nodes cannot draw over its opaque background.
