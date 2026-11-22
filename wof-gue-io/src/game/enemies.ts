@@ -715,9 +715,9 @@ const SPECIES: SpeciesDef[] = [
     },
   },
 
-  /* 3 ─ LUNA MOTH */
+  /* 3 ─ LUNAR MOTH */
   {
-    id: "moth", hp: 20, dmg: 20, name: "Luna Moth", hue: 236, flying: true, speed: 130, turn: 2.6, ranged: true, keep: 380, muzzle: 1.4,
+    id: "moth", hp: 20, dmg: 20, name: "Lunar Moth", hue: 236, flying: true, speed: 130, turn: 2.6, ranged: true, keep: 380, muzzle: 1.4,
     armed: { gun: false, missile: false, shield: true }, pack: [1, 1, 1, 1, 1, 1],
     abilities: [
       { type: "shoot", name: "Shot Burst", minTier: 0, wind: 0.4, dmg: 2, n: 5, spread: 1.2, speed: 600, life: 1.2, size: 5, kind: "bolt", maxS: 2, maxP: 800 },

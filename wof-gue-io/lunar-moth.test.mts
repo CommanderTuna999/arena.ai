@@ -1,0 +1,11 @@
+import assert from 'node:assert/strict';
+import { SPECIES_LIST } from './src/game/enemies';
+import { migrate, newSave, RECIPE_BY_ID, recipeProblem, type Comp } from './src/game/data';
+assert.equal(SPECIES_LIST.find(s=>s.id==='moth')?.name,'Lunar Moth');
+const old:Comp={id:'old',species:'Luna Moth',name:'Luna Moth Wing',kind:'wing',tier:1,poly:[],area:1,mass:1,hue:1,value:1};
+const saved=newSave();saved.inventory=[old];const restored=migrate(saved);
+assert.equal(restored.inventory[0].species,'Lunar Moth');assert.equal(restored.inventory[0].name,'Lunar Moth Wing');
+const recipe=RECIPE_BY_ID.ab_timewarp;assert(recipe.species?.names.includes('Lunar Moth'));
+const components=Array.from({length:recipe.n},(_,i)=>({...old,id:String(i),species:i===0?'Luna Moth':'Other'}));
+assert.equal(recipeProblem(recipe,components),null,'old moth components remain usable even before migration');
+console.log('Lunar Moth naming and old inventory compatibility passed');

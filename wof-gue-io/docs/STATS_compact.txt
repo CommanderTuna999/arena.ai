@@ -37,7 +37,7 @@ Hull T0-T5: 406 / 1,644 / 9,947 / 82,608 / 478,008 / 2,194,880 HP. T5: 109 parts
 Defence: T2 1 shell(s) 5,968 HP; T3 2 shell(s) 99,130 HP; T4 3 shell(s) 860,415 HP; T5 4 shell(s) 5,267,712 HP; T3 2 shield panel(s) 12,480 HP at 182-182uu. Mounts T5: 0 gun(s), 2 missile pod(s).
 Abilities: Web Shot [shoot] T1+ 6s cd, 0.4x eDmg dmg; 0.5s wind, 1 proj T5, 460u/s, 1.8s life, size 12, slow 0.5x/2.5s, 120-800u, web. | Fang Strike [swing] T2+ 2s cd, 1.7x eDmg dmg; 0.4s wind, 0-2.3 body units, mandible swing, needs Fang. | Acid Glob [spit] T3+ 7s cd, 0.6x eDmg dmg; 0.5s wind, 480u/s, size 1.5, 0-800u. | Silk Line [pull] T4+ 12s cd, 0.5x eDmg dmg; 0.5s wind, 760u/s, 250-850u.
 
-4. Luna Moth (moth) — zones 0-4; flying ranged, keep 380u; speed 130, turn 2.6; pack 1/1/1/1/1/1.
+4. Lunar Moth (moth) — zones 0-4; flying ranged, keep 380u; speed 130, turn 2.6; pack 1/1/1/1/1/1.
 Hull T0-T5: 350 / 1,683 / 8,957 / 72,832 / 346,608 / 1,582,080 HP. T5: 70 parts, 862u radius. Core T0-T5: 30 / 120 / 540 / 2,400 / 10,800 / 48,000.
 Defence: T2 1 shell(s) 5,374 HP; T3 2 shell(s) 87,398 HP; T4 3 shell(s) 623,895 HP; T5 4 shell(s) 3,796,992 HP; T3 2 shield panel(s) 12,480 HP at 182-182uu; T4 3 shield panel(s) 84,240 HP at 301-301uu; T5 4 shield panel(s) 499,200 HP at 497-497uu. Mounts T5: 0 gun(s), 0 missile pod(s).
 Abilities: Scale Dust [cloud] T1+ 8s cd, 0.4x eDmg dmg; 0.6s wind, size 2.8, slow 0.55x/1.5s, 0-700u. | Spore Orbs [shoot] T2+ 5s cd, 0.8x eDmg dmg; 0.5s wind, 4 proj T5, 0.7 spread, 260u/s, 4s life, size 9, slow 0.8x/1s, homing 1.6, 0-800u, orb. | Lunar Lure [pull] T3+ 12s cd, 0.5x eDmg dmg; 0.6s wind, 700u/s, 250-800u. | Gust Pulse [ring] T4+ 9s cd, 1.2x eDmg dmg; 0.9s wind, 460u/s, size 6, 0-4 body units.
@@ -241,7 +241,7 @@ Nano Repair Field: 22s base cd; 35% x min(1.6,f) hull and 60% shield. D3, 5 part
 Phase Blink: 9s base cd; teleport 520u forward. D4, 6 parts (1x Wing/Core + 1x Cicada/Katydid/Mantis).
 Aegis Barrier: 18s base cd; 2.5s overshield = hull x (0.35+0.30f). D3, 5 parts (1x Shield).
 Overdrive: 26s base cd; 6s of 2.2x weapon damage and 1.8x fire rate. D5, 7 parts (1x Core/Weapon + 1x Tiger/Hornet).
-Time Warp: 24s base cd; 4s slow within 900u to max(0.10,0.25-0.05f) speed. D5, 7 parts (1x Core/Wing + 1x Atlas/Luna Moth).
+Time Warp: 24s base cd; 4s slow within 900u to max(0.10,0.25-0.05f) speed. D5, 7 parts (1x Core/Wing + 1x Atlas/Lunar Moth).
 Shockwave: 16s base cd; 520u, 5f x st.dmg, 900u/s knockback, 0.5s stun. D4, 6 parts (1x Plate/Body + 1x Dung/Scarab).
 All active cooldowns = base / (0.7 + 0.30 x f).
 

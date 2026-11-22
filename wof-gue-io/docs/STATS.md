@@ -107,7 +107,7 @@ Abilities (4): cooldowns scale down with rarity (T1 12s, T2 8s, T3 3s, T4 1.75s,
   - Bite [grab], from T4: 1.67x eDmg damage (6,493 at T5); 0.4s wind-up; chomps at 1s each over a 3s hold; lunges in to close the gap; range 0-~1300u.
   - Pull [pull], from T4: 17x eDmg damage (66,096 at T5); 0.5s wind-up; 760 u/s; range 250-~1300u.
 
---- 4. Luna Moth (moth) ---
+--- 4. Lunar Moth (moth) ---
 Spawn: zones 0-4 (Common (outer) to Legendary). Pack per tier: 1 / 1 / 1 / 1 / 1 / 1.
 Movement: flying; speed 130u/s; turn 2.6; ranged, keeps 380u; muzzle 1.4 body-size units.
 Hull by tier:
@@ -755,7 +755,7 @@ Nano Repair Field (ab_repair): 22s base cooldown. Restores 35% x min(1.6, eff) o
 Phase Blink (ab_blink): 9s base cooldown. Teleports 520u forward, interrupting pulls and leaving a particle burst. Cooldown = base / (0.7 + 0.30 x eff). Craft: difficulty 4, 6 components; 1x Wing/Core + 1x Cicada / Katydid / Mantis part.
 Aegis Barrier (ab_barrier): 18s base cooldown. 2.5s overshield = hull x (0.35 + 0.30 x eff), absorbs damage before shield and hull. Cooldown = base / (0.7 + 0.30 x eff). Craft: difficulty 3, 5 components; 1x Shield.
 Overdrive (ab_overdrive): 26s base cooldown. 6s of 2.2x weapon damage and 1.8x fire rate. Cooldown = base / (0.7 + 0.30 x eff). Craft: difficulty 5, 7 components; 1x Core/Weapon + 1x Tiger Beetle / Hornet part.
-Time Warp (ab_timewarp): 24s base cooldown. 4s slow on every enemy within 900u to max(0.10, 0.25 - 0.05 x eff) speed. Cooldown = base / (0.7 + 0.30 x eff). Craft: difficulty 5, 7 components; 1x Core/Wing + 1x Atlas Moth / Luna Moth part.
+Time Warp (ab_timewarp): 24s base cooldown. 4s slow on every enemy within 900u to max(0.10, 0.25 - 0.05 x eff) speed. Cooldown = base / (0.7 + 0.30 x eff). Craft: difficulty 5, 7 components; 1x Core/Wing + 1x Atlas Moth / Lunar Moth part.
 Shockwave (ab_shockwave): 16s base cooldown. 520u blast: 5x st.dmg x eff, 900u/s knockback, 0.5s stun. Cooldown = base / (0.7 + 0.30 x eff). Craft: difficulty 4, 6 components; 1x Plate/Body + 1x Dung Beetle / Scarab part.
 
 ============================================================

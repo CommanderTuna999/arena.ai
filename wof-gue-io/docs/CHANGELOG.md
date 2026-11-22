@@ -1,3 +1,8 @@
+## 0.3. v2.29.6 — Chat and Lunar Moth
+
+- Chat queues offline messages locally, retries when connected, and fades its message panel after five seconds of inactivity. Incoming messages reveal the expanded panel again.
+- Fixed chat message sanitization; renamed Lunar Moth and migrated older saved components without breaking recipes.
+
 ## 0.3. v2.29.5 — Chat connection diagnostics
 
 - Chat shows a stable retry status; the chat service accepts known project website aliases and reports rejected origins.

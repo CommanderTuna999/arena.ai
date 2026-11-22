@@ -1,0 +1,14 @@
+import assert from 'node:assert/strict';
+import { ChatOutbox, CHAT_QUEUE_LIMIT } from './src/game/chat-outbox';
+let saved='';const storage={getItem:()=>saved,setItem:(_key:string,value:string)=>{saved=value;}};
+const box=new ChatOutbox(storage);assert(box.enqueue('message-1','Pilot','hello\nworld',100));
+assert.deepEqual(box.list().map(x=>x.text),['hello world']);
+const restored=new ChatOutbox(storage);assert.equal(restored.list().length,1);
+const copy=restored.list();copy[0].text='changed';assert.equal(restored.list()[0].text,'hello world');
+assert(!restored.enqueue('message-1','Pilot','duplicate',101));
+assert(restored.acknowledge('message-1'));assert(!restored.acknowledge('message-1'));
+for(let i=0;i<CHAT_QUEUE_LIMIT;i++)assert(restored.enqueue(`message-${i}`,'Pilot',`hello ${i}`,i));
+assert(!restored.enqueue('message-overflow','Pilot','not lost',500));
+const broken=new ChatOutbox({getItem:()=>{throw Error('blocked')},setItem:()=>{throw Error('blocked')}});
+assert(broken.enqueue('message-safe','Pilot','memory only',1));assert.equal(broken.list().length,1);
+console.log('Offline chat queue persists, remains bounded and survives blocked storage');

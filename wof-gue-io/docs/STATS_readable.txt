@@ -192,7 +192,7 @@ ABILITIES
   760u/s · range 250–850u
 
 ────────────────────────────────────────
-4. LUNA MOTH
+4. LUNAR MOTH
 Flying · Ranged, keeps 380u · Spawns Common–Legendary
 Contact type: Physical · Pack size: C 1 · U 1 · R 1 · E 1 · L 1 · M 1
 
@@ -1672,7 +1672,7 @@ Craft: D5 · 7 parts · 1× Core/Weapon + 1× Tiger/Hornet part
 
 TIME WARP
 24s base cooldown · 4s slow within 900u to max(0.10, 0.25 − 0.05f) speed
-Craft: D5 · 7 parts · 1× Core/Wing + 1× Atlas/Luna Moth part
+Craft: D5 · 7 parts · 1× Core/Wing + 1× Atlas/Lunar Moth part
 
 SHOCKWAVE
 16s base cooldown · 520u · 5f × st.dmg · 900u/s knockback · 0.5s stun

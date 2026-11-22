@@ -613,7 +613,7 @@ export const RECIPES: Recipe[] = [
   { id: "ab_blink", name: "Phase Blink", slot: "ability", difficulty: 4, n: 6, need: { cats: ["wing", "core"], count: 1 }, species: { names: ["Cicada", "Katydid", "Mantis"], count: 1 }, desc: "Teleports you a long way in the direction you are facing." },
   { id: "ab_barrier", name: "Aegis Barrier", slot: "ability", difficulty: 3, n: 5, need: { cats: ["shield"], count: 1 }, desc: "Projects a temporary overshield that absorbs damage before your hull." },
   { id: "ab_overdrive", name: "Overdrive", slot: "ability", difficulty: 5, n: 7, need: { cats: ["core", "weapon"], count: 1 }, species: { names: ["Tiger Beetle", "Hornet"], count: 1 }, desc: "Overclocks your weapons: far more damage and fire rate for a few seconds." },
-  { id: "ab_timewarp", name: "Time Warp", slot: "ability", difficulty: 5, n: 7, need: { cats: ["core", "wing"], count: 1 }, species: { names: ["Atlas Moth", "Luna Moth"], count: 1 }, desc: "Warps local time, slowing every enemy nearby to a crawl." },
+  { id: "ab_timewarp", name: "Time Warp", slot: "ability", difficulty: 5, n: 7, need: { cats: ["core", "wing"], count: 1 }, species: { names: ["Atlas Moth", "Lunar Moth"], count: 1 }, desc: "Warps local time, slowing every enemy nearby to a crawl." },
   { id: "ab_shockwave", name: "Shockwave", slot: "ability", difficulty: 4, n: 6, need: { cats: ["plate", "body"], count: 1 }, species: { names: ["Dung Beetle", "Scarab"], count: 1 }, desc: "Blasts everything around you outward and tears it apart." },
 ];
 
@@ -718,7 +718,7 @@ export function recipeProblem(r: Recipe, comps: Comp[]): string | null {
     if (have < r.need.count) return `Needs ${r.need.count}x ${r.need.cats.map((c) => CAT_NAME[c]).join("/")}`;
   }
   if (r.species) {
-    const have = comps.filter((c) => r.species!.names.includes(c.species)).length;
+    const have = comps.filter((c) => r.species!.names.includes(c.species === "Luna Moth" ? "Lunar Moth" : c.species)).length;
     if (have < r.species.count) return `Needs ${r.species.count}x part from ${r.species.names.join(" / ")}`;
   }
   return null;
@@ -867,7 +867,7 @@ export function migrate(raw: unknown): SaveData {
     cannon,
     upgrades: Object.fromEntries(Object.entries(legacy).filter(([k]) => UPGRADE_BY_ID[k])),
     inventory: Array.isArray(r.inventory)
-      ? r.inventory.map((c) => (c && c.species === "World Serpent" ? { ...c, species: "Snake" } : c))
+      ? r.inventory.map((c) => c && c.species === "World Serpent" ? { ...c, species: "Snake" } : c && c.species === "Luna Moth" ? { ...c, species: "Lunar Moth", name: typeof c.name === "string" ? c.name.replace(/^Luna Moth\b/, "Lunar Moth") : c.name } : c)
       : [],
     crafted: Array.isArray(r.crafted) ? r.crafted : [],
     equip: { ...d.equip, ...(r.equip ?? {}), weapon: [0, 1, 2].map((i) => r.equip?.weapon?.[i] ?? null) },

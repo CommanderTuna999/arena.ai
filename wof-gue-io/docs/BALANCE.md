@@ -18,7 +18,7 @@ Google Docs and is the owner's; this file only records what was applied and wher
 
 The species number is one **normal (body) piece** at common rarity:
 
-Dragonfly 19 · Scorpion 25 · Widow Spider 19 · Luna Moth 20 · Mantis 31 · Centipede 20 · Hornet 20 ·
+Dragonfly 19 · Scorpion 25 · Widow Spider 19 · Lunar Moth 20 · Mantis 31 · Centipede 20 · Hornet 20 ·
 Scarab 36 · Soldier Ant 27 (sheet lists worker ant only) · Firefly 24 · Worker Ant 27 · Honeybee 25 ·
 Grasshopper 27 · Cockroach 27 · Mosquito 20 · Bombardier Beetle 37 · Rhinoceros Beetle 40 ·
 Yellowjacket 25 · Ladybug 25 · Stag Beetle 37 · Carpenter Ant 28 · Cicada 25 · Assassin Bug 23 ·
@@ -30,7 +30,7 @@ leg x0.5, arm x1.33, wing x0.5, weapon x1.83, shield x2.17, spike x0.42.
 
 ## Enemy base damage (`SpeciesDef.dmg`, per hit at common rarity)
 
-Dragonfly 30 · Scorpion 34 · Widow Spider 50 · Luna Moth 20 · Mantis 29 · Centipede 35 · Hornet 37 ·
+Dragonfly 30 · Scorpion 34 · Widow Spider 50 · Lunar Moth 20 · Mantis 29 · Centipede 35 · Hornet 37 ·
 Scarab 20 · Soldier Ant 25 · Firefly 21 · Worker Ant 25 · Honeybee 35 · Grasshopper 27 · Cockroach 27 ·
 Mosquito 28 · Bombardier 20 · Rhinoceros 20 · Yellowjacket 38 · Ladybug 25 · Stag 23 · Carpenter 22 ·
 Cicada 20 · Assassin 47 · Tiger 25 · Mole Cricket 28 · Katydid 25 · Dung 20 · Atlas 30 · Weevil 25 ·
