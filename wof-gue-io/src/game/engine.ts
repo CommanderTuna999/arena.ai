@@ -4225,7 +4225,9 @@ export class Game {
     const p = this.player, st = this.stats, k = this.input.keys;
 
     if (p.dead) {
-      p.respawn -= dt;
+      // Only the respawn countdown catches up after a background tab stalls.
+      // The rest of the simulation remains capped to avoid a huge physics step.
+      p.respawn = Math.max(0, p.respawn - (Number.isFinite(dtRaw) ? Math.max(0, dtRaw) : 0));
       if (p.respawn <= 0) this.respawnPlayer();
     } else {
       // movement

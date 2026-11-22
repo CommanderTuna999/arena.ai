@@ -1,3 +1,7 @@
+## 0.3. v2.29.21 — Respawn timer
+
+- The respawn countdown catches up when returning to a background tab.
+
 ## 0.3. v2.29.20 — Multiplayer test vision
 
 - Matched the multiplayer test’s default view to the main game and reduced off-screen updates.
