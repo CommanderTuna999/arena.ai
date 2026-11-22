@@ -812,9 +812,6 @@ function CannonTree({ game }: { game: Game }) {
             );
           })}
         </div>
-        <p className="mt-2 text-[10px] leading-relaxed text-white/35">
-          Hover a node for its numbers, its bill and the build button. One chassis per tier: buy one and the rest of that row greys out. Upgrades belong to the gun, and swapping costs nothing.
-        </p>
       </div>
 
       {/* ---- the fitted gun's branch ---- */}
@@ -906,9 +903,6 @@ function CannonTree({ game }: { game: Game }) {
             })}
           </div>
         </div>
-        <p className="mt-2 text-[10px] leading-relaxed text-white/30">
-          A button greys out when the gun has fewer levels left than it buys. Barrels stop at two, and the second one alternates with the first.
-        </p>
       </div>
     </div>
   );

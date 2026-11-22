@@ -1,7 +1,7 @@
 import { TAU, angDiff, clamp, distToPoly, hash2, lerp, mulberry32, pointInPoly } from "./math";
 import {
   ABILITY_BY_ID, BASE, BASE_MAX_HP, BASE_RING, BASE_TAKE, CANNONS, CANNON_BY_ID, CANNON_TRACKS, CANNON_TRACK_BY_ID,
-  DMG_MUL, KIND_CAT, KIND_DROP_RATE, RARITIES, RECIPE_BY_ID, SHIP_R, UPGRADES, WORLD_R, W_SLOTS, cannonBillPicks, cannonBillProblem,
+  DMG_MUL, KIND_CAT, KIND_DROP_RATE, RARITIES, RECIPE_BY_ID, SHIP_R, UPGRADES, WORLD_R, W_SLOTS, COMMON_CORE_RATE, COMMON_UNCOMMON_RATE, cannonBillPicks, cannonBillProblem,
   cannonDmg, cannonOwned, cannonRate, cannonTrackCost,
   compMass, compValue, computeStats, craftEfficiency,
   recipeProblem, upgradeCost, zoneTier, WEAPON_DMG, WEAPON_RANGE, type Comp, type DmgKind, type PartKind, type SaveData, type Slot, type Stats,
@@ -169,6 +169,9 @@ export interface Enemy {
   crippledLegs: boolean[];
   /** furthest shield panel from the body centre (0 when unshielded) */
   shieldReach: number;
+  /** body-level shield retract: >0 retracts every panel so a body-contact
+   *  attack (grab, sting, charge, swing) is not blocked by its own shields */
+  shieldDownT: number;
   abil: AbilityDef[]; abilCd: number[]; gap: number; act: Act | null; stun: number;
   wander: { x: number; y: number; t: number }; roleGroups: Record<string, number[]>;
   walk: number; dead: boolean; eDmg: number; keep: number; strafe: number; strafeT: number;
@@ -1441,7 +1444,7 @@ export class Game {
       speed: spd.speed * (1 + 0.04 * tier), turn: (spd.turn * TIER_TURN[clamp(tier, 0, 5)]) / (1 + b.radius / (b.size * 6)), mobility: 1, legCount: b.legCount, wingCount: b.wingCount, turnFrac: 1, legPlate: tier >= 4 ? tier - 3 : 0, crippledLegs: [], shieldReach: shieldParts.reduce((m, id) => Math.max(m, b.parts[id].shieldR), 0),
       abil, abilCd: abil.map(() => 1 + Math.random() * 3), gap: 1, act: null, stun: 0, wander: { x, y, t: 0 }, roleGroups,
       walk: Math.random() * 6, dead: false, eDmg: spd.dmg * DMG_MUL[tier], keep: spd.keep + b.radius * 0.9, strafe: Math.random() < 0.5 ? 1 : -1, strafeT: 2,
-      provoked: 0, mgHeat: 0, mgCool: 0, domainT: 0, domainMul: 1, baseEDmg: spd.dmg * DMG_MUL[tier], domainOrig: [], tags, shields: [], weaponParts, shieldParts, dist: 9999, bdist: 9999, contactCd: 0, swatCd: 0, hasChange: false, gen: 0,
+      provoked: 0, mgHeat: 0, mgCool: 0, domainT: 0, domainMul: 1, baseEDmg: spd.dmg * DMG_MUL[tier], domainOrig: [], tags, shields: [], weaponParts, shieldParts, dist: 9999, bdist: 9999, contactCd: 0, swatCd: 0, hasChange: false, gen: 0, shieldDownT: 0,
       dmgTaken: 0, baseDmg: 0,
       dot: 0, dotT: 0, melt: 0, slowT: 0, slowF: 1,
       shells: Array.from({ length: shellN }, () => ({ hp: shellMax, max: shellMax })),
@@ -1628,6 +1631,9 @@ export class Game {
     if (d <= 0) return;
     /* common and uncommon bodies are neutral until somebody shoots them */
     if (!fromBase) e.provoked = PROVOKE_T;
+    /* any damage snaps the body to attention: an unaggroed enemy aggros the
+     * instant it is first hit, whatever dealt the hit */
+    e.aggro = true;
     e.dmgTaken += d;
     if (fromBase) e.baseDmg += d;
   }
@@ -1788,16 +1794,6 @@ export class Game {
     this.shake = Math.max(this.shake, 16);
     if (!byBase) this.maybeDrop(e, e.parts[e.coreId], x, y);
   }
-  private rollTier(etier: number, isCore: boolean) {
-    const luck = this.stats.luck;
-    if (isCore && Math.random() < 0.1 + luck * 0.2) return etier;
-    const top = etier - 1;
-    if (top < 0) return 0;
-    let r = top;
-    const q = 0.5 * (1 - luck);
-    while (r > 0 && Math.random() < q) r--;
-    return r;
-  }
   /** Throw spendable credits when a player breaks a part. The coins are a HUD
    *  flourish: they home at the counter and the money lands when they arrive. */
   private dropCreditValue(e: Enemy, x: number, y: number, area: number, kind: PartKind) {
@@ -1850,10 +1846,18 @@ export class Game {
     const boss = !!e.spd.boss;
     /* Strict drop rates: the bestiary lists KIND_DROP_RATE per kind, and the
      * engine rolls exactly that (scaled only by the player's salvage upgrade
-     * and the per-call multiplier). No hidden size-based drift. */
-    const chance = boss ? 1 : KIND_DROP_RATE[p.kind] * this.stats.dropChance * mul;
+     * and the per-call multiplier). No hidden size-based drift.
+     *
+     * Tier rule: a dropped component carries the enemy's own rarity. The core
+     * drops at 90% (55% on a common body). Every non-core kind drops at ~5% at
+     * the same rarity, and a common body additionally rolls an uncommon-tier
+     * component at 30% — so farming commons is the way to climb rarity. */
+    let chance: number, tier: number;
+    if (boss) { chance = 1; tier = 5; }
+    else if (isCore) { chance = (e.tier === 0 ? COMMON_CORE_RATE : KIND_DROP_RATE.core) * this.stats.dropChance * mul; tier = e.tier; }
+    else if (e.tier === 0 && Math.random() < COMMON_UNCOMMON_RATE * this.stats.dropChance * mul) { chance = 1; tier = 1; }
+    else { chance = KIND_DROP_RATE[p.kind] * this.stats.dropChance * mul; tier = e.tier; }
     if (Math.random() > chance) return;
-    const tier = boss ? 5 : this.rollTier(e.tier, isCore);
     const poly = p.poly.map((v, i) => +(v - (i % 2 === 0 ? p.cx : p.cy)).toFixed(1));
     const comp: Comp = {
       id: uid(), species: e.spd.name, name: `${e.spd.name} ${p.name}`, kind: p.kind, tier, poly, area: p.area,
@@ -2181,6 +2185,13 @@ export class Game {
   private runAct(e: Enemy, dt: number, toP: number, dist: number) {
     const a = e.act!, d = a.def, p = this.player;
     a.t += dt;
+    /* body-contact attacks retract the shields for their whole run: a grab,
+     * sting, charge or swing puts the body on the ship, and the shields would
+     * block that contact. Keep the retract timer topped up while any of these
+     * runs, so it holds for the lunge, the hold and the recoil. */
+    if (d.type === "grab" || d.type === "sting" || d.type === "charge" || d.type === "swing") {
+      e.shieldDownT = Math.max(e.shieldDownT, 0.5);
+    }
     const S = e.S;
     const turnTo = (rate: number) => { const tr = e.turn * e.turnFrac * rate; e.a += clamp(angDiff(e.a, toP), -tr * dt, tr * dt); };
     const damp = (k: number) => { const f = Math.exp(-k * dt); e.vx *= f; e.vy *= f; };
@@ -2678,7 +2689,12 @@ export class Game {
     }
     // shields
     e.shields.length = 0;
-    for (const id of e.shieldParts) {
+    /* a body-contact attack (grab / sting / charge / swing) retracts the
+     * shields for its duration: a dragonfly cannot pincer-grab through its own
+     * frontal wall, and no shielded body should. The timer is topped up by
+     * runAct while the contact ability runs, and bleeds off once it ends. */
+    if (e.shieldDownT > 0) e.shieldDownT -= dt;
+    else for (const id of e.shieldParts) {
       const q = e.parts[id];
       if (!q.alive) continue;
       if (q.shieldDown > 0) { q.shieldDown -= dt; if (q.shieldDown <= 0) q.shieldHp = q.shieldMax * 0.4; }
@@ -2710,9 +2726,9 @@ export class Game {
         q.cd -= dt;
         const dd = Math.hypot(aimX - wx, aimY - wy);
         const spec = q.wpn === "missile" ? null : GUN_SPECS[q.wpn as GunKind];
-        /* the rail's reach is the body's own aggro: it can shoot whatever it can
-         * see, and the aggro ring is exactly what it can see */
-        const range = q.wpn === "missile" ? 1150 : spec!.aggroRange ? this.aggroRange(e) : spec!.range;
+        /* every weapon reaches the body's full aggro range: a mount shoots
+         * whatever the body can see, and the aggro ring is exactly that */
+        const range = this.aggroRange(e);
         /* a rotary gun holds the trigger for its burst, then has to cool */
         const hot = spec?.burst ? e.mgCool > 0 : false;
         if (hot) e.mgCool -= dt;
@@ -2744,7 +2760,9 @@ export class Game {
           }
           continue;
         }
-        if (!hot && q.cd <= 0 && dd < range && Math.abs(angDiff(g.ang, rel)) < 0.22 && e.stun <= 0) {
+        /* an aggroed body fires at the ship even past its own range: the range
+         * above is the aggro reach, not a firing gate */
+        if (!hot && q.cd <= 0 && Math.abs(angDiff(g.ang, rel)) < 0.22 && e.stun <= 0) {
           const dir = e.a + g.ang;
           const mx = wx + Math.cos(dir) * q.muzzle, my = wy + Math.sin(dir) * q.muzzle;
           if (q.wpn === "missile") {

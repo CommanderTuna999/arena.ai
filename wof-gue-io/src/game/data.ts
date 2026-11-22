@@ -62,10 +62,17 @@ export const CAT_NAME: Record<Category, string> = {
 
 /* Drop rates per part kind. This is the single source of truth: the bestiary
  * displays these numbers and the engine rolls exactly these (scaled only by
- * the player's salvage upgrade), so what is listed is what enemies follow. */
+ * the player's salvage upgrade), so what is listed is what enemies follow.
+ * Every non-core kind drops at ~5% at the enemy's own rarity; the core drops
+ * at 90% (55% on commons). Commons additionally drop uncommon-tier components
+ * at 30% — see maybeDrop() for the tier roll. */
 export const KIND_DROP_RATE: Record<PartKind, number> = {
-  core: 0.9, segment: 0.35, armor: 0.3, leg: 0.25, arm: 0.35, wing: 0.25, weapon: 0.5, shield: 0.5, spike: 0.12,
+  core: 0.9, segment: 0.05, armor: 0.05, leg: 0.05, arm: 0.05, wing: 0.05, weapon: 0.05, shield: 0.05, spike: 0.05,
 };
+/** the uncommon drop rate commons roll for each non-core kind */
+export const COMMON_UNCOMMON_RATE = 0.3;
+/** the core drop rate on a common body (every other body keeps 0.9) */
+export const COMMON_CORE_RATE = 0.55;
 export const KIND_DROP_PCT = (k: PartKind) => `${Math.round(KIND_DROP_RATE[k] * 100)}%`;
 
 export interface Comp {
@@ -274,6 +281,52 @@ export const CANNONS: CannonDef[] = [
     muzzles: [{ x: 25, y: -5.5 }, { x: 25, y: 5.5 }], kick: 16, heat: 0.08,
     heatMax: 300 / 55, heatSpread: 4, overheat: 3,
     look: { len: 26, bore: 4.6, hue: 34, style: "twin" },
+  },
+  {
+    id: "skewer2", name: "Skewer MK2", tier: 2,
+    desc: "The rail that taught the MK1 to pierce.",
+    dmg: 520, interval: 1.1, speed: 0, range: 3000, hitscan: true,
+    credits: 1200,
+    parts: [
+      { kind: "leg", tier: 0, count: 2, label: "leg" },
+      { kind: "spike", tier: 0, count: 1, name: "Antenna", label: "antenna" },
+      { kind: "segment", tier: 0, count: 1, name: "Head", label: "head" },
+      { kind: "core", tier: 0, count: 8, label: "core" },
+    ],
+    tracks: ["crit", "critDmg", "pen", "dmg", "rate"], costMul: 2.6, requires: "skewer",
+    muzzles: [{ x: 42, y: 0 }], kick: 40, heat: 0.4, heatMax: 1, heatSpread: 1,
+    look: { len: 46, bore: 3.6, hue: 200, style: "lance" },
+  },
+  {
+    id: "peashooter2", name: "Peashooter MK2", tier: 2,
+    desc: "Tighter, faster, and it never runs out of pellets.",
+    dmg: 48, interval: 0.085, speed: 520, range: 820, spread: 0.18,
+    credits: 900,
+    parts: [
+      { kind: "leg", tier: 0, count: 2, label: "leg" },
+      { kind: "core", tier: 0, count: 8, label: "core" },
+    ],
+    tracks: ["acc", "speed", "dmg", "crit", "critDmg"], costMul: 1.2, requires: "peashooter",
+    muzzles: [{ x: 18, y: 0 }], kick: 4, heat: 0.014, heatMax: 1, heatSpread: 1,
+    look: { len: 18, bore: 3.8, hue: 150, style: "spray" },
+  },
+  {
+    id: "workhorse2", name: "Workhorse MK2", tier: 2,
+    desc: "The twin that learned to run hotter and hit harder.",
+    /* chews harder the hotter it gets and wanders the closer it is to cooking:
+     * 80 a round cold, 300 at a full gauge, then three and a half seconds of
+     * cooling */
+    dmg: 80, interval: 0.5, speed: 800, range: 1000, spread: 0.04,
+    credits: 1200,
+    parts: [
+      { kind: "leg", tier: 0, count: 2, label: "leg" },
+      { kind: "segment", tier: 0, count: 1, name: "Head", label: "head" },
+      { kind: "core", tier: 0, count: 8, label: "core" },
+    ],
+    tracks: ["dmg", "rate", "pen", "barrels"], costMul: 1.8, requires: "workhorse",
+    muzzles: [{ x: 28, y: -6 }, { x: 28, y: 6 }], kick: 18, heat: 0.1,
+    heatMax: 300 / 80, heatSpread: 4, overheat: 3.5,
+    look: { len: 30, bore: 5.0, hue: 40, style: "twin" },
   },
 ];
 export const CANNON_BY_ID: Record<string, CannonDef> = Object.fromEntries(CANNONS.map((c) => [c.id, c]));

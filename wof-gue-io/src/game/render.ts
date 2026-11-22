@@ -684,6 +684,10 @@ function drawHeatVignette(g: Game, ctx: CanvasRenderingContext2D) {
   const heat = g.player.heat;
   const jam = g.player.jam;
   const overheat = g.stats.overheat;
+  /* only a chassis that can actually overheat shows the screen edge: the heat
+   * gauge is internal to every gun (it feeds damage and spread), but the
+   * vignette is the overheat warning and stays off for guns that never jam */
+  if ((overheat || 0) <= 0) return;
   const max = Math.max(0.001, overheat || 1);
   if (heat <= 0.02 && jam <= 0) return;
   const { w, h } = g;
