@@ -1,3 +1,7 @@
+## 0.3. v2.29.20 — Multiplayer test vision
+
+- Matched the multiplayer test’s default view to the main game and reduced off-screen updates.
+
 ## 0.3. v2.29.19 — Harpoons and multiplayer test
 
 - Harpoons prioritise the component hovered at launch.

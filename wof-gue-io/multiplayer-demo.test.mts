@@ -16,6 +16,11 @@ try{
  const hasWorld=(m:any)=>m.type==='world-snapshot'&&m.world.pilots.length===2&&m.world.enemies.length>0;
  const [a,b]=await Promise.all([until(one.ws,hasWorld),until(two.ws,hasWorld)]);
  assert(one.ws.extensions.includes('permessage-deflate'),'snapshot compression negotiated');
+ // The server accepts bounded viewport updates on an authenticated connection,
+ // ignores invalid dimensions, and continues sending snapshots.
+ one.ws.send(JSON.stringify({type:'viewport',width:1e9,height:1000}));
+ one.ws.send(JSON.stringify({type:'viewport',width:1920,height:1080}));
+ await until(one.ws,m=>m.type==='world-snapshot'&&m.sequence>a.sequence);assert.equal(one.ws.readyState,WebSocket.OPEN);
  assert(a.world.pilots.some((p:any)=>p.id===two.id));assert(b.world.pilots.some((p:any)=>p.id===one.id));
  const enemy=a.world.enemies[0];assert(enemy.parts.length>0&&enemy.parts.some((p:any)=>p.poly.length>=6),'enemy body geometry transmitted');
  const bullets=until(two.ws,m=>m.type==='world-snapshot'&&m.world.bullets.length>0);

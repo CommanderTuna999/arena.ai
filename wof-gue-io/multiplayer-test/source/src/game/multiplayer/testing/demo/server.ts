@@ -13,6 +13,7 @@ import { PilotRoom } from '../../pilot-room';
 import { PilotTransport } from '../../pilot-transport';
 import { TicketAuthority, TicketReplayGuard } from '../../ticket';
 import { AuthenticatedPilotTransport } from '../../authenticated-transport';
+import { demoInterestRadius } from '../../demo-view';
 
 const port=Number(process.env.PORT || 3001), capacity=12;
 if(!Number.isSafeInteger(port)||port<1||port>65535) throw Error('Invalid port');
@@ -38,7 +39,7 @@ const server=http.createServer((req,res)=>{
     const id=`guest_${randomUUID().replaceAll('-','')}`,name=`Guest${++totalSessions}`;
     res.writeHead(200,{'content-type':'application/json'});res.end(JSON.stringify({ticket:authority.issue({id,name},Date.now())}));return;
   }
-  if(req.method==='GET' && req.url==='/health'){res.writeHead(healthy?200:503,{'content-type':'application/json'});res.end(JSON.stringify({ok:healthy,experimental:true,build:'performance-v4',players:room.roster.size}));return;}
+  if(req.method==='GET' && req.url==='/health'){res.writeHead(healthy?200:503,{'content-type':'application/json'});res.end(JSON.stringify({ok:healthy,experimental:true,build:'performance-v5',players:room.roster.size}));return;}
   res.writeHead(404);res.end();
 });
 const sockets=new WebSocketServer({noServer:true,maxPayload:1024,perMessageDeflate:{threshold:1024,serverNoContextTakeover:true,clientNoContextTakeover:true,zlibDeflateOptions:{level:1},concurrencyLimit:1}});
@@ -52,10 +53,21 @@ sockets.on('connection',ws=>{
   if(!auth.attach(ws,Date.now())){ws.close(1013,'Server busy');return;}
   let alive=true;ws.on('pong',()=>{alive=true});
   const heartbeat=setInterval(()=>{if(!alive){ws.terminate();return;}alive=false;ws.ping();},30000);
-  let joined=false;
+  let joined=false, viewportWindow=0, viewportCount=0;
   ws.on('message',(data,binary)=>{
     if(binary){ws.close(1003,'Text only');return;}
     const text=data.toString(), now=Date.now();
+    if (joined) {
+      let request: any; try { request=JSON.parse(text); } catch {}
+      if (request?.type === 'viewport') {
+        if (now-viewportWindow >= 1000) { viewportWindow=now; viewportCount=0; }
+        if (++viewportCount <= 10) {
+          const radius=demoInterestRadius(request.width,request.height);
+          if (radius !== null) transport.setInterestRadius(ws,radius);
+        }
+        return;
+      }
+    }
     let identity: ReturnType<TicketAuthority['verify']> = null;
     if(!joined) {try {const request=JSON.parse(text);identity=authority.verify(request.ticket,now);} catch {}}
     const ok=auth.receive(ws,text,now);

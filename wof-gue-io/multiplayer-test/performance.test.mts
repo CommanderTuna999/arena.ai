@@ -41,3 +41,18 @@ const playback=new DemoPlayback(.18);let last=-Infinity;
 for(const [serverTime,wall] of [[1,0],[1,200],[1.133,201],[1.133,250],[1.3,400],[1.3,500],[1.433,505]] as const){
  const next=playback.sample(serverTime,wall);assert(next>=last,'playback never rewinds');assert(next<=serverTime,'playback never extrapolates');last=next;
 }
+const {demoInterestRadius,MAX_VIEW_DIMENSION}=await import('./source/src/game/multiplayer/demo-view');
+assert.equal(r.game.cam.z,1/1.3,'demo uses main game default no-optics zoom');
+for(const [width,height] of [[1920,1080],[3840,2160],[7680,4320],[8192,8192]]) {
+ const radius=demoInterestRadius(width,height)!;assert(radius>=Math.hypot(width,height)/(2*r.game.cam.z)+120,'viewport corners and renderer margin are covered');assert(radius<=8000);
+}
+assert.equal(demoInterestRadius(0,1080),null);assert.equal(demoInterestRadius(MAX_VIEW_DIMENSION+1,100),null);assert.equal(demoInterestRadius(200,NaN),null);
+const manyWorld=new Game(newSave(),'world') as any,many=new CombatHarness(manyWorld,2);many.roster.add('a');many.roster.add('b');
+const manyA=many.roster.get('a')!,manyB=many.roster.get('b')!;manyA.player.x=-50000;manyA.player.y=-65000;manyB.player.x=-50000;manyB.player.y=-65000;
+const aNear=manyWorld.makeEnemy(0,0,-49800,-65000,'near',31),aFar=manyWorld.makeEnemy(0,0,-48000,-65000,'far',32);aNear.radius=aFar.radius=10;manyWorld.enemies=[aNear,aFar];
+const interestWorld=many.snapshot();let sharedRadius=0;const roomMock:any={join:()=>true,leave(){},advance:()=>1,sharedSnapshot:(radius:number)=>{sharedRadius=radius;return interestWorld},snapshot:()=>[]};
+const receivedA:string[]=[],receivedB:string[]=[];const pa:any={bufferedAmount:0,send(s:string){receivedA.push(s)},close(){}},pb:any={bufferedAmount:0,send(s:string){receivedB.push(s)},close(){}};
+const variable=new PilotTransport(roomMock,65536,3500);assert(variable.attach(pa,'a'));assert(variable.attach(pb,'b'));assert(variable.setInterestRadius(pa,500));assert(variable.setInterestRadius(pb,2500));assert(!variable.setInterestRadius(pa,8001));assert(!variable.setInterestRadius({} as any,500));variable.advance(1000);
+assert.equal(sharedRadius,2500);assert.equal(JSON.parse(receivedA.at(-1)!).world.enemies.length,1);assert.equal(JSON.parse(receivedB.at(-1)!).world.enemies.length,2);
+variable.detach(pb);variable.advance(1034);assert.equal(sharedRadius,500,'large disconnected view does not inflate remaining views');
+console.log('Main-game default zoom and bounded per-viewport interest coverage verified');

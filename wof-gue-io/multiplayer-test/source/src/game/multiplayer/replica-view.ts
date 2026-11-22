@@ -1,4 +1,4 @@
-import { Game, type Bullet, type EProj, type Enemy, type Other, type Puddle, type Ring } from '../engine';
+import { Game, VISION_MUL, type Bullet, type EProj, type Enemy, type Other, type Puddle, type Ring } from '../engine';
 import { newSave } from '../data';
 import { SPECIES_LIST } from '../enemies';
 import type { CombatHarness } from './combat-harness';
@@ -18,7 +18,7 @@ export class ReplicaView {
   constructor() {
     this.game = new Game(newSave(), 'visual-replica');
     this.game.persistent = false;
-    this.game.cam.z = .38;
+    this.game.cam.z = 1 / VISION_MUL;
   }
   resize(w: number, h: number, dpr: number) { this.game.resize(w,h,dpr); }
   apply(world: WorldSnapshot, pilots: Pilot[], enemies: EnemyView[], pilotId: string, renderTime = world.time): boolean {

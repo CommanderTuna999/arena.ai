@@ -72,6 +72,11 @@ export class ExperimentalWorldClient {
     socket.onerror = () => this.disconnect();
     socket.onclose = () => { if (this.socket === socket) this.disconnect(); };
   }
+  sendViewport(width: number, height: number): boolean {
+    if (this.state !== 'online' || !this.socket || this.socket.readyState !== 1 ||
+        !Number.isSafeInteger(width) || !Number.isSafeInteger(height) || width < 1 || height < 1 || width > 8192 || height > 8192) return false;
+    try { this.socket.send(JSON.stringify({type:'viewport',width,height})); return true; } catch { this.disconnect(); return false; }
+  }
   sendInput(frame: unknown): boolean {
     if (this.state !== 'online' || !this.socket || this.socket.readyState !== 1) return false;
     const input: PlayerInput | null = parseInput(frame,this.inputSequence);

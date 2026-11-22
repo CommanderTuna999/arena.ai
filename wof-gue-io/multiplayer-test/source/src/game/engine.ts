@@ -132,7 +132,7 @@ const BASE_POWER_IDLE = 120;
 /** rarity no longer drags turning down: common through epic share one rate */
 const TIER_TURN = [1, 1, 1, 1, 0.9, 0.8];
 /** baseline camera pull-back: the player sees 1.3x further everywhere */
-const VISION_MUL = 1.3;
+export const VISION_MUL = 1.3;
 /* six point-defence turrets on the outer hex ring */
 const MINI_COUNT = 6;
 const MINI_DMG = 72;

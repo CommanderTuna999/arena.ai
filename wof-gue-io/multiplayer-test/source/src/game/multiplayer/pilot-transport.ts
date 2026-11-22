@@ -15,6 +15,7 @@ export class PilotTransport {
   private readonly peers = new Map<PilotPeer, string>();
   private snapshotSequence = 0;
   private readonly geometry = new Map<PilotPeer, Geometry>();
+  private readonly peerRadii = new Map<PilotPeer, number>();
   private readonly congestedSince = new Map<PilotPeer, number>();
   private lastBroadcastMs = -Infinity;
   constructor(private readonly room: PilotRoom, private readonly maxBufferedBytes = 65536, private readonly interestRadius = 20_000, private readonly broadcastIntervalMs = 0, private readonly compactGeometry = false) {
@@ -31,7 +32,12 @@ export class PilotTransport {
   detach(peer: PilotPeer): void {
     const id = this.peers.get(peer);
     if (id === undefined) return;
-    this.peers.delete(peer); this.congestedSince.delete(peer); this.geometry.delete(peer); this.room.leave(id);
+    this.peers.delete(peer); this.congestedSince.delete(peer); this.geometry.delete(peer); this.peerRadii.delete(peer); this.room.leave(id);
+  }
+  /** Server-validated demo viewport only; cannot change identity or inputs. */
+  setInterestRadius(peer: PilotPeer, radius: number): boolean {
+    if (!this.peers.has(peer) || !Number.isFinite(radius) || radius < 1 || radius > 8000) return false;
+    this.peerRadii.set(peer, radius); return true;
   }
   receive(peer: PilotPeer, text: string, nowMs: number): boolean {
     const id = this.peers.get(peer);
@@ -47,7 +53,8 @@ export class PilotTransport {
     const steps = this.room.advance(nowMs);
     if (!steps || !this.peers.size || nowMs - this.lastBroadcastMs < this.broadcastIntervalMs) return steps;
     this.lastBroadcastMs = nowMs;
-    const shared = this.room.sharedSnapshot(this.interestRadius);
+    const sharedRadius = Math.max(...Array.from(this.peers.keys(), p => this.peerRadii.get(p) ?? this.interestRadius));
+    const shared = this.room.sharedSnapshot(sharedRadius);
     const sequence = this.snapshotSequence++;
     const pilotMessage = shared ? null : JSON.stringify({ type: 'pilot-snapshot', sequence, pilots: this.room.snapshot() });
     for (const [peer, pilotId] of this.peers) {
@@ -62,7 +69,7 @@ export class PilotTransport {
         }
         this.congestedSince.delete(peer);
         if (shared) {
-          const view = interestSnapshot(shared, pilotId, this.interestRadius);
+          const view = interestSnapshot(shared, pilotId, this.peerRadii.get(peer) ?? this.interestRadius);
           if (!view) { peer.close(1011, 'Pilot missing'); this.detach(peer); }
           else if (this.compactGeometry) {
             const packed = packGeometry(view, this.geometry.get(peer) ?? new Map());
