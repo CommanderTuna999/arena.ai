@@ -620,7 +620,7 @@ export class Game {
     this.rev++;
   }
 
-  private dmgMul() { return this.admin.on && this.admin.damage ? 100 : 1; }
+  private dmgMul() { return this.admin.on && this.admin.damage ? Infinity : 1; }
 
   recompute() {
     const old = this.stats;
@@ -1389,7 +1389,7 @@ export class Game {
       this.burst(ix, iy, "#ffd9a0", 2, 2.1, 160);
     }
     /* Plate Breaker buys extra bite against the slabs, not just the armour parts */
-    const dealt = dmg * (SHELL_TAKE[src] ?? 0.3);
+    const dealt = dmg === Infinity ? Math.max(0, layer.hp) : dmg * (SHELL_TAKE[src] ?? 0.3);
     const before = layer.hp;
     this.trackDamage(e, Math.min(dealt, Math.max(0, before)), fromBase);
     layer.hp -= dealt;
@@ -1697,6 +1697,8 @@ export class Game {
     return e.baseDmg > 0 && e.baseDmg * 2 > e.dmgTaken;
   }
   damagePart(e: Enemy, p: Part, dmg: number, wx: number, wy: number, src: DmgSrc = "kinetic", fromBase = false, crit = false) {
+    // Resolve an infinite hit to finite current health, preserving attribution and avoiding NaN.
+    if (dmg === Infinity) dmg = Math.max(0, p.hp) + (e.buffT > 0 ? Math.max(0, e.buffHp) : 0);
     /* the moth's heal-shield bubble absorbs incoming damage while it is up, so
      * the body underneath takes the remainder (or nothing, while it holds) */
     if (e.buffT > 0 && e.buffHp > 0) {

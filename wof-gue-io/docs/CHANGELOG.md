@@ -1,3 +1,7 @@
+## 0.3. v2.29.1 — Map and admin fixes
+
+- Removed the camera rectangle from the map. Infinite Damage now deals infinite damage to hit parts and armour instead of 100 times damage.
+
 ## 0.3. v2.29.0 — Map controls
 
 - Press M to glide between the large map, a focused local minimap and the default minimap. Removed enemy dots and made the player marker a green dot.

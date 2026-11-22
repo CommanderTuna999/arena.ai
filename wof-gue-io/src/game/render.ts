@@ -2129,9 +2129,6 @@ function drawMinimap(g: Game, ctx: CanvasRenderingContext2D) {
   ctx.imageSmoothingEnabled = true;
   hexPath(ctx, x(BASE.x), y(BASE.y), 4.5, 0);
   ctx.fillStyle = "#4dffd2"; ctx.fill();
-  const vw = (g.w / g.cam.z) * k, vh = (g.h / g.cam.z) * k;
-  ctx.strokeStyle = "rgba(125,249,255,0.5)";
-  ctx.strokeRect(x(g.cam.x) - vw / 2, y(g.cam.y) - vh / 2, vw, vh);
   for (const o of g.others) { ctx.fillStyle = "#ff7ad9"; ctx.beginPath(); ctx.arc(x(o.x), y(o.y), 2.5, 0, TAU); ctx.fill(); }
   ctx.fillStyle = "#58ff77"; ctx.beginPath(); ctx.arc(x(g.player.x), y(g.player.y), 3, 0, TAU); ctx.fill();
   ctx.restore();

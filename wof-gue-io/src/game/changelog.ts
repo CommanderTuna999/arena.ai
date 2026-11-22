@@ -8,7 +8,7 @@
  *   CHANGELOG and mirror the details in docs/CHANGELOG.md.
  */
 
-export const VERSION = "2.29.0";
+export const VERSION = "2.29.1";
 
 export interface ChangeEntry {
   version: string;
@@ -19,6 +19,7 @@ export interface ChangeEntry {
 }
 
 export const CHANGELOG: ChangeEntry[] = [
+  { version: "2.29.1", date: "20 Nov 2026", title: "Map and admin fixes", points: ["Removed the camera rectangle from the map. Infinite Damage now deals infinite damage to hit parts and armour instead of 100 times damage."] },
   { version: "2.29.0", date: "20 Nov 2026", title: "Map controls", points: ["Press M to glide to a large map, then a focused local minimap, then the default map. Removed enemy markers and changed the player marker to a green dot."] },
   { version: "2.28.1", date: "20 Nov 2026", title: "Chat controls", points: ["Removed floating damage numbers. Chat opens on a new message or with slash or Enter; collapse it to a button with an unread count."] },
   {

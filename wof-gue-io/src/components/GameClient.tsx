@@ -1311,7 +1311,7 @@ function AdminPanel({ game, hud, onClose }: { game: Game; hud: Hud; onClose: () 
   const rows: [keyof typeof a, string, string][] = [
     ["credits", "Infinite Credits", "Upgrades cost nothing and crafting stays affordable."],
     ["health", "Infinite Health", "Hull and shield are pinned at maximum."],
-    ["damage", "Infinite Damage", "Every shot deals 100x damage."],
+    ["damage", "Infinite Damage", "Player attacks deal infinite damage to the part or armour they hit."],
     ["components", "Infinite Components", "Craft anything without spending components."],
   ];
   return (
