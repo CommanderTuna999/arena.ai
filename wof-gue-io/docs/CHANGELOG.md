@@ -1,3 +1,7 @@
+## 0.3. v2.27.1 — Sharper salvage
+
+- Increased cached component resolution and render very large pieces as vectors instead of stretching low-resolution images.
+
 ## 0.3. v2.27.0 — Combat feedback
 
 - Added colour-coded damage numbers and critical hit indicators, grouping rapid damage ticks for readability.

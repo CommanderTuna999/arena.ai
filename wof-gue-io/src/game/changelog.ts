@@ -8,7 +8,7 @@
  *   CHANGELOG and mirror the details in docs/CHANGELOG.md.
  */
 
-export const VERSION = "2.27.0";
+export const VERSION = "2.27.1";
 
 export interface ChangeEntry {
   version: string;
@@ -19,6 +19,10 @@ export interface ChangeEntry {
 }
 
 export const CHANGELOG: ChangeEntry[] = [
+  {
+    version: "2.27.1", date: "20 Nov 2026", title: "Sharper salvage",
+    points: ["Large dropped components now render sharply at their actual screen resolution; oversized pieces use vector drawing instead of stretched low-resolution images."],
+  },
   {
     version: "2.27.0", date: "20 Nov 2026", title: "Combat feedback",
     points: ["Added colour-coded floating damage numbers, including critical hit indicators, with rapid damage grouped to keep fights readable.", "Removed rarity colours from the map and made cannon-tree popups fully opaque."],

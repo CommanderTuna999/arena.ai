@@ -1,3 +1,4 @@
+import { salvageSpriteScale } from "./salvage-render";
 import { MAP_GRID, MAP_CELL, MAP_RADIUS } from "./world";
 import { TAU, clamp, fmtNum } from "./math";
 import { BASE, CANNON_BY_ID, CANNONS, CAT_NAME, KIND_CAT, RARITIES, SHIP_R, W_SLOTS, WEAPON_RANGE, WEAPON_TINT, WORLD_R } from "./data";
@@ -1104,24 +1105,33 @@ function drawComp(g: Game, ctx: CanvasRenderingContext2D, c: LComp, z: number, t
     return;
   }
   const pulse = 0.5 + 0.5 * Math.sin(t * 3 + c.id);
-  const scale = Math.min(3, 184 / Math.max(1, c.r * 3), Math.max(0.125, Math.pow(2, Math.ceil(Math.log2(z * g.dpr)))));
-  let sprite = compSprites.get(c);
-  if (!sprite || sprite.scale !== scale) {
-    const extent = c.r * 1.5 + 36 / scale;
-    const canvas = document.createElement("canvas");
-    canvas.width = canvas.height = Math.ceil(extent * 2 * scale);
-    const spriteCtx = canvas.getContext("2d");
-    if (spriteCtx) {
-      spriteCtx.setTransform(scale, 0, 0, scale, canvas.width / 2, canvas.height / 2);
-      drawCompSprite(spriteCtx, c, scale);
-      sprite = { canvas, scale, extent: canvas.width / (2 * scale) };
-      compSprites.set(c, sprite);
-    }
-  }
-  if (sprite) {
+  const scale = salvageSpriteScale(c.r, z, g.dpr);
+  if (scale === null) {
+    // Never magnify a small bitmap to screen-filling size. Drawing the original
+    // geometry directly keeps even enormous pieces crisp without huge canvases.
+    compSprites.delete(c);
     ctx.save(); ctx.translate(c.x, c.y); ctx.rotate(c.a);
-    ctx.drawImage(sprite.canvas, -sprite.extent, -sprite.extent, sprite.extent * 2, sprite.extent * 2);
+    drawCompSprite(ctx, c, z);
     ctx.restore();
+  } else {
+    let sprite = compSprites.get(c);
+    if (!sprite || sprite.scale !== scale) {
+      const extent = c.r * 1.5 + 36 / scale;
+      const canvas = document.createElement("canvas");
+      canvas.width = canvas.height = Math.ceil(extent * 2 * scale);
+      const spriteCtx = canvas.getContext("2d");
+      if (spriteCtx) {
+        spriteCtx.setTransform(scale, 0, 0, scale, canvas.width / 2, canvas.height / 2);
+        drawCompSprite(spriteCtx, c, scale);
+        sprite = { canvas, scale, extent: canvas.width / (2 * scale) };
+        compSprites.set(c, sprite);
+      }
+    }
+    if (sprite) {
+      ctx.save(); ctx.translate(c.x, c.y); ctx.rotate(c.a);
+      ctx.drawImage(sprite.canvas, -sprite.extent, -sprite.extent, sprite.extent * 2, sprite.extent * 2);
+      ctx.restore();
+    }
   }
   // marker ring
   ctx.strokeStyle = col; ctx.globalAlpha = 0.25 + 0.25 * pulse; ctx.lineWidth = 1.5 / z;
