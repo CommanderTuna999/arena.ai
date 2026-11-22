@@ -38,7 +38,7 @@ const server=http.createServer((req,res)=>{
     const id=`guest_${randomUUID().replaceAll('-','')}`,name=`Guest${++totalSessions}`;
     res.writeHead(200,{'content-type':'application/json'});res.end(JSON.stringify({ticket:authority.issue({id,name},Date.now())}));return;
   }
-  if(req.method==='GET' && req.url==='/health'){res.writeHead(healthy?200:503,{'content-type':'application/json'});res.end(JSON.stringify({ok:healthy,experimental:true,players:room.roster.size}));return;}
+  if(req.method==='GET' && req.url==='/health'){res.writeHead(healthy?200:503,{'content-type':'application/json'});res.end(JSON.stringify({ok:healthy,experimental:true,build:'performance-v1',players:room.roster.size}));return;}
   res.writeHead(404);res.end();
 });
 const sockets=new WebSocketServer({noServer:true,maxPayload:1024,perMessageDeflate:{threshold:1024,serverNoContextTakeover:true,clientNoContextTakeover:true,zlibDeflateOptions:{level:1},concurrencyLimit:1}});
