@@ -221,9 +221,15 @@ export interface EProj {
   homing: number; slow: number; slowT: number; poison: number; pierce: boolean; hp: number; speed: number; src: Enemy | null; puddle: { r: number; dps: number; slow: number } | null;
   /** energy damage: bypasses the kinetic-shield archetype */
   energy?: boolean;
+  /** draw a silken string back to src (web volley) */
+  tether?: boolean;
+  /** drop a web zone on death (large web) */
+  webDrop?: boolean;
+  /** target point for a web drop */
+  tx?: number; ty?: number;
 }
 export interface Particle { x: number; y: number; vx: number; vy: number; rot: number; vr: number; life: number; max: number; size: number; shape: number; color: string; fill: boolean }
-export interface Puddle { x: number; y: number; r: number; life: number; max: number; arm: number; dps: number; slow: number; hue: number }
+export interface Puddle { x: number; y: number; r: number; life: number; max: number; arm: number; dps: number; slow: number; hue: number; poison?: number; web?: boolean }
 export interface Ring { x: number; y: number; r: number; max: number; speed: number; dmg: number; hit: boolean; color: string; hurts: boolean }
 export interface DebrisPiece { poly: number[]; stroke: string; fill: string }
 export interface Debris { x: number; y: number; vx: number; vy: number; rot: number; vr: number; life: number; max: number; pieces: DebrisPiece[] }
@@ -2021,15 +2027,26 @@ export class Game {
   }
 
   /* ---------------- projectiles ---------------- */
-  spawnProj(src: Enemy, x: number, y: number, ang: number, d: AbilityDef, o: { type?: ProjType; speed?: number; life?: number; dmgMul?: number } = {}) {
+  spawnProj(src: Enemy, x: number, y: number, ang: number, d: AbilityDef, o: { type?: ProjType; speed?: number; life?: number; dmgMul?: number; tether?: boolean; webDrop?: boolean; tx?: number; ty?: number } = {}) {
     const speed = o.speed ?? d.speed ?? 500;
     const type = o.type ?? d.kind ?? "bolt";
-    const size = (d.size ?? 6) * (1 + 0.14 * src.tier);
+    /* projectiles read too small at a distance: scale the whole bill up so
+     * every shot is clearly visible (collision scales with it too). */
+    const size = (d.size ?? 6) * (1 + 0.14 * src.tier) * 5;
     this.eprojs.push({
       x, y, vx: Math.cos(ang) * speed, vy: Math.sin(ang) * speed, life: o.life ?? d.life ?? 2, dmg: src.eDmg * d.dmg * (o.dmgMul ?? 1), r: size,
       hue: src.spd.hue, type, homing: d.homing ?? 0, slow: d.slow ?? 0, slowT: d.slowT ?? 1.5, poison: d.poison ? src.eDmg * d.poison : 0,
       pierce: !!d.pierce, hp: 1, speed, src, puddle: null,
+      tether: o.tether, webDrop: o.webDrop, tx: o.tx, ty: o.ty,
     });
+  }
+  /** the large web lands on the floor and expands into a spider-web zone the
+   * size of the spider: it slows the ship and poisons it while it lasts. */
+  private dropWeb(src: Enemy | null, x: number, y: number, r: number) {
+    const S = src?.S ?? 1;
+    const rad = Math.max(r, S * 1.4);
+    this.puddles.push({ x, y, r: rad, life: 7, max: 7, arm: 0.4, dps: (src?.eDmg ?? 16) * 0.25, slow: 0.5, hue: src?.spd.hue ?? 272, poison: (src?.eDmg ?? 16) * 0.2, web: true });
+    this.ringFx(x, y, rad, `hsl(${src?.spd.hue ?? 272} 80% 70%)`, 500);
   }
   private updateEProjs(dt: number) {
     const p = this.player, st = this.stats;
@@ -2052,6 +2069,11 @@ export class Game {
       }
       pr.x += pr.vx * dt; pr.y += pr.vy * dt;
       let dead = pr.life <= 0;
+      /* a web-drop projectile lands when it reaches its target point, so the
+       * web zone forms where the spider aimed even if the ship dodges */
+      if (!dead && pr.webDrop && pr.tx !== undefined && pr.ty !== undefined) {
+        if (Math.hypot(pr.x - pr.tx, pr.y - pr.ty) < pr.r) { this.dropWeb(pr.src, pr.tx, pr.ty, pr.r); dead = true; }
+      }
       /* Enemies aim at the ship, but the base is solid: stray fire that crosses
        * its hull still damages the structure. */
       if (!dead && !this.baseLost) {
@@ -2087,6 +2109,11 @@ export class Game {
           } else {
             this.hurtPlayer(pr.dmg, { poison: pr.poison, energy: pr.energy, kb: pr.type === "missile" || pr.type === "slug" ? 250 : 0, kbx: pr.vx / (pr.speed || 1), kby: pr.vy / (pr.speed || 1) });
             if (pr.slow > 0) this.applySlow(pr.slow, pr.slowT);
+            /* a tethered web volley reels the ship back to the spider on hit */
+            if (pr.tether && pr.src && !this.inSafe()) {
+              p.pull = { e: pr.src, x: pr.src.x, y: pr.src.y, t: 1.4, max: 1.4 };
+              this.toast("Webbed!", "#c9a7ff");
+            }
             if (pr.type === "missile") { this.ringFx(pr.x, pr.y, 90, "#ffb04d", 500); this.burst(pr.x, pr.y, "#ffb04d", 10, 5, 260); }
             else if (pr.type === "laser") { this.burst(pr.x, pr.y, "#7df9ff", 8, 4, 220); this.ringFx(pr.x, pr.y, 46, "#7df9ff", 400); }
             else this.burst(pr.x, pr.y, `hsl(${pr.hue},100%,65%)`, 4, 3, 160);
@@ -2111,6 +2138,7 @@ export class Game {
       }
       if (dead) {
         if (pr.type === "glob" && pr.puddle) this.puddles.push({ x: pr.x, y: pr.y, r: pr.puddle.r, life: 6, max: 6, arm: 0, dps: pr.puddle.dps, slow: pr.puddle.slow, hue: pr.hue });
+        if (pr.webDrop) this.dropWeb(pr.src, pr.x, pr.y, pr.r);
         if (pr.type === "missile" && pr.life <= 0) this.burst(pr.x, pr.y, "#ffb04d", 6, 4, 180);
         this.eprojs.splice(i, 1);
       }
@@ -2212,7 +2240,10 @@ export class Game {
           const spread = d.spread ?? 0.3;
           for (let i = 0; i < n; i++) {
             const off = n === 1 ? 0 : -spread / 2 + (spread * i) / (n - 1);
-            this.spawnProj(e, mx, my, base + off, d, { life: d.life ?? ((d.maxP ?? 800) + 200) / sp });
+            const o: { life: number; tether?: boolean; webDrop?: boolean; tx?: number; ty?: number } = { life: d.life ?? ((d.maxP ?? 800) + 200) / sp };
+            if (d.tether) o.tether = true;
+            if (d.webDrop) { o.webDrop = true; o.tx = p.x; o.ty = p.y; }
+            this.spawnProj(e, mx, my, base + off, d, o);
           }
           this.burst(mx, my, `hsl(${e.spd.hue},100%,70%)`, 5, 3, 160);
         }
@@ -2380,6 +2411,29 @@ export class Game {
         } else {
           p.pull = null;
           if (a.t >= 0.3) done();
+        }
+        break;
+      }
+      case "sting": {
+        /* the scorpion extends its tail and lunges in to sting the ship: a
+         * quick high-damage venom hit on contact, then it recoils. The strike
+         * is the payoff, not a hold. */
+        if (a.ph === 0) {
+          turnTo(1.6); damp(5);
+          if (a.t >= d.wind) { a.ph = 1; a.t = 0; }
+        } else if (a.ph === 1) {
+          const sp = (d.lunge ?? 900) * (0.6 + 0.4 * e.mobility);
+          e.vx = Math.cos(toP) * sp; e.vy = Math.sin(toP) * sp;
+          if (!a.hit && this.touching(e, 12)) {
+            a.hit = true; a.ph = 2; a.t = 0;
+            this.hurtPlayer(e.eDmg * d.dmg, { poison: d.poison ? e.eDmg * d.poison : 0, kb: 500, kbx: Math.cos(toP), kby: Math.sin(toP) });
+            this.shake = Math.max(this.shake, 10);
+            this.burst(p.x, p.y, `hsl(${e.spd.hue},100%,60%)`, 12, 5, 240);
+          }
+          if (a.t >= (d.dur ?? 1.2)) { a.ph = 2; a.t = 0; }
+        } else {
+          damp(3);
+          if (a.t >= 0.4) done();
         }
         break;
       }
@@ -3956,7 +4010,11 @@ export class Game {
       const q = this.puddles[i];
       if (q.arm > 0) q.arm -= dt; else {
         q.life -= dt;
-        if (!p.dead && Math.hypot(p.x - q.x, p.y - q.y) < q.r + SHIP_R * 0.5) { this.hurtPlayer(q.dps * dt, { dot: true }); this.applySlow(q.slow, 0.4); }
+        if (!p.dead && Math.hypot(p.x - q.x, p.y - q.y) < q.r + SHIP_R * 0.5) {
+          this.hurtPlayer(q.dps * dt, { dot: true });
+          this.applySlow(q.slow, 0.4);
+          if (q.poison) this.hurtPlayer(q.poison * dt, { dot: true, poison: q.poison });
+        }
       }
       if (q.life <= 0) this.puddles.splice(i, 1);
     }

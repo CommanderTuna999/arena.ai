@@ -132,7 +132,7 @@ export const LASER_RAMP = 3;
 /** the beam's damage multiplier when it first touches down, and at full ramp */
 export const LASER_RAMP_MIN = 0.35;
 
-export type AbilityType = "swing" | "charge" | "shoot" | "nova" | "ring" | "pull" | "spit" | "cloud" | "summon" | "blink" | "drain" | "grab" | "beam" | "domain";
+export type AbilityType = "swing" | "charge" | "shoot" | "nova" | "ring" | "pull" | "spit" | "cloud" | "summon" | "blink" | "drain" | "grab" | "beam" | "domain" | "sting";
 export type ProjType = "bolt" | "missile" | "web" | "orb" | "wave" | "hook" | "glob" | "pellet" | "slug" | "laser";
 export interface AbilityDef {
   type: AbilityType;
@@ -170,6 +170,10 @@ export interface AbilityDef {
   hold?: number;
   /** grab: speed of the closing lunge toward the player during wind-up */
   lunge?: number;
+  /** shoot: the web drops a floor web zone on landing instead of just hitting */
+  webDrop?: boolean;
+  /** shoot: the web is tethered to the spider and reels the ship in on hit */
+  tether?: boolean;
   /** beam: how many beams to fire */
   beams?: number;
   /** beam: rotation speed in rad/s */
@@ -614,7 +618,7 @@ const SPECIES: SpeciesDef[] = [
     armed: { gun: true, missile: false, shield: false }, pack: [1, 1, 1, 1, 1, 1],
     abilities: [
       { type: "grab", name: "Pincer Grab", minTier: 0, wind: 0.5, dmg: 2, chompCd: 0.8, hold: 2, maxS: 3.5, lunge: 850 },
-      { type: "grab", name: "Tail Sting", minTier: 3, wind: 0.7, dmg: 3.6, chompCd: 1, hold: 5, maxS: 3.5, lunge: 750 },
+      { type: "sting", name: "Tail Sting", minTier: 3, wind: 0.7, dmg: 3.6, dur: 1.4, lunge: 850, maxS: 3.5, poison: 0.3 },
     ],
     build(b, t) {
       const pl = 1 + (t >= 2 ? 1 : 0) + (t >= 4 ? 1 : 0), lg = 1 + (t >= 3 ? 1 : 0), ed = t >= 3 ? 1 : 2;
@@ -670,8 +674,8 @@ const SPECIES: SpeciesDef[] = [
     id: "spider", hp: 19, dmg: 50, name: "Widow Spider", hue: 272, flying: false, speed: 140, turn: 2.8, ranged: true, keep: 300, muzzle: 2.2,
     armed: { gun: false, missile: true, shield: false }, pack: [1, 1, 1, 1, 1, 1],
     abilities: [
-      { type: "shoot", name: "Web", minTier: 0, wind: 0.5, dmg: 0.4, n: 1, speed: 380, life: 2, size: 14, slow: 0.4, slowT: 3, poison: 0.2, kind: "web", minP: 120, maxS: 2, maxP: 900 },
-      { type: "shoot", name: "Web Volley", minTier: 0, wind: 0.5, dmg: 0.3, n: 3, spread: 0.2, speed: 680, life: 1.5, size: 7, kind: "web", minP: 120, maxS: 2, maxP: 900 },
+      { type: "shoot", name: "Web", minTier: 0, wind: 0.5, dmg: 0.4, n: 1, speed: 380, life: 2, size: 14, slow: 0.4, slowT: 3, poison: 0.2, kind: "web", minP: 120, maxS: 2, maxP: 900, webDrop: true },
+      { type: "shoot", name: "Web Volley", minTier: 0, wind: 0.5, dmg: 0.3, n: 3, spread: 0.2, speed: 680, life: 1.5, size: 7, kind: "web", minP: 120, maxS: 2, maxP: 900, tether: true },
       { type: "grab", name: "Bite", minTier: 4, wind: 0.4, dmg: 1.67, chompCd: 1, hold: 3, maxS: 3, maxP: 500, lunge: 950 },
       { type: "pull", name: "Pull", minTier: 4, wind: 0.5, dmg: 17, speed: 760, minP: 250, maxS: 2, maxP: 900 },
     ],
@@ -710,7 +714,7 @@ const SPECIES: SpeciesDef[] = [
     abilities: [
       { type: "shoot", name: "Shot Burst", minTier: 0, wind: 0.4, dmg: 2, n: 5, spread: 1.2, speed: 600, life: 1.2, size: 5, kind: "bolt", maxS: 2, maxP: 800 },
       { type: "beam", name: "Rotating Lasers", minTier: 3, wind: 0.6, dmg: 1, beams: 4, beamSpin: 1.5, dur: 4, maxS: 4, maxP: 200 },
-      { type: "shoot", name: "Missiles", minTier: 4, wind: 0.6, dmg: 3, n: 20, spread: 0.3, speed: 480, life: 3, size: 7, homing: 2.5, kind: "orb", maxS: 2, maxP: 900 },
+      { type: "shoot", name: "Missiles", minTier: 4, wind: 0.6, dmg: 3, n: 20, spread: 0.3, speed: 480, life: 3, size: 9, homing: 2.5, kind: "missile", maxS: 2, maxP: 900 },
       { type: "domain", name: "Domain", minTier: 5, wind: 1.0, dmg: 0.1, dur: 180, maxS: 5, maxP: 200 },
     ],
     build(b, t) {

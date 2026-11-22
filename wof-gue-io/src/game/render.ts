@@ -107,9 +107,41 @@ export function render(g: Game, ctx: CanvasRenderingContext2D) {
     }
   }
 
-  /* ---- puddles ---- */
+  /* ---- puddles & spider-web zones ---- */
   for (const q of g.puddles) {
     if (q.x + q.r < vx0 || q.x - q.r > vx1 || q.y + q.r < vy0 || q.y - q.r > vy1) continue;
+    if (q.web) {
+      /* a landed spider web: a translucent silken sheet with radial strands
+       * and a sticky overlay, expanding as it forms */
+      const grow = q.arm > 0 ? 0.3 : clamp(q.life / 1.5, 0, 1);
+      const a = clamp(grow, 0, 1);
+      ctx.globalAlpha = 0.5 * a;
+      ctx.fillStyle = `hsla(${q.hue},60%,96%,${0.5 * a})`;
+      ctx.beginPath(); ctx.arc(q.x, q.y, q.r * a, 0, TAU); ctx.fill();
+      ctx.globalAlpha = 0.85;
+      ctx.strokeStyle = `hsla(${q.hue},70%,80%,${0.7 * a})`;
+      ctx.lineWidth = 1.4 / z;
+      /* radial strands from the centre out to the rim */
+      const strands = 12;
+      for (let k = 0; k < strands; k++) {
+        const ang = (k / strands) * TAU + t * 0.15;
+        ctx.beginPath();
+        ctx.moveTo(q.x, q.y);
+        ctx.lineTo(q.x + Math.cos(ang) * q.r * a, q.y + Math.sin(ang) * q.r * a);
+        ctx.stroke();
+      }
+      /* concentric silk rings */
+      for (let k = 1; k <= 3; k++) {
+        ctx.beginPath(); ctx.arc(q.x, q.y, (q.r * a) * (k / 3), 0, TAU); ctx.stroke();
+      }
+      /* a sticky pulsing glow to signal the slow + poison */
+      ctx.globalAlpha = 0.25 + 0.15 * Math.sin(t * 4);
+      ctx.strokeStyle = `hsla(${q.hue},90%,65%,1)`;
+      ctx.lineWidth = 3 / z;
+      ctx.beginPath(); ctx.arc(q.x, q.y, q.r * a, 0, TAU); ctx.stroke();
+      ctx.globalAlpha = 1;
+      continue;
+    }
     if (q.arm > 0) {
       ctx.strokeStyle = `hsla(${q.hue},100%,60%,${0.4 + 0.3 * Math.sin(t * 20)})`;
       ctx.lineWidth = 2 / z; ctx.setLineDash([10 / z, 8 / z]);
@@ -246,14 +278,45 @@ export function render(g: Game, ctx: CanvasRenderingContext2D) {
       const ang = e.a + (beamAng[i] ?? 0) + spin;
       const bx = e.x + Math.cos(ang) * e.radius * 0.5, by = e.y + Math.sin(ang) * e.radius * 0.5;
       const col = `hsl(${e.spd.hue} 100% 65%)`;
-      ctx.strokeStyle = col; ctx.lineWidth = 6 / z;
-      ctx.shadowColor = col; ctx.shadowBlur = 22;
-      ctx.globalAlpha = 0.9;
-      ctx.beginPath(); ctx.moveTo(bx, by); ctx.lineTo(bx + Math.cos(ang) * 550, by + Math.sin(ang) * 550); ctx.stroke();
-      /* a bright core down the middle of each beam */
-      ctx.strokeStyle = `hsl(${e.spd.hue} 100% 88%)`; ctx.lineWidth = 2 / z; ctx.shadowBlur = 10;
-      ctx.beginPath(); ctx.moveTo(bx, by); ctx.lineTo(bx + Math.cos(ang) * 550, by + Math.sin(ang) * 550); ctx.stroke();
+      const ex = bx + Math.cos(ang) * 1100, ey = by + Math.sin(ang) * 1100;
+      /* a thick laser: a wide glowing body with a hot white core */
+      ctx.strokeStyle = col; ctx.lineWidth = 16 / z;
+      ctx.shadowColor = col; ctx.shadowBlur = 40;
+      ctx.globalAlpha = 0.85;
+      ctx.beginPath(); ctx.moveTo(bx, by); ctx.lineTo(ex, ey); ctx.stroke();
+      ctx.strokeStyle = `hsl(${e.spd.hue} 100% 50%)`; ctx.lineWidth = 22 / z; ctx.globalAlpha = 0.3;
+      ctx.beginPath(); ctx.moveTo(bx, by); ctx.lineTo(ex, ey); ctx.stroke();
+      ctx.globalAlpha = 0.95; ctx.shadowBlur = 20;
+      ctx.strokeStyle = `hsl(${e.spd.hue} 100% 92%)`; ctx.lineWidth = 5 / z;
+      ctx.beginPath(); ctx.moveTo(bx, by); ctx.lineTo(ex, ey); ctx.stroke();
+      /* a bright muzzle node where each beam originates */
+      ctx.globalAlpha = 1; ctx.shadowBlur = 24;
+      ctx.fillStyle = `hsl(${e.spd.hue} 100% 85%)`;
+      ctx.beginPath(); ctx.arc(bx, by, 10 / z, 0, TAU); ctx.fill();
     }
+    ctx.restore();
+  }
+
+  /* ---- scorpion tail-sting: the stinger extends and lashes at the ship ---- */
+  for (const e of g.enemies) {
+    const a = e.act;
+    if (!a || a.def.type !== "sting") continue;
+    /* the tail uncoils: a venom-glowing stinger needle from the scorpion's
+     * rear toward the player, extending through the wind-up then snapping in */
+    const prog = a.ph === 0 ? a.t / Math.max(0.001, a.def.wind) : 1;
+    const reach = SHIP_R + 60 + 340 * clamp(prog, 0, 1);
+    const ang = Math.atan2(g.player.y - e.y, g.player.x - e.x);
+    const tx = e.x + Math.cos(ang + Math.PI) * e.radius * 0.6;
+    const ty = e.y + Math.sin(ang + Math.PI) * e.radius * 0.6;
+    const ex = tx + Math.cos(ang) * reach, ey = ty + Math.sin(ang) * reach;
+    ctx.save();
+    ctx.strokeStyle = `rgba(190,255,120,${0.55 + 0.35 * Math.sin(t * 40)})`;
+    ctx.shadowColor = "rgba(190,255,120,0.95)"; ctx.shadowBlur = 18;
+    ctx.lineWidth = 6 / z; ctx.lineCap = "round";
+    ctx.beginPath(); ctx.moveTo(tx, ty); ctx.lineTo(ex, ey); ctx.stroke();
+    /* the venom drop at the tip */
+    ctx.fillStyle = "rgba(160,255,90,0.95)";
+    ctx.beginPath(); ctx.arc(ex, ey, 7 / z, 0, TAU); ctx.fill();
     ctx.restore();
   }
 
@@ -288,6 +351,29 @@ export function render(g: Game, ctx: CanvasRenderingContext2D) {
       const pulse = 0.5 + 0.5 * Math.sin(t * 16);
       ctx.strokeStyle = `rgba(255,120,140,${0.4 + 0.4 * pulse})`; ctx.lineWidth = 3 / z;
       ctx.beginPath(); ctx.arc(pl.x, pl.y, SHIP_R + 6, 0, TAU); ctx.stroke();
+      /* the scorpion's pincers clamp down on the ship: two curved claws
+       * closing from either side so the grab reads as pincers, not nothing */
+      if (pl.pull.e.spd.id === "scorpion") {
+        const pg = pl.pull.e;
+        const claw = SHIP_R + 14;
+        const clamp = 0.6 + 0.4 * pulse;
+        ctx.strokeStyle = `hsl(${pg.spd.hue} 70% 60%)`; ctx.lineWidth = 5 / z;
+        ctx.lineCap = "round";
+        for (const side of [1, -1]) {
+          ctx.save(); ctx.translate(pl.x, pl.y);
+          ctx.rotate(side > 0 ? 0.5 : -0.5);
+          ctx.beginPath();
+          ctx.moveTo(side * claw * 0.5, -claw * 0.7 * clamp);
+          ctx.quadraticCurveTo(side * claw * 1.1, 0, side * claw * 0.5, claw * 0.7 * clamp);
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.moveTo(side * claw * 0.5, -claw * 0.7 * clamp);
+          ctx.lineTo(side * claw * 0.2, -claw * 0.5 * clamp);
+          ctx.stroke();
+          ctx.restore();
+        }
+        ctx.lineCap = "butt";
+      }
     } else {
       ctx.strokeStyle = "rgba(255,140,80,0.8)"; ctx.lineWidth = 3 / z; ctx.setLineDash([12 / z, 8 / z]);
       ctx.beginPath(); ctx.moveTo(pl.x, pl.y); ctx.lineTo(pl.pull.e.x, pl.pull.e.y); ctx.stroke(); ctx.setLineDash([]);
@@ -298,6 +384,13 @@ export function render(g: Game, ctx: CanvasRenderingContext2D) {
   /* ---- enemy projectiles ---- */
   for (const pr of g.eprojs) {
     if (pr.x < vx0 || pr.x > vx1 || pr.y < vy0 || pr.y > vy1) continue;
+    /* a tethered web trail runs a silken string back to the spider, so the
+     * volley reads as a web being cast rather than loose pellets */
+    if (pr.tether && pr.src) {
+      ctx.strokeStyle = `hsla(${pr.hue},80%,80%,0.7)`;
+      ctx.lineWidth = 2 / z; ctx.setLineDash([8 / z, 6 / z]);
+      ctx.beginPath(); ctx.moveTo(pr.x, pr.y); ctx.lineTo(pr.src.x, pr.src.y); ctx.stroke(); ctx.setLineDash([]);
+    }
     const col = pr.type === "missile" ? "#ffb04d" : `hsl(${pr.hue},100%,68%)`;
     ctx.shadowColor = col; ctx.shadowBlur = pr.r * z > 2 ? 12 : 0;
     ctx.fillStyle = col; ctx.strokeStyle = col;

@@ -1,3 +1,31 @@
+## 0.1. v2.15.1 — ability behaviour: webs, pincers, stings and lasers
+
+- **Spider webs reel and trap** (`engine.ts`, `enemies.ts`, `render.ts`): the **Web Volley**'s
+  three small webs are each **tethered to the spider by a visible silken string**, and a hit
+  **reels the ship back to the spider** (1.4s pull) instead of the spider lunging. The large
+  **Web** now **lands on the floor** and **expands into a real spider-web zone the size of the
+  spider** (1.4x scale) that **slows** the ship (0.5x) and **poisons** it (0.2x eDmg/s) while it
+  lasts.
+- **Scorpion pincers and tail** (`engine.ts`, `enemies.ts`, `render.ts`): **Pincer Grab** clamps
+  the ship with drawn pincer claws; **Tail Sting** is now a real **`sting`** ability — the tail
+  **uncoils and extends** a venom-glowing stinger needle toward the ship, the scorpion **lunges in**
+  to sting (knockback 500, venom), then recoils.
+- **Moth lasers and missiles** (`enemies.ts`, `render.ts`, `engine.ts`): **Rotating Lasers** are
+  now **long, thick real lasers** (1100u reach, a wide glowing body with a hot white core and a
+  muzzle node). **Missiles** now spawn as **missile** projectiles (they were silently dead as orbs)
+  so the homing volley actually appears. **All enemy projectiles render ~5x larger** so every shot
+  is clearly visible.
+
+### Under the hood
+
+- **`EProj` gains `tether` / `webDrop` / `tx` / `ty`** (`engine.ts`): a web-drop projectile lands
+  at its aim point and spawns a web zone; a tethered volley web, on hit, sets the player's `pull`
+  so the ship is reeled in. **`Puddle` gains `poison` / `web`** so a landed web applies both slow
+  and poison.
+- **New `runAct` `sting` case** (`engine.ts`): wind-up → lunge toward the ship → contact deals venom
+  damage with knockback, then recoil. **`AbilityType` gains `sting`**; **`AbilityDef` gains
+  `webDrop` / `tether`** (`enemies.ts`).
+
 ## 0. v2.15.0 — enemy abilities, bestiary drops and cannon quality of life
 
 - **Four enemies gained their full ability kits** (`enemies.ts`, `engine.ts`): the **dragonfly**

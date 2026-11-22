@@ -8,7 +8,7 @@
  *   CHANGELOG and mirror the details in docs/CHANGELOG.md.
  */
 
-export const VERSION = "2.15.0";
+export const VERSION = "2.15.1";
 
 export interface ChangeEntry {
   version: string;
@@ -19,6 +19,16 @@ export interface ChangeEntry {
 }
 
 export const CHANGELOG: ChangeEntry[] = [
+  {
+    version: "2.15.1",
+    date: "20 Nov 2026",
+    title: "Ability behaviour: webs, pincers, stings and lasers",
+    points: [
+      "The spider's Web Volley fires three small webs each tethered to the spider by a visible silken string; a hit reels the ship back to the spider instead of the spider lunging. The large Web now lands on the floor and expands into a real spider-web zone the size of the spider that slows and poisons the ship.",
+      "The scorpion's Pincer Grab now clamps the ship with drawn pincer claws, and Tail Sting is a real sting: the tail uncoils and extends a venom stinger toward the ship, the scorpion lunges in to sting (knockback and venom) and recoils.",
+      "The moth's Rotating Lasers are now long, thick real lasers, and its Missiles spawn as missile projectiles so the homing volley actually appears. All enemy projectiles now render about five times larger so every shot is clearly visible.",
+    ],
+  },
   {
     version: "2.15.0",
     date: "20 Nov 2026",
