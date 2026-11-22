@@ -8,7 +8,7 @@
  *   CHANGELOG and mirror the details in docs/CHANGELOG.md.
  */
 
-export const VERSION = "2.29.15";
+export const VERSION = "2.29.16";
 
 export interface ChangeEntry {
   version: string;
@@ -19,6 +19,7 @@ export interface ChangeEntry {
 }
 
 export const CHANGELOG: ChangeEntry[] = [
+  { version: "2.29.16", date: "22 Nov 2026", title: "Multiplayer test", points: ["Improved multiplayer test reconnection and reduced rendering and network overhead."] },
   { version: "2.29.15", date: "22 Nov 2026", title: "Username wording", points: ["Account and settings labels now use username."] },
   { version: "2.29.14", date: "22 Nov 2026", title: "Multiplayer test performance", points: ["Reduced multiplayer test bandwidth and processing overhead."] },
   { version: "2.29.13", date: "22 Nov 2026", title: "Multiplayer test", points: ["Multiplayer test."] },

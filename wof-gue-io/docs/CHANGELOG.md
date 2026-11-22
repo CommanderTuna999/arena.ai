@@ -1,3 +1,7 @@
+## 0.3. v2.29.16 — Multiplayer test
+
+- Improved multiplayer test reconnection and reduced rendering and network overhead.
+
 ## 0.3. v2.29.15 — Username wording
 
 - Account and settings labels now use username.

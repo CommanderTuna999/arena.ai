@@ -29,10 +29,14 @@ try{
  (win.HTMLCanvasElement.prototype as any).getContext=()=>paint;
  (win as any).fetch=(url:string,options:any)=>fetch(new URL(url,base),options);
  (win as any).structuredClone=structuredClone;
- (win as any).WebSocket=function(url:string){return new WebSocket(url,{origin})};
+ let browserSocket:WebSocket;let browserConnections=0;
+ (win as any).WebSocket=function(url:string){browserConnections++;return browserSocket=new WebSocket(url,{origin})};
  win.eval(script);
  await new Promise<void>((resolve,reject)=>{const timer=setTimeout(()=>{clearInterval(check);reject(Error('browser demo did not render: '+String(browserError)+' status='+win.document.querySelector('#status')?.textContent));},7000);const check=setInterval(()=>{const text=win.document.querySelector('#status')?.textContent||'';if(text.includes('3 pilots') && polygons>2){clearTimeout(timer);clearInterval(check);resolve();}},20)});
  assert(polygons>2,'actual demo canvas calls draw for ships and enemy polygons');assert.equal(browserError,null,'original game renderer should finish without throwing');
+ browserSocket!.terminate();
+ await new Promise<void>((resolve,reject)=>{const timer=setTimeout(()=>{clearInterval(check);reject(Error('browser did not reconnect: '+win.document.querySelector('#status')?.textContent));},12000);const check=setInterval(()=>{if(browserConnections>=2 && (win.document.querySelector('#status')?.textContent||'').includes('3 pilots')){clearTimeout(timer);clearInterval(check);resolve();}},50)});
+ assert(browserConnections>=2,'browser reconnects with a fresh guest session');
  win.dispatchEvent(new win.Event('pagehide'));win.close();
  console.log('Two demo clients share enemies, player positions and fired projectiles; browser bundle paints; cross-origin socket rejected');
 }finally{for(const ws of clients)ws.terminate();child.kill();}

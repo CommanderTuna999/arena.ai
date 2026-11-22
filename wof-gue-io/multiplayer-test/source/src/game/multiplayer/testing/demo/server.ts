@@ -19,7 +19,7 @@ if(!Number.isSafeInteger(port)||port<1||port>65535) throw Error('Invalid port');
 const secret=randomBytes(32).toString('hex'), authority=new TicketAuthority(secret,'visual-demo');
 const world=new Game(newSave(),'world');
 const harness=new CombatHarness(world,capacity,true,undefined,undefined,true),room=new PilotRoom(world,capacity,60,harness);
-const transport=new PilotTransport(room,1048576,3500,100),auth=new AuthenticatedPilotTransport(transport,new TicketReplayGuard(authority),5000,capacity);
+const transport=new PilotTransport(room,262144,3500,125),auth=new AuthenticatedPilotTransport(transport,new TicketReplayGuard(authority),5000,capacity);
 const javascript=process.env.DEMO_CLIENT_BUNDLE ? readFileSync(process.env.DEMO_CLIENT_BUNDLE) : buildSync({entryPoints:['src/game/multiplayer/testing/demo/client.ts'],bundle:true,write:false,platform:'browser',format:'iife',target:'es2020',minify:false,logLevel:'silent'}).outputFiles[0].contents;
 let healthy=true, totalSessions=0;
 const html=`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Multiplayer visual prototype</title><style>*{box-sizing:border-box}html,body{margin:0;background:#040b12;color:#c7f9ff;font:14px system-ui;overflow:hidden}canvas{display:block;width:100vw;height:100dvh;cursor:crosshair}#info{position:fixed;top:12px;left:12px;background:#06121deF;border:1px solid #3e8294;padding:10px 14px;border-radius:7px;pointer-events:none;max-width:450px}strong{color:#ffe18d}#status{color:#7df9ff}</style></head><body><canvas></canvas><div id="info"><strong>EXPERIMENTAL SHARED-WORLD DEMO</strong><br>Temporary guest pilots · no saves or progression<br>WASD: move · mouse: aim · hold left click: fire<br><span id="status">Connecting…</span></div><script src="/demo.js"></script></body></html>`;
@@ -28,7 +28,7 @@ function allowSession(req:http.IncomingMessage) {
   const key=req.socket.remoteAddress||'unknown',now=Date.now();let r=sessions.get(key);
   if(!r||now-r.start>60000){r={start:now,count:0};sessions.set(key,r);}
   if(sessions.size>1000)for(const [k,v] of sessions)if(now-v.start>60000)sessions.delete(k);
-  return ++r.count<=30;
+  return ++r.count<=180;
 }
 const server=http.createServer((req,res)=>{
   res.setHeader('cache-control','no-store');res.setHeader('x-content-type-options','nosniff');
@@ -38,7 +38,7 @@ const server=http.createServer((req,res)=>{
     const id=`guest_${randomUUID().replaceAll('-','')}`,name=`Guest${++totalSessions}`;
     res.writeHead(200,{'content-type':'application/json'});res.end(JSON.stringify({ticket:authority.issue({id,name},Date.now())}));return;
   }
-  if(req.method==='GET' && req.url==='/health'){res.writeHead(healthy?200:503,{'content-type':'application/json'});res.end(JSON.stringify({ok:healthy,experimental:true,build:'performance-v1',players:room.roster.size}));return;}
+  if(req.method==='GET' && req.url==='/health'){res.writeHead(healthy?200:503,{'content-type':'application/json'});res.end(JSON.stringify({ok:healthy,experimental:true,build:'performance-v2',players:room.roster.size}));return;}
   res.writeHead(404);res.end();
 });
 const sockets=new WebSocketServer({noServer:true,maxPayload:1024,perMessageDeflate:{threshold:1024,serverNoContextTakeover:true,clientNoContextTakeover:true,zlibDeflateOptions:{level:1},concurrencyLimit:1}});
@@ -51,7 +51,7 @@ server.on('upgrade',(req,socket,head)=>{
 sockets.on('connection',ws=>{
   if(!auth.attach(ws,Date.now())){ws.close(1013,'Server busy');return;}
   let alive=true;ws.on('pong',()=>{alive=true});
-  const heartbeat=setInterval(()=>{if(!alive){ws.terminate();return;}alive=false;ws.ping();},15000);
+  const heartbeat=setInterval(()=>{if(!alive){ws.terminate();return;}alive=false;ws.ping();},30000);
   let joined=false;
   ws.on('message',(data,binary)=>{
     if(binary){ws.close(1003,'Text only');return;}
