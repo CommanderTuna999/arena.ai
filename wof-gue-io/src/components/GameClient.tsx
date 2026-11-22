@@ -240,6 +240,9 @@ export default function GameClient() {
       <div className="pointer-events-none fixed inset-0" style={{ background: "radial-gradient(ellipse at center, transparent 55%, rgba(0,0,10,0.65) 100%)" }} />
       {!hud && <div className="absolute inset-0 grid place-items-center text-xl tracking-[0.4em] text-cyan-300">LOADING SAVE…</div>}
       {hud && game && <Hud_ hud={hud} creditRef={creditRef} onOpen={() => { game.blur(); setAdminOpen(false); setMenu(true); }} onHelp={() => setHelp(true)} onAdmin={() => { game.blur(); setMenu(false); setAdminOpen(true); }} onToggleAuto={() => game.toggleAutoFire()} onSettings={() => { game.blur(); setSettingsOpen(true); }} onBestiary={() => { game.blur(); setBestiaryOpen(true); }} onHome={goHome} account={account} />}
+      {hud && <div aria-live="polite" className="pointer-events-none absolute bottom-4 left-4 z-[70] flex max-w-[min(34rem,85vw)] flex-col items-start gap-1.5">
+        {hud.ultraNotices.map((notice) => <div key={notice.id} className="rounded-sm border border-white/60 px-3 py-1.5 text-sm font-black text-black shadow-lg" style={{ background: "linear-gradient(110deg, #ffffff, #cccccc 55%, #999999)" }}>{notice.msg}</div>)}
+      </div>}
       {hud && game && adminOpen && <AdminPanel game={game} hud={hud} onClose={() => setAdminOpen(false)} />}
       {hud && game && menu && <Hangar game={game} hud={hud} onClose={() => setMenu(false)} />}
       {game && bestiaryOpen && <Bestiary bestiary={game.save.bestiary ?? {}} onClose={() => { setBestiaryOpen(false); game.blur(); }} />}
@@ -542,10 +545,11 @@ function CompIcon({ c, size = 44 }: { c: Comp; size?: number }) {
   const w = maxx - minx || 1, h = maxy - miny || 1, s = Math.max(w, h);
   const pts: string[] = [];
   for (let i = 0; i < c.poly.length; i += 2) pts.push(`${((c.poly[i] - minx) / s) * 40 + 4 + (40 - (w / s) * 40) / 2},${((c.poly[i + 1] - miny) / s) * 40 + 4 + (40 - (h / s) * 40) / 2}`);
-  const col = RARITIES[c.tier].color;
+  const col = c.tier === 6 ? "#d0d0d0" : RARITIES[c.tier].color;
   return (
     <svg width={size} height={size} viewBox="0 0 48 48" style={{ filter: `drop-shadow(0 0 4px ${col})` }}>
-      <polygon points={pts.join(" ")} fill={col + "30"} stroke={col} strokeWidth={1.8} strokeLinejoin="round" />
+      {c.tier === 6 && <defs><linearGradient id="ultra-piece-gradient" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="#454545" /><stop offset="40%" stopColor="#0a0a0a" /><stop offset="100%" stopColor="#000000" /></linearGradient></defs>}
+      <polygon points={pts.join(" ")} fill={c.tier === 6 ? "url(#ultra-piece-gradient)" : col + "30"} stroke={col} strokeWidth={1.8} strokeLinejoin="round" />
     </svg>
   );
 }
@@ -1122,7 +1126,7 @@ function Craft({ game }: { game: Game }) {
         <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3 lg:grid-cols-4">
           {inv.map((c) => {
             const on = sel.includes(c.id);
-            const col = RARITIES[c.tier].color;
+            const col = c.tier === 6 ? "#d0d0d0" : RARITIES[c.tier].color;
             const need = !!r.need?.cats?.includes(KIND_CAT[c.kind]) || !!r.species?.names.includes(c.species);
             return (
               <button key={c.id} onClick={() => toggle(c.id)} className="flex items-center gap-2 rounded-sm border p-1.5 text-left" style={{ borderColor: on ? "#ffe14d" : col + "66", background: on ? "rgba(255,225,77,0.15)" : "rgba(255,255,255,0.03)" }}>
@@ -1161,7 +1165,7 @@ function Storage({ game }: { game: Game }) {
       {inv.length === 0 && <div className="py-10 text-center text-white/50">Nothing stored. Shoot enemy pieces, harpoon the glowing components and drag them into the yellow hex.</div>}
       <div className="grid gap-1.5 sm:grid-cols-2 lg:grid-cols-3">
         {[...inv].sort((a, b) => b.tier - a.tier || b.value - a.value).map((c) => {
-          const col = RARITIES[c.tier].color;
+          const col = c.tier === 6 ? "#d0d0d0" : RARITIES[c.tier].color;
           return (
             <div key={c.id} className="flex items-center gap-2 rounded-sm border p-2" style={{ borderColor: col + "77", background: col + "0d" }}>
               <CompIcon c={c} size={52} />

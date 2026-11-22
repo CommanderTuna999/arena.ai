@@ -122,8 +122,8 @@ function BugArt({ sp, tier, seen, size }: { sp: SpeciesDef; tier: number; seen: 
         <polygon
           key={i}
           points={Array.from({ length: p.poly.length / 2 }, (_, k) => `${p.poly[k * 2]},${p.poly[k * 2 + 1]}`).join(" ")}
-          fill={seen ? (tier === 6 ? "#08060d" : p.fill) : "#05070c"}
-          stroke={seen ? (tier === 6 ? "#b777ff" : p.stroke) : "#131a24"}
+          fill={seen ? p.fill : "#05070c"}
+          stroke={seen ? p.stroke : "#131a24"}
           strokeWidth={Math.max(0.8, vb.w * (seen ? 0.008 : 0.006))}
         />
       ))}
@@ -191,7 +191,7 @@ export default function Bestiary({ bestiary, onClose }: { bestiary: Record<strin
                           {[0, 1, 2, 3, 4, 5, 6].map((k) => {
                             const tierKnown = known && best >= k;
                             const active = hover?.id === s.id && hover.tier === k;
-                            const col = k === 6 ? "#bf91ee" : RARITIES[k].color;
+                            const col = k === 6 ? "#bcbcbc" : RARITIES[k].color;
                             return (
                               <button
                                 key={k}
@@ -208,7 +208,7 @@ export default function Bestiary({ bestiary, onClose }: { bestiary: Record<strin
                                 }}
                               >
                                 <BugArt sp={s} tier={k} seen={tierKnown} size={34} />
-                                <span className="absolute inset-x-0 bottom-0 text-center text-[7px] font-bold tracking-[0.1em]" style={{ color: tierKnown ? col : "#33404f" }}>
+                                <span className="absolute inset-x-0 bottom-0 text-center text-[7px] font-bold tracking-[0.1em]" style={{ color: tierKnown ? (k === 6 ? "#000000" : col) : "#33404f", background: tierKnown && k === 6 ? "linear-gradient(110deg, #fff, #777)" : undefined }}>
                                   {RARITIES[k].name.slice(0, 3).toUpperCase()}
                                 </span>
                               </button>
@@ -230,7 +230,7 @@ export default function Bestiary({ bestiary, onClose }: { bestiary: Record<strin
           {!seen ? (
             <div className="grid place-items-center gap-2 py-6 text-center">
               <BugArt sp={sp} tier={hover.tier} seen={false} size={96} />
-              <div className="text-sm font-black" style={{ color: hover.tier === 6 ? "#cba9f5" : RARITIES[hover.tier].color }}>{RARITIES[hover.tier].name.toUpperCase()}</div>
+              <div className="text-sm font-black" style={{ color: hover.tier === 6 ? "#000000" : RARITIES[hover.tier].color, background: hover.tier === 6 ? "linear-gradient(110deg, #fff, #777)" : undefined }}>{RARITIES[hover.tier].name.toUpperCase()}</div>
               <div className="text-[11px] text-white/45">
                 {bestiary[sp.id] === undefined
                   ? "Kill this species once to fill in its entries."
@@ -262,7 +262,7 @@ function EntryInfo({ sp, tier }: { sp: SpeciesDef; tier: number }) {
           <div className="text-base font-black leading-tight text-yellow-200">{sp.name}</div>
           <div className="text-[10px] uppercase tracking-widest text-white/40">{familyOf(sp.id)}</div>
           <div className="mt-1 text-[10px] text-white/40">Rarity</div>
-          <div className="text-xs font-black tracking-[0.14em]" style={{ color: tier === 6 ? "#cba9f5" : RARITIES[tier].color }}>{RARITIES[tier].name.toUpperCase()}</div>
+          <div className="text-xs font-black tracking-[0.14em]" style={{ color: tier === 6 ? "#000000" : RARITIES[tier].color, background: tier === 6 ? "linear-gradient(110deg, #fff, #777)" : undefined }}>{RARITIES[tier].name.toUpperCase()}</div>
         </div>
       </div>
       <p className="mt-2 border-l-2 border-yellow-300/40 pl-2 text-[11px] italic leading-snug text-white/65">{FLAVOUR[sp.id] ?? "No field notes yet."}</p>

@@ -1,0 +1,15 @@
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { Game } from './src/game/engine';
+import { newSave, RARITIES } from './src/game/data';
+const g=new Game(newSave(),'test') as any;g.admin.on=true;g.adminSpawn(0,6,1);
+assert.equal(RARITIES[6].color,'#000000');
+const msg=g.hud().ultraNotices[0];assert.match(msg.msg,/An Ultra .+ has spawned!/);assert.equal(msg.t,10);
+for(let i=0;i<12;i++)g.toast('routine notice');
+assert(g.hud().ultraNotices.some((n:any)=>n.id===msg.id),'ordinary notifications cannot evict Ultra notices');
+const e=g.enemies[0];g.killEnemy(e,e.x,e.y);assert(g.hud().ultraNotices.some((n:any)=>n.msg.includes('was defeated by')));
+const render=readFileSync('src/game/render.ts','utf8'), bestiary=readFileSync('src/components/Bestiary.tsx','utf8'), ui=readFileSync('src/components/GameClient.tsx','utf8');
+assert(!render.includes('A moving diagonal enchantment sheen'));assert(render.includes('hurt ? "rgba(255,255,255,0.85)" : p.fill'));
+assert(bestiary.includes('fill={seen ? p.fill : "#05070c"}'));
+assert(ui.includes('hud.ultraNotices.map')&&ui.includes('z-[70]')&&ui.includes('aria-live="polite"'));
+console.log('Ultra colour and notification checks passed');

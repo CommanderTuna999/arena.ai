@@ -1,3 +1,8 @@
+## 0.3. v2.25.1 — Ultra visual and notice fixes
+
+- Restored normal species colours for Ultra enemies; Ultra rarity components use black with a subtle white gradient instead of an animated enchantment glint.
+- Ultra spawn and defeat messages now appear in a high-contrast bottom-left overlay above other UI for ten seconds, independent of ordinary notifications.
+
 ## 0.3. v2.25.0 — Ultra rarity
 
 - Ultra enemies have 13.5× mythical normal-piece health, armour at 16× average normal-piece health, and 3× mythical size. Each ordinary mythical spawn has a 0.5% chance to become Ultra.

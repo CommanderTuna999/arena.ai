@@ -738,13 +738,8 @@ function drawUltraHud(g: Game, ctx: CanvasRenderingContext2D) {
     ctx.restore(); ctx.shadowBlur = 0; ctx.fillStyle = "#fff"; ctx.font = "bold 16px ui-monospace, monospace"; ctx.fillText(e.spd.name.toUpperCase(), x + w / 2, y + 23);
     ctx.fillStyle = "#1b1427"; ctx.fillRect(x + 25, y + 40, w - 50, 7);
     ctx.fillStyle = "#cbb6e7"; ctx.fillRect(x + 25, y + 40, (w - 50) * a, 7);
-    ctx.lineWidth = 3; ctx.strokeStyle = "#d9baff"; ctx.fillStyle = "#000000"; ctx.font = "bold 14px ui-monospace, monospace";
+    ctx.lineWidth = 3; ctx.strokeStyle = "#e0e0e0"; ctx.fillStyle = "#000000"; ctx.font = "bold 14px ui-monospace, monospace";
     ctx.strokeText("ULTRA", x + w / 2, y + 63); ctx.fillText("ULTRA", x + w / 2, y + 63);
-  });
-  ctx.textAlign = "left"; ctx.font = "bold 14px ui-monospace, monospace";
-  const notices = g.toasts.filter(t => t.color === "#000000");
-  notices.forEach((n, i) => { const y = g.h - 28 - (notices.length - 1 - i) * 24;
-    ctx.lineWidth = 4; ctx.strokeStyle = "#d6b5f2"; ctx.strokeText(n.msg, 18, y); ctx.fillStyle = "#000000"; ctx.fillText(n.msg, 18, y);
   });
   ctx.restore();
 }
@@ -872,7 +867,7 @@ function drawCreditFlights(g: Game, ctx: CanvasRenderingContext2D) {
 /* Hover card for loose components: name, rarity/category, value and mass.
  * Drawn in screen space so the text stays crisp at every zoom level. */
 function drawCompTooltip(g: Game, ctx: CanvasRenderingContext2D, c: LComp) {
-  const col = c.c.tier === 6 ? "#c99df5" : RARITIES[c.c.tier].color;
+  const col = c.c.tier === 6 ? "#dddddd" : RARITIES[c.c.tier].color;
   const bw = 216, bh = 84;
   let x = g.input.mx + 18, y = g.input.my + 18;
   if (x + bw > g.w - 8) x = g.input.mx - bw - 18;
@@ -1101,7 +1096,7 @@ function drawTurret(g: Game, ctx: CanvasRenderingContext2D, z: number, t: number
 
 function drawComp(g: Game, ctx: CanvasRenderingContext2D, c: LComp, z: number, t: number) {
   const ultra = c.c.tier === 6;
-  const col = ultra ? "#b986ef" : RARITIES[c.c.tier].color;
+  const col = ultra ? "#d1d1d1" : RARITIES[c.c.tier].color;
   /* Far zoom: a clipped, hatched, glowing outline per component is far more
    * expensive than it is legible. Show a compact rarity-coloured pip instead. */
   if (z < 0.12) {
@@ -1117,25 +1112,28 @@ function drawComp(g: Game, ctx: CanvasRenderingContext2D, c: LComp, z: number, t
   ctx.translate(c.x, c.y); ctx.rotate(c.a);
   ctx.lineJoin = "round";
   polyPath(ctx, c.c.poly);
-  ctx.fillStyle = ultra ? "#08060d" : col + "26"; ctx.fill();
-  // hatch
-  ctx.save(); ctx.clip();
-  ctx.strokeStyle = col + "55"; ctx.lineWidth = 1 / z;
-  ctx.beginPath();
-  const spacing = Math.max(6, c.r * 0.22), phase = ultra ? (t * 40) % spacing : 0;
-  for (let d = -c.r * 2 + phase; d < c.r * 2; d += spacing) { ctx.moveTo(d, -c.r * 2); ctx.lineTo(d + c.r * 2, c.r * 2); }
-  ctx.stroke();
-  ctx.restore();
-  ctx.shadowColor = col; ctx.shadowBlur = 10 + 8 * pulse;
+  if (ultra) {
+    const grad = ctx.createLinearGradient(-c.r, -c.r, c.r, c.r);
+    grad.addColorStop(0, "#303030"); grad.addColorStop(0.35, "#080808"); grad.addColorStop(1, "#000000");
+    ctx.fillStyle = grad; ctx.fill();
+  } else {
+    ctx.fillStyle = col + "26"; ctx.fill();
+    ctx.save(); ctx.clip(); ctx.strokeStyle = col + "55"; ctx.lineWidth = 1 / z; ctx.beginPath();
+    for (let d = -c.r * 2; d < c.r * 2; d += Math.max(6, c.r * 0.22)) { ctx.moveTo(d, -c.r * 2); ctx.lineTo(d + c.r * 2, c.r * 2); }
+    ctx.stroke(); ctx.restore();
+  }
+  ctx.shadowColor = col; ctx.shadowBlur = ultra ? 0 : 10 + 8 * pulse;
   ctx.strokeStyle = col; ctx.lineWidth = 2.2 / z;
   polyPath(ctx, c.c.poly); ctx.stroke();
   ctx.shadowBlur = 0;
+  if (!ultra) {
   ctx.setLineDash([5 / z, 5 / z]);
   ctx.save(); ctx.scale(0.8, 0.8);
   polyPath(ctx, c.c.poly);
   ctx.strokeStyle = "rgba(255,255,255,0.5)"; ctx.lineWidth = 1 / z; ctx.stroke();
   ctx.restore();
   ctx.setLineDash([]);
+  }
   ctx.restore();
   // marker ring
   ctx.strokeStyle = col; ctx.globalAlpha = 0.25 + 0.25 * pulse; ctx.lineWidth = 1.5 / z;
@@ -1954,20 +1952,8 @@ function drawEnemy(g: Game, ctx: CanvasRenderingContext2D, e: Enemy, z: number, 
     /* a crippled leg is dead weight: dim, desaturated and no longer swinging */
     const crippled = p.kind === "leg" && !legHealthy(p);
     ctx.globalAlpha = (0.62 + 0.38 * hf) * (crippled ? 0.5 : 1);
-    ctx.fillStyle = hurt ? "rgba(255,255,255,0.85)" : e.tier === 6 ? "#08060d" : p.fill;
+    ctx.fillStyle = hurt ? "rgba(255,255,255,0.85)" : p.fill;
     ctx.fill();
-    if (e.tier === 6 && !hurt && p.r * z > 4) {
-      // A moving diagonal enchantment sheen clipped to each black part.
-      ctx.save(); ctx.clip(); ctx.globalAlpha = 0.35;
-      ctx.strokeStyle = "#bc80ff"; ctx.lineWidth = Math.max(3 / z, p.r * 0.12);
-      const span = Math.max(25, p.r * 0.7), phase = (t * 45) % span;
-      ctx.beginPath();
-      for (let d = -p.r * 3 + phase; d < p.r * 3; d += span) {
-        ctx.moveTo(p.cx + d - p.r, p.cy + p.r * 1.5);
-        ctx.lineTo(p.cx + d + p.r, p.cy - p.r * 1.5);
-      }
-      ctx.stroke(); ctx.restore();
-    }
     /* Canvas blur cost explodes with the area it covers. Keep the glow only
      * on small on-screen pieces; large parts get a cheap echo stroke instead. */
     const prs = p.r * z;
@@ -1976,7 +1962,7 @@ function drawEnemy(g: Game, ctx: CanvasRenderingContext2D, e: Enemy, z: number, 
       ctx.shadowBlur = p.kind === "core" ? 22 : 12;
     }
     else if (big && p.r * z > 14) { ctx.save(); ctx.globalAlpha = 0.12; ctx.strokeStyle = p.stroke; ctx.lineWidth = lw * 3.2; ctx.stroke(); ctx.restore(); }
-    ctx.strokeStyle = hurt ? "#ffffff" : e.tier === 6 ? "#a976e3" : crippled ? "#6a5d4d" : p.stroke;
+    ctx.strokeStyle = hurt ? "#ffffff" : crippled ? "#6a5d4d" : p.stroke;
     ctx.lineWidth = lw * (p.kind === "core" ? 1.6 : 1);
     ctx.stroke();
     ctx.shadowBlur = 0;

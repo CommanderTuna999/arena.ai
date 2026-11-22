@@ -8,7 +8,7 @@
  *   CHANGELOG and mirror the details in docs/CHANGELOG.md.
  */
 
-export const VERSION = "2.25.0";
+export const VERSION = "2.25.1";
 
 export interface ChangeEntry {
   version: string;
@@ -19,6 +19,13 @@ export interface ChangeEntry {
 }
 
 export const CHANGELOG: ChangeEntry[] = [
+  {
+    version: "2.25.1", date: "20 Nov 2026", title: "Ultra visual and notice fixes",
+    points: [
+      "Ultra enemies keep their normal species colours. Ultra rarity components are black with a subtle white gradient, without an enchantment glint.",
+      "Ultra spawn and defeat announcements now appear clearly above the interface in the bottom-left for ten seconds.",
+    ],
+  },
   {
     version: "2.25.0", date: "20 Nov 2026", title: "Ultra rarity",
     points: [

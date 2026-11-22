@@ -322,7 +322,7 @@ export interface Hud {
   creditTick: number;
   /** the running collection: value collected "at once" and the coin scale for it */
   creditPop: { v: number; s: number };
-  harp: { state: number; load: number; hp: number }[]; toasts: Toast[]; nearBase: boolean;
+  harp: { state: number; load: number; hp: number }[]; toasts: Toast[]; ultraNotices: Toast[]; nearBase: boolean;
   tp: { has: boolean; ch: number; cd: number; max: number }; dead: boolean; respawn: number; x: number; y: number;
   online: number; zoomOn: boolean; inv: number; cargo: number; hold: number; rev: number; zoom: number; fps: number;
   abilities: HudAbility[]; admin: AdminState; lock: boolean; autoFire: boolean; overdrive: boolean;
@@ -416,6 +416,7 @@ export class Game {
   harpoons: Harpoon[] = [];
   others: Other[] = [];
   toasts: Toast[] = [];
+  ultraNotices: Toast[] = [];
   /** newly discovered species banner, shown at the top of the screen */
   discovery: { name: string; t: number } | null = null;
   /** a domain-expansion cutscene: t counts down from dur while it plays */
@@ -501,7 +502,12 @@ export class Game {
   /* ---------------- misc helpers ---------------- */
   resize(w: number, h: number, dpr: number) { this.w = w; this.h = h; this.dpr = dpr; }
   toast(msg: string, color = "#7df9ff") {
-    this.toasts.push({ id: this.toastId++, msg, color, t: 4 });
+    const id = this.toastId++;
+    this.toasts.push({ id, msg, color, t: 4 });
+    if (color === "#000000") {
+      this.ultraNotices.push({ id, msg, color, t: 10 });
+      if (this.ultraNotices.length > 8) this.ultraNotices.shift();
+    }
     if (this.toasts.length > 5) this.toasts.shift();
   }
   mouseWorld(): [number, number] {
@@ -4301,6 +4307,7 @@ export class Game {
       o.a += angDiff(o.a, o.ta) * Math.min(1, dt * 8);
     }
     for (let i = this.toasts.length - 1; i >= 0; i--) { this.toasts[i].t -= dt; if (this.toasts[i].t <= 0) this.toasts.splice(i, 1); }
+    for (let i = this.ultraNotices.length - 1; i >= 0; i--) { this.ultraNotices[i].t -= dt; if (this.ultraNotices[i].t <= 0) this.ultraNotices.splice(i, 1); }
 
     // biome tint
     const w = biomeWeights(p.x, p.y);
@@ -4335,7 +4342,7 @@ export class Game {
       hp: p.hp, maxHp: st.hull, shield: p.shield, maxShield: st.shieldMax, boost: p.boost, hasBoost: st.hasBoost, credits: this.save.credits, creditTick: this.creditTick,
       creditPop: { v: this.creditPopValue, s: this.creditPopScale },
       harp: this.harpoons.map((h) => ({ state: h.state, load: h.comp ? h.comp.c.mass / (h.comp.hooks.length * st.hStr) : 0, hp: h.hp / h.maxHp })),
-      toasts: [...this.toasts], nearBase: this.nearBase(),
+      toasts: [...this.toasts], ultraNotices: [...this.ultraNotices], nearBase: this.nearBase(),
       tp: { has: st.tpTime > 0, ch: p.tpT > 0 ? 1 - p.tpT / st.tpTime : 0, cd: p.tpCd, max: st.tpCd },
       dead: p.dead, respawn: p.respawn, x: p.x, y: p.y, online: this.online, zoomOn: st.zoomMin < 1, inv: this.save.inventory.length, cargo: st.cargo,
       hold: this.input.rHold / 0.6, rev: this.rev, zoom: this.zoom, fps: this.fps,
