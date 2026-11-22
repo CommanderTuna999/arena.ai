@@ -1,0 +1,18 @@
+import assert from 'node:assert/strict';
+import { BASE, newSave, ultraSpawnTier, zoneAt } from './src/game/data';
+import { Game } from './src/game/engine';
+import { MAP_CELL, MAP_GRID, MAP_RADIUS, isUltraZone, walkable } from './src/game/world';
+assert(BASE.x < 0 && BASE.y < 0 && walkable(BASE.x,BASE.y));
+assert.equal(zoneAt(BASE.x,BASE.y),0);
+const corner=145.5*MAP_CELL-MAP_RADIUS;
+assert(walkable(corner,corner) && isUltraZone(corner,corner));
+assert(!isUltraZone(BASE.x,BASE.y));
+assert.equal(ultraSpawnTier(.79),5);assert.equal(ultraSpawnTier(.8),4);
+const g=new Game(newSave(),'test') as any;
+const before={x:g.player.x,y:g.player.y};g.adminTeleport(corner,corner);assert.deepEqual({x:g.player.x,y:g.player.y},before,'requires admin');
+g.admin.on=true;g.adminTeleport(corner,corner);assert.equal(g.player.x,corner);assert.equal(g.player.y,corner);assert.equal(g.cam.x,corner);
+g.adminTeleport(-MAP_RADIUS,-MAP_RADIUS);assert(walkable(g.player.x,g.player.y),'wall snaps to open ground');
+assert(g.player.x < 0 && g.player.y < 0,'snaps near clicked point');
+g.adminTeleport(NaN,1);assert(walkable(g.player.x,g.player.y));
+assert.equal(MAP_GRID.length,160);
+console.log('new map, Ultra zone and teleport checks passed');

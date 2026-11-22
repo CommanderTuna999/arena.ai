@@ -8,7 +8,7 @@
  *   CHANGELOG and mirror the details in docs/CHANGELOG.md.
  */
 
-export const VERSION = "2.23.2";
+export const VERSION = "2.24.0";
 
 export interface ChangeEntry {
   version: string;
@@ -19,6 +19,14 @@ export interface ChangeEntry {
 }
 
 export const CHANGELOG: ChangeEntry[] = [
+  {
+    version: "2.24.0", date: "20 Nov 2026", title: "New map and Ultra zone",
+    points: [
+      "The supplied map replaces the old maze, with the base in the top-left and rarity increasing toward the bottom-right.",
+      "The bottom-right Ultra zone currently spawns mostly mythical enemies, with some legendary enemies; Ultra enemy and component tiers are not yet available.",
+      "Admins can select a destination on the world map and teleport there; wall selections snap to nearby open ground.",
+    ],
+  },
   {
     version: "2.23.2", date: "20 Nov 2026", title: "Mediator sparks",
     points: ["The Mediator sheds violet energy shards and pale sparks from its muzzle while firing."],

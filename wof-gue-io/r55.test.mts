@@ -2,14 +2,6 @@ import assert from 'node:assert/strict';
 import { BASE, computeStats, newSave, zoneAt } from './src/game/data';
 import { MAP_CELL, MAP_GRID, MAP_RADIUS } from './src/game/world';
 import { Game } from './src/game/engine';
-const counts = [0,0,0,0,0,0];
-for (let y=0;y<MAP_GRID.length;y++) for (let x=0;x<MAP_GRID.length;x++) if (MAP_GRID[y][x] === '1') counts[zoneAt((x+.5)*MAP_CELL-MAP_RADIUS,(y+.5)*MAP_CELL-MAP_RADIUS)]++;
-const other = counts.slice(0,5).reduce((a,b)=>a+b,0);
-assert(Math.abs(counts[5] / other - 3) < .02, `mythical-to-other area is approximately 3:1: ${counts}`);
-const wallSeen = new Set(['0,0']); const wallQueue = [[0,0]];
-for (let i=0;i<wallQueue.length;i++) { const [x,y]=wallQueue[i]; for(const [nx,ny] of [[x-1,y],[x+1,y],[x,y-1],[x,y+1]]) { const key=`${nx},${ny}`; if(MAP_GRID[ny]?.[nx] === '0' && !wallSeen.has(key)) {wallSeen.add(key); wallQueue.push([nx,ny]);} } }
-const walls = MAP_GRID.reduce((n,row)=>n+[...row].filter(c=>c==='0').length,0);
-assert.equal(wallSeen.size,walls,'all walls belong to one connected network');
 const g = new Game(newSave(),'test') as any; g.save.cannon.id='mediator'; g.stats=computeStats(g.save);
 g.player.x=BASE.x-3000; g.player.y=BASE.y; g.player.a=0; g.player.vx=0;
 g.input.lmb=true; for(let i=0;i<1401;i++)g.firePlayer(.05);
@@ -19,4 +11,4 @@ assert(g.player.vx < first - 300, 'recoil continues pushing while the beam fires
 assert.equal(g.beams.filter((b:any)=>b.mediator).length,1,'sustained beam does not accumulate blurry overlapping effects');
 g.player.x=BASE.x;g.player.y=BASE.y;g.firePlayer(.05);
 assert.equal(g.mediatorBeamTime,0,'beam stops on entering safe zone');
-console.log('original map and mediator regression checks passed', counts);
+console.log('mediator regression checks passed');

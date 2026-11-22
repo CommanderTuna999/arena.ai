@@ -1,3 +1,9 @@
+## 0.3. v2.24.0 — new map and Ultra zone
+
+- Replaced the maze with the supplied map, placing the base at the top-left and increasing rarity toward the bottom-right.
+- The new Ultra map zone currently spawns 80% mythical and 20% legendary enemies; Ultra enemy and component tiers are not yet available.
+- Added map-point teleporting to the admin panel, with wall destinations snapped to nearby open ground.
+
 ## 0.3. v2.23.2 — Mediator sparks
 
 - Added violet energy shards and pale sparks around the Mediator's muzzle throughout its sustained beam.

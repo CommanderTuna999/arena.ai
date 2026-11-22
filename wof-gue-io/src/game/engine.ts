@@ -1,11 +1,11 @@
-import { MAP_CELL, MAP_GRID, MAP_RADIUS, walkable } from "./world";
+import { MAP_CELL, MAP_GRID, MAP_RADIUS, isUltraZone, walkable } from "./world";
 import { TAU, angDiff, clamp, distToPoly, hash2, lerp, mulberry32, pointInPoly } from "./math";
 import {
   ABILITY_BY_ID, BASE, BASE_MAX_HP, BASE_TAKE, CANNONS, CANNON_BY_ID, CANNON_TRACKS, CANNON_TRACK_BY_ID,
   DMG_MUL, KIND_CAT, KIND_DROP_RATE, RARITIES, RECIPE_BY_ID, SHIP_R, UPGRADES, WORLD_R, W_SLOTS, COMMON_CORE_RATE, COMMON_UNCOMMON_RATE, cannonBillPicks, cannonBillProblem,
   cannonDmg, cannonOwned, cannonRate, cannonTrackCost,
   compMass, compValue, computeStats, craftEfficiency,
-  recipeProblem, upgradeCost, zoneAt, WEAPON_DMG, WEAPON_RANGE, type Comp, type DmgKind, type PartKind, type SaveData, type Slot, type Stats,
+  recipeProblem, upgradeCost, zoneAt, ultraSpawnTier, WEAPON_DMG, WEAPON_RANGE, type Comp, type DmgKind, type PartKind, type SaveData, type Slot, type Stats,
 } from "./data";
 import { ABILITY_INTERVALS, GUN_SPECS, LASER_RAMP, LASER_RAMP_MIN, SPECIES_LIST, buildEnemy, type AbilityDef, type Group, type GunKind, type Part, type ProjType, type SpeciesDef } from "./enemies";
 
@@ -490,8 +490,8 @@ export class Game {
    *  It never lands in an inner zone (that would put the shop next to mythicals)
    *  and always stays clear of the world edge. */
   private placeBase() {
-    // The broad lower-right opening in the supplied map.
-    const x = 48000, y = 48000;
+    // Starting room in the top-left of the supplied map.
+    const x = -59000, y = -68000;
     BASE.x = x; BASE.y = y;
     this.cam.x = x;
     this.cam.y = y - 120;
@@ -560,6 +560,17 @@ export class Game {
     }
     writeAdminFlags(this.admin);
     this.rev++;
+  }
+
+  /** Teleport to a selected map point, snapping wall selections to open ground. */
+  adminTeleport(x: number, y: number) {
+    if (!this.admin.on || !Number.isFinite(x) || !Number.isFinite(y)) return;
+    const [tx, ty] = clampWorld(Math.max(-MAP_RADIUS, Math.min(MAP_RADIUS, x)), Math.max(-MAP_RADIUS, Math.min(MAP_RADIUS, y)));
+    this.admin.sandbox = false; this.testReturn = null;
+    this.player.x = tx; this.player.y = ty; this.player.vx = this.player.vy = 0;
+    this.cam.x = tx; this.cam.y = ty;
+    writeAdminFlags(this.admin);
+    this.toast("TELEPORTED", "#ff7ad9"); this.rev++;
   }
 
   /** Wipe every enemy and hostile projectile in the test range. */
@@ -1492,7 +1503,7 @@ export class Game {
       if (Math.hypot(x - this.player.x, y - this.player.y) < 1200) continue;
       const z2 = zoneAt(x, y);
       const r = rolls[0];
-      const tier = Math.max(0, r < 0.55 ? z2 : r < 0.83 ? z2 - 1 : r < 0.95 ? z2 - 2 : z2 - 3);
+      const tier = isUltraZone(x, y) ? ultraSpawnTier(r) : Math.max(0, r < 0.55 ? z2 : r < 0.83 ? z2 - 1 : r < 0.95 ? z2 - 2 : z2 - 3);
       const spi = pickSpecies(x, y, () => rolls[1], z2);
       const pack = SPECIES_LIST[spi].pack[tier];
       for (let k = 0; k < pack; k++) {
@@ -1589,7 +1600,7 @@ export class Game {
         if (!walkable(x, y)) continue;
         if (Math.hypot(x - BASE.x, y - BASE.y) < BASE.safe + 350) continue;
         const z2 = zoneAt(x, y);
-        const tier = Math.max(0, z2 - (Math.random() < 0.55 ? 0 : 1));
+        const tier = isUltraZone(x, y) ? ultraSpawnTier(Math.random()) : Math.max(0, z2 - (Math.random() < 0.55 ? 0 : 1));
         const key = `${Math.floor(x / CH)},${Math.floor(y / CH)}`;
         this.enemies.push(this.makeEnemy(pickSpecies(x, y, Math.random, z2), tier, x, y, key, hash2(x | 0, y | 0, 21)));
         break;
@@ -1619,7 +1630,7 @@ export class Game {
         const key = `${Math.floor(x / CH)},${Math.floor(y / CH)}`;
         /* The visibility floor stays at rare tier even in epic+ rings: those
          * zones must feel sparse, not refill with one legendary per glance. */
-        this.enemies.push(this.makeEnemy(pickSpecies(x, y, Math.random, z2), Math.max(0, Math.min(2, z2 - 1)), x, y, key, hash2(x | 0, y | 0, 31)));
+        this.enemies.push(this.makeEnemy(pickSpecies(x, y, Math.random, z2), (isUltraZone(x, y) ? ultraSpawnTier(Math.random()) : Math.max(0, Math.min(2, z2 - 1))), x, y, key, hash2(x | 0, y | 0, 31)));
         break;
       }
     }

@@ -1,6 +1,6 @@
-import { MAP_GRID, MAP_CELL, MAP_RADIUS } from "./world";
+import { MAP_GRID, MAP_CELL, MAP_RADIUS, isUltraZone } from "./world";
 import { TAU, clamp, fmtNum } from "./math";
-import { BASE, CANNON_BY_ID, CANNONS, CAT_NAME, KIND_CAT, RARITIES, SHIP_R, W_SLOTS, WEAPON_RANGE, WEAPON_TINT, WORLD_R, ZONE_EDGES, zoneAt } from "./data";
+import { BASE, CANNON_BY_ID, CANNONS, CAT_NAME, KIND_CAT, RARITIES, SHIP_R, W_SLOTS, WEAPON_RANGE, WEAPON_TINT, WORLD_R, ZONE_EDGES, ULTRA_ZONE, zoneAt } from "./data";
 import { N_ROPE, legHealthy, plateGrow, type Enemy, type Game, type LComp } from "./engine";
 
 function bend(e: Enemy, p: { seg: number }) {
@@ -2065,7 +2065,7 @@ function terrainMap(): HTMLCanvasElement {
   for (let y = 0; y < MAP_GRID.length; y++) for (let x = 0; x < MAP_GRID.length; x++) {
     if (MAP_GRID[y][x] !== "1") continue;
     const wx = (x + 0.5) * MAP_CELL - MAP_RADIUS, wy = (y + 0.5) * MAP_CELL - MAP_RADIUS;
-    c.fillStyle = RARITIES[zoneAt(wx, wy)].color + "88";
+    c.fillStyle = (isUltraZone(wx, wy) ? ULTRA_ZONE.color : RARITIES[zoneAt(wx, wy)].color) + "88";
     c.fillRect(x, y, 1, 1);
   }
   return minimapTerrain = image;

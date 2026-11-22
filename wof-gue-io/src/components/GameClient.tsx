@@ -5,13 +5,14 @@ import { useRouter } from "next/navigation";
 import { Game, type Hud } from "@/game/engine";
 import { render } from "@/game/render";
 import {
-  ABILITY_LIST, CANNONS, CANNON_BY_ID, CAT_NAME, DMG_INFO, KIND_CAT, RARITIES, RECIPES, RECIPE_BY_ID, SLOT_NAME, UPGRADES, UP_CATS,
+  BASE, ULTRA_ZONE, zoneAt, ABILITY_LIST, CANNONS, CANNON_BY_ID, CAT_NAME, DMG_INFO, KIND_CAT, RARITIES, RECIPES, RECIPE_BY_ID, SLOT_NAME, UPGRADES, UP_CATS,
   cannonBillProblem, cannonDmg, cannonOwned, cannonRate, cannonTracks, cannonTrackCost, cannonTrackValue, craftEfficiency, damageProfile,
   migrate, newSave, partBillText, recipeProblem, upgradeCost,
   type CannonDef, type CannonTrackId, type Comp, type Recipe, type SaveData, type Slot, type UpCat,
 } from "@/game/data";
 import { clamp, fmtNum } from "@/game/math";
 import { SPECIES_LIST } from "@/game/enemies";
+import { MAP_GRID, MAP_CELL, MAP_RADIUS, isUltraZone } from "@/game/world";
 import SettingsPanel from "@/components/SettingsPanel";
 import RecipeIcon from "@/components/RecipeIcon";
 import Bestiary, { BeeIcon } from "@/components/Bestiary";
@@ -1252,6 +1253,36 @@ function Settings({ game }: { game: Game }) {
 }
 
 /* ---------------------------------------------------------------- Admin */
+function AdminMap({ game, enabled }: { game: Game; enabled: boolean }) {
+  const canvas = useRef<HTMLCanvasElement>(null);
+  const [point, setPoint] = useState<{ x: number; y: number } | null>(null);
+  useEffect(() => {
+    const ctx = canvas.current?.getContext("2d"); if (!ctx) return;
+    const n = MAP_GRID.length;
+    ctx.fillStyle = "#11121b"; ctx.fillRect(0, 0, n, n);
+    for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) {
+      if (MAP_GRID[y][x] !== "1") continue;
+      const wx = (x + .5) * MAP_CELL - MAP_RADIUS, wy = (y + .5) * MAP_CELL - MAP_RADIUS;
+      ctx.fillStyle = isUltraZone(wx, wy) ? ULTRA_ZONE.color : RARITIES[zoneAt(wx, wy)].color;
+      ctx.fillRect(x, y, 1, 1);
+    }
+    const mark = (x: number, y: number, color: string) => {
+      ctx.fillStyle = color; ctx.beginPath(); ctx.arc((x + MAP_RADIUS) / (2 * MAP_RADIUS) * n, (y + MAP_RADIUS) / (2 * MAP_RADIUS) * n, 2.5, 0, Math.PI * 2); ctx.fill();
+    };
+    mark(BASE.x, BASE.y, "#36ffdb"); mark(game.player.x, game.player.y, "#ffffff");
+    if (point) mark(point.x, point.y, "#ff00e6");
+  }, [game, point]);
+  return <div className="mt-2 rounded-sm border border-fuchsia-300/30 bg-fuchsia-500/5 p-2">
+    <div className="text-[10px] font-black tracking-[0.2em] text-fuchsia-200">MAP TELEPORT</div>
+    <canvas ref={canvas} width={MAP_GRID.length} height={MAP_GRID.length} aria-label="Select teleport destination on world map" role="img"
+      className={`mt-2 w-full border border-white/20 [image-rendering:pixelated] ${enabled ? "cursor-crosshair" : "opacity-50"}`}
+      onClick={(e) => { if (!enabled) return; const r=e.currentTarget.getBoundingClientRect();
+        setPoint({ x: (clamp((e.clientX-r.left)/r.width,0,1)*2-1)*MAP_RADIUS, y: (clamp((e.clientY-r.top)/r.height,0,1)*2-1)*MAP_RADIUS }); }} />
+    <div className="mt-1 text-[10px] text-white/55">{point ? `Selected: ${Math.round(point.x)}, ${Math.round(point.y)}${isUltraZone(point.x, point.y) ? " · ULTRA" : ""}` : "Select a destination on the map."}</div>
+    <button disabled={!enabled || !point} onClick={() => { if (point) { game.adminTeleport(point.x, point.y); setPoint({ ...point }); } }} className="mt-1 w-full rounded-sm border border-fuchsia-300/60 bg-fuchsia-400/15 px-2 py-1 text-[10px] font-black text-fuchsia-100 hover:bg-fuchsia-400/30 disabled:opacity-40">TELEPORT</button>
+  </div>;
+}
+
 function AdminPanel({ game, hud, onClose }: { game: Game; hud: Hud; onClose: () => void }) {
   const a = hud.admin;
   /* Remember the last species/rarity picked in the spawner: spawning the same
@@ -1302,6 +1333,7 @@ function AdminPanel({ game, hud, onClose }: { game: Game; hud: Hud; onClose: () 
           </label>
         ))}
       </div>
+      <AdminMap game={game} enabled={a.on} />
       <div className={`mt-2 rounded-sm border border-fuchsia-300/30 bg-fuchsia-500/5 p-2 ${a.on ? "" : "opacity-50"}`}>
         <div className="flex items-center justify-between">
           <span className="text-[10px] font-black tracking-[0.2em] text-fuchsia-200">TEST RANGE</span>

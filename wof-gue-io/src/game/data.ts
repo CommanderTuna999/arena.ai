@@ -2,12 +2,12 @@ import { clamp, fmtNum } from "./math";
 
 /* ---------- world constants ---------- */
 export const WORLD_R = 90000;
-/* The base is in the open lower-right starting region. */
+/* The base starts in the top-left opening. */
 /* turretR is the siege cannon's reach; aggroR (10% beyond it) is the base's
  * defence-alert radius and the band enemies are retained in while chasing the
  * player through it. Enemies never target the base itself. smallR is the
  * point-defence reach of the six hex turrets on the base ring. */
-export const BASE = { x: 48000, y: 48000, r: 260, dock: 175, safe: 950, turretR: 1600, aggroR: 1760, smallR: 850 };
+export const BASE = { x: -59000, y: -68000, r: 260, dock: 175, safe: 950, turretR: 1600, aggroR: 1760, smallR: 850 };
 /** radius band the base may occupy — the outer (common) ring only */
 export const BASE_RING = { min: 13900, max: 15300 };
 /** structural integrity of the base; high-tier enemies chew through this fast */
@@ -23,13 +23,18 @@ export const W_SLOTS = [
 export const SHIP_R = 15;
 /** Minimum distance from the base for each successive rarity band.
  * Keep thresholds data-driven so future rarities can extend the map. */
-export const ZONE_EDGES = [12015, 18350, 24060, 29652, 39069];
+export const ZONE_EDGES = [30000, 58000, 90000, 125000, 155000];
 export function zoneTier(distanceFromBase: number) {
   return ZONE_EDGES.reduce((tier, edge) => tier + (distanceFromBase >= edge ? 1 : 0), 0);
 }
 export function zoneAt(x: number, y: number) {
   return zoneTier(Math.hypot(x - BASE.x, y - BASE.y));
 }
+
+/** Ultra is a map zone, not yet an enemy or component tier. */
+export const ULTRA_ZONE = { id: "ultra", name: "Ultra", color: "#f2f7ff" } as const;
+/** Ultra encounters are currently mostly mythical, with some legendary. */
+export function ultraSpawnTier(roll: number): number { return roll < 0.8 ? 5 : 4; }
 
 /* ---------- rarities ---------- */
 export const RARITIES = [
