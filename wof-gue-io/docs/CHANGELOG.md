@@ -1,3 +1,7 @@
+## 0.3. v2.29.12 — Chat focus and guest notice
+
+- Empty Enter releases chat typing focus without closing the panel. The title screen explains that guests must log in to save progress.
+
 ## 0.3. v2.29.11 — Chat Enter fix
 
 - Sending a chat message with Enter keeps chat open; Enter on an empty field closes it.

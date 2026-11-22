@@ -68,8 +68,7 @@ export default function Chat({ game, notices }: { game: Game; notices: Toast[] }
           (target instanceof HTMLElement && (target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT', 'BUTTON'].includes(target.tagName)))) return;
       if (e.key !== '/' && e.key !== 'Enter') return;
       e.preventDefault(); e.stopPropagation(); game.blur();
-      if (e.key === 'Enter' && expandedRef.current) { manuallyCollapsed.current = true; expandedRef.current = false; setExpanded(false); }
-      else open(true);
+      open(true);
     };
     window.addEventListener('keydown', shortcut, true);
     return () => window.removeEventListener('keydown', shortcut, true);
@@ -144,11 +143,8 @@ export default function Chat({ game, notices }: { game: Game; notices: Toast[] }
     connect();
     return () => { closed = true; ready = false; clearInterval(interval); if (retry) clearTimeout(retry); if (fadeTimer.current) clearTimeout(fadeTimer.current); socket.current?.close(); socket.current = null; outbox.current = null; };
   }, []);
-  const closeChat = () => {
-    input.current?.blur(); manuallyCollapsed.current = true; expandedRef.current = false; setExpanded(false);
-  };
   const submit = (e: React.SyntheticEvent, close = false) => {
-    e.preventDefault(); const clean = text.trim(); if (!clean) { if (close) closeChat(); return; }
+    e.preventDefault(); const clean = text.trim(); if (!clean) { if (close) input.current?.blur(); return; }
     const queue = outbox.current ?? (outbox.current = new ChatOutbox(storage()));
     const id = messageId();
     if (!queue.enqueue(id, game.save.name || 'Pilot', clean, Date.now())) { setQueueError('Queue full; wait for messages to send.'); return; }

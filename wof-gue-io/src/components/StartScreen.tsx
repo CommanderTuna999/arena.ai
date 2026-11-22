@@ -197,16 +197,13 @@ export default function StartScreen() {
             <button
               onClick={() => setAuthOpen(true)}
               title="Log in to pick a name and keep your progress"
-              aria-label={`Playing as ${guest}. Log in to save progress.`}
-              className="h-11 w-full cursor-pointer border-b border-white/10 bg-transparent px-2 text-center text-lg tracking-[0.18em] text-white/25 transition hover:text-white/45"
+              aria-label="Currently playing as a Guest. Login to save progress"
+              className="min-h-11 w-full cursor-pointer border-b border-white/10 bg-transparent px-2 text-center text-sm text-white/60 transition hover:text-white"
             >
-              {guest}
+              Currently playing as a Guest. Login to save progress
             </button>
           )}
           {err && <div className="mt-2 text-[11px] text-red-300">{err}</div>}
-          {!sess && (
-            <div className="mt-2 text-[10px] tracking-[0.2em] text-white/25">GUEST RUN · NOT SAVED</div>
-          )}
 
           <button
             onClick={play}
