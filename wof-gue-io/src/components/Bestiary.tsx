@@ -113,18 +113,27 @@ function bounds(parts: { poly: number[] }[]) {
   return { x: x0 - pad, y: y0 - pad, w: x1 - x0 + pad * 2, h: y1 - y0 + pad * 2 };
 }
 
-function BugArt({ sp, tier, seen, size }: { sp: SpeciesDef; tier: number; seen: boolean; size: number }) {
+// A shared world-space frame keeps all species and rarities at the same scale.
+let mythicExtent = 0;
+function referenceExtent() {
+  if (!mythicExtent) for (const species of SPECIES_LIST) {
+    const b = bounds(preview(species, 5).parts);
+    mythicExtent = Math.max(mythicExtent, Math.abs(b.x), Math.abs(b.y), Math.abs(b.x + b.w), Math.abs(b.y + b.h));
+  }
+  return mythicExtent;
+}
+function BugArt({ sp, tier, seen, size, showcase = false }: { sp: SpeciesDef; tier: number; seen: boolean; size: number; showcase?: boolean }) {
   const built = preview(sp, tier);
-  const vb = bounds(built.parts);
+  const extent = referenceExtent() * (showcase ? 1 : 3);
   return (
-    <svg width={size} height={size} viewBox={`${vb.x} ${vb.y} ${vb.w} ${vb.h}`} aria-hidden="true">
+    <svg width={showcase ? "100%" : size} height={showcase ? "100%" : size} viewBox={`${-extent} ${-extent} ${extent * 2} ${extent * 2}`} aria-hidden="true">
       {built.parts.map((p, i) => (
         <polygon
           key={i}
           points={Array.from({ length: p.poly.length / 2 }, (_, k) => `${p.poly[k * 2]},${p.poly[k * 2 + 1]}`).join(" ")}
           fill={seen ? p.fill : "#05070c"}
           stroke={seen ? p.stroke : "#131a24"}
-          strokeWidth={Math.max(0.8, vb.w * (seen ? 0.008 : 0.006))}
+          strokeWidth={Math.max(0.8, built.radius * (seen ? 0.016 : 0.012))}
         />
       ))}
     </svg>
@@ -225,6 +234,11 @@ export default function Bestiary({ bestiary, onClose }: { bestiary: Record<strin
         </div>
       </div>
 
+      {sp && hover && (
+        <div className="pointer-events-none fixed inset-0 z-[55] opacity-70" aria-hidden="true">
+          <BugArt sp={sp} tier={hover.tier} seen={!!seen} size={0} showcase />
+        </div>
+      )}
       {sp && hover && (
         <div className="pointer-events-none fixed z-[60] max-h-[85dvh] overflow-hidden rounded-md border border-yellow-300/50 bg-[#070b1a] p-3 shadow-[0_10px_40px_rgba(0,0,0,0.7)]" style={{ left: hover.x, top: hover.y, width: hover.w }}>
           {!seen ? (

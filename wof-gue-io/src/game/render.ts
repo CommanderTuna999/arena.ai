@@ -893,7 +893,7 @@ function drawCompTooltip(g: Game, ctx: CanvasRenderingContext2D, c: LComp) {
   ctx.fillStyle = "#ffe14d";
   ctx.fillText(`◈ ${fmtNum(c.c.value)} CR`, x + 12, y + 57);
   ctx.fillStyle = "rgba(200,235,255,0.7)";
-  ctx.fillText(`⚖ ${c.c.mass.toFixed(1)} mass`, x + 112, y + 57);
+  ctx.fillText(`⚖ ${c.c.mass.toFixed(1)}`, x + 112, y + 57);
   ctx.fillStyle = "rgba(200,235,255,0.4)";
   ctx.fillText(c.c.species, x + 12, y + 73);
   ctx.restore();
@@ -1094,6 +1094,9 @@ function drawTurret(g: Game, ctx: CanvasRenderingContext2D, z: number, t: number
   void t;
 }
 
+// The expensive clipped hatch and glow are rasterized once per piece and zoom
+// bucket. Animation and interaction overlays remain live; WeakMap permits GC.
+const compSprites = new WeakMap<LComp, { canvas: HTMLCanvasElement; scale: number; extent: number }>();
 function drawComp(g: Game, ctx: CanvasRenderingContext2D, c: LComp, z: number, t: number) {
   const ultra = c.c.tier === 6;
   const col = ultra ? "#d1d1d1" : RARITIES[c.c.tier].color;
@@ -1108,33 +1111,25 @@ function drawComp(g: Game, ctx: CanvasRenderingContext2D, c: LComp, z: number, t
     return;
   }
   const pulse = 0.5 + 0.5 * Math.sin(t * 3 + c.id);
-  ctx.save();
-  ctx.translate(c.x, c.y); ctx.rotate(c.a);
-  ctx.lineJoin = "round";
-  polyPath(ctx, c.c.poly);
-  if (ultra) {
-    const grad = ctx.createLinearGradient(-c.r, -c.r, c.r, c.r);
-    grad.addColorStop(0, "#303030"); grad.addColorStop(0.35, "#080808"); grad.addColorStop(1, "#000000");
-    ctx.fillStyle = grad; ctx.fill();
-  } else {
-    ctx.fillStyle = col + "26"; ctx.fill();
-    ctx.save(); ctx.clip(); ctx.strokeStyle = col + "55"; ctx.lineWidth = 1 / z; ctx.beginPath();
-    for (let d = -c.r * 2; d < c.r * 2; d += Math.max(6, c.r * 0.22)) { ctx.moveTo(d, -c.r * 2); ctx.lineTo(d + c.r * 2, c.r * 2); }
-    ctx.stroke(); ctx.restore();
+  const scale = Math.min(3, 184 / Math.max(1, c.r * 3), Math.max(0.125, Math.pow(2, Math.ceil(Math.log2(z * g.dpr)))));
+  let sprite = compSprites.get(c);
+  if (!sprite || sprite.scale !== scale) {
+    const extent = c.r * 1.5 + 36 / scale;
+    const canvas = document.createElement("canvas");
+    canvas.width = canvas.height = Math.ceil(extent * 2 * scale);
+    const spriteCtx = canvas.getContext("2d");
+    if (spriteCtx) {
+      spriteCtx.setTransform(scale, 0, 0, scale, canvas.width / 2, canvas.height / 2);
+      drawCompSprite(spriteCtx, c, scale);
+      sprite = { canvas, scale, extent: canvas.width / (2 * scale) };
+      compSprites.set(c, sprite);
+    }
   }
-  ctx.shadowColor = col; ctx.shadowBlur = ultra ? 0 : 10 + 8 * pulse;
-  ctx.strokeStyle = col; ctx.lineWidth = 2.2 / z;
-  polyPath(ctx, c.c.poly); ctx.stroke();
-  ctx.shadowBlur = 0;
-  if (!ultra) {
-  ctx.setLineDash([5 / z, 5 / z]);
-  ctx.save(); ctx.scale(0.8, 0.8);
-  polyPath(ctx, c.c.poly);
-  ctx.strokeStyle = "rgba(255,255,255,0.5)"; ctx.lineWidth = 1 / z; ctx.stroke();
-  ctx.restore();
-  ctx.setLineDash([]);
+  if (sprite) {
+    ctx.save(); ctx.translate(c.x, c.y); ctx.rotate(c.a);
+    ctx.drawImage(sprite.canvas, -sprite.extent, -sprite.extent, sprite.extent * 2, sprite.extent * 2);
+    ctx.restore();
   }
-  ctx.restore();
   // marker ring
   ctx.strokeStyle = col; ctx.globalAlpha = 0.25 + 0.25 * pulse; ctx.lineWidth = 1.5 / z;
   ctx.beginPath(); ctx.arc(c.x, c.y, c.r + 8 + pulse * 4, 0, TAU); ctx.stroke();
@@ -1147,6 +1142,39 @@ function drawComp(g: Game, ctx: CanvasRenderingContext2D, c: LComp, z: number, t
     ctx.strokeStyle = `rgba(255,70,90,${0.4 + 0.5 * Math.sin(t * 30)})`; ctx.lineWidth = 3 / z;
     ctx.beginPath(); ctx.arc(c.x, c.y, c.r + 4, 0, TAU * c.stress); ctx.stroke();
   }
+}
+
+function drawCompSprite(ctx: CanvasRenderingContext2D, c: LComp, z: number) {
+  const ultra = c.c.tier === 6;
+  const col = ultra ? "#d1d1d1" : RARITIES[c.c.tier].color;
+  ctx.save();
+
+  ctx.lineJoin = "round";
+  polyPath(ctx, c.c.poly);
+  if (ultra) {
+    const grad = ctx.createLinearGradient(-c.r, -c.r, c.r, c.r);
+    grad.addColorStop(0, "#303030"); grad.addColorStop(0.35, "#080808"); grad.addColorStop(1, "#000000");
+    ctx.fillStyle = grad; ctx.fill();
+  } else {
+    ctx.fillStyle = col + "26"; ctx.fill();
+    ctx.save(); ctx.clip(); ctx.strokeStyle = col + "55"; ctx.lineWidth = 1 / z; ctx.beginPath();
+    for (let d = -c.r * 2; d < c.r * 2; d += Math.max(6, c.r * 0.22)) { ctx.moveTo(d, -c.r * 2); ctx.lineTo(d + c.r * 2, c.r * 2); }
+    ctx.stroke(); ctx.restore();
+  }
+  ctx.shadowColor = col; ctx.shadowBlur = ultra ? 0 : 14;
+  ctx.strokeStyle = col; ctx.lineWidth = 2.2 / z;
+  polyPath(ctx, c.c.poly); ctx.stroke();
+  ctx.shadowBlur = 0;
+  if (!ultra) {
+  ctx.setLineDash([5 / z, 5 / z]);
+  ctx.save(); ctx.scale(0.8, 0.8);
+  polyPath(ctx, c.c.poly);
+  ctx.strokeStyle = "rgba(255,255,255,0.5)"; ctx.lineWidth = 1 / z; ctx.stroke();
+  ctx.restore();
+  ctx.setLineDash([]);
+  }
+  ctx.restore();
+
 }
 
 function drawRope(g: Game, ctx: CanvasRenderingContext2D, h: { state: number; nodes: { x: number; y: number }[]; comp: LComp | null; taut: number; hp: number; maxHp: number; hx: number; hy: number; ang: number }, z: number) {
@@ -1757,39 +1785,7 @@ const PLATE_KINDS = new Set(["segment", "armor"]);
 
 function drawEnemy(g: Game, ctx: CanvasRenderingContext2D, e: Enemy, z: number, t: number) {
   const sr = e.radius * z;
-  /* At full optics zoom the viewport holds hundreds of insects; drawing every
-   * limb of a four-pixel enemy is invisible work. Far enemies collapse to a
-   * single species-coloured mote, and mid-range ones drop their plating and
-   * shadows. */
-  if (sr < 3) {
-    ctx.globalAlpha = 0.85;
-    ctx.fillStyle = `hsl(${e.spd.hue},85%,64%)`;
-    ctx.beginPath(); ctx.arc(e.x, e.y, Math.max(1.4, sr * 0.55), 0, TAU); ctx.fill();
-    ctx.globalAlpha = 1;
-    return;
-  }
-  /* Fully zoomed out, every insect becomes a cheap species-coloured marker.
-   * Drawing 70-part mythical bodies at this scale was the single biggest frame
-   * cost, and their overlapping translucent fills turned the centre white. */
-  if (z < 0.1) {
-    const rr = Math.max(2.5, Math.min(sr * 0.6, 26));
-    ctx.globalAlpha = 0.2;
-    ctx.fillStyle = `hsl(${e.spd.hue},80%,55%)`;
-    ctx.beginPath(); ctx.arc(e.x, e.y, rr, 0, TAU); ctx.fill();
-    ctx.globalAlpha = 0.9;
-    ctx.strokeStyle = `hsl(${e.spd.hue},85%,68%)`;
-    ctx.lineWidth = 1.4 / z;
-    ctx.stroke();
-    ctx.fillStyle = `hsl(${e.spd.hue},100%,82%)`;
-    ctx.beginPath(); ctx.arc(e.x, e.y, Math.max(1.2, Math.min(3.5, rr * 0.16)), 0, TAU); ctx.fill();
-    ctx.globalAlpha = 1;
-    return;
-  }
-  let detail = sr < 9 ? 2 : sr < 26 ? 1 : 0;
-  /* Zooming out is a strategic view: cap detail globally so a screen full of
-   * mythical insects costs roughly the same as a screen full of small ones. */
-  if (z < 0.35) detail = Math.max(detail, 1);
-  const simple = detail > 0;
+  const simple = sr < 26 || z < 0.35;
   // telegraphs
   if (e.act && e.act.ph === 0 && e.act.t < e.act.def.wind + 0.01) {
     const d = e.act.def;
@@ -1865,17 +1861,14 @@ function drawEnemy(g: Game, ctx: CanvasRenderingContext2D, e: Enemy, z: number, 
   ctx.lineJoin = "round";
   const lw = 1.7 / z;
   const big = !simple && sr > 60;
-  const stride = Math.max(1, Math.ceil(e.order.length / (detail === 2 ? 7 : 12)));
-  const drawOrder = detail === 0
-    ? e.order
-    : e.order.filter((idx, i) => i % stride === 0 || e.parts[idx].kind === "core" || e.parts[idx].kind === "weapon");
+  const drawOrder = e.order;
   /* ---- physical plating ----
    * Solid steel slabs bolted around every body plate: a dark underlay for thickness,
    * a filled top face and a bright rim, plus one faint ridge per extra layer. It is
    * drawn in its own pass so the slabs sit under the whole body rather than painting
    * over whatever limbs happen to come later in the draw order. */
   const shellN = e.shells.length;
-  const showPlate = !simple && sr > 24 && shellN > 0;
+  const showPlate = shellN > 0;
   const plateMin = e.radius * 0.05;
   if (showPlate) {
     const top = e.shells[shellN - 1];
@@ -1888,7 +1881,7 @@ function drawEnemy(g: Game, ctx: CanvasRenderingContext2D, e: Enemy, z: number, 
     const fill = steel(19 + 11 * f, 0.97);
     const lip = steel(36 + 14 * f, 0.95);
     const rim = steel(62, 0.75 + 0.2 * f + 0.25 * hit);
-    const rimW = 2.6 / z;
+    const rimW = 2.6 / (3 * z);
     /* The old plating was a 4-19u rim; the slabs now stand ~10x thicker, and
      * their width tracks the size of the plate they are bolted to. */
     const platePath = (p: { poly: number[]; cx: number; cy: number; r: number }, g: number) => {
@@ -1923,7 +1916,7 @@ function drawEnemy(g: Game, ctx: CanvasRenderingContext2D, e: Enemy, z: number, 
       ctx.fillStyle = fill; ctx.fill();
       /* lighter lip just inside the outer edge gives the slab a bevel */
       platePath(p, grow * 0.84);
-      ctx.strokeStyle = lip; ctx.lineWidth = Math.max(2, grow * 0.22) / z; ctx.stroke();
+      ctx.strokeStyle = lip; ctx.lineWidth = Math.max(2 / 3, grow * 0.22) / z; ctx.stroke();
       /* bright outer rim */
       ctx.strokeStyle = rim; ctx.lineWidth = rimW; ctx.stroke();
       /* one ridge per extra layer, so four bolted layers read as four */
@@ -1931,7 +1924,7 @@ function drawEnemy(g: Game, ctx: CanvasRenderingContext2D, e: Enemy, z: number, 
         for (let i = 1; i < layersHere; i++) {
           ctx.globalAlpha = 0.65;
           platePath(p, grow * (1 - i / (layersHere + 0.4)));
-          ctx.strokeStyle = lip; ctx.lineWidth = Math.max(1.2, grow * 0.1) / z; ctx.stroke();
+          ctx.strokeStyle = lip; ctx.lineWidth = Math.max(0.4, grow * 0.1) / z; ctx.stroke();
         }
         ctx.globalAlpha = 1;
       }

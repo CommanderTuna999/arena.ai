@@ -1,3 +1,9 @@
+## 0.3. v2.26.0 — Performance and scale
+
+- Cached detailed salvage artwork and spatially indexed enemy separation. All enemy parts remain visible at every zoom.
+- Ultra body contact destroys lower-rarity enemies without rewards or bestiary credit. Bestiary art uses a shared world scale; armour plating is one third as thick.
+- Wall collision now accounts for the full player hull and a smaller enemy hitbox, including contact pushes. Removed the word mass from the component hover card.
+
 ## 0.3. v2.25.2 — Ultra scaling
 
 - Ultra normal-piece health and damage are each 135× the mythical equivalent (13.5×, multiplied by 10). Armour remains 16× average Ultra normal-piece health.

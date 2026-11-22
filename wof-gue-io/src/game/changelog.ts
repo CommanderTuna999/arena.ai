@@ -8,7 +8,7 @@
  *   CHANGELOG and mirror the details in docs/CHANGELOG.md.
  */
 
-export const VERSION = "2.25.2";
+export const VERSION = "2.26.0";
 
 export interface ChangeEntry {
   version: string;
@@ -19,6 +19,10 @@ export interface ChangeEntry {
 }
 
 export const CHANGELOG: ChangeEntry[] = [
+  {
+    version: "2.26.0", date: "20 Nov 2026", title: "Performance and scale",
+    points: ["Cached salvage artwork and spatially indexed enemy separation; enemy parts remain visible at every zoom.", "Ultra bodies destroy lower rarities without rewards. Bestiary art shares a world scale, armour is thinner, and wall collision respects the player hull and smaller enemy hitboxes."],
+  },
   {
     version: "2.25.2", date: "20 Nov 2026", title: "Ultra scaling",
     points: ["Ultra normal-piece health and damage are each 135× their mythical values. Armour remains 16× average Ultra normal-piece health."],

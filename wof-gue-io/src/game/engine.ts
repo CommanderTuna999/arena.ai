@@ -1,4 +1,4 @@
-import { MAP_CELL, MAP_GRID, MAP_RADIUS, isUltraZone, walkable } from "./world";
+import { MAP_CELL, MAP_GRID, MAP_RADIUS, isUltraZone, walkable, circleWalkable } from "./world";
 import { TAU, angDiff, clamp, distToPoly, hash2, lerp, mulberry32, pointInPoly } from "./math";
 import {
   ABILITY_BY_ID, BASE, BASE_MAX_HP, BASE_TAKE, CANNONS, CANNON_BY_ID, CANNON_TRACKS, CANNON_TRACK_BY_ID,
@@ -93,7 +93,7 @@ export const SHELL_GROW_PER_LAYER = 10;
 export const SHELL_GROW_FRAC = 0.26;
 export const SHELL_GROW_CAP = 1.9;
 export const plateGrow = (r: number, layers: number) =>
-  Math.min(r * SHELL_GROW_CAP, SHELL_BASE_GROW + (layers - 1) * SHELL_GROW_PER_LAYER + r * SHELL_GROW_FRAC);
+  Math.min(r * SHELL_GROW_CAP, SHELL_BASE_GROW + (layers - 1) * SHELL_GROW_PER_LAYER + r * SHELL_GROW_FRAC) / 3;
 /* Base defence tuning. The siege shell one-shots up to legendary; mythicals lose
  * a fixed chunk so they stay a genuine end-game threat. */
 const SHELL_DMG = 2_500_000;
@@ -370,7 +370,7 @@ function pickSpecies(x: number, y: number, rng: () => number, zone: number) {
 
 const uid = () => Math.random().toString(36).slice(2, 10);
 const clampWorld = (x: number, y: number): [number, number] => {
-  if (walkable(x, y)) return [x, y];
+  if (circleWalkable(x, y, SHIP_R)) return [x, y];
   let bestX = BASE.x, bestY = BASE.y, best = Infinity;
   for (let row = 0; row < MAP_GRID.length; row++) for (let col = 0; col < MAP_GRID.length; col++) {
     if (MAP_GRID[row][col] !== "1") continue;
@@ -2498,8 +2498,10 @@ export class Game {
           } else if (a.t >= d.wind + 2) { a.ph = 2; a.t = 0; }
         } else if (a.ph === 1) {
           /* the enemy stays clamped onto the ship */
-          p.x = e.x + Math.cos(e.a) * (e.radius + SHIP_R + 2);
-          p.y = e.y + Math.sin(e.a) * (e.radius + SHIP_R + 2);
+          const gx = e.x + Math.cos(e.a) * (e.radius + SHIP_R + 2);
+          const gy = e.y + Math.sin(e.a) * (e.radius + SHIP_R + 2);
+          if (circleWalkable(gx, p.y, SHIP_R)) p.x = gx;
+          if (circleWalkable(p.x, gy, SHIP_R)) p.y = gy;
           p.vx *= Math.exp(-8 * dt); p.vy *= Math.exp(-8 * dt);
           a.chompT = (a.chompT ?? 0) - dt;
           if (a.chompT <= 0) {
@@ -2970,14 +2972,16 @@ export class Game {
     if (!e.act || e.act.def.type === "charge") { /* turning handled by act for others */ }
     const turnRate = e.turn * turnMul;
     if (!e.act) e.a += clamp(angDiff(e.a, faceTo), -turnRate * dt, turnRate * dt);
-    if (walkable(e.x + e.vx * dt, e.y)) e.x += e.vx * dt; else e.vx = 0;
-    if (walkable(e.x, e.y + e.vy * dt)) e.y += e.vy * dt; else e.vy = 0;
+    if (circleWalkable(e.x + e.vx * dt, e.y, Math.min(e.radius * 0.2, MAP_CELL * 0.35))) e.x += e.vx * dt; else e.vx = 0;
+    if (circleWalkable(e.x, e.y + e.vy * dt, Math.min(e.radius * 0.2, MAP_CELL * 0.35))) e.y += e.vy * dt; else e.vy = 0;
 
     // contact with player
     if (!p.dead && dist < e.radius + SHIP_R + 30 && !this.inSafe()) {
       if (this.touching(e, 0)) {
         const k = dist || 1;
-        p.x += (dx / k) * 140 * dt; p.y += (dy / k) * 140 * dt;
+        const nx = p.x + (dx / k) * 140 * dt, ny = p.y + (dy / k) * 140 * dt;
+        if (circleWalkable(nx, p.y, SHIP_R)) p.x = nx;
+        if (circleWalkable(p.x, ny, SHIP_R)) p.y = ny;
         p.vx += (dx / k) * 600 * dt; p.vy += (dy / k) * 600 * dt;
         if (e.contactCd <= 0) { e.contactCd = 0.7; this.hurtPlayer(e.eDmg * 0.25, { kb: 200, kbx: dx / k, kby: dy / k }); }
       }
@@ -3006,16 +3010,52 @@ export class Game {
       if (e.dist > 3800 && !e.aggro) continue;
       this.updateEnemy(e, dt, dx, dy, e.dist);
     }
+    // Ultra body contact destroys lower rarities without rewards or discovery.
+    for (const ultra of this.enemies) {
+      if (ultra.dead || ultra.tier !== 6) continue;
+      const body = ultra.parts.filter(q => q.alive && (q.kind === "core" || q.kind === "segment" || q.kind === "armor"));
+      for (const other of this.enemies) {
+        if (other.dead || other.tier >= ultra.tier) continue;
+        const dx = other.x - ultra.x, dy = other.y - ultra.y;
+        if (dx * dx + dy * dy > (ultra.radius + other.radius) ** 2) continue;
+        let hit = false;
+        for (const q of body) {
+          const [x, y] = this.partWorld(ultra, q);
+          for (const part of other.parts) {
+            if (!part.alive) continue;
+            const [ox, oy] = this.partWorld(other, part);
+            if ((x - ox) ** 2 + (y - oy) ** 2 <= (q.r + part.r) ** 2) { hit = true; break; }
+          }
+          if (hit) break;
+        }
+        if (hit) { other.dead = true; this.scrubDrops(other); }
+      }
+    }
     // separation
     /* Use the real body sizes here. The old 420u cap let two 1,300u mythical
      * insects sit almost on top of each other, so the centre of the map turned
      * into a pile whose translucent bodies stacked into a white blob. */
-    const n = this.enemies.length;
+    const n = this.enemies.length, cell = 1800;
+    const buckets = new Map<string, number[]>();
+    for (let i = 0; i < n; i++) {
+      const e = this.enemies[i];
+      if (e.dead) continue;
+      const key = `${Math.floor(e.x / cell)},${Math.floor(e.y / cell)}`;
+      const bucket = buckets.get(key);
+      if (bucket) bucket.push(i); else buckets.set(key, [i]);
+    }
     for (let i = 0; i < n; i++) {
       const a = this.enemies[i];
-      if (a.dist > 3400) continue;
-      for (let j = i + 1; j < n; j++) {
+      if (a.dead || a.dist > 3400) continue;
+      const cx = Math.floor(a.x / cell), cy = Math.floor(a.y / cell);
+      const nearby: number[] = [];
+      for (let y = cy - 1; y <= cy + 1; y++) for (let x = cx - 1; x <= cx + 1; x++) {
+        const bucket = buckets.get(`${x},${y}`);
+        if (bucket) for (const j of bucket) if (j > i) nearby.push(j);
+      }
+      for (const j of nearby) {
         const b = this.enemies[j];
+        if (b.dead) continue;
         const dx = b.x - a.x, dy = b.y - a.y;
         const min = (Math.min(a.radius, 900) + Math.min(b.radius, 900)) * 0.8;
         const d2 = dx * dx + dy * dy;
@@ -3023,8 +3063,13 @@ export class Game {
           const d = Math.sqrt(d2);
           const push = ((min - d) / min) * 320 * dt;
           const wa = b.radius / (a.radius + b.radius), wb = 1 - wa;
-          a.x -= (dx / d) * push * wa * 2; a.y -= (dy / d) * push * wa * 2;
-          b.x += (dx / d) * push * wb * 2; b.y += (dy / d) * push * wb * 2;
+          const ar = Math.min(a.radius * 0.2, MAP_CELL * 0.35), br = Math.min(b.radius * 0.2, MAP_CELL * 0.35);
+          const ax = a.x - (dx / d) * push * wa * 2, ay = a.y - (dy / d) * push * wa * 2;
+          const bx = b.x + (dx / d) * push * wb * 2, by = b.y + (dy / d) * push * wb * 2;
+          if (circleWalkable(ax, a.y, ar)) a.x = ax;
+          if (circleWalkable(a.x, ay, ar)) a.y = ay;
+          if (circleWalkable(bx, b.y, br)) b.x = bx;
+          if (circleWalkable(b.x, by, br)) b.y = by;
         }
       }
     }
@@ -4139,19 +4184,22 @@ export class Game {
              * speed, so thrust and inertia cannot resist it - inertial dampers
              * are gone and the pull is not a suggestion */
             const reel = 1700;
-            p.x += (dx / d) * reel * dt;
-            p.y += (dy / d) * reel * dt;
+            const nx = p.x + (dx / d) * reel * dt, ny = p.y + (dy / d) * reel * dt;
+            if (circleWalkable(nx, p.y, SHIP_R)) p.x = nx;
+            if (circleWalkable(p.x, ny, SHIP_R)) p.y = ny;
           }
         }
       }
       maxSp = Math.max(maxSp, 1);
       const oldX = p.x, oldY = p.y;
       const nextX = oldX + p.vx * dt, nextY = oldY + p.vy * dt;
-      if (walkable(nextX, oldY)) p.x = nextX; else p.vx = 0;
-      if (walkable(p.x, nextY)) p.y = nextY; else p.vy = 0;
+      if (circleWalkable(nextX, oldY, SHIP_R)) p.x = nextX; else p.vx = 0;
+      if (circleWalkable(p.x, nextY, SHIP_R)) p.y = nextY; else p.vy = 0;
       /* energy panels are walls with teeth: the wall stops the hull every frame,
        * and contact discharges into it when the shock is off cooldown */
+      const beforeShieldX = p.x, beforeShieldY = p.y;
       if (!this.inSafe()) this.shieldContact(p);
+      if (circleWalkable(beforeShieldX, beforeShieldY, SHIP_R) && !circleWalkable(p.x, p.y, SHIP_R)) { p.x = beforeShieldX; p.y = beforeShieldY; p.vx = p.vy = 0; }
       const [mx, my] = this.mouseWorld();
       const want = Math.atan2(my - p.y, mx - p.x);
       // The sustained Mediator beam is deliberately difficult to steer.

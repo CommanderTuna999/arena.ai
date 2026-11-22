@@ -169,6 +169,22 @@ export function walkable(x: number, y: number): boolean {
   return row >= 0 && row < MAP_GRID.length && col >= 0 && col < MAP_GRID.length && MAP_GRID[row][col] === "1";
 }
 
+/** Exact circle against neighbouring solid map cells. */
+export function circleWalkable(x: number, y: number, radius: number): boolean {
+  const left = Math.floor((x - radius + MAP_RADIUS) / MAP_CELL);
+  const right = Math.floor((x + radius + MAP_RADIUS) / MAP_CELL);
+  const top = Math.floor((y - radius + MAP_RADIUS) / MAP_CELL);
+  const bottom = Math.floor((y + radius + MAP_RADIUS) / MAP_CELL);
+  for (let row = top; row <= bottom; row++) for (let col = left; col <= right; col++) {
+    if (MAP_GRID[row]?.[col] === "1") continue;
+    const x0 = col * MAP_CELL - MAP_RADIUS, y0 = row * MAP_CELL - MAP_RADIUS;
+    const dx = x - Math.max(x0, Math.min(x, x0 + MAP_CELL));
+    const dy = y - Math.max(y0, Math.min(y, y0 + MAP_CELL));
+    if (dx * dx + dy * dy < radius * radius) return false;
+  }
+  return true;
+}
+
 export const ULTRA_GRID = [
   "0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
   "0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
