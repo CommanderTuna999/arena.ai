@@ -6,6 +6,10 @@ import { WebSocketServer, WebSocket } from 'ws';
 const port = Number(process.env.PORT || 10000);
 const allowed = new Set((process.env.ALLOWED_ORIGINS || 'https://wofgue.io,https://www.wofgue.io').split(',').map(s => s.trim()).filter(Boolean));
 const server = http.createServer((req, res) => {
+  if (req.method === 'GET' && req.url === '/') {
+    res.writeHead(200, { 'content-type': 'text/plain; charset=utf-8' });
+    return res.end('Wofgue chat service is running. Play at https://wofgue.io. This service does not yet host multiplayer combat.');
+  }
   if (req.method === 'GET' && req.url === '/health') {
     res.writeHead(200, { 'content-type': 'application/json', 'cache-control': 'no-store' });
     return res.end(JSON.stringify({ ok: true, service: 'chat', multiplayerCombat: false }));

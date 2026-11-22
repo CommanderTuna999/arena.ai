@@ -1,0 +1,11 @@
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { Game } from './src/game/engine';
+import { newSave } from './src/game/data';
+const game = new Game(newSave(), 'test');
+assert.equal(game.mapMode, 0); game.keyDown('KeyM'); assert.equal(game.mapMode, 1);
+game.keyDown('KeyM'); assert.equal(game.mapMode, 2); game.keyDown('KeyM'); assert.equal(game.mapMode, 0);
+const r = readFileSync('src/game/render.ts','utf8');
+const map = r.slice(r.indexOf('function drawMinimap('), r.indexOf('function drawBaseArrow('));
+assert(!map.includes('g.enemies')); assert(map.includes('#58ff77')); assert(map.includes('Math.exp')); assert(map.includes('g.mapMode === 2'));
+console.log('Map mode and marker checks passed');

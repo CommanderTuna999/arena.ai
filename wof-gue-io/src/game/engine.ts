@@ -388,6 +388,8 @@ export class Game {
   w = 800; h = 600; dpr = 1;
   cam = { x: BASE.x, y: BASE.y - 120, z: 1 };
   zoom = 1;
+  mapMode: 0 | 1 | 2 = 0; // full minimap, expanded map, local minimap
+  mapAnimation = { size: 0, x: 0, y: 0, scale: 1, focusX: 0, focusY: 0, last: 0 };
   t = 0;
   rev = 0;
   fps = 60;
@@ -896,6 +898,7 @@ export class Game {
   /* ---------------- input ---------------- */
   keyDown(code: string) {
     this.input.keys.add(code);
+    if (code === "KeyM") this.mapMode = ((this.mapMode + 1) % 3) as 0 | 1 | 2;
     if (code === "KeyT") this.toggleRecall();
     if (code === "KeyB") this.toggleAutoFire();
     const ai = (["KeyZ", "KeyX", "KeyC", "KeyV", "KeyF"] as const).indexOf(code as never);

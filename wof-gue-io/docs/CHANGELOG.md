@@ -1,3 +1,7 @@
+## 0.3. v2.29.0 — Map controls
+
+- Press M to glide between the large map, a focused local minimap and the default minimap. Removed enemy dots and made the player marker a green dot.
+
 ## 0.3. v2.28.1 — Chat controls
 
 - Removed floating damage numbers. Chat opens on a new message or with slash or Enter; collapse it to a button with an unread count.

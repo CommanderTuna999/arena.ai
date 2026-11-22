@@ -2103,36 +2103,40 @@ function terrainMap(): HTMLCanvasElement {
   return minimapTerrain = image;
 }
 function drawMinimap(g: Game, ctx: CanvasRenderingContext2D) {
-  const S = Math.min(170, g.w * 0.28);
-  const cx = g.w - S / 2 - 14, cy = S / 2 + 14;
-  const R = S / 2;
-  const k = R / WORLD_R;
+  const small = Math.min(170, g.w * 0.28, g.h * 0.28);
+  const large = Math.max(small, Math.min(g.w * 0.74, g.h * 0.72, 700));
+  const targetSize = g.mapMode === 1 ? large : small;
+  const targetX = g.mapMode === 1 ? g.w / 2 : g.w - small / 2 - 14;
+  const targetY = g.mapMode === 1 ? g.h / 2 : small / 2 + 14;
+  const targetScale = g.mapMode === 2 ? 4 : 1;
+  const targetFocusX = g.mapMode === 2 ? g.player.x : 0;
+  const targetFocusY = g.mapMode === 2 ? g.player.y : 0;
+  const a = g.mapAnimation, now = performance.now();
+  if (!a.last) { a.size = targetSize; a.x = targetX; a.y = targetY; a.scale = targetScale; a.focusX = targetFocusX; a.focusY = targetFocusY; }
+  const blend = 1 - Math.exp(-Math.min(0.1, (now - (a.last || now)) / 1000) * 10);
+  a.last = now;
+  a.size += (targetSize - a.size) * blend; a.x += (targetX - a.x) * blend; a.y += (targetY - a.y) * blend;
+  a.scale += (targetScale - a.scale) * blend;
+  a.focusX += (targetFocusX - a.focusX) * blend; a.focusY += (targetFocusY - a.focusY) * blend;
+  const S = a.size, cx = a.x, cy = a.y, R = S / 2, k = R * a.scale / WORLD_R;
+  const x = (worldX: number) => cx + (worldX - a.focusX) * k;
+  const y = (worldY: number) => cy + (worldY - a.focusY) * k;
   ctx.save();
   ctx.beginPath(); ctx.rect(cx - R, cy - R, S, S); ctx.clip();
-  ctx.fillStyle = "rgba(4,8,20,0.8)"; ctx.fillRect(cx - R, cy - R, S, S);
+  ctx.fillStyle = "rgba(4,8,20,0.9)"; ctx.fillRect(cx - R, cy - R, S, S);
   ctx.imageSmoothingEnabled = false;
-  ctx.drawImage(terrainMap(), cx - R, cy - R, S, S);
+  ctx.drawImage(terrainMap(), x(-MAP_RADIUS), y(-MAP_RADIUS), 2 * MAP_RADIUS * k, 2 * MAP_RADIUS * k);
   ctx.imageSmoothingEnabled = true;
-  // enemies
-  ctx.fillStyle = "rgba(255,255,255,0.45)";
-  for (const e of g.enemies) ctx.fillRect(cx + e.x * k - 0.8, cy + e.y * k - 0.8, 1.6, 1.6);
-  // base
-  hexPath(ctx, cx + BASE.x * k, cy + BASE.y * k, 4.5, 0);
+  hexPath(ctx, x(BASE.x), y(BASE.y), 4.5, 0);
   ctx.fillStyle = "#4dffd2"; ctx.fill();
-  // view box
   const vw = (g.w / g.cam.z) * k, vh = (g.h / g.cam.z) * k;
   ctx.strokeStyle = "rgba(125,249,255,0.5)";
-  ctx.strokeRect(cx + g.cam.x * k - vw / 2, cy + g.cam.y * k - vh / 2, vw, vh);
-  for (const o of g.others) { ctx.fillStyle = "#ff7ad9"; ctx.beginPath(); ctx.arc(cx + o.x * k, cy + o.y * k, 2.5, 0, TAU); ctx.fill(); }
-  const p = g.player;
-  ctx.save(); ctx.translate(cx + p.x * k, cy + p.y * k);
-  ctx.strokeStyle = "#fff"; ctx.lineWidth = 1.6;
-  ctx.beginPath(); ctx.arc(0, 0, 4.6, 0, TAU); ctx.stroke();
-  ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(0, 0, 1.7, 0, TAU); ctx.fill();
+  ctx.strokeRect(x(g.cam.x) - vw / 2, y(g.cam.y) - vh / 2, vw, vh);
+  for (const o of g.others) { ctx.fillStyle = "#ff7ad9"; ctx.beginPath(); ctx.arc(x(o.x), y(o.y), 2.5, 0, TAU); ctx.fill(); }
+  ctx.fillStyle = "#58ff77"; ctx.beginPath(); ctx.arc(x(g.player.x), y(g.player.y), 3, 0, TAU); ctx.fill();
   ctx.restore();
-  ctx.restore();
-  ctx.strokeStyle = "rgba(125,249,255,0.7)"; ctx.lineWidth = 2;
-  ctx.strokeRect(cx - R, cy - R, S, S);
+  ctx.save(); ctx.strokeStyle = "rgba(125,249,255,0.7)"; ctx.lineWidth = 2;
+  ctx.strokeRect(cx - R, cy - R, S, S); ctx.restore();
 }
 
 function drawBaseArrow(g: Game, ctx: CanvasRenderingContext2D) {
