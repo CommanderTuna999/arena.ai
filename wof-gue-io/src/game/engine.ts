@@ -3437,6 +3437,10 @@ export class Game {
       this.mediatorBeamTime = 0; p.charging = false; p.charge = 0;
     }
     const want = this.input.lmb || this.input.keys.has("Space");
+    // These two chassis fire faster than a render frame. Keep fractional
+    // cooldown carry while held, but never bank shots while idle.
+    const rapid = st.cannonId === "peashooter2" || st.cannonId === "gatler";
+    if (rapid && p.fireCd < 0) p.fireCd = 0;
     p.fireCd -= dt;
     if (this.mediatorBeamTime > 0 && st.charge && !this.inSafe()) {
       const step = Math.min(dt, this.mediatorBeamTime);
@@ -3512,7 +3516,9 @@ export class Game {
         p.charge = Math.max(0, p.charge - dt * 0.5);
       }
     } else if (want && p.fireCd <= 0 && p.jam <= 0 && !this.inSafe()) {
-      p.fireCd = 1 / (st.rate * (p.overT > 0 ? 1.8 : 1));
+      do {
+      const shotInterval = 1 / (st.rate * (p.overT > 0 ? 1.8 : 1));
+      p.fireCd = rapid ? p.fireCd + shotInterval : shotInterval;
       const over = p.overT > 0 ? 2.2 : 1;
       const crit = st.crit > 0 && Math.random() < st.crit;
       /* the gauge feeds the round: a Workhorse at full heat hits for five times
@@ -3524,12 +3530,14 @@ export class Game {
        * barrels. The second barrel buys cooling and reach, not a second round. */
       const mz = st.muzzles.length ? st.muzzles : [{ x: 14, y: 0 }];
       const first = p.muzzle % mz.length;
-      const n = 1;
+      const n = CANNON_BY_ID[st.cannonId]?.pellets ?? 1;
       const spreadMul = 1 + (st.heatSpread - 1) * clamp(p.heat, 0, 1);
       const ca = Math.cos(base), sa = Math.sin(base);
       const at = (i: number) => {
-        const m = mz[(first + i) % mz.length];
-        return { x: p.x + ca * m.x - sa * m.y, y: p.y + sa * m.x + ca * m.y };
+        const index = (first + i) % mz.length;
+        const m = mz[index];
+        const lateral = CANNON_BY_ID[st.cannonId]?.rotary ? Math.sin(this.t * 10 + index * TAU / mz.length) * 5.5 : m.y;
+        return { x: p.x + ca * m.x - sa * lateral, y: p.y + sa * m.x + ca * lateral };
       };
       const m0 = at(0);
       if (st.hitscan) {
@@ -3552,7 +3560,7 @@ export class Game {
       } else {
         for (let i = 0; i < n; i++) {
           /* spread is per round, and a cooking barrel throws wider */
-          const spread = st.spread > 0 ? (Math.random() - 0.5) * st.spread * spreadMul * 2 : 0;
+          const spread = st.spread > 0 ? (n > 1 ? (2 * i / (n - 1) - 1) : (Math.random() - 0.5) * 2) * st.spread * spreadMul : 0;
           const ang = base + spread;
           const m = at(i);
           this.bullets.push({ x: m.x, y: m.y, vx: Math.cos(ang) * st.bulletSpeed + p.vx * 0.3, vy: Math.sin(ang) * st.bulletSpeed + p.vy * 0.3, life: st.bulletRange / st.bulletSpeed, dmg, pierce: st.pierce, hit: [], kind: 0, target: null, crit, elem: "kinetic", boom: st.boom || undefined });
@@ -3576,6 +3584,7 @@ export class Game {
         this.burst(p.x, p.y, "#ffb04d", 10, 5, 220);
       }
       p.vx -= ca * st.kick; p.vy -= sa * st.kick;
+      } while (rapid && p.fireCd <= 1e-9 && p.jam <= 0);
     }
     this.fireWeapons(dt, base);
   }
@@ -4275,7 +4284,7 @@ export class Game {
       const [mx, my] = this.mouseWorld();
       const want = Math.atan2(my - p.y, mx - p.x);
       // The sustained Mediator beam is deliberately difficult to steer.
-      const turnRate = st.charge && this.mediatorBeamTime > 0 && !this.inSafe() ? 1.4 : 14;
+      const turnRate = st.charge && this.mediatorBeamTime > 0 && !this.inSafe() ? 1.4 : (CANNON_BY_ID[st.cannonId]?.turnRate ?? 14);
       p.a += clamp(angDiff(p.a, want), -turnRate * dt, turnRate * dt);
 
       // status

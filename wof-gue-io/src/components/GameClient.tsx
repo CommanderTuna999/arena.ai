@@ -456,10 +456,7 @@ function Hud_({ hud, creditRef, onOpen, onHelp, onAdmin, onSettings, onBestiary,
 
       {hud.nearBase && !hud.dead && (
         <button onClick={onOpen} title="Open base (E)" className="absolute bottom-16 left-1/2 grid h-11 w-11 -translate-x-1/2 animate-pulse place-items-center rounded-full border-2 border-cyan-300 bg-cyan-400/15 text-cyan-100 shadow-[0_0_24px_rgba(77,255,210,0.5)] hover:bg-cyan-400/30">
-          <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.6">
-            <path d="M12 2.5l8 4.6v9.8l-8 4.6-8-4.6V7.1z" />
-            <path d="M12 8.2l4 2.3v4.6l-4 2.3-4-2.3v-4.6z" />
-          </svg>
+          <span className="text-xl font-black">E</span>
         </button>
       )}
       {hud.baseLost && (
@@ -659,6 +656,7 @@ function TrackIcon({ id, hue, className }: { id: CannonTrackId; hue: number; cla
     case "crit": return g(<><path d="M10 2.6l2 4.6 4.9.5-3.7 3.3 1.1 4.8-4.3-2.5-4.3 2.5 1.1-4.8L3.1 7.7l4.9-.5z" fill={c} fillOpacity={0.2} /></>);
     case "critDmg": return g(<><path d="M10 2.6l2 4.6 4.9.5-3.7 3.3 1.1 4.8-4.3-2.5-4.3 2.5 1.1-4.8L3.1 7.7l4.9-.5z" fill={c} fillOpacity={0.2} /><circle cx="10" cy="9.6" r="2" stroke="#fff8cf" /></>);
     case "pen": return g(<><path d="M2 10h8M7 6.6L10.6 10 7 13.4" /><path d="M12.5 3.5v13" stroke={dim} /><path d="M15 10h3.4" /></>);
+    case "spread":
     case "acc": return g(<><circle cx="10" cy="10" r="6" stroke={dim} /><circle cx="10" cy="10" r="2.4" /><path d="M10 1.6v3.4M10 15v3.4M1.6 10h3.4M15 10h3.4" /></>);
     case "speed": return g(<><path d="M3 5.6l5 4.4-5 4.4M9.6 5.6l5 4.4-5 4.4M16.2 5.6l2.2 4.4-2.2 4.4" stroke={dim} /><path d="M3 5.6l5 4.4-5 4.4" /></>);
     case "barrels": return g(<><rect x="3" y="5.4" width="14" height="3" rx="1" /><rect x="3" y="11.4" width="14" height="3" rx="1" /><path d="M17 6.9h1.6M17 12.9h1.6" /></>);
