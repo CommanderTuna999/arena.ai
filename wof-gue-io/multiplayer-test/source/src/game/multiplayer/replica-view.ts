@@ -21,7 +21,7 @@ export class ReplicaView {
     this.game.cam.z = 1 / VISION_MUL;
   }
   resize(w: number, h: number, dpr: number) { this.game.resize(w,h,dpr); }
-  apply(world: WorldSnapshot, pilots: Pilot[], enemies: EnemyView[], pilotId: string, renderTime = world.time): boolean {
+  apply(world: WorldSnapshot, pilots: Pilot[], enemies: EnemyView[], pilotId: string, renderTime = world.time, projectiles?: { bullets: {id:string|number;x:number;y:number}[]; enemyProjectiles: {id:string|number;x:number;y:number}[] }): boolean {
     const me=pilots.find(p=>p.id===pilotId);if(!me)return false;
     const g=this.game;
     g.t=renderTime;
@@ -51,6 +51,18 @@ export class ReplicaView {
     for (const e of g.enemies) {
       const pos=positions.get(e.id); if (!pos) continue;
       e.x=pos.x; e.y=pos.y; e.a=pos.angle; e.dist=Math.hypot(e.x-me.x,e.y-me.y);
+    }
+    if (projectiles) {
+      const bullets = new Map(projectiles.bullets.map(b=>[b.id,b]));
+      const shots = new Map(projectiles.enemyProjectiles.map(p=>[p.id,p]));
+      for (let i=0;i<world.bullets.length;i++) {
+        const position=bullets.get(world.bullets[i].id);
+        if (position && g.bullets[i]) {g.bullets[i].x=position.x;g.bullets[i].y=position.y;}
+      }
+      for (let i=0;i<world.enemyProjectiles.length;i++) {
+        const position=shots.get(world.enemyProjectiles[i].id);
+        if (position && g.eprojs[i]) {g.eprojs[i].x=position.x;g.eprojs[i].y=position.y;}
+      }
     }
     return true;
   }

@@ -23,6 +23,8 @@ export class ExperimentalWorldClient {
   private geometry: Geometry = new Map();
   private readonly pilotFrames: SnapshotBuffer<Body>;
   private readonly enemyFrames: SnapshotBuffer<Body>;
+  private readonly bulletFrames = new SnapshotBuffer<Body>(32,true);
+  private readonly projectileFrames = new SnapshotBuffer<Body>(32,true);
   constructor(private readonly factory: SocketFactory = url => new WebSocket(url), private readonly timeoutMs = 5000, private readonly demoOrigin?: string, private readonly compactHistory = false) {
     this.pilotFrames = new SnapshotBuffer<Body>(32, compactHistory);
     this.enemyFrames = new SnapshotBuffer<Body>(32, compactHistory);
@@ -63,9 +65,13 @@ export class ExperimentalWorldClient {
       const compact = (b: Body): Body => ({id:b.id, x:b.x, y:b.y, angle:b.angle});
       const pilots={sequence:data.sequence,time:world.time,bodies:this.compactHistory ? world.pilots.map(compact) : world.pilots};
       const enemies={sequence:data.sequence,time:world.time,bodies:this.compactHistory ? world.enemies.map(compact) : world.enemies};
-      if (!SnapshotBuffer.valid(pilots) || !SnapshotBuffer.valid(enemies)) return;
+      const projectileBody = (v: any): Body => ({id:v?.id,x:v?.x,y:v?.y,angle:0});
+      if (!Array.isArray(world.bullets) || !Array.isArray(world.enemyProjectiles)) return;
+      const bullets={sequence:data.sequence,time:world.time,bodies:world.bullets.map(projectileBody)};
+      const shots={sequence:data.sequence,time:world.time,bodies:world.enemyProjectiles.map(projectileBody)};
+      if (!SnapshotBuffer.valid(pilots) || !SnapshotBuffer.valid(enemies) || !SnapshotBuffer.valid(bullets) || !SnapshotBuffer.valid(shots)) return;
       if (this.latestView && world.time <= this.latestView.time) return;
-      if (!this.pilotFrames.push(pilots) || !this.enemyFrames.push(enemies)) { this.disconnect(); return; }
+      if (!this.pilotFrames.push(pilots) || !this.enemyFrames.push(enemies) || !this.bulletFrames.push(bullets) || !this.projectileFrames.push(shots)) { this.disconnect(); return; }
       if (unpacked) this.geometry = unpacked.cache;
       this.lastSequence=data.sequence; this.latestView=this.compactHistory ? world : structuredClone(world);
     };
@@ -87,7 +93,7 @@ export class ExperimentalWorldClient {
    * per-frame copy of megabytes of static enemy geometry. */
   renderSnapshot(): Readonly<View> | null { return this.latestView; }
   snapshot(): View | null { return this.latestView ? structuredClone(this.latestView) : null; }
-  sample(time: number): { pilots: Body[]; enemies: Body[] } { return { pilots:this.pilotFrames.sample(time), enemies:this.enemyFrames.sample(time) }; }
+  sample(time: number): { pilots: Body[]; enemies: Body[]; bullets: Body[]; enemyProjectiles: Body[] } { return { pilots:this.pilotFrames.sample(time), enemies:this.enemyFrames.sample(time), bullets:this.bulletFrames.sample(time), enemyProjectiles:this.projectileFrames.sample(time) }; }
   disconnect(): void {
     if (this.timer) clearTimeout(this.timer); this.timer=null;
     const socket=this.socket; this.socket=null; this.state='closed';

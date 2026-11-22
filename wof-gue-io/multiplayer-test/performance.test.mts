@@ -56,3 +56,15 @@ const variable=new PilotTransport(roomMock,65536,3500);assert(variable.attach(pa
 assert.equal(sharedRadius,2500);assert.equal(JSON.parse(receivedA.at(-1)!).world.enemies.length,1);assert.equal(JSON.parse(receivedB.at(-1)!).world.enemies.length,2);
 variable.detach(pb);variable.advance(1034);assert.equal(sharedRadius,500,'large disconnected view does not inflate remaining views');
 console.log('Main-game default zoom and bounded per-viewport interest coverage verified');
+// Projectiles have stable server identities; only their visual positions are
+// interpolated, and the authoritative snapshot remains unchanged.
+const bullet:any={x:p.player.x+100,y:p.player.y,vx:500,vy:0,kind:0,life:1,dmg:1,pierce:0,hit:[],target:null,crit:false};
+const shot:any={x:p.player.x+200,y:p.player.y,vx:100,vy:0,type:'bolt',r:4,hue:0,speed:100,tether:false,src:null};
+world.bullets=[bullet];world.eprojs=[shot];world.t=10;const shotA=h.snapshot();bullet.x+=100;shot.x+=40;world.t=11;const shotB=h.snapshot();
+assert.equal(shotA.bullets[0].id,shotB.bullets[0].id);assert.equal(shotA.enemyProjectiles[0].id,shotB.enemyProjectiles[0].id);assert.notEqual(shotA.bullets[0].id,shotA.enemyProjectiles[0].id);
+let projectileWire:any={readyState:1,send(){},close(){},onopen:null,onmessage:null,onerror:null,onclose:null};const projectileClient=new ExperimentalWorldClient(()=>projectileWire,5000,'https://example.com',true);projectileClient.connect('wss://example.com/world','ticket');projectileWire.onopen();projectileWire.onmessage({data:JSON.stringify({type:'welcome',pilotId:'a'})});
+const sendFrame=(sequence:number,world:any)=>projectileWire.onmessage({data:JSON.stringify({type:'world-snapshot',sequence,world})});sendFrame(1,shotA);sendFrame(2,shotB);const inBetween=projectileClient.sample(10.5);assert.equal(inBetween.bullets[0].x,bullet.x-50);assert.equal(inBetween.enemyProjectiles[0].x,shot.x-20);
+const originalSnapshot=JSON.stringify(shotB);const smoothed=new ReplicaView();assert(smoothed.apply(shotB,shotB.pilots,shotB.enemies,'a',10.5,inBetween));assert.equal(smoothed.game.bullets[0].x,bullet.x-50);assert.equal(smoothed.game.eprojs[0].x,shot.x-20);assert.equal(JSON.stringify(shotB),originalSnapshot);
+const malformed=structuredClone(shotB);malformed.time=12;malformed.bullets.push({...malformed.bullets[0]});sendFrame(3,malformed);assert.equal(projectileClient.snapshot()!.time,11);
+world.bullets=[];world.eprojs=[];world.t=12;sendFrame(3,h.snapshot());assert.equal(projectileClient.sample(12).bullets.length,0);world.bullets=[{...bullet}];world.t=13;assert.notEqual(h.snapshot().bullets[0].id,shotA.bullets[0].id);projectileClient.disconnect();
+console.log('Multiplayer test projectile motion interpolates without changing combat state');

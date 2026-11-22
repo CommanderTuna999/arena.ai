@@ -13,6 +13,16 @@ import type { RewardWriteQueue } from '../../server/multiplayer-reward-queue';
 export class CombatHarness {
   readonly roster: PilotRoster;
   private readonly dropChances = new Map<string, number>();
+  private readonly projectileIds = new WeakMap<object, number>();
+  private nextProjectileId = 1;
+  private projectileId(projectile: object): number {
+    let id=this.projectileIds.get(projectile);
+    if (id === undefined) {
+      if (!Number.isSafeInteger(this.nextProjectileId)) throw new Error('Projectile IDs exhausted');
+      id=this.nextProjectileId++; this.projectileIds.set(projectile,id);
+    }
+    return id;
+  }
   constructor(readonly world: Game, capacity = 64, private readonly populate = false, readonly privateLoot = new PrivateLootVault(), private readonly rewards?: RewardWriteQueue, private readonly discardRewards = false) {
     this.roster = new PilotRoster(world, capacity);
     if (!discardRewards) world.enableExperimentalDamageTracking();
@@ -57,8 +67,8 @@ export class CombatHarness {
     return {
       time: this.world.t,
       pilots,
-      bullets: this.world.bullets.filter(b => near(b.x,b.y)).map(b => ({ x:b.x, y:b.y, vx:b.vx, vy:b.vy, kind:b.kind, elem:b.elem, crit:b.crit })),
-      enemyProjectiles: this.world.eprojs.filter(p => near(p.x,p.y,p.r)).map(p => ({ x:p.x, y:p.y, vx:p.vx, vy:p.vy, type:p.type, radius:p.r, hue:p.hue, speed:p.speed, tether:p.tether, srcId:p.src?.id })),
+      bullets: this.world.bullets.filter(b => near(b.x,b.y)).map(b => ({ id:this.projectileId(b), x:b.x, y:b.y, vx:b.vx, vy:b.vy, kind:b.kind, elem:b.elem, crit:b.crit })),
+      enemyProjectiles: this.world.eprojs.filter(p => near(p.x,p.y,p.r)).map(p => ({ id:this.projectileId(p), x:p.x, y:p.y, vx:p.vx, vy:p.vy, type:p.type, radius:p.r, hue:p.hue, speed:p.speed, tether:p.tether, srcId:p.src?.id })),
       puddles: this.world.puddles.filter(p => near(p.x,p.y,p.r)).map(p => ({ x:p.x, y:p.y, radius:p.r, arm:p.arm, life:p.life, max:p.max, hue:p.hue, web:p.web })),
       rings: this.world.rings.filter(r => near(r.x,r.y,r.r)).map(r => ({ x:r.x, y:r.y, radius:r.r, max:r.max, color:r.color, hurts:r.hurts })),
       enemies: this.world.enemies.filter(e => !e.dead && near(e.x,e.y,e.radius)).map(e => ({

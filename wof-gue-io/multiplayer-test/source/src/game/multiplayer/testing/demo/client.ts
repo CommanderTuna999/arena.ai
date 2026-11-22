@@ -34,7 +34,7 @@ function draw(){
  const pilots=view.pilots.map((p:any)=>({...p,...pilotPositions.get(p.id) as any}));
  const me=pilots.find((p:any)=>p.id===shown.pilotId);if(!me)return;
  if(client===shown && client.state==='online'){attempts=0;status.textContent=`${sampled.pilots.length} pilot${sampled.pilots.length===1?'':'s'} nearby · ${sampled.enemies.length} enemies · ${fps || "…"} FPS · updates ${updateGap || "…"} ms${innerWidth>MAX_VIEW_DIMENSION||innerHeight>MAX_VIEW_DIMENSION?" · viewport exceeds demo limit":""}`;}
- if(replica.apply(view,pilots,sampled.enemies,shown.pilotId,renderTime)) render(replica.game,ctx);
+ if(replica.apply(view,pilots,sampled.enemies,shown.pilotId,renderTime,sampled)) render(replica.game,ctx);
 }
 function scheduleReconnect(){
  if(stopped || connecting || retryTimer)return;

@@ -1,3 +1,7 @@
+## 0.3. v2.29.22 — Multiplayer test smoothing
+
+- Smoothed projectile motion in the multiplayer test.
+
 ## 0.3. v2.29.21 — Respawn timer
 
 - The respawn countdown catches up when returning to a background tab.

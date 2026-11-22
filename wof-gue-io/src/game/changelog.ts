@@ -8,7 +8,7 @@
  *   CHANGELOG and mirror the details in docs/CHANGELOG.md.
  */
 
-export const VERSION = "2.29.21";
+export const VERSION = "2.29.22";
 
 export interface ChangeEntry {
   version: string;
@@ -19,6 +19,7 @@ export interface ChangeEntry {
 }
 
 export const CHANGELOG: ChangeEntry[] = [
+  { version: "2.29.22", date: "23 Nov 2026", title: "Multiplayer test smoothing", points: ["Smoothed projectile motion in the multiplayer test."] },
   { version: "2.29.21", date: "23 Nov 2026", title: "Respawn timer", points: ["The respawn countdown catches up when returning to a background tab."] },
   { version: "2.29.20", date: "23 Nov 2026", title: "Multiplayer test vision", points: ["Matched the multiplayer test’s default view to the main game and reduced off-screen updates."] },
   { version: "2.29.19", date: "23 Nov 2026", title: "Harpoons and multiplayer test", points: ["Harpoons prioritise the component hovered at launch.", "Improved multiplayer test playback and connection diagnostics."] },
