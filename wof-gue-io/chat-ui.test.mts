@@ -53,6 +53,8 @@ try {
  fireEvent.keyDown(window,{key:'/',code:'Slash'}); await act(async()=>{await new Promise(r=>setTimeout(r,5));});
  const reopened=screen.getByRole('textbox',{name:'Chat message'});fireEvent.change(reopened,{target:{value:'Enter sends and closes'}});fireEvent.keyDown(reopened,{key:'Enter',code:'Enter'});assert(screen.getByRole('button',{name:'Open chat'}));
  fireEvent.click(screen.getByRole('button',{name:'Open chat'}));
+ fireEvent.keyDown(window,{key:'Enter',code:'Enter'}); assert(screen.getByRole('button',{name:'Open chat'}),'Enter also closes expanded chat when not typing');
+ fireEvent.click(screen.getByRole('button',{name:'Open chat'}));
  fireEvent.click(screen.getByRole('button',{name:'Collapse chat'}));
  await act(async()=>ws.message({type:'message',message:{id:'server-2',name:'Other',text:'hello',time:2}}));
  assert(screen.getByRole('button',{name:'Open chat, 1 unread'}),'collapsed chat stays collapsed');
