@@ -49,10 +49,12 @@ export default function Chat({ game, notices }: { game: Game; notices: Toast[] }
   useEffect(() => { end.current?.scrollIntoView({ block: 'nearest' }); }, [messages]);
   useEffect(() => {
     if (!url) return;
-    let closed = false, timer: ReturnType<typeof setTimeout> | undefined;
+    let closed = false, attempted = false, timer: ReturnType<typeof setTimeout> | undefined;
     const connect = () => {
       if (closed) return;
-      setStatus('connecting');
+      // Keep OFFLINE visible between retries instead of flashing CONNECTING.
+      if (!attempted) setStatus('connecting');
+      attempted = true;
       let ws: WebSocket;
       try { ws = new WebSocket(url); } catch { setStatus('offline'); return; }
       socket.current = ws;
@@ -78,7 +80,7 @@ export default function Chat({ game, notices }: { game: Game; notices: Toast[] }
   };
   if (!expanded) return <button type="button" onClick={() => open(true)} aria-label={`Open chat${unread ? `, ${unread} unread` : ''}`} className="absolute bottom-4 left-4 z-[70] rounded border border-cyan-200/30 bg-[#050e16] px-3 py-2 text-xs font-bold text-cyan-200">CHAT{unread > 0 && <span className="ml-2 rounded-full bg-cyan-300 px-1.5 text-black">{unread}</span>}</button>;
   return <section className="absolute bottom-4 left-4 z-[70] w-[min(22rem,85vw)] rounded border border-cyan-200/30 bg-[#050e16]/95 p-2 text-xs shadow-lg" aria-label="Chat">
-    <div className="mb-1 flex justify-between text-[10px] font-bold tracking-widest text-cyan-200/70"><span>CHAT</span><span className="flex items-center gap-2"><span>{status === 'online' ? 'ONLINE' : status === 'connecting' ? 'CONNECTING' : 'OFFLINE'}</span><button type="button" aria-label="Collapse chat" onClick={() => { manuallyCollapsed.current = true; expandedRef.current = false; setExpanded(false); }} className="rounded border border-white/30 px-1 text-white">−</button></span></div>
+    <div className="mb-1 flex justify-between text-[10px] font-bold tracking-widest text-cyan-200/70"><span>CHAT</span><span className="flex items-center gap-2"><span title={status === 'offline' ? 'Connection failed; retrying. Check the website address and network.' : undefined}>{status === 'online' ? 'ONLINE' : status === 'connecting' ? 'CONNECTING' : url ? 'OFFLINE · RETRYING' : 'OFFLINE · NOT CONFIGURED'}</span><button type="button" aria-label="Collapse chat" onClick={() => { manuallyCollapsed.current = true; expandedRef.current = false; setExpanded(false); }} className="rounded border border-white/30 px-1 text-white">−</button></span></div>
     <div aria-live="polite" className="h-24 overflow-y-auto break-words text-white/80">
       {messages.map(m => <div key={m.id}><span className={m.local ? 'font-bold text-yellow-200' : 'font-bold text-cyan-200'}>{m.name}: </span>{m.text}</div>)}
       <div ref={end} />

@@ -1,3 +1,7 @@
+## 0.3. v2.29.5 — Chat connection diagnostics
+
+- Chat shows a stable retry status; the chat service accepts known project website aliases and reports rejected origins.
+
 ## 0.3. v2.29.4 — Mediator charge and reload
 
 - Mediator needs at least two seconds of continuous charge before firing; reload starts after the beam ends.

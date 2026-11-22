@@ -4,7 +4,10 @@ import { WebSocketServer, WebSocket } from 'ws';
 
 // This service currently hosts chat only. It does not simulate or synchronize combat.
 const port = Number(process.env.PORT || 10000);
-const allowed = new Set((process.env.ALLOWED_ORIGINS || 'https://wofgue.io,https://www.wofgue.io').split(',').map(s => s.trim()).filter(Boolean));
+// Explicit site aliases only: never permit arbitrary *.vercel.app origins.
+// ALLOWED_ORIGINS, when set, deliberately replaces the defaults.
+const defaultOrigins = 'https://wofgue.io,https://www.wofgue.io,https://wof-gue-io.vercel.app,https://wofgueio-overlux.vercel.app';
+const allowed = new Set((process.env.ALLOWED_ORIGINS || defaultOrigins).split(',').map(s => s.trim()).filter(Boolean));
 const server = http.createServer((req, res) => {
   if (req.method === 'GET' && req.url === '/') {
     res.writeHead(200, { 'content-type': 'text/plain; charset=utf-8' });
@@ -12,7 +15,7 @@ const server = http.createServer((req, res) => {
   }
   if (req.method === 'GET' && req.url === '/health') {
     res.writeHead(200, { 'content-type': 'application/json', 'cache-control': 'no-store' });
-    return res.end(JSON.stringify({ ok: true, service: 'chat', multiplayerCombat: false }));
+    return res.end(JSON.stringify({ ok: true, service: 'chat', multiplayerCombat: false, allowedOrigins: [...allowed] }));
   }
   res.writeHead(404); res.end();
 });
@@ -24,8 +27,11 @@ const broadcast = (data) => {
   for (const peer of wss.clients) if (peer.readyState === WebSocket.OPEN && peer.bufferedAmount < 65536) peer.send(encoded);
 };
 server.on('upgrade', (req, socket, head) => {
-  if (req.url !== '/chat' || !allowed.has(req.headers.origin || '') || wss.clients.size >= 200) {
-    socket.destroy(); return;
+  const origin = req.headers.origin || '';
+  const status = req.url !== '/chat' ? '404 Not Found' : !allowed.has(origin) ? '403 Forbidden' : wss.clients.size >= 200 ? '503 Service Unavailable' : null;
+  if (status) {
+    console.warn(`Chat upgrade rejected: ${status}; origin=${JSON.stringify(origin)}`);
+    socket.end(`HTTP/1.1 ${status}\r\nConnection: close\r\nContent-Length: 0\r\n\r\n`); return;
   }
   wss.handleUpgrade(req, socket, head, ws => wss.emit('connection', ws, req));
 });
