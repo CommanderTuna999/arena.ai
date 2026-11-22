@@ -397,6 +397,7 @@ export class Game {
   bullets: Bullet[] = [];
   eprojs: EProj[] = [];
   particles: Particle[] = [];
+  damageNumbers: { x: number; y: number; amount: number; kind: string; crit: boolean; born: number; last: number }[] = [];
   /** recycled particle records; avoids allocating thousands of short-lived objects */
   private pPool: Particle[] = [];
   puddles: Puddle[] = [];
@@ -1371,8 +1372,17 @@ export class Game {
     return this.shieldInfoAt(e, x, y)?.part ?? null;
   }
 
+  private damageNumber(x: number, y: number, amount: number, kind: string, crit = false) {
+    if (!Number.isFinite(amount) || amount <= 0) return;
+    // Group rapid ticks to stay readable and avoid a per-frame text flood.
+    const prior = this.damageNumbers.find(n => n.kind === kind && n.crit === crit && this.t - n.last < 0.16 && this.t - n.born < 0.35 && (n.x - x) ** 2 + (n.y - y) ** 2 < 10000);
+    if (prior) { prior.amount += amount; prior.last = this.t; return; }
+    if (this.damageNumbers.length >= 80) this.damageNumbers.shift();
+    this.damageNumbers.push({ x, y, amount, kind, crit, born: this.t, last: this.t });
+  }
+
   /** plating takes the hit instead of the body. Returns true if it absorbed it. */
-  private shellHit(e: Enemy, dmg: number, src: DmgSrc, fromBase = false, hx?: number, hy?: number) {
+  private shellHit(e: Enemy, dmg: number, src: DmgSrc, fromBase = false, hx?: number, hy?: number, crit = false) {
     const layer = e.shells[e.shells.length - 1];
     if (!layer) return false;
     /* Sparks at the point of contact: without them a hit on thick plating looks
@@ -1388,6 +1398,7 @@ export class Game {
     /* Plate Breaker buys extra bite against the slabs, not just the armour parts */
     const dealt = dmg * (SHELL_TAKE[src] ?? 0.3);
     const before = layer.hp;
+    this.damageNumber(hx ?? e.x, hy ?? e.y, Math.min(dealt, Math.max(0, before)), src, crit);
     this.trackDamage(e, Math.min(dealt, Math.max(0, before)), fromBase);
     layer.hp -= dealt;
     e.shellHit = 0.12;
@@ -1693,8 +1704,10 @@ export class Game {
   private baseMajority(e: Enemy) {
     return e.baseDmg > 0 && e.baseDmg * 2 > e.dmgTaken;
   }
-  damagePart(e: Enemy, p: Part, dmg: number, wx: number, wy: number, src: DmgSrc = "kinetic", fromBase = false) {
-    void src;
+  damagePart(e: Enemy, p: Part, dmg: number, wx: number, wy: number, src: DmgSrc = "kinetic", fromBase = false, crit = false) {
+    const displayDamage = Math.min(dmg, Math.max(0, p.hp) + (e.buffT > 0 ? Math.max(0, e.buffHp) : 0));
+    const [hitX, hitY] = (wx !== 0 || wy !== 0) ? [wx, wy] : this.partWorld(e, p);
+    this.damageNumber(hitX, hitY, displayDamage, src, crit);
     /* the moth's heal-shield bubble absorbs incoming damage while it is up, so
      * the body underneath takes the remainder (or nothing, while it holds) */
     if (e.buffT > 0 && e.buffHp > 0) {
@@ -2063,6 +2076,7 @@ export class Game {
     }
     let d = dmg * (1 - st.armor) * (1 - st.reactive);
     if (st.kinetic > 0 && p.shield > 0 && !o.energy) d *= 1 - st.kinetic;
+    this.damageNumber(p.x, p.y - 30, Math.min(d, p.hp + p.shield + p.barrier), o.dot ? "dot" : o.energy ? "incomingEnergy" : "incoming");
     p.hitT = 0; p.shieldT = st.shieldDelay;
     if (p.barrier > 0) { const a = Math.min(p.barrier, d); p.barrier -= a; d -= a; }
     const shieldBefore = p.shield;
@@ -2756,7 +2770,7 @@ export class Game {
       e.dotT -= dt;
       const alive = e.parts.filter((q) => q.alive);
       const q = alive.length ? alive[Math.floor(Math.random() * alive.length)] : null;
-      if (q) this.damagePart(e, q, e.dot * dt, 0, 0);
+      if (q) this.damagePart(e, q, e.dot * dt, 0, 0, "dot");
       if (e.dotT <= 0) e.dot = 0;
     }
     const safe = this.inSafe() || p.dead;
@@ -3099,7 +3113,7 @@ export class Game {
         this.plateAt(e, b.x - b.vx / 120, b.y - b.vy / 120) ||
         this.plateAt(e, b.x - b.vx / 60, b.y - b.vy / 60)
       )) {
-        this.shellHit(e, b.dmg, b.kind === 3 ? "explosive" : "kinetic", false, b.x, b.y);
+        this.shellHit(e, b.dmg, b.elem === "energy" || b.elem === "thermal" ? "laser" : b.elem === "shock" ? "shock" : b.kind === 1 ? "missile" : b.kind === 3 ? "explosive" : "kinetic", false, b.x, b.y, b.crit);
         return true;
       }
       /* the panels are thin, so sample the round's path like the plating does */
@@ -3131,7 +3145,7 @@ export class Game {
       let dmg = b.dmg * (1 + e.melt);
       if (b.dot) { e.dot = Math.max(e.dot, b.dot); e.dotT = Math.max(e.dotT, 2.5); }
       if (b.melt) e.melt = Math.min(0.9, e.melt + b.melt);
-      this.damagePart(e, p, dmg, b.x, b.y);
+      this.damagePart(e, p, dmg, b.x, b.y, b.elem === "energy" || b.elem === "thermal" ? "laser" : b.elem === "shock" ? "shock" : b.elem === "corrosive" ? "dot" : b.kind === 1 ? "missile" : b.kind === 3 ? "explosive" : "kinetic", false, b.crit);
       if (b.boom) {
         /* "explodes slightly": a small charge that catches whatever is packed
          * around the impact point, never a fireball */
@@ -3260,7 +3274,7 @@ export class Game {
     }
     return best;
   }
-  private beam(x: number, y: number, ang: number, len: number, dmg: number, pierce: number, bypass = false, src: DmgSrc = "laser", color = "#baffff", width = 1, armorMul = 1) {
+  private beam(x: number, y: number, ang: number, len: number, dmg: number, pierce: number, bypass = false, src: DmgSrc = "laser", color = "#baffff", width = 1, armorMul = 1, crit = false) {
     const st = this.stats;
     const hits = new Set<number>();
     const cos = Math.cos(ang), sin = Math.sin(ang);
@@ -3274,7 +3288,7 @@ export class Game {
         const reach = Math.max(e.radius, e.shieldReach);
         if (dx * dx + dy * dy > (reach + 18 * width) * (reach + 18 * width)) continue;
         if (e.shells.length && (bx - e.x) * (bx - e.x) + (by - e.y) * (by - e.y) < e.shellR * e.shellR && this.plateAt(e, bx, by)) {
-          this.shellHit(e, dmg * armorMul, src, false, bx, by);
+          this.shellHit(e, dmg * armorMul, src, false, bx, by, crit);
           endLen = d;
           break outer;
         }
@@ -3304,7 +3318,7 @@ export class Game {
         if (hits.has(key)) continue;
         hits.add(key);
         let dm = dmg * (1 + e.melt);
-        this.damagePart(e, p, dm * (p.kind === "armor" ? armorMul : 1), bx, by, src);
+        this.damagePart(e, p, dm * (p.kind === "armor" ? armorMul : 1), bx, by, src, false, crit);
         pierced++;
         if (pierced > pierce) { endLen = d; break outer; }
       }
@@ -3364,8 +3378,10 @@ export class Game {
    *  for guns that draw a line instead of throwing a slug. */
   fencerCharge = 0;
   private fencerDamage = 0;
+  private fencerCrit = false;
   private mediatorBeamTime = 0;
   private mediatorBeamDamage = 0;
+  private mediatorCrit = false;
   private mediatorSparkClock = 0;
   private firePlayer(dt: number) {
     const p = this.player, st = this.stats;
@@ -3380,7 +3396,7 @@ export class Game {
       const m = st.muzzles[0] ?? { x: 14, y: 0 };
       const x = p.x + Math.cos(p.a) * m.x - Math.sin(p.a) * m.y;
       const y = p.y + Math.sin(p.a) * m.x + Math.cos(p.a) * m.y;
-      this.beam(x, y, p.a, st.bulletRange, this.mediatorBeamDamage * step, st.pierce, false, "laser", "#e9d5ff", st.beamWidth);
+      this.beam(x, y, p.a, st.bulletRange, this.mediatorBeamDamage * step, st.pierce, false, "laser", "#e9d5ff", st.beamWidth, 1, this.mediatorCrit);
       // Violet shards and pale sparks peel off the muzzle throughout the beam.
       // A time accumulator keeps the effect consistent at different frame rates.
       this.mediatorSparkClock += step;
@@ -3408,7 +3424,7 @@ export class Game {
         const m = st.muzzles[0] ?? { x: 14, y: 0 };
         const x = p.x + Math.cos(base) * m.x - Math.sin(base) * m.y;
         const y = p.y + Math.sin(base) * m.x + Math.cos(base) * m.y;
-        this.beam(x, y, base, st.bulletRange, this.fencerDamage, st.pierce + 2, false, "laser", "#c4a6ff");
+        this.beam(x, y, base, st.bulletRange, this.fencerDamage, st.pierce + 2, false, "laser", "#c4a6ff", 1, 1, this.fencerCrit);
         this.burst(x, y, "#c4a6ff", 20, 8, 480); this.ringFx(x, y, 90, "#c4a6ff", 600);
         this.shake = Math.max(this.shake, 12); p.recoil = 1; p.muzzleFlash = 1;
         p.vx -= Math.cos(base) * 200; p.vy -= Math.sin(base) * 200;
@@ -3430,6 +3446,7 @@ export class Game {
         const dmg = st.dmg * (0.35 + 0.65 * p.charge) * st.chargeDmg * this.dmgMul() * (crit ? st.critMul : 1);
         const col = "#e9d5ff";
         this.mediatorBeamDamage = dmg;
+        this.mediatorCrit = crit;
         this.mediatorBeamTime = 3;
         this.mediatorSparkClock = 0;
         this.burst(m.x, m.y, col, 18, 7, 420);
@@ -3471,11 +3488,11 @@ export class Game {
         const skewer2 = st.cannonId === "skewer2";
         let chargeShot = false;
         if (fencer) { p.fenceShots++; chargeShot = p.fenceShots % 5 === 0; }
-        if (chargeShot) { this.fencerCharge = 0.4; this.fencerDamage = dmg * 12.5; return; }
+        if (chargeShot) { this.fencerCharge = 0.4; this.fencerDamage = dmg * 12.5; this.fencerCrit = crit; return; }
         const energyShot = skewer2 && Math.random() < st.energyChance;
         const dShot = chargeShot ? dmg * 12.5 : dmg;
         const col = (energyShot || chargeShot) ? "#c4a6ff" : crit ? "#fff3b0" : "#e6fbff";
-        this.beam(m0.x, m0.y, base, st.bulletRange, dShot, chargeShot ? st.pierce + 2 : st.pierce, energyShot, energyShot ? "laser" : "kinetic", col, 1, skewer2 ? st.armorDmg : 1);
+        this.beam(m0.x, m0.y, base, st.bulletRange, dShot, chargeShot ? st.pierce + 2 : st.pierce, energyShot, energyShot ? "laser" : "kinetic", col, 1, skewer2 ? st.armorDmg : 1, crit);
         this.burst(m0.x, m0.y, col, chargeShot ? 20 : crit ? 12 : 7, chargeShot ? 8 : 5.5, chargeShot ? 480 : 340);
         this.ringFx(m0.x, m0.y, chargeShot ? 90 : crit ? 60 : 40, col, chargeShot ? 600 : 420);
         this.shake = Math.max(this.shake, chargeShot ? 12 : crit ? 6 : 3.5);
@@ -4148,6 +4165,7 @@ export class Game {
     if (this.paused) { this.blur(); return; }
     const dt = Math.min(dtRaw, 0.05);
     this.t += dt;
+    this.damageNumbers = this.damageNumbers.filter(n => this.t - n.born < 1.1);
     if (this.discovery) { this.discovery.t -= dt; if (this.discovery.t <= 0) this.discovery = null; }
     if (this.cutscene) { this.cutscene.t -= dt; if (this.cutscene.t <= 0) this.cutscene = null; }
     this.fpsAcc += dtRaw; this.fpsN++;

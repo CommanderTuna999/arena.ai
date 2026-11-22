@@ -1,6 +1,6 @@
-import { MAP_GRID, MAP_CELL, MAP_RADIUS, isUltraZone } from "./world";
+import { MAP_GRID, MAP_CELL, MAP_RADIUS } from "./world";
 import { TAU, clamp, fmtNum } from "./math";
-import { BASE, CANNON_BY_ID, CANNONS, CAT_NAME, KIND_CAT, RARITIES, SHIP_R, W_SLOTS, WEAPON_RANGE, WEAPON_TINT, WORLD_R, ZONE_EDGES, ULTRA_ZONE, zoneAt } from "./data";
+import { BASE, CANNON_BY_ID, CANNONS, CAT_NAME, KIND_CAT, RARITIES, SHIP_R, W_SLOTS, WEAPON_RANGE, WEAPON_TINT, WORLD_R } from "./data";
 import { N_ROPE, legHealthy, plateGrow, type Enemy, type Game, type LComp } from "./engine";
 
 function bend(e: Enemy, p: { seg: number }) {
@@ -68,14 +68,6 @@ export function render(g: Game, ctx: CanvasRenderingContext2D) {
   for (let y = Math.floor(vy0 / 500) * 500; y < vy1; y += 500) { ctx.moveTo(vx0, y); ctx.lineTo(vx1, y); }
   ctx.stroke();
 
-  /* ---- zone rings & world edge ---- */
-  ctx.setLineDash([40 / z, 40 / z]);
-  ctx.lineWidth = 3 / z;
-  ZONE_EDGES.forEach((r, i) => {
-    ctx.strokeStyle = RARITIES[i + 1].color + "40";
-    ctx.beginPath(); ctx.arc(BASE.x, BASE.y, r, 0, TAU); ctx.stroke();
-  });
-  ctx.setLineDash([]);
   // The dark regions are solid terrain; draw only the visible map tiles.
   const x0 = Math.max(0, Math.floor((vx0 + MAP_RADIUS) / MAP_CELL));
   const x1 = Math.min(MAP_GRID.length - 1, Math.floor((vx1 + MAP_RADIUS) / MAP_CELL));
@@ -700,6 +692,7 @@ export function render(g: Game, ctx: CanvasRenderingContext2D) {
 
   /* ---- screen space HUD in canvas ---- */
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  drawDamageNumbers(g, ctx, cx, cy, z);
   drawCreditFlights(g, ctx);
   drawMinimap(g, ctx);
   drawBaseArrow(g, ctx);
@@ -2087,6 +2080,28 @@ function drawBars(g: Game, ctx: CanvasRenderingContext2D, e: Enemy, z: number) {
   }
 }
 
+const DAMAGE_COLORS: Record<string, string> = {
+  kinetic: "#f3f8ff", laser: "#c995ff", shock: "#70efff", explosive: "#ff9e51",
+  missile: "#ffcf5a", dot: "#82f58b", incoming: "#ff617a", incomingEnergy: "#df80ff",
+};
+function drawDamageNumbers(g: Game, ctx: CanvasRenderingContext2D, cx: number, cy: number, z: number) {
+  ctx.save(); ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.lineJoin = "round";
+  for (const n of g.damageNumbers) {
+    const age = g.t - n.born, f = Math.max(0, 1 - age / 1.1);
+    const x = (n.x - cx) * z + g.w / 2, y = (n.y - cy) * z + g.h / 2 - age * 40;
+    if (x < -100 || x > g.w + 100 || y < -50 || y > g.h + 50) continue;
+    const size = n.crit ? 24 : 17;
+    ctx.font = `900 ${size}px system-ui, sans-serif`;
+    ctx.globalAlpha = Math.min(1, f * 3);
+    ctx.lineWidth = n.crit ? 5 : 4; ctx.strokeStyle = "#080a16";
+    ctx.fillStyle = DAMAGE_COLORS[n.kind] ?? DAMAGE_COLORS.kinetic;
+    ctx.shadowColor = ctx.fillStyle; ctx.shadowBlur = n.crit ? 13 : 5;
+    const label = `${n.crit ? "✦ " : ""}${fmtNum(n.amount)}${n.crit ? " CRIT" : ""}`;
+    ctx.strokeText(label, x, y); ctx.fillText(label, x, y);
+  }
+  ctx.restore();
+}
+
 let minimapTerrain: HTMLCanvasElement | null = null;
 function terrainMap(): HTMLCanvasElement {
   if (minimapTerrain) return minimapTerrain;
@@ -2095,8 +2110,7 @@ function terrainMap(): HTMLCanvasElement {
   const c = image.getContext("2d")!;
   for (let y = 0; y < MAP_GRID.length; y++) for (let x = 0; x < MAP_GRID.length; x++) {
     if (MAP_GRID[y][x] !== "1") continue;
-    const wx = (x + 0.5) * MAP_CELL - MAP_RADIUS, wy = (y + 0.5) * MAP_CELL - MAP_RADIUS;
-    c.fillStyle = (isUltraZone(wx, wy) ? ULTRA_ZONE.color : RARITIES[zoneAt(wx, wy)].color) + "88";
+    c.fillStyle = "rgba(165,185,200,0.55)";
     c.fillRect(x, y, 1, 1);
   }
   return minimapTerrain = image;

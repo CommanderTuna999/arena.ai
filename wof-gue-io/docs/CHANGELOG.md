@@ -1,3 +1,8 @@
+## 0.3. v2.27.0 — Combat feedback
+
+- Added colour-coded damage numbers and critical hit indicators, grouping rapid damage ticks for readability.
+- Removed rarity colouring from maps and made cannon-tree popups fully opaque.
+
 ## 0.3. v2.26.0 — Performance and scale
 
 - Cached detailed salvage artwork and spatially indexed enemy separation. All enemy parts remain visible at every zoom.

@@ -8,7 +8,7 @@
  *   CHANGELOG and mirror the details in docs/CHANGELOG.md.
  */
 
-export const VERSION = "2.26.0";
+export const VERSION = "2.27.0";
 
 export interface ChangeEntry {
   version: string;
@@ -19,6 +19,10 @@ export interface ChangeEntry {
 }
 
 export const CHANGELOG: ChangeEntry[] = [
+  {
+    version: "2.27.0", date: "20 Nov 2026", title: "Combat feedback",
+    points: ["Added colour-coded floating damage numbers, including critical hit indicators, with rapid damage grouped to keep fights readable.", "Removed rarity colours from the map and made cannon-tree popups fully opaque."],
+  },
   {
     version: "2.26.0", date: "20 Nov 2026", title: "Performance and scale",
     points: ["Cached salvage artwork and spatially indexed enemy separation; enemy parts remain visible at every zoom.", "Ultra bodies destroy lower rarities without rewards. Bestiary art shares a world scale, armour is thinner, and wall collision respects the player hull and smaller enemy hitboxes."],

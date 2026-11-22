@@ -5,14 +5,14 @@ import { useRouter } from "next/navigation";
 import { Game, type Hud } from "@/game/engine";
 import { render } from "@/game/render";
 import {
-  BASE, ULTRA_ZONE, zoneAt, ABILITY_LIST, CANNONS, CANNON_BY_ID, CAT_NAME, DMG_INFO, KIND_CAT, RARITIES, RECIPES, RECIPE_BY_ID, SLOT_NAME, UPGRADES, UP_CATS,
+  BASE, ABILITY_LIST, CANNONS, CANNON_BY_ID, CAT_NAME, DMG_INFO, KIND_CAT, RARITIES, RECIPES, RECIPE_BY_ID, SLOT_NAME, UPGRADES, UP_CATS,
   cannonBillProblem, cannonDmg, cannonOwned, cannonRate, cannonTracks, cannonTrackCost, cannonTrackValue, craftEfficiency, damageProfile,
   migrate, newSave, partBillText, recipeProblem, upgradeCost,
   type CannonDef, type CannonTrackId, type Comp, type Recipe, type SaveData, type Slot, type UpCat,
 } from "@/game/data";
 import { clamp, fmtNum } from "@/game/math";
 import { SPECIES_LIST } from "@/game/enemies";
-import { MAP_GRID, MAP_CELL, MAP_RADIUS, isUltraZone } from "@/game/world";
+import { MAP_GRID, MAP_RADIUS, isUltraZone } from "@/game/world";
 import SettingsPanel from "@/components/SettingsPanel";
 import RecipeIcon from "@/components/RecipeIcon";
 import Bestiary, { BeeIcon } from "@/components/Bestiary";
@@ -728,7 +728,7 @@ function CannonTree({ game }: { game: Game }) {
               down ? "top-full pt-1" : "bottom-full pb-1"
             }`}
           >
-            <div className={`rounded-sm border bg-[#050e16]/97 p-2 shadow-[0_14px_44px_rgba(0,0,0,0.8)] ${selected ? "border-yellow-300/60" : owned ? "border-cyan-300/50" : "border-white/25"}`}>
+            <div className={`rounded-sm border bg-[#050e16] p-2 shadow-[0_14px_44px_rgba(0,0,0,0.8)] ${selected ? "border-yellow-300/60" : owned ? "border-cyan-300/50" : "border-white/25"}`}>
               <div className="flex items-center gap-1.5">
                 <CannonIcon c={c} className="h-6 w-12 shrink-0" />
                 <span className={`min-w-0 flex-1 truncate text-[12px] font-black ${selected ? "text-yellow-100" : "text-white"}`}>{c.name}</span>
@@ -1266,8 +1266,7 @@ function AdminMap({ game, enabled }: { game: Game; enabled: boolean }) {
     ctx.fillStyle = "#11121b"; ctx.fillRect(0, 0, n, n);
     for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) {
       if (MAP_GRID[y][x] !== "1") continue;
-      const wx = (x + .5) * MAP_CELL - MAP_RADIUS, wy = (y + .5) * MAP_CELL - MAP_RADIUS;
-      ctx.fillStyle = isUltraZone(wx, wy) ? ULTRA_ZONE.color : RARITIES[zoneAt(wx, wy)].color;
+      ctx.fillStyle = "#a5b9c8";
       ctx.fillRect(x, y, 1, 1);
     }
     const mark = (x: number, y: number, color: string) => {
