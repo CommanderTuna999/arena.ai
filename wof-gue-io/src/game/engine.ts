@@ -3285,6 +3285,7 @@ export class Game {
   private fencerDamage = 0;
   private mediatorBeamTime = 0;
   private mediatorBeamDamage = 0;
+  private mediatorSparkClock = 0;
   private firePlayer(dt: number) {
     const p = this.player, st = this.stats;
     if (p.dead) { this.mediatorBeamTime = 0; this.fencerCharge = 0; return; }
@@ -3299,6 +3300,21 @@ export class Game {
       const x = p.x + Math.cos(p.a) * m.x - Math.sin(p.a) * m.y;
       const y = p.y + Math.sin(p.a) * m.x + Math.cos(p.a) * m.y;
       this.beam(x, y, p.a, st.bulletRange, this.mediatorBeamDamage * step, st.pierce, false, "laser", "#e9d5ff", st.beamWidth);
+      // Violet shards and pale sparks peel off the muzzle throughout the beam.
+      // A time accumulator keeps the effect consistent at different frame rates.
+      this.mediatorSparkClock += step;
+      const ca = Math.cos(p.a), sa = Math.sin(p.a);
+      while (this.mediatorSparkClock >= 1 / 24) {
+        this.mediatorSparkClock -= 1 / 24;
+        const side = Math.random() < 0.5 ? -1 : 1;
+        const lateral = side * (100 + Math.random() * 230);
+        const forward = -80 + Math.random() * 240;
+        const along = Math.random() * 80;
+        const offset = side * (10 + Math.random() * 15) * st.beamWidth;
+        this.addParticle(x + ca * along - sa * offset, y + sa * along + ca * offset,
+          p.vx * 0.15 + ca * forward - sa * lateral, p.vy * 0.15 + sa * forward + ca * lateral,
+          Math.random() < 0.5 ? "#e9d5ff" : "#a978ff", 5 + Math.random() * 6, 0.32 + Math.random() * 0.25, 1, true);
+      }
       // Sustained thrust from the beam, not just a one-off firing kick.
       p.vx -= Math.cos(p.a) * 2850 * step;
       p.vy -= Math.sin(p.a) * 2850 * step;
@@ -3334,6 +3350,7 @@ export class Game {
         const col = "#e9d5ff";
         this.mediatorBeamDamage = dmg;
         this.mediatorBeamTime = 3;
+        this.mediatorSparkClock = 0;
         this.burst(m.x, m.y, col, 18, 7, 420);
         this.ringFx(m.x, m.y, 70, col, 500);
         this.shake = Math.max(this.shake, 14 + 10 * p.charge);

@@ -1,3 +1,7 @@
+## 0.3. v2.23.2 — Mediator sparks
+
+- Added violet energy shards and pale sparks around the Mediator's muzzle throughout its sustained beam.
+
 ## 0.3. v2.23.1 — Mediator handling
 
 - Removed the charge progress bar; the charging animation remains.

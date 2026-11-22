@@ -8,7 +8,7 @@
  *   CHANGELOG and mirror the details in docs/CHANGELOG.md.
  */
 
-export const VERSION = "2.23.1";
+export const VERSION = "2.23.2";
 
 export interface ChangeEntry {
   version: string;
@@ -19,6 +19,10 @@ export interface ChangeEntry {
 }
 
 export const CHANGELOG: ChangeEntry[] = [
+  {
+    version: "2.23.2", date: "20 Nov 2026", title: "Mediator sparks",
+    points: ["The Mediator sheds violet energy shards and pale sparks from its muzzle while firing."],
+  },
   {
     version: "2.23.1", date: "20 Nov 2026", title: "Mediator handling",
     points: [
