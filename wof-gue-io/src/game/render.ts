@@ -703,12 +703,50 @@ export function render(g: Game, ctx: CanvasRenderingContext2D) {
   drawCreditFlights(g, ctx);
   drawMinimap(g, ctx);
   drawBaseArrow(g, ctx);
+  drawUltraHud(g, ctx);
   /* heat vignette: a hot gun bleeds a warm glow in from the edges of the
    * screen, climbing from a faint amber at the mid-ramp to a hard red-orange
    * ring at the top, and a slow pulse when it is jammed and cooling */
   drawHeatVignette(g, ctx);
   if (hoveredComp) drawCompTooltip(g, ctx, hoveredComp);
   drawCutscene(g, ctx);
+}
+
+/** Screen-space Ultra encounter bars and legible black announcements. */
+function drawUltraHud(g: Game, ctx: CanvasRenderingContext2D) {
+  const z = g.cam.z;
+  const visible = g.enemies.filter(e => !e.dead && e.tier === 6 &&
+    Math.abs(e.x - g.cam.x) <= g.w / (2 * z) + e.radius &&
+    Math.abs(e.y - g.cam.y) <= g.h / (2 * z) + e.radius).slice(0, 3);
+  ctx.save(); ctx.textAlign = "center";
+  visible.forEach((e, i) => {
+    const w = Math.min(620, g.w * 0.7), x = (g.w - w) / 2, y = 24 + i * 80;
+    let hull = 0, hullMax = 0, armor = 0, armorMax = 0;
+    for (const p of e.parts) {
+      if (p.kind === "armor") { armorMax += p.maxHp; if (p.alive) armor += p.hp; }
+      else { hullMax += p.maxHp; if (p.alive) hull += p.hp; }
+    }
+    for (const shell of e.shells) armor += shell.hp;
+    armorMax += e.shellMaxTotal;
+    const f = clamp(hull / Math.max(1, hullMax), 0, 1), a = clamp(armor / Math.max(1, armorMax), 0, 1);
+    ctx.shadowColor = "#a665ff"; ctx.shadowBlur = 12;
+    ctx.fillStyle = "#090611"; ctx.strokeStyle = "#d8b4ff"; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(x + 18, y); ctx.lineTo(x + w - 18, y); ctx.lineTo(x + w, y + 18); ctx.lineTo(x + w - 18, y + 36); ctx.lineTo(x + 18, y + 36); ctx.lineTo(x, y + 18); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.save(); ctx.clip(); ctx.fillStyle = "#51317b"; ctx.fillRect(x + 4, y + 4, (w - 8) * f, 28);
+    ctx.strokeStyle = "rgba(216,180,255,.4)"; ctx.lineWidth = 1;
+    for (let j = 0; j < 12; j++) { const px = x + (j + 1) * w / 13; ctx.beginPath(); ctx.moveTo(px - 10, y + 34); ctx.lineTo(px + 10, y + 2); ctx.stroke(); }
+    ctx.restore(); ctx.shadowBlur = 0; ctx.fillStyle = "#fff"; ctx.font = "bold 16px ui-monospace, monospace"; ctx.fillText(e.spd.name.toUpperCase(), x + w / 2, y + 23);
+    ctx.fillStyle = "#1b1427"; ctx.fillRect(x + 25, y + 40, w - 50, 7);
+    ctx.fillStyle = "#cbb6e7"; ctx.fillRect(x + 25, y + 40, (w - 50) * a, 7);
+    ctx.lineWidth = 3; ctx.strokeStyle = "#d9baff"; ctx.fillStyle = "#000000"; ctx.font = "bold 14px ui-monospace, monospace";
+    ctx.strokeText("ULTRA", x + w / 2, y + 63); ctx.fillText("ULTRA", x + w / 2, y + 63);
+  });
+  ctx.textAlign = "left"; ctx.font = "bold 14px ui-monospace, monospace";
+  const notices = g.toasts.filter(t => t.color === "#000000");
+  notices.forEach((n, i) => { const y = g.h - 28 - (notices.length - 1 - i) * 24;
+    ctx.lineWidth = 4; ctx.strokeStyle = "#d6b5f2"; ctx.strokeText(n.msg, 18, y); ctx.fillStyle = "#000000"; ctx.fillText(n.msg, 18, y);
+  });
+  ctx.restore();
 }
 
 /** the moth's domain-expansion cutscene: a hard violet flash, a slow push-in
@@ -834,7 +872,7 @@ function drawCreditFlights(g: Game, ctx: CanvasRenderingContext2D) {
 /* Hover card for loose components: name, rarity/category, value and mass.
  * Drawn in screen space so the text stays crisp at every zoom level. */
 function drawCompTooltip(g: Game, ctx: CanvasRenderingContext2D, c: LComp) {
-  const col = RARITIES[c.c.tier].color;
+  const col = c.c.tier === 6 ? "#c99df5" : RARITIES[c.c.tier].color;
   const bw = 216, bh = 84;
   let x = g.input.mx + 18, y = g.input.my + 18;
   if (x + bw > g.w - 8) x = g.input.mx - bw - 18;
@@ -1062,7 +1100,8 @@ function drawTurret(g: Game, ctx: CanvasRenderingContext2D, z: number, t: number
 }
 
 function drawComp(g: Game, ctx: CanvasRenderingContext2D, c: LComp, z: number, t: number) {
-  const col = RARITIES[c.c.tier].color;
+  const ultra = c.c.tier === 6;
+  const col = ultra ? "#b986ef" : RARITIES[c.c.tier].color;
   /* Far zoom: a clipped, hatched, glowing outline per component is far more
    * expensive than it is legible. Show a compact rarity-coloured pip instead. */
   if (z < 0.12) {
@@ -1078,12 +1117,13 @@ function drawComp(g: Game, ctx: CanvasRenderingContext2D, c: LComp, z: number, t
   ctx.translate(c.x, c.y); ctx.rotate(c.a);
   ctx.lineJoin = "round";
   polyPath(ctx, c.c.poly);
-  ctx.fillStyle = col + "26"; ctx.fill();
+  ctx.fillStyle = ultra ? "#08060d" : col + "26"; ctx.fill();
   // hatch
   ctx.save(); ctx.clip();
   ctx.strokeStyle = col + "55"; ctx.lineWidth = 1 / z;
   ctx.beginPath();
-  for (let d = -c.r * 2; d < c.r * 2; d += Math.max(6, c.r * 0.22)) { ctx.moveTo(d, -c.r * 2); ctx.lineTo(d + c.r * 2, c.r * 2); }
+  const spacing = Math.max(6, c.r * 0.22), phase = ultra ? (t * 40) % spacing : 0;
+  for (let d = -c.r * 2 + phase; d < c.r * 2; d += spacing) { ctx.moveTo(d, -c.r * 2); ctx.lineTo(d + c.r * 2, c.r * 2); }
   ctx.stroke();
   ctx.restore();
   ctx.shadowColor = col; ctx.shadowBlur = 10 + 8 * pulse;
@@ -1914,8 +1954,20 @@ function drawEnemy(g: Game, ctx: CanvasRenderingContext2D, e: Enemy, z: number, 
     /* a crippled leg is dead weight: dim, desaturated and no longer swinging */
     const crippled = p.kind === "leg" && !legHealthy(p);
     ctx.globalAlpha = (0.62 + 0.38 * hf) * (crippled ? 0.5 : 1);
-    ctx.fillStyle = hurt ? "rgba(255,255,255,0.85)" : p.fill;
+    ctx.fillStyle = hurt ? "rgba(255,255,255,0.85)" : e.tier === 6 ? "#08060d" : p.fill;
     ctx.fill();
+    if (e.tier === 6 && !hurt && p.r * z > 4) {
+      // A moving diagonal enchantment sheen clipped to each black part.
+      ctx.save(); ctx.clip(); ctx.globalAlpha = 0.35;
+      ctx.strokeStyle = "#bc80ff"; ctx.lineWidth = Math.max(3 / z, p.r * 0.12);
+      const span = Math.max(25, p.r * 0.7), phase = (t * 45) % span;
+      ctx.beginPath();
+      for (let d = -p.r * 3 + phase; d < p.r * 3; d += span) {
+        ctx.moveTo(p.cx + d - p.r, p.cy + p.r * 1.5);
+        ctx.lineTo(p.cx + d + p.r, p.cy - p.r * 1.5);
+      }
+      ctx.stroke(); ctx.restore();
+    }
     /* Canvas blur cost explodes with the area it covers. Keep the glow only
      * on small on-screen pieces; large parts get a cheap echo stroke instead. */
     const prs = p.r * z;
@@ -1924,7 +1976,7 @@ function drawEnemy(g: Game, ctx: CanvasRenderingContext2D, e: Enemy, z: number, 
       ctx.shadowBlur = p.kind === "core" ? 22 : 12;
     }
     else if (big && p.r * z > 14) { ctx.save(); ctx.globalAlpha = 0.12; ctx.strokeStyle = p.stroke; ctx.lineWidth = lw * 3.2; ctx.stroke(); ctx.restore(); }
-    ctx.strokeStyle = hurt ? "#ffffff" : crippled ? "#6a5d4d" : p.stroke;
+    ctx.strokeStyle = hurt ? "#ffffff" : e.tier === 6 ? "#a976e3" : crippled ? "#6a5d4d" : p.stroke;
     ctx.lineWidth = lw * (p.kind === "core" ? 1.6 : 1);
     ctx.stroke();
     ctx.shadowBlur = 0;

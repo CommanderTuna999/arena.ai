@@ -1,3 +1,10 @@
+## 0.3. v2.25.0 — Ultra rarity
+
+- Ultra enemies have 13.5× mythical normal-piece health, armour at 16× average normal-piece health, and 3× mythical size. Each ordinary mythical spawn has a 0.5% chance to become Ultra.
+- Ultra pieces are black with an animated violet enchantment glint. Ultra enemies guarantee mythical drops, plus independent 2% Ultra part and 10% Ultra core chances.
+- Added Ultra spawn/defeat notices, a screen-space boss health and armour display, and Ultra bestiary/admin entries.
+- Live preview uses the independent dev output so a production rebuild cannot invalidate a running server. Combat is locally simulated; defeat credit distinguishes the local player from base damage, not other clients.
+
 ## 0.3. v2.24.0 — new map and Ultra zone
 
 - Replaced the maze with the supplied map, placing the base at the top-left and increasing rarity toward the bottom-right.

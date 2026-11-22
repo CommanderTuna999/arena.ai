@@ -35,6 +35,8 @@ export function zoneAt(x: number, y: number) {
 export const ULTRA_ZONE = { id: "ultra", name: "Ultra", color: "#f2f7ff" } as const;
 /** Ultra encounters are currently mostly mythical, with some legendary. */
 export function ultraSpawnTier(roll: number): number { return roll < 0.8 ? 5 : 4; }
+/** A mythic encounter has a half-percent chance to become Ultra. */
+export function rollUltra(tier: number, roll: number): number { return tier === 5 && roll < 0.005 ? 6 : tier; }
 
 /* ---------- rarities ---------- */
 export const RARITIES = [
@@ -44,17 +46,18 @@ export const RARITIES = [
   { id: "epic", name: "Epic", color: "#c45cff" },
   { id: "legendary", name: "Legendary", color: "#ffb21f" },
   { id: "mythical", name: "Mythical", color: "#ff3d73" },
+  { id: "ultra", name: "Ultra", color: "#000000" },
 ] as const;
 
 export const SIZE_GROWTH = 1.65;
 /* Piece health by rarity, straight from the balance sheet: each step multiplies
  * the one below it (x3.75, x4, x4.7, x6, x8.1). */
-export const HP_MUL = [1, 3.75, 15, 70.5, 423, 3426.3];
+export const HP_MUL = [1, 3.75, 15, 70.5, 423, 3426.3, 3426.3 * 13.5];
 /** the starting cannon from the sheet (see CANNONS below): 20 damage, 0.7s interval */
 export const CANNON_DMG = 20;
 export const CANNON_INTERVAL = 0.7;
 /* 2x baseline as of v2.0 — the 3x ratio between tiers is unchanged. */
-export const DMG_MUL = [1, 3, 9, 27, 81, 243];
+export const DMG_MUL = [1, 3, 9, 27, 81, 243, 243];
 
 /* ---------- parts / components ---------- */
 export type PartKind = "core" | "segment" | "armor" | "leg" | "arm" | "wing" | "weapon" | "shield" | "spike";

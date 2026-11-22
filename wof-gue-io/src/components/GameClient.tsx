@@ -1294,7 +1294,7 @@ function AdminPanel({ game, hud, onClose }: { game: Game; hud: Hud; onClose: () 
       if (!raw) return { spi: 0, tier: 2 };
       const o = JSON.parse(raw) as { id?: string; tier?: number };
       const idx = o.id ? SPECIES_LIST.findIndex((sp) => sp.id === o.id) : -1;
-      const tv = typeof o.tier === "number" ? clamp(Math.round(o.tier), 0, 5) : 2;
+      const tv = typeof o.tier === "number" ? clamp(Math.round(o.tier), 0, 6) : 2;
       return { spi: idx >= 0 ? idx : 0, tier: tv };
     } catch { return { spi: 0, tier: 2 }; }
   });

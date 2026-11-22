@@ -5,7 +5,7 @@ import {
   DMG_MUL, KIND_CAT, KIND_DROP_RATE, RARITIES, RECIPE_BY_ID, SHIP_R, UPGRADES, WORLD_R, W_SLOTS, COMMON_CORE_RATE, COMMON_UNCOMMON_RATE, cannonBillPicks, cannonBillProblem,
   cannonDmg, cannonOwned, cannonRate, cannonTrackCost,
   compMass, compValue, computeStats, craftEfficiency,
-  recipeProblem, upgradeCost, zoneAt, ultraSpawnTier, WEAPON_DMG, WEAPON_RANGE, type Comp, type DmgKind, type PartKind, type SaveData, type Slot, type Stats,
+  recipeProblem, upgradeCost, zoneAt, ultraSpawnTier, rollUltra, WEAPON_DMG, WEAPON_RANGE, type Comp, type DmgKind, type PartKind, type SaveData, type Slot, type Stats,
 } from "./data";
 import { ABILITY_INTERVALS, GUN_SPECS, LASER_RAMP, LASER_RAMP_MIN, SPECIES_LIST, buildEnemy, type AbilityDef, type Group, type GunKind, type Part, type ProjType, type SpeciesDef } from "./enemies";
 
@@ -199,6 +199,7 @@ export interface Enemy {
   gen: number;
   /** outer armour plating, one entry per layer (higher tiers get more) */
   shells: ShellLayer[];
+  shellMaxTotal: number;
   /** plating hit flash timer */
   shellHit: number;
   /** radius of the plating shell */
@@ -588,7 +589,7 @@ export class Game {
     if (!this.admin.on) return;
     const p = this.player;
     const sp = clamp(Math.round(spi), 0, SPECIES_LIST.length - 1);
-    const t = clamp(Math.round(tier), 0, 5);
+    const t = clamp(Math.round(tier), 0, 6);
     const [mx, my] = this.mouseWorld();
     let dx = mx - p.x, dy = my - p.y;
     let d = Math.hypot(dx, dy);
@@ -1461,6 +1462,7 @@ export class Game {
       if (p.wpn) weaponParts.push(p.id);
       if (p.shieldR > 0) shieldParts.push(p.id);
     }
+    if (tier === 6) this.toast(`An Ultra ${spd.name} has spawned!`, "#000000");
     return {
       id: this.idc++, sp: spi, spd, tier, x, y, a: Math.random() * TAU, vx: 0, vy: 0, S: b.size, radius: b.radius,
       parts: b.parts, groups: b.groups, order: b.order, coreId: b.coreId, chunk: key, home: { x, y }, aggro: false, barT: 0,
@@ -1470,7 +1472,7 @@ export class Game {
       provoked: 0, mgHeat: 0, mgCool: 0, domainT: 0, domainMul: 1, baseEDmg: spd.dmg * DMG_MUL[tier], domainOrig: [], buffT: 0, buffHp: 0, buffMax: 0, domainFxT: 0, tags, shields: [], weaponParts, shieldParts, dist: 9999, bdist: 9999, contactCd: 0, swatCd: 0, hasChange: false, gen: 0, shieldDownT: 0,
       dmgTaken: 0, baseDmg: 0,
       dot: 0, dotT: 0, melt: 0, slowT: 0, slowF: 1,
-      shells: Array.from({ length: shellN }, () => ({ hp: shellMax, max: shellMax })),
+      shells: Array.from({ length: shellN }, () => ({ hp: shellMax, max: shellMax })), shellMaxTotal: shellN * shellMax,
       shellHit: 0, shellR: plateR || b.radius + 6,
       bend: spd.bodyWave ? { amp: spd.bodyWave.amp * b.size, k: spd.bodyWave.k, speed: spd.bodyWave.speed } : null,
     };
@@ -1505,12 +1507,13 @@ export class Game {
       const r = rolls[0];
       const tier = isUltraZone(x, y) ? ultraSpawnTier(r) : Math.max(0, r < 0.55 ? z2 : r < 0.83 ? z2 - 1 : r < 0.95 ? z2 - 2 : z2 - 3);
       const spi = pickSpecies(x, y, () => rolls[1], z2);
-      const pack = SPECIES_LIST[spi].pack[tier];
+      const spawnTier = rollUltra(tier, rng());
+      const pack = SPECIES_LIST[spi].pack[Math.min(spawnTier, 5)];
       for (let k = 0; k < pack; k++) {
         if (this.enemies.length >= HARD_MAX || made >= budget) break;
         const ox = k === 0 ? 0 : Math.cos(k * 2.4) * (80 + k * 40), oy = k === 0 ? 0 : Math.sin(k * 2.4) * (80 + k * 40);
         if (!walkable(x + ox, y + oy)) continue;
-        this.enemies.push(this.makeEnemy(spi, tier, x + ox, y + oy, key, hash2(cx + k, cy + i, 5)));
+        this.enemies.push(this.makeEnemy(spi, spawnTier, x + ox, y + oy, key, hash2(cx + k, cy + i, 5)));
         made++;
       }
     }
@@ -1602,7 +1605,7 @@ export class Game {
         const z2 = zoneAt(x, y);
         const tier = isUltraZone(x, y) ? ultraSpawnTier(Math.random()) : Math.max(0, z2 - (Math.random() < 0.55 ? 0 : 1));
         const key = `${Math.floor(x / CH)},${Math.floor(y / CH)}`;
-        this.enemies.push(this.makeEnemy(pickSpecies(x, y, Math.random, z2), tier, x, y, key, hash2(x | 0, y | 0, 21)));
+        this.enemies.push(this.makeEnemy(pickSpecies(x, y, Math.random, z2), rollUltra(tier, Math.random()), x, y, key, hash2(x | 0, y | 0, 21)));
         break;
       }
     }
@@ -1630,7 +1633,7 @@ export class Game {
         const key = `${Math.floor(x / CH)},${Math.floor(y / CH)}`;
         /* The visibility floor stays at rare tier even in epic+ rings: those
          * zones must feel sparse, not refill with one legendary per glance. */
-        this.enemies.push(this.makeEnemy(pickSpecies(x, y, Math.random, z2), (isUltraZone(x, y) ? ultraSpawnTier(Math.random()) : Math.max(0, Math.min(2, z2 - 1))), x, y, key, hash2(x | 0, y | 0, 31)));
+        this.enemies.push(this.makeEnemy(pickSpecies(x, y, Math.random, z2), rollUltra(isUltraZone(x, y) ? ultraSpawnTier(Math.random()) : Math.max(0, Math.min(2, z2 - 1)), Math.random()), x, y, key, hash2(x | 0, y | 0, 31)));
         break;
       }
     }
@@ -1823,6 +1826,11 @@ export class Game {
       this.toast("THE WORLD SERPENT IS SLAIN", "#c54cff");
       this.shake = Math.max(this.shake, 24);
     }
+    if (e.tier === 6) {
+      // Combat is local to this client; the base is the only other damage source.
+      const winner = this.baseMajority(e) ? "Base" : (this.save.name || "Pilot");
+      this.toast(`An Ultra ${e.spd.name} was defeated by ${winner}!`, "#000000");
+    }
     this.save.kills++;
     /* Bestiary credit belongs to the player. A kill finished by the base or its
      * hex turrets never unlocks a species or announces a discovery. */
@@ -1839,6 +1847,7 @@ export class Game {
       q.alive = false;
       i++;
       const [wx, wy] = this.partWorld(e, q);
+      if (e.tier === 6 && !byBase && !this.baseMajority(e) && q.kind !== "core") this.maybeDrop(e, q, wx, wy);
       if (e.parts.length < 70 || i % 2 === 0) this.burst(wx, wy, q.stroke, clamp(Math.round(q.r / 9), 3, 12), clamp(q.r * 0.16, 3, 22), 160 + q.r * 2);
       /* Only the first two weapon/panel blasts get the full cascade treatment.
        * A packed body used to throw one shockwave per gun it was carrying. */
@@ -1906,24 +1915,34 @@ export class Game {
      * drops at 90% (55% on a common body). Every non-core kind drops at ~5% at
      * the same rarity, and a common body additionally rolls an uncommon-tier
      * component at 30% — so farming commons is the way to climb rarity. */
-    let chance: number, tier: number;
-    if (boss) { chance = 1; tier = 5; }
-    else if (isCore) { chance = (e.tier === 0 ? COMMON_CORE_RATE : KIND_DROP_RATE.core) * this.stats.dropChance * mul; tier = e.tier; }
-    else if (e.tier === 0 && Math.random() < COMMON_UNCOMMON_RATE * this.stats.dropChance * mul) { chance = 1; tier = 1; }
-    else { chance = KIND_DROP_RATE[p.kind] * this.stats.dropChance * mul; tier = e.tier; }
-    if (Math.random() > chance) return;
-    const poly = p.poly.map((v, i) => +(v - (i % 2 === 0 ? p.cx : p.cy)).toFixed(1));
-    const comp: Comp = {
-      id: uid(), species: e.spd.name, name: `${e.spd.name} ${p.name}`, kind: p.kind, tier, poly, area: p.area,
-      mass: compMass(p.area), hue: e.spd.hue, value: compValue(p.area, tier, p.kind),
-    };
-    const a = Math.random() * TAU, s = 60 + Math.random() * 120;
-    this.comps.push({ id: this.idc++, c: comp, x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, a: e.a, va: (Math.random() - 0.5) * 3, r: p.r, hooks: [], stress: 0, ttl: 160, born: this.t, srcId: e.id });
-    if (this.comps.length > 90) {
-      const i = this.comps.findIndex((c) => !c.hooks.length);
-      if (i >= 0) this.comps.splice(i, 1);
+    let tiers: number[] = [];
+    if (e.tier === 6) {
+      // Guaranteed mythical salvage plus an independent ultra roll per piece.
+      tiers = [5];
+      if (Math.random() < (isCore ? 0.10 : 0.02)) tiers.push(6);
+    } else {
+      let chance: number, tier: number;
+      if (boss) { chance = 1; tier = 5; }
+      else if (isCore) { chance = (e.tier === 0 ? COMMON_CORE_RATE : KIND_DROP_RATE.core) * this.stats.dropChance * mul; tier = e.tier; }
+      else if (e.tier === 0 && Math.random() < COMMON_UNCOMMON_RATE * this.stats.dropChance * mul) { chance = 1; tier = 1; }
+      else { chance = KIND_DROP_RATE[p.kind] * this.stats.dropChance * mul; tier = e.tier; }
+      if (Math.random() <= chance) tiers.push(tier);
+    }
+    for (const tier of tiers) {
+      const poly = p.poly.map((v, i) => +(v - (i % 2 === 0 ? p.cx : p.cy)).toFixed(1));
+      const comp: Comp = {
+        id: uid(), species: e.spd.name, name: `${e.spd.name} ${p.name}`, kind: p.kind, tier, poly, area: p.area,
+        mass: compMass(p.area), hue: e.spd.hue, value: compValue(p.area, tier, p.kind),
+      };
+      const a = Math.random() * TAU, s = 60 + Math.random() * 120;
+      this.comps.push({ id: this.idc++, c: comp, x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, a: e.a, va: (Math.random() - 0.5) * 3, r: p.r, hooks: [], stress: 0, ttl: 160, born: this.t, srcId: e.id });
+      if (this.comps.length > 400) {
+        const i = this.comps.findIndex((c) => !c.hooks.length);
+        if (i >= 0) this.comps.splice(i, 1);
+      }
     }
   }
+
   /** Detonate a part or a shield layer. The blast is an expanding ring that
    *  hurts the player as it sweeps past, plus an immediate hull hit on every
    *  enemy part inside the radius (the breaker's own hull included). */

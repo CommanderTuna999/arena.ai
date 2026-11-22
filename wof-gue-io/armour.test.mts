@@ -4,9 +4,9 @@ import { ARMOUR_HP_MUL, SPECIES_LIST, buildEnemy } from "@/game/enemies";
 
 const assert = (c: boolean, m: string) => { if (!c) throw new Error("FAIL: " + m); console.log("ok  " + m); };
 
-const SHEET = [null, null, 4, 5.5, 7, 9];
-assert(ARMOUR_HP_MUL.length === 6, "one multiplier per rarity");
-for (let t = 2; t <= 5; t++) assert(ARMOUR_HP_MUL[t] === SHEET[t], `tier ${t} armour is ${SHEET[t]}x the average piece (got ${ARMOUR_HP_MUL[t]})`);
+const SHEET = [null, null, 4, 5.5, 7, 9, 16];
+assert(ARMOUR_HP_MUL.length === 7, "one multiplier per rarity");
+for (let t = 2; t <= 6; t++) assert(ARMOUR_HP_MUL[t] === SHEET[t], `tier ${t} armour is ${SHEET[t]}x the average piece (got ${ARMOUR_HP_MUL[t]})`);
 assert(ARMOUR_HP_MUL[0] < ARMOUR_HP_MUL[2] && ARMOUR_HP_MUL[1] < ARMOUR_HP_MUL[2], "common and uncommon sit below rare");
 
 /* walk a few species at every tier and check the ratio the body actually gets */

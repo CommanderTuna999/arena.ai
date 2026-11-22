@@ -122,8 +122,8 @@ function BugArt({ sp, tier, seen, size }: { sp: SpeciesDef; tier: number; seen: 
         <polygon
           key={i}
           points={Array.from({ length: p.poly.length / 2 }, (_, k) => `${p.poly[k * 2]},${p.poly[k * 2 + 1]}`).join(" ")}
-          fill={seen ? p.fill : "#05070c"}
-          stroke={seen ? p.stroke : "#131a24"}
+          fill={seen ? (tier === 6 ? "#08060d" : p.fill) : "#05070c"}
+          stroke={seen ? (tier === 6 ? "#b777ff" : p.stroke) : "#131a24"}
           strokeWidth={Math.max(0.8, vb.w * (seen ? 0.008 : 0.006))}
         />
       ))}
@@ -137,7 +137,7 @@ export default function Bestiary({ bestiary, onClose }: { bestiary: Record<strin
   const discovered = useMemo(() => SPECIES_LIST.filter((s) => bestiary[s.id] !== undefined).length, [bestiary]);
   /* every species is catalogued once per rarity, so there are six entries each */
   const entries = useMemo(() => SPECIES_LIST.reduce((a, s) => a + (bestiary[s.id] === undefined ? 0 : bestiary[s.id] + 1), 0), [bestiary]);
-  const total = SPECIES_LIST.length * 6;
+  const total = SPECIES_LIST.length * RARITIES.length;
   const [hover, setHover] = useState<Hover | null>(null);
   const sp = hover ? SPECIES_LIST.find((s) => s.id === hover.id) ?? null : null;
   const seen = sp && hover ? (bestiary[sp.id] ?? -1) >= hover.tier : false;
@@ -185,13 +185,13 @@ export default function Bestiary({ bestiary, onClose }: { bestiary: Record<strin
                           <span className={`truncate text-[9px] font-bold tracking-[0.16em] ${known ? "text-cyan-100/85" : "text-white/25"}`}>
                             {known ? s.name.toUpperCase() : "???"}
                           </span>
-                          <span className="shrink-0 text-[8px] tabular-nums text-white/30">{known ? best + 1 : 0}/6</span>
+                          <span className="shrink-0 text-[8px] tabular-nums text-white/30">{known ? best + 1 : 0}/{RARITIES.length}</span>
                         </div>
                         <div className="flex gap-1">
-                          {[0, 1, 2, 3, 4, 5].map((k) => {
+                          {[0, 1, 2, 3, 4, 5, 6].map((k) => {
                             const tierKnown = known && best >= k;
                             const active = hover?.id === s.id && hover.tier === k;
-                            const col = RARITIES[k].color;
+                            const col = k === 6 ? "#bf91ee" : RARITIES[k].color;
                             return (
                               <button
                                 key={k}
@@ -230,7 +230,7 @@ export default function Bestiary({ bestiary, onClose }: { bestiary: Record<strin
           {!seen ? (
             <div className="grid place-items-center gap-2 py-6 text-center">
               <BugArt sp={sp} tier={hover.tier} seen={false} size={96} />
-              <div className="text-sm font-black" style={{ color: RARITIES[hover.tier].color }}>{RARITIES[hover.tier].name.toUpperCase()}</div>
+              <div className="text-sm font-black" style={{ color: hover.tier === 6 ? "#cba9f5" : RARITIES[hover.tier].color }}>{RARITIES[hover.tier].name.toUpperCase()}</div>
               <div className="text-[11px] text-white/45">
                 {bestiary[sp.id] === undefined
                   ? "Kill this species once to fill in its entries."
@@ -262,7 +262,7 @@ function EntryInfo({ sp, tier }: { sp: SpeciesDef; tier: number }) {
           <div className="text-base font-black leading-tight text-yellow-200">{sp.name}</div>
           <div className="text-[10px] uppercase tracking-widest text-white/40">{familyOf(sp.id)}</div>
           <div className="mt-1 text-[10px] text-white/40">Rarity</div>
-          <div className="text-xs font-black tracking-[0.14em]" style={{ color: RARITIES[tier].color }}>{RARITIES[tier].name.toUpperCase()}</div>
+          <div className="text-xs font-black tracking-[0.14em]" style={{ color: tier === 6 ? "#cba9f5" : RARITIES[tier].color }}>{RARITIES[tier].name.toUpperCase()}</div>
         </div>
       </div>
       <p className="mt-2 border-l-2 border-yellow-300/40 pl-2 text-[11px] italic leading-snug text-white/65">{FLAVOUR[sp.id] ?? "No field notes yet."}</p>
@@ -275,14 +275,14 @@ function EntryInfo({ sp, tier }: { sp: SpeciesDef; tier: number }) {
         <Stat k="Mounts" v={guns || "—"} />
         <Stat k="Speed" v={Math.round(sp.speed)} />
         <Stat k="Turn" v={sp.turn.toFixed(1)} />
-        <Stat k="Pack" v={sp.pack[tier]} />
+        <Stat k="Pack" v={sp.pack[Math.min(tier, 5)]} />
       </div>
       <div className="mt-1.5 text-[10px] leading-snug text-white/45">Abilities: {sp.abilities.filter((a) => a.minTier <= tier).map((a) => SHORT[a.name] ?? a.name).join(", ") || "none"}</div>
       <div className="mt-2 text-[10px] font-bold tracking-[0.2em] text-white/40">DROPS</div>
       <div className="mt-1 flex flex-wrap gap-1">
         {dropList(sp, tier).map((d) => (
           <span key={d.kind} className="rounded-sm border px-1.5 py-0.5 text-[10px] font-bold" style={{ borderColor: d.color + "88", color: d.color, background: d.color + "12" }}>
-            {d.name} · {d.rarity} · {KIND_DROP_PCT(d.kind)}
+            {tier === 6 ? `${d.name} · Mythical 100% + Ultra ${d.kind === "core" ? "10%" : "2%"}` : `${d.name} · ${d.rarity} · ${KIND_DROP_PCT(d.kind)}`}
           </span>
         ))}
       </div>
@@ -298,7 +298,7 @@ function dropList(sp: SpeciesDef, tier: number) {
   const built = preview(sp, tier);
   const kinds = [...new Set(built.parts.filter((p) => p.kind !== "leg" || sp.bodyWave).map((p) => p.kind))];
   return kinds.map((kind) => {
-    const r = kind === "core" ? tier : Math.max(0, tier - 1);
+    const r = tier === 6 ? 5 : tier;
     return { kind, name: CAT_NAME[KIND_CAT[kind]], rarity: RARITIES[r].name, color: RARITIES[r].color };
   });
 }

@@ -8,7 +8,7 @@
  *   CHANGELOG and mirror the details in docs/CHANGELOG.md.
  */
 
-export const VERSION = "2.24.0";
+export const VERSION = "2.25.0";
 
 export interface ChangeEntry {
   version: string;
@@ -19,6 +19,15 @@ export interface ChangeEntry {
 }
 
 export const CHANGELOG: ChangeEntry[] = [
+  {
+    version: "2.25.0", date: "20 Nov 2026", title: "Ultra rarity",
+    points: [
+      "Ultra enemies have 13.5× mythical piece health, 16× normal-piece armour health and 3× mythical size. They replace 0.5% of mythical spawns.",
+      "Ultra pieces have a black enchantment glint. They guarantee mythical salvage, with a 2% Ultra piece chance and 10% Ultra core chance.",
+      "Ultra encounters have spawn and defeat announcements, a large health and armour display, and bestiary and admin entries.",
+      "The live preview now uses a separate development output to prevent production rebuilds breaking it.",
+    ],
+  },
   {
     version: "2.24.0", date: "20 Nov 2026", title: "New map and Ultra zone",
     points: [

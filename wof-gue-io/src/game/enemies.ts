@@ -316,7 +316,7 @@ const KIND_HP: Record<PartKind, number> = { core: 2.5, segment: 1, armor: 1, leg
 /** Armour is worth this multiple of the body's average piece, by rarity:
  *  common, uncommon, rare, epic, legendary, mythical. The sheet fixes rare to
  *  mythic at 4 / 5.5 / 7 / 9; common and uncommon continue the ramp below. */
-export const ARMOUR_HP_MUL = [2.5, 3.25, 4, 5.5, 7, 9];
+export const ARMOUR_HP_MUL = [2.5, 3.25, 4, 5.5, 7, 9, 16];
 
 /* ---------------- builder ---------------- */
 export class Builder {
@@ -325,7 +325,7 @@ export class Builder {
   coreId = 0;
   readonly S: number;
   constructor(public tier: number, public hue: number, public rng: () => number, public baseHp = 12) {
-    this.S = BASE_SIZE * Math.pow(SIZE_GROWTH, tier);
+    this.S = BASE_SIZE * Math.pow(SIZE_GROWTH, Math.min(tier, 5)) * (tier === 6 ? 3 : 1);
   }
 
   add(kind: PartKind, name: string, poly: number[], o: { layer?: number; hpM?: number; g?: number; links?: number[]; style?: number; seg?: number } = {}) {
@@ -1660,7 +1660,7 @@ export function buildEnemy(speciesIdx: number, tier: number, seed: number): Buil
   const sp = SPECIES[speciesIdx];
   const rng = mulberry32(seed);
   const b = new Builder(tier, sp.hue, rng, sp.hp);
-  const mounts = sp.build(b, tier);
+  const mounts = sp.build(b, Math.min(tier, 5));
   loadout(b, mounts, sp);
   scaleArmour(b.parts, tier, sp.hp);
   const order = b.parts.map((_, i) => i).sort((a, c) => b.parts[a].layer - b.parts[c].layer || a - c);
