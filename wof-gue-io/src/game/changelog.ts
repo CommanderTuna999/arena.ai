@@ -8,7 +8,7 @@
  *   CHANGELOG and mirror the details in docs/CHANGELOG.md.
  */
 
-export const VERSION = "2.29.3";
+export const VERSION = "2.29.4";
 
 export interface ChangeEntry {
   version: string;
@@ -19,6 +19,7 @@ export interface ChangeEntry {
 }
 
 export const CHANGELOG: ChangeEntry[] = [
+  { version: "2.29.4", date: "22 Nov 2026", title: "Mediator charge and reload", points: ["Mediator requires at least two seconds of continuous charge before it fires and reloads after its beam ends."] },
   { version: "2.29.3", date: "22 Nov 2026", title: "Changelog dates", points: ["Corrected release dates from version 2.12 onward."] },
   { version: "2.29.2", date: "22 Nov 2026", title: "Core contact", points: ["Enemy cores no longer deal contact or body-attack damage; other enemy parts and attacks still can."] },
   { version: "2.29.1", date: "22 Nov 2026", title: "Map and admin fixes", points: ["Removed the camera rectangle from the map. Infinite Damage now deals infinite damage to hit parts and armour instead of 100 times damage."] },

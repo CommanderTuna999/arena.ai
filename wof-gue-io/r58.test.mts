@@ -4,7 +4,7 @@ import { BASE, computeStats, newSave } from './src/game/data';
 const g = new Game(newSave(),'test') as any;
 g.save.cannon.id='mediator';g.stats=computeStats(g.save);g.admin.sandbox=true;
 g.player.x=BASE.x-3000;g.player.y=BASE.y;g.player.a=0;g.player.vx=0;g.player.vy=0;
-g.input.lmb=true;g.firePlayer(.05);g.input.lmb=false;g.firePlayer(.05);
+g.input.lmb=true;for(let i=0;i<40;i++)g.firePlayer(.05);g.input.lmb=false;g.firePlayer(.05);
 assert.equal(g.player.vx,-3*g.stats.kick,'initial recoil is tripled');
 const vx=g.player.vx;g.firePlayer(.05);assert(Math.abs(g.player.vx-vx+2850*.05)<1e-8,'continuous recoil is tripled');
 g.resize(1000,800,1);g.cam.x=g.player.x;g.cam.y=g.player.y;g.input.mx=500;g.input.my=1000;

@@ -1,3 +1,7 @@
+## 0.3. v2.29.4 — Mediator charge and reload
+
+- Mediator needs at least two seconds of continuous charge before firing; reload starts after the beam ends.
+
 ## 0.3. v2.29.3 — Changelog dates
 
 - Corrected the displayed release dates from v2.12 onward: v2.12.0 through v2.15.0 are dated 21 November, and later versions are dated 22 November.

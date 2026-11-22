@@ -3377,12 +3377,16 @@ export class Game {
     const p = this.player, st = this.stats;
     if (p.dead) { this.mediatorBeamTime = 0; this.fencerCharge = 0; return; }
     if (st.cannonId !== "fencer" || this.inSafe()) this.fencerCharge = 0;
-    if (!st.charge || this.inSafe()) { this.mediatorBeamTime = 0; p.charging = false; p.charge = 0; }
+    if (!st.charge || this.inSafe()) {
+      if (this.mediatorBeamTime > 0) p.fireCd = Math.max(p.fireCd, 0.7);
+      this.mediatorBeamTime = 0; p.charging = false; p.charge = 0;
+    }
     const want = this.input.lmb || this.input.keys.has("Space");
     p.fireCd -= dt;
     if (this.mediatorBeamTime > 0 && st.charge && !this.inSafe()) {
       const step = Math.min(dt, this.mediatorBeamTime);
-      this.mediatorBeamTime -= step;
+      this.mediatorBeamTime = Math.max(0, this.mediatorBeamTime - step);
+      if (this.mediatorBeamTime <= 1e-9) { this.mediatorBeamTime = 0; p.fireCd = 0.7; }
       const m = st.muzzles[0] ?? { x: 14, y: 0 };
       const x = p.x + Math.cos(p.a) * m.x - Math.sin(p.a) * m.y;
       const y = p.y + Math.sin(p.a) * m.x + Math.cos(p.a) * m.y;
@@ -3430,6 +3434,9 @@ export class Game {
         p.charge = Math.min(1, p.charge + dt * st.chargeRate / st.chargeTime);
       } else if (p.charging) {
         p.charging = false;
+        // Require two real seconds of continuous charge, regardless of upgrades.
+        const minCharge = Math.min(1, 2 * st.chargeRate / st.chargeTime);
+        if (p.charge + 1e-10 < minCharge) { p.charge = 0; return; }
         const mz = st.muzzles.length ? st.muzzles : [{ x: 14, y: 0 }];
         const m = { x: p.x + Math.cos(base) * mz[0].x - Math.sin(base) * mz[0].y, y: p.y + Math.sin(base) * mz[0].x + Math.cos(base) * mz[0].y };
         const crit = Math.random() < st.crit;
@@ -3444,7 +3451,8 @@ export class Game {
         this.shake = Math.max(this.shake, 14 + 10 * p.charge);
         p.vx -= Math.cos(base) * st.kick * 3; p.vy -= Math.sin(base) * st.kick * 3;
         p.charge = 0;
-        p.fireCd = 3.7;
+        // Reload begins after the three-second beam finishes, not at trigger release.
+        p.fireCd = 0;
       } else {
         p.charge = Math.max(0, p.charge - dt * 0.5);
       }

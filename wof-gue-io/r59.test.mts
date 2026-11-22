@@ -5,7 +5,7 @@ function make() {
  const g = new Game(newSave(),'test') as any;
  g.save.cannon.id='mediator';g.stats=computeStats(g.save);g.admin.sandbox=true;
  g.player.x=BASE.x-3000;g.player.y=BASE.y;g.player.a=0;g.cam.x=g.player.x;g.cam.y=g.player.y;
- g.input.lmb=true;g.firePlayer(.05);g.input.lmb=false;g.firePlayer(.05);
+ g.input.lmb=true;for(let i=0;i<40;i++)g.firePlayer(.05);g.input.lmb=false;g.firePlayer(.05);
  g.particles=[];return g;
 }
 for (const dt of [.05,.01]) {
