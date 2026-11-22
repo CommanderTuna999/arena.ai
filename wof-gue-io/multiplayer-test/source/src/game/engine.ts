@@ -4448,6 +4448,11 @@ export class Game {
     }
     if (!chosen) return false;
     if (grabbed) chosen = grabbed;
+    // Most of the seeded world is far away. Avoid swapping full pilot/game
+    // contexts for inactive enemies on every simulation step.
+    const targetDistance = Math.hypot(chosen.player.x - e.x, chosen.player.y - e.y);
+    e.dist = targetDistance; e.bdist = Math.hypot(BASE.x - e.x, BASE.y - e.y);
+    if (targetDistance > 3800 && !e.aggro) return true;
     const previous = this.pilotPhaseContext(), previousPilots = this.multiplayerEnemyPilots;
     this.setPilotPhaseContext(chosen); this.multiplayerEnemyPilots = pilots;
     try {

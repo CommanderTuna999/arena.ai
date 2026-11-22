@@ -12,6 +12,7 @@ try{
  const one=await join(),two=await join();
  const hasWorld=(m:any)=>m.type==='world-snapshot'&&m.world.pilots.length===2&&m.world.enemies.length>0;
  const [a,b]=await Promise.all([until(one.ws,hasWorld),until(two.ws,hasWorld)]);
+ assert(one.ws.extensions.includes('permessage-deflate'),'snapshot compression negotiated');
  assert(a.world.pilots.some((p:any)=>p.id===two.id));assert(b.world.pilots.some((p:any)=>p.id===one.id));
  const enemy=a.world.enemies[0];assert(enemy.parts.length>0&&enemy.parts.some((p:any)=>p.poly.length>=6),'enemy body geometry transmitted');
  const bullets=until(two.ws,m=>m.type==='world-snapshot'&&m.world.bullets.length>0);

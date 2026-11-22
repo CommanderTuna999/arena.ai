@@ -44,7 +44,7 @@ export class PilotTransport {
     const steps = this.room.advance(nowMs);
     if (!steps || nowMs - this.lastBroadcastMs < this.broadcastIntervalMs) return steps;
     this.lastBroadcastMs = nowMs;
-    const shared = this.room.sharedSnapshot();
+    const shared = this.room.sharedSnapshot(this.interestRadius);
     const sequence = this.snapshotSequence++;
     const pilotMessage = shared ? null : JSON.stringify({ type: 'pilot-snapshot', sequence, pilots: this.room.snapshot() });
     for (const [peer, pilotId] of this.peers) {

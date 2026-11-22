@@ -21,7 +21,7 @@ export class ExperimentalWorldClient {
   private latestView: View | null = null;
   private readonly pilotFrames = new SnapshotBuffer<Body>();
   private readonly enemyFrames = new SnapshotBuffer<Body>();
-  constructor(private readonly factory: SocketFactory = url => new WebSocket(url), private readonly timeoutMs = 5000, private readonly demoOrigin?: string) {
+  constructor(private readonly factory: SocketFactory = url => new WebSocket(url), private readonly timeoutMs = 5000, private readonly demoOrigin?: string, private readonly compactHistory = false) {
     if (!Number.isSafeInteger(timeoutMs) || timeoutMs < 1 || timeoutMs > 60000) throw new Error('Invalid handshake timeout');
   }
   connect(url: string, ticket: string): void {
@@ -55,12 +55,13 @@ export class ExperimentalWorldClient {
       // Validate both sets before mutating either history: a malformed snapshot
       // must not advance the stream or create inconsistent animation buffers.
       const validation = new SnapshotBuffer<Body>(2);
-      const pilots={sequence:data.sequence,time:world.time,bodies:world.pilots};
-      const enemies={sequence:data.sequence,time:world.time,bodies:world.enemies};
+      const compact = (b: Body): Body => ({id:b.id, x:b.x, y:b.y, angle:b.angle});
+      const pilots={sequence:data.sequence,time:world.time,bodies:this.compactHistory ? world.pilots.map(compact) : world.pilots};
+      const enemies={sequence:data.sequence,time:world.time,bodies:this.compactHistory ? world.enemies.map(compact) : world.enemies};
       if (!validation.push(pilots)) return; validation.clear(); if (!validation.push(enemies)) return;
       if (this.latestView && world.time <= this.latestView.time) return;
       if (!this.pilotFrames.push(pilots) || !this.enemyFrames.push(enemies)) { this.disconnect(); return; }
-      this.lastSequence=data.sequence; this.latestView=structuredClone(world);
+      this.lastSequence=data.sequence; this.latestView=this.compactHistory ? world : structuredClone(world);
     };
     socket.onerror = () => this.disconnect();
     socket.onclose = () => { if (this.socket === socket) this.disconnect(); };
@@ -71,6 +72,9 @@ export class ExperimentalWorldClient {
     if (!input) return false;
     try { this.socket.send(JSON.stringify({ type:'input',frame:input })); this.inputSequence=input.seq; return true; } catch { this.disconnect(); return false; }
   }
+  /** Read-only reference for the isolated renderer. Do not mutate it; no
+   * per-frame copy of megabytes of static enemy geometry. */
+  renderSnapshot(): Readonly<View> | null { return this.latestView; }
   snapshot(): View | null { return this.latestView ? structuredClone(this.latestView) : null; }
   sample(time: number): { pilots: Body[]; enemies: Body[] } { return { pilots:this.pilotFrames.sample(time), enemies:this.enemyFrames.sample(time) }; }
   disconnect(): void {

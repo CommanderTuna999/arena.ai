@@ -36,5 +36,5 @@ export class PilotRoom {
   }
   snapshot() { return this.roster.snapshot(); }
   /** Debug-only world view; does not contain enough data for the real client. */
-  sharedSnapshot() { return this.combat?.snapshot() ?? null; }
+  sharedSnapshot(interestRadius?: number) { return this.combat?.snapshot(interestRadius) ?? null; }
 }

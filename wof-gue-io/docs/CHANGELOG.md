@@ -1,3 +1,7 @@
+## 0.3. v2.29.14 — Multiplayer test performance
+
+- Reduced multiplayer test bandwidth and processing overhead.
+
 ## 0.3. v2.29.13 — Multiplayer test
 
 - Multiplayer test.

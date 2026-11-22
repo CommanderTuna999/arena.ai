@@ -14,6 +14,7 @@ type EnemyView = WorldSnapshot['enemies'][number];
  * connected to the shipped game or a production server. */
 export class ReplicaView {
   readonly game: Game;
+  private previousWorld: WorldSnapshot | null = null;
   constructor() {
     this.game = new Game(newSave(), 'visual-replica');
     this.game.persistent = false;
@@ -27,8 +28,10 @@ export class ReplicaView {
     Object.assign(g.player,{x:me.x,y:me.y,a:me.angle,hp:me.hp,shield:me.shield,dead:me.dead});
     g.cam.x=me.x;g.cam.y=me.y;
     g.others=pilots.filter(p=>p.id!==pilotId).map(p=>({id:p.id,name:p.name,x:p.x,y:p.y,a:p.angle,tx:p.x,ty:p.y,ta:p.angle,seen:world.time} satisfies Other));
+    if (this.previousWorld !== world) {
+    this.previousWorld = world;
     g.enemies=[];
-    for(const e of enemies) {
+    for(const e of world.enemies) {
       const sp=SPECIES_LIST.findIndex(s=>s.id===e.species);if(sp<0)continue;
       const parts=e.parts.map(p=>({...p,poly:[...p.poly],links:[...p.links]}));
       const byId=new Map(parts.map(p=>[p.id,p]));
@@ -37,6 +40,12 @@ export class ReplicaView {
       // live server or its mutable entities leave the wire snapshot.
       g.enemies.push({...e,sp,spd:SPECIES_LIST[sp],a:e.angle,S:e.size,parts,shields,
         dist:Math.hypot(e.x-me.x,e.y-me.y),dead:false} as unknown as Enemy);
+    }
+    }
+    const positions = new Map(enemies.map(e=>[e.id,e]));
+    for (const e of g.enemies) {
+      const pos=positions.get(e.id); if (!pos) continue;
+      e.x=pos.x; e.y=pos.y; e.a=pos.angle; e.dist=Math.hypot(e.x-me.x,e.y-me.y);
     }
     const byEnemy=new Map(g.enemies.map(e=>[e.id,e]));
     g.bullets=world.bullets.map(b=>({...b} as unknown as Bullet));

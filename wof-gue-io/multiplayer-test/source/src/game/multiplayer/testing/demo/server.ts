@@ -41,7 +41,7 @@ const server=http.createServer((req,res)=>{
   if(req.method==='GET' && req.url==='/health'){res.writeHead(healthy?200:503,{'content-type':'application/json'});res.end(JSON.stringify({ok:healthy,experimental:true,players:room.roster.size}));return;}
   res.writeHead(404);res.end();
 });
-const sockets=new WebSocketServer({noServer:true,maxPayload:1024,perMessageDeflate:false});
+const sockets=new WebSocketServer({noServer:true,maxPayload:1024,perMessageDeflate:{threshold:1024,serverNoContextTakeover:true,clientNoContextTakeover:true,zlibDeflateOptions:{level:1},concurrencyLimit:1}});
 server.on('upgrade',(req,socket,head)=>{
   let matches=false;
   try {const origin=new URL(req.headers.origin||'');matches=['http:','https:'].includes(origin.protocol)&&origin.host===req.headers.host;} catch {}

@@ -45,15 +45,20 @@ export class CombatHarness {
   }
   /** Experimental full geometry view. Not production replication: bandwidth,
    * combat coverage, reconciliation, privacy and durable saves remain open. */
-  snapshot() {
+  snapshot(interestRadius?: number) {
+    const pilots = this.roster.snapshot();
+    // Avoid constructing and copying geometry for enemies no connected pilot
+    // could receive. Filtering individual views still happens in transport.
+    const near = (x: number, y: number, extent = 0) => interestRadius === undefined ||
+      pilots.some(p => Math.hypot(p.x - x, p.y - y) <= interestRadius + Math.max(0, extent));
     return {
       time: this.world.t,
-      pilots: this.roster.snapshot(),
-      bullets: this.world.bullets.map(b => ({ x:b.x, y:b.y, vx:b.vx, vy:b.vy, kind:b.kind, elem:b.elem, crit:b.crit })),
-      enemyProjectiles: this.world.eprojs.map(p => ({ x:p.x, y:p.y, vx:p.vx, vy:p.vy, type:p.type, radius:p.r, hue:p.hue, speed:p.speed, tether:p.tether, srcId:p.src?.id })),
-      puddles: this.world.puddles.map(p => ({ x:p.x, y:p.y, radius:p.r, arm:p.arm, life:p.life, max:p.max, hue:p.hue, web:p.web })),
-      rings: this.world.rings.map(r => ({ x:r.x, y:r.y, radius:r.r, max:r.max, color:r.color, hurts:r.hurts })),
-      enemies: this.world.enemies.filter(e => !e.dead).map(e => ({
+      pilots,
+      bullets: this.world.bullets.filter(b => near(b.x,b.y)).map(b => ({ x:b.x, y:b.y, vx:b.vx, vy:b.vy, kind:b.kind, elem:b.elem, crit:b.crit })),
+      enemyProjectiles: this.world.eprojs.filter(p => near(p.x,p.y,p.r)).map(p => ({ x:p.x, y:p.y, vx:p.vx, vy:p.vy, type:p.type, radius:p.r, hue:p.hue, speed:p.speed, tether:p.tether, srcId:p.src?.id })),
+      puddles: this.world.puddles.filter(p => near(p.x,p.y,p.r)).map(p => ({ x:p.x, y:p.y, radius:p.r, arm:p.arm, life:p.life, max:p.max, hue:p.hue, web:p.web })),
+      rings: this.world.rings.filter(r => near(r.x,r.y,r.r)).map(r => ({ x:r.x, y:r.y, radius:r.r, max:r.max, color:r.color, hurts:r.hurts })),
+      enemies: this.world.enemies.filter(e => !e.dead && near(e.x,e.y,e.radius)).map(e => ({
         id:e.id, species:e.spd.id, speciesName:e.spd.name, tier:e.tier, x:e.x, y:e.y, angle:e.a, radius:e.radius, size:e.S,
         walk:e.walk, bend:e.bend ? {...e.bend} : null, aggro:e.aggro, barT:e.barT, legPlate:e.legPlate,
         shellHit:e.shellHit, shellR:e.shellR, shellMaxTotal:e.shellMaxTotal, shells:e.shells.map(s=>({...s})),
