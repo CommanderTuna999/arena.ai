@@ -8,7 +8,7 @@
  *   CHANGELOG and mirror the details in docs/CHANGELOG.md.
  */
 
-export const VERSION = "2.25.1";
+export const VERSION = "2.25.2";
 
 export interface ChangeEntry {
   version: string;
@@ -19,6 +19,10 @@ export interface ChangeEntry {
 }
 
 export const CHANGELOG: ChangeEntry[] = [
+  {
+    version: "2.25.2", date: "20 Nov 2026", title: "Ultra scaling",
+    points: ["Ultra normal-piece health and damage are each 135× their mythical values. Armour remains 16× average Ultra normal-piece health."],
+  },
   {
     version: "2.25.1", date: "20 Nov 2026", title: "Ultra visual and notice fixes",
     points: [

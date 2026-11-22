@@ -1,3 +1,7 @@
+## 0.3. v2.25.2 — Ultra scaling
+
+- Ultra normal-piece health and damage are each 135× the mythical equivalent (13.5×, multiplied by 10). Armour remains 16× average Ultra normal-piece health.
+
 ## 0.3. v2.25.1 — Ultra visual and notice fixes
 
 - Restored normal species colours for Ultra enemies; Ultra rarity components use black with a subtle white gradient instead of an animated enchantment glint.
