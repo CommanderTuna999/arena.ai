@@ -1,3 +1,27 @@
+## 0.2. v2.16.0 — contact attacks break their own shields, full-aggro guns and tier-2 cannons
+
+- **Contact attacks retract their own shields** (`engine.ts`): a dragonfly (and any future body whose
+  attack reaches the ship by contact) **retracts every frontal shield panel for the whole of a grab,
+  sting, charge or swing**, so the pincer grab cannot be blocked by the dragonfly's own shield wall.
+  A body-level `shieldDownT` timer is kept topped up by `runAct` while any contact ability runs and
+  bleeds off once it ends; the shield projection loop skips re-projecting while it is live.
+- **Weapon range is the full aggro reach** (`engine.ts`): every enemy mount's firing `range` is now the
+  body's full `aggroRange`, and an **aggroed body keeps firing at the ship even when the ship sits past
+  that range** — the range is the reach, not a firing gate (the `dd < range` term is gone from the firing
+  check). **Unaggroed enemies snap to attention the instant they take their first damage** (`trackDamage`
+  now sets `e.aggro = true`).
+- **Tier-driven drop rates** (`engine.ts`, `data.ts`): every **non-core component drops at ~5% at the
+  enemy's own rarity**; the **core drops at 90%** (**55% on a common body**); a **common body
+  additionally rolls an uncommon-tier component at 30%**. The old `rollTier` roll is gone.
+- **Overheat vignette only on overheating guns** (`render.ts`): `drawHeatVignette` returns early unless
+  `overheat > 0`, so chassis that never jam no longer flash the screen-edge warning.
+- **Three tier-2 cannons** (`data.ts`): **Skewer MK2** (longer, harder-hitting hitscan lance),
+  **Peashooter MK2** (tighter, faster spray) and **Workhorse MK2** (hotter, harder-hitting twin), each
+  `requires` its tier-1 predecessor. **Tier-1 crafting recipe check**: `homing` (cd 1.70→1.8) and
+  `rail` (cd 1.82→1.4) are the slightly-altered tier-1 recipes.
+- **Cannon tree helper text removed** (`GameClient.tsx`): the "hover a node for its numbers…" and "A
+  button greys out…" paragraphs are gone.
+
 ## 0.1. v2.15.1 — ability behaviour: webs, pincers, stings and lasers
 
 - **Spider webs reel and trap** (`engine.ts`, `enemies.ts`, `render.ts`): the **Web Volley**'s

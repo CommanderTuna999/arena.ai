@@ -8,7 +8,7 @@
  *   CHANGELOG and mirror the details in docs/CHANGELOG.md.
  */
 
-export const VERSION = "2.15.1";
+export const VERSION = "2.16.0";
 
 export interface ChangeEntry {
   version: string;
@@ -19,6 +19,19 @@ export interface ChangeEntry {
 }
 
 export const CHANGELOG: ChangeEntry[] = [
+  {
+    version: "2.16.0",
+    date: "20 Nov 2026",
+    title: "Contact attacks break their own shields, full-aggro guns and tier-2 cannons",
+    points: [
+      "A dragonfly (and any future body whose attack reaches the ship by contact) now retracts its frontal shields for the whole of a grab, sting, charge or swing, so the pincer cannot be blocked by the dragonfly's own shield wall. The retract is a body-level timer that the contact ability keeps topped up.",
+      "Every enemy weapon now reaches the body's full aggro range, and an aggroed body keeps firing at the ship even when the ship is past that range - the range is the reach, not a firing gate. Unaggroed enemies snap to attention the instant they take their first damage.",
+      "Drop rates are now tier-driven: every non-core component drops at about 5% at the enemy's own rarity, the core drops at 90% (55% on a common body), and a common body additionally rolls an uncommon-tier component at 30% - farming commons is the way up the rarity ladder.",
+      "The overheat screen edge-glow now only appears on a chassis that can actually overheat, so guns that never jam no longer flash the warning.",
+      "Three tier-2 cannons join the tree: Skewer MK2 (a longer, harder-hitting hitscan lance), Peashooter MK2 (a tighter, faster spray) and Workhorse MK2 (a hotter, harder-hitting twin), each requiring its tier-1 predecessor.",
+      "The cannon tree's stray helper paragraphs are gone; the nodes speak for themselves.",
+    ],
+  },
   {
     version: "2.15.1",
     date: "20 Nov 2026",
