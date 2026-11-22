@@ -1,3 +1,18 @@
+## 0.3. v2.20.0 — expanded world and rarity zones
+
+- Enlarged the reference-inspired map and added 48 interior wall segments. Every walkable cell remains reachable from the base.
+- Rarity zones progress outward from the base: common below 12k units, uncommon 12–25k, rare 25–40k, epic 40–56k, legendary 56–74k, mythical 74k+. Enemy rarity can vary within a zone.
+- The minimap displays these zones in their rarity colours. The map leaves space for future rarity tiers. Population slots are reserved for nearby refills so the global enemy cap does not leave explored regions empty.
+
+## 0.3. v2.19.0 — combat and session fixes
+
+- Lunar moth rotating lasers deal seven times the previous damage.
+- Fencer MK1 visibly charges its fifth attack before firing energy damage with strong recoil.
+- Every player-severed disconnected component rolls its normal independent drop chance.
+- Cannon-tree connections follow each chassis prerequisite, including all Skewer MK1 tier-2 branches.
+- Leaving resets the run's world; reopening or reloading starts at the home screen while retaining pilot upgrades.
+- Update checks no longer pause gameplay for a commit that has not deployed.
+
 ## 0.3. v2.18.0 — new map and tier-2 cannon upgrades
 
 - Replaced the circular arena with a connected corridor map based on the supplied layout. Its walkable area is approximately five times the old arena; the base is in the lower open region.

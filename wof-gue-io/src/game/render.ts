@@ -1,6 +1,6 @@
 import { MAP_GRID, MAP_CELL, MAP_RADIUS } from "./world";
 import { TAU, clamp, fmtNum } from "./math";
-import { BASE, CANNON_BY_ID, CANNONS, CAT_NAME, KIND_CAT, RARITIES, SHIP_R, W_SLOTS, WEAPON_RANGE, WEAPON_TINT, WORLD_R, ZONE_EDGES } from "./data";
+import { BASE, CANNON_BY_ID, CANNONS, CAT_NAME, KIND_CAT, RARITIES, SHIP_R, W_SLOTS, WEAPON_RANGE, WEAPON_TINT, WORLD_R, ZONE_EDGES, zoneAt } from "./data";
 import { N_ROPE, legHealthy, plateGrow, type Enemy, type Game, type LComp } from "./engine";
 
 function bend(e: Enemy, p: { seg: number }) {
@@ -72,8 +72,8 @@ export function render(g: Game, ctx: CanvasRenderingContext2D) {
   ctx.setLineDash([40 / z, 40 / z]);
   ctx.lineWidth = 3 / z;
   ZONE_EDGES.forEach((r, i) => {
-    ctx.strokeStyle = RARITIES[5 - i].color + "40";
-    ctx.beginPath(); ctx.arc(0, 0, r, 0, TAU); ctx.stroke();
+    ctx.strokeStyle = RARITIES[i + 1].color + "40";
+    ctx.beginPath(); ctx.arc(BASE.x, BASE.y, r, 0, TAU); ctx.stroke();
   });
   ctx.setLineDash([]);
   // The dark regions are solid terrain; draw only the visible map tiles.
@@ -1595,6 +1595,14 @@ function drawArmorVisual(ctx: CanvasRenderingContext2D, rid: string, eff: number
 }
 
 function drawPlayer(g: Game, ctx: CanvasRenderingContext2D, z: number, t: number) {
+  if (g.fencerCharge > 0) {
+    const p = g.player, progress = 1 - g.fencerCharge / 0.4;
+    const x = p.x + Math.cos(p.a) * 42, y = p.y + Math.sin(p.a) * 42;
+    ctx.save(); ctx.shadowColor = "#c4a6ff"; ctx.shadowBlur = 20 + 30 * progress;
+    ctx.fillStyle = "#e9d5ff"; ctx.beginPath(); ctx.arc(x, y, 5 + progress * 14, 0, TAU); ctx.fill();
+    ctx.strokeStyle = "#b487ff"; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(x, y, 24 - 12 * progress, 0, TAU); ctx.stroke(); ctx.restore();
+  }
+
   const p = g.player, st = g.stats;
   ctx.save();
   ctx.translate(p.x, p.y); ctx.rotate(p.a);
@@ -2025,6 +2033,20 @@ function drawBars(g: Game, ctx: CanvasRenderingContext2D, e: Enemy, z: number) {
   }
 }
 
+let minimapTerrain: HTMLCanvasElement | null = null;
+function terrainMap(): HTMLCanvasElement {
+  if (minimapTerrain) return minimapTerrain;
+  const image = document.createElement("canvas");
+  image.width = image.height = MAP_GRID.length;
+  const c = image.getContext("2d")!;
+  for (let y = 0; y < MAP_GRID.length; y++) for (let x = 0; x < MAP_GRID.length; x++) {
+    if (MAP_GRID[y][x] !== "1") continue;
+    const wx = (x + 0.5) * MAP_CELL - MAP_RADIUS, wy = (y + 0.5) * MAP_CELL - MAP_RADIUS;
+    c.fillStyle = RARITIES[zoneAt(wx, wy)].color + "88";
+    c.fillRect(x, y, 1, 1);
+  }
+  return minimapTerrain = image;
+}
 function drawMinimap(g: Game, ctx: CanvasRenderingContext2D) {
   const S = Math.min(170, g.w * 0.28);
   const cx = g.w - S / 2 - 14, cy = S / 2 + 14;
@@ -2033,11 +2055,9 @@ function drawMinimap(g: Game, ctx: CanvasRenderingContext2D) {
   ctx.save();
   ctx.beginPath(); ctx.rect(cx - R, cy - R, S, S); ctx.clip();
   ctx.fillStyle = "rgba(4,8,20,0.8)"; ctx.fillRect(cx - R, cy - R, S, S);
-  const cell = S / MAP_GRID.length;
-  ctx.fillStyle = "rgba(145,185,202,0.38)";
-  for (let y = 0; y < MAP_GRID.length; y++) for (let x = 0; x < MAP_GRID.length; x++) {
-    if (MAP_GRID[y][x] === "1") ctx.fillRect(cx - R + x * cell, cy - R + y * cell, cell + 0.3, cell + 0.3);
-  }
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(terrainMap(), cx - R, cy - R, S, S);
+  ctx.imageSmoothingEnabled = true;
   // enemies
   ctx.fillStyle = "rgba(255,255,255,0.45)";
   for (const e of g.enemies) ctx.fillRect(cx + e.x * k - 0.8, cy + e.y * k - 0.8, 1.6, 1.6);

@@ -8,7 +8,7 @@
  *   CHANGELOG and mirror the details in docs/CHANGELOG.md.
  */
 
-export const VERSION = "2.18.0";
+export const VERSION = "2.20.0";
 
 export interface ChangeEntry {
   version: string;
@@ -19,6 +19,24 @@ export interface ChangeEntry {
 }
 
 export const CHANGELOG: ChangeEntry[] = [
+  {
+    version: "2.20.0", date: "20 Nov 2026", title: "Expanded world and rarity zones",
+    points: [
+      "The reference-inspired world is larger and contains dozens of additional walls, while all walkable regions remain connected to the base.",
+      "Rarity increases with distance from the base, from common through mythical. The minimap now colours the actual zones, with space for future rarity tiers.",
+    ],
+  },
+  {
+    version: "2.19.0", date: "20 Nov 2026", title: "Combat and session fixes",
+    points: [
+      "Lunar moth rotating lasers deal seven times their previous damage.",
+      "Fencer MK1 now visibly charges before firing its fifth attack as an energy shot with strong recoil.",
+      "Every disconnected component has its normal independent drop chance when severed by the player.",
+      "The cannon tree connects each chassis to its actual prerequisite, including all Skewer MK1 tier-2 branches.",
+      "Leaving resets the run's world; reopening or reloading the game returns to the home screen. Your pilot upgrades remain saved.",
+      "Update checks no longer pause the game just because a newer commit exists; they wait until a new version is actually live.",
+    ],
+  },
   {
     version: "2.18.0",
     date: "20 Nov 2026",

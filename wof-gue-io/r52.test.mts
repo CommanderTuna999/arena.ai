@@ -22,7 +22,7 @@ const seen = new Set([`${startX},${startY}`]); const queue = [[startX, startY]];
 for (let i = 0; i < queue.length; i++) { const [x,y] = queue[i]; for (const [nx,ny] of [[x+1,y],[x-1,y],[x,y+1],[x,y-1]]) { const k = `${nx},${ny}`; if (MAP_GRID[ny]?.[nx] === "1" && !seen.has(k)) { seen.add(k); queue.push([nx,ny]); } } }
 assert.equal(seen.size, cells.length, "all walkable map cells are connected to the base");
 const ratio = cells.length * MAP_CELL ** 2 / (Math.PI * 16000 ** 2);
-assert(ratio > 4.8 && ratio < 5.2, `walkable area ratio ${ratio}`);
+assert(ratio > 6.5, `walkable area ratio ${ratio}`);
 const g = new Game(newSave(), "test") as any;
 g.save.cannon.id = "mediator"; g.save.cannon.lv.mediator = { chargeRate: 2, beamWidth: 2 }; g.stats = computeStats(g.save);
 g.player.x = BASE.x + 2000; g.player.y = BASE.y; g.input.lmb = true; g.player.fireCd = 0;

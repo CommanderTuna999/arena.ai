@@ -3,23 +3,10 @@
 import { useEffect, useState } from "react";
 import { VERSION } from "@/game/changelog";
 
-/*
- * Standby screen for a deploy.
- *
- *  - /api/update-status says a newer commit exists than the one this build was
- *    made from -> a push is on its way, so the game is paused and the site says
- *    so until the new build takes over.
- *  - once the live build's VERSION no longer matches this bundle, the tab is
- *    stale: keep the same screen up and reload into the new build.
- *  - if the update never lands (a push with no deploy behind it) the overlay
- *    gives up after four minutes rather than walling the game off forever.
- *
- * It also cleans up caches and any stray service worker so a reload really does
- * fetch the new bundle.
- */
+/* Reload once after a newer build is actually live. A pushed commit alone is
+ * not proof of a deployment and must never pause a playable session. */
 
 const RELOAD_KEY = "wof-version-reload";
-const STALE_LIMIT_MS = 4 * 60 * 1000;
 const POLL_MS = 8000;
 
 type State = { text: string } | null;
@@ -30,7 +17,6 @@ export default function UpdateGuard() {
   useEffect(() => {
     let dead = false;
     let reloading = false;
-    let waitingSince = 0;
 
     try {
       if ("caches" in window) {
@@ -67,7 +53,7 @@ export default function UpdateGuard() {
         if (j.version && j.version !== VERSION) {
           let last = "";
           try { last = sessionStorage.getItem(RELOAD_KEY) ?? ""; } catch { /* ignore */ }
-          if (last === j.version) return; // already tried once; do not loop
+          if (last === j.version) { release(); return; } // failed reload must not leave the game paused
           hold("Pausing gameplay for update - please stand by");
           reloading = true;
           try { sessionStorage.setItem(RELOAD_KEY, j.version); } catch { /* ignore */ }
@@ -77,16 +63,10 @@ export default function UpdateGuard() {
           return;
         }
 
-        if (j.updating) {
-          if (!waitingSince) waitingSince = Date.now();
-          if (Date.now() - waitingSince < STALE_LIMIT_MS) {
-            hold("Pausing gameplay for update - please stand by");
-            return;
-          }
-        }
-        waitingSince = 0;
+        // A newer commit is not necessarily a deploy. Never block a running
+        // game on a speculative build; reload only after the version changes.
         release();
-      } catch { /* offline: say nothing */ }
+      } catch { release(); /* offline must not leave the game paused */ }
     };
 
     const onVis = () => { if (document.visibilityState === "visible") void check(); };

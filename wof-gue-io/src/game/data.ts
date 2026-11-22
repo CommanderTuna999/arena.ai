@@ -1,14 +1,13 @@
 import { clamp, fmtNum } from "./math";
 
 /* ---------- world constants ---------- */
-export const WORLD_R = 48000;
-/* The base drifts around the outer ring every run: the x/y below are only the
- * initial fallback, Game.placeBase() moves it before the player spawns. */
+export const WORLD_R = 60000;
+/* The base is in the open lower-right starting region. */
 /* turretR is the siege cannon's reach; aggroR (10% beyond it) is the base's
  * defence-alert radius and the band enemies are retained in while chasing the
  * player through it. Enemies never target the base itself. smallR is the
  * point-defence reach of the six hex turrets on the base ring. */
-export const BASE = { x: 24000, y: 12000, r: 260, dock: 175, safe: 950, turretR: 1600, aggroR: 1760, smallR: 850 };
+export const BASE = { x: 30000, y: 15000, r: 260, dock: 175, safe: 950, turretR: 1600, aggroR: 1760, smallR: 850 };
 /** radius band the base may occupy — the outer (common) ring only */
 export const BASE_RING = { min: 13900, max: 15300 };
 /** structural integrity of the base; high-tier enemies chew through this fast */
@@ -22,12 +21,14 @@ export const W_SLOTS = [
   { x: -14.72, y: 8.5, rest: (5 * Math.PI) / 6 },
 ] as const;
 export const SHIP_R = 15;
-/** distance-from-centre thresholds: tier = index of first threshold the distance is under (mythical first) */
-export const ZONE_EDGES = [5250, 11250, 18000, 24000, 26250]; // mythical, legendary, epic, rare, uncommon, else common
-
-export function zoneTier(distFromCentre: number) {
-  for (let i = 0; i < ZONE_EDGES.length; i++) if (distFromCentre < ZONE_EDGES[i]) return 5 - i;
-  return 0;
+/** Minimum distance from the base for each successive rarity band.
+ * Keep thresholds data-driven so future rarities can extend the map. */
+export const ZONE_EDGES = [12000, 25000, 40000, 56000, 74000];
+export function zoneTier(distanceFromBase: number) {
+  return ZONE_EDGES.reduce((tier, edge) => tier + (distanceFromBase >= edge ? 1 : 0), 0);
+}
+export function zoneAt(x: number, y: number) {
+  return zoneTier(Math.hypot(x - BASE.x, y - BASE.y));
 }
 
 /* ---------- rarities ---------- */

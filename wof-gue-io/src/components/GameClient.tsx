@@ -52,6 +52,7 @@ async function loadSave(pid: string, saveKey: string): Promise<SaveData> {
 export default function GameClient() {
   const router = useRouter();
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const allowedEntry = useRef<boolean | null>(null);
   const gameRef = useRef<Game | null>(null);
   const [hud, setHud] = useState<Hud | null>(null);
   const creditRef = useRef<HTMLDivElement | null>(null);
@@ -98,6 +99,11 @@ export default function GameClient() {
     const cleanups: (() => void)[] = [];
 
     (async () => {
+      if (allowedEntry.current === null) {
+        allowedEntry.current = sessionStorage.getItem("wof-enter-game") === "1";
+        sessionStorage.removeItem("wof-enter-game");
+      }
+      if (!allowedEntry.current) { router.replace("/"); return; }
       /* Accounts come first: a signed-in player plays their own save slot. */
       const sess = await resolveSession();
       if (stopped) return;
@@ -196,6 +202,9 @@ export default function GameClient() {
 
       const vis = () => { if (document.visibilityState === "hidden") game.beaconSave(); };
       const unload = () => game.beaconSave();
+      const onPageShow = (e: PageTransitionEvent) => { if (e.persisted) router.replace("/"); };
+      window.addEventListener("pageshow", onPageShow);
+      cleanups.push(() => window.removeEventListener("pageshow", onPageShow));
       document.addEventListener("visibilitychange", vis);
       window.addEventListener("pagehide", unload);
       cleanups.push(() => { document.removeEventListener("visibilitychange", vis); window.removeEventListener("pagehide", unload); game.beaconSave(); });
@@ -664,8 +673,6 @@ function CannonTree({ game }: { game: Game }) {
   const [msg, setMsg] = useState<string | null>(null);
   const [open, setOpen] = useState<string | null>(null);
   const fittedLv = save.cannon?.lv?.[fitted.id] ?? {};
-  const tiers = [...new Set(CANNONS.map((c) => c.tier))].sort((a, b) => a - b);
-  const build = (id: string) => setMsg(game.buyCannonChassis(id));
   const freeParts = game.admin.on && game.admin.components;
 
   /* one node: compact by default, the whole card while it is open */
@@ -767,7 +774,24 @@ function CannonTree({ game }: { game: Game }) {
     );
   };
 
-  const rows = [...tiers].sort((a, b) => b - a);
+  const branch = (c: CannonDef, ancestors: Set<string>): ReactNode => {
+    if (ancestors.has(c.id)) return null;
+    const next = new Set(ancestors).add(c.id);
+    const children = CANNONS.filter((child) => child.requires === c.id && !next.has(child.id));
+    return <div key={c.id} className="flex min-w-[125px] flex-col items-center">
+      {children.length > 0 && <>
+        <div className="flex w-full items-end justify-center gap-2">
+          {children.map((child) => <div key={child.id} className="relative flex flex-1 flex-col items-center">
+            {branch(child, next)}
+            <div className="h-4 w-px bg-cyan-300/35" />
+          </div>)}
+        </div>
+        {children.length > 1 && <div className="h-px bg-cyan-300/35" style={{ width: `${100 * (children.length - 1) / children.length}%` }} />}
+        <div className="h-4 w-px bg-cyan-300/35" />
+      </>}
+      <div className="w-[125px]">{node(c, true, "mid")}</div>
+    </div>;
+  };
   return (
     <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)]">
       {/* ---- the tree ---- */}
@@ -776,41 +800,10 @@ function CannonTree({ game }: { game: Game }) {
           <div className="text-[10px] font-bold tracking-[0.22em] text-cyan-200/60">CANNON TREE</div>
         </div>
         {msg && <div className="mb-1 rounded-sm border border-red-400/40 bg-red-500/10 px-2 py-1 text-[11px] text-red-200">{msg}</div>}
-        <div className="pt-1">
-          {rows.map((tier, ri) => {
-            const row = CANNONS.filter((c) => c.tier === tier);
-            const last = ri === rows.length - 1;
-            const nodes = row.length > 1
-              ? row.map((c, i) => node(c, true, i === 0 ? "left" : i === row.length - 1 ? "right" : "mid"))
-              : [<div key="l" />, <div key="c">{node(row[0], false, "mid")}</div>, <div key="r" />];
-            return (
-              <div key={tier}>
-                <div className="mb-1 text-center text-[8px] font-bold tracking-[0.28em] text-white/25">TIER {tier}</div>
-                <div className="grid grid-cols-3 gap-1.5">{nodes}</div>
-                {!last && (
-                  <>
-                    {row.length > 1 && (
-                      <div className="grid grid-cols-3">
-                        {row.map((c, i) => (
-                          <div key={c.id} className="relative h-4">
-                            <div className="absolute inset-y-0 left-1/2 w-px bg-cyan-300/35" />
-                            <div
-                              className="absolute bottom-0 h-px bg-cyan-300/35"
-                              style={{ left: i === 0 ? "50%" : "-3px", right: i === row.length - 1 ? "50%" : "-3px" }}
-                            />
-                            {i === Math.floor((row.length - 1) / 2) && <div className="absolute -bottom-1 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full bg-cyan-300/60" />}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                    <div className="grid grid-cols-3">
-                      <div /><div className="h-5"><div className="mx-auto h-full w-px bg-cyan-300/35" /></div><div />
-                    </div>
-                  </>
-                )}
-              </div>
-            );
-          })}
+        <div className="overflow-x-auto pt-1 pb-2">
+          <div className="flex min-w-max justify-center gap-4">
+            {CANNONS.filter((c) => !c.requires || !CANNON_BY_ID[c.requires]).map((c) => branch(c, new Set()))}
+          </div>
         </div>
       </div>
 

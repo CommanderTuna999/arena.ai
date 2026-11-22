@@ -143,6 +143,7 @@ export default function StartScreen() {
       return;
     }
     persist({ ...save, name: n, ts: Date.now() });
+    sessionStorage.setItem("wof-enter-game", "1");
     router.push("/play");
   };
 

@@ -5,7 +5,7 @@ import {
   DMG_MUL, KIND_CAT, KIND_DROP_RATE, RARITIES, RECIPE_BY_ID, SHIP_R, UPGRADES, WORLD_R, W_SLOTS, COMMON_CORE_RATE, COMMON_UNCOMMON_RATE, cannonBillPicks, cannonBillProblem,
   cannonDmg, cannonOwned, cannonRate, cannonTrackCost,
   compMass, compValue, computeStats, craftEfficiency,
-  recipeProblem, upgradeCost, zoneTier, WEAPON_DMG, WEAPON_RANGE, type Comp, type DmgKind, type PartKind, type SaveData, type Slot, type Stats,
+  recipeProblem, upgradeCost, zoneAt, WEAPON_DMG, WEAPON_RANGE, type Comp, type DmgKind, type PartKind, type SaveData, type Slot, type Stats,
 } from "./data";
 import { ABILITY_INTERVALS, GUN_SPECS, LASER_RAMP, LASER_RAMP_MIN, SPECIES_LIST, buildEnemy, type AbilityDef, type Group, type GunKind, type Part, type ProjType, type SpeciesDef } from "./enemies";
 
@@ -455,6 +455,7 @@ export class Game {
   private idc = 1;
   private chunkT = 0;
   private worldSeeded = false;
+  private worldSeed = Math.floor(Math.random() * 0x7fffffff);
   private saveT = 0;
   private serverT = 0;
   private netT = 0;
@@ -490,7 +491,7 @@ export class Game {
    *  and always stays clear of the world edge. */
   private placeBase() {
     // The broad lower-right opening in the supplied map.
-    const x = 24000, y = 12000;
+    const x = 30000, y = 15000;
     BASE.x = x; BASE.y = y;
     this.cam.x = x;
     this.cam.y = y - 120;
@@ -1464,10 +1465,10 @@ export class Game {
     };
   }
   private spawnChunk(cx: number, cy: number, key: string, budget = Infinity) {
-    const rng = mulberry32(hash2(cx, cy, 77));
+    const rng = mulberry32(hash2(cx, cy, this.worldSeed));
     const ccx = (cx + 0.5) * CH, ccy = (cy + 0.5) * CH;
     if (Math.abs(ccx) > WORLD_R || Math.abs(ccy) > WORLD_R) return;
-    const zt = zoneTier(Math.hypot(ccx, ccy));
+    const zt = zoneAt(ccx, ccy);
     /* the one-time world seed keeps the rarity-band density curve: an epic
      * chunk is ~12% as likely to hold a resident as an outer chunk, a legendary
      * chunk ~6% and a mythical chunk ~3%; each inner ring is quieter still */
@@ -1485,12 +1486,11 @@ export class Game {
     for (let i = 0; i < n; i++) {
       if (this.enemies.length >= HARD_MAX || made >= budget) break;
       const x = cx * CH + rng() * CH, y = cy * CH + rng() * CH;
-      const d = Math.hypot(x, y);
       const rolls = [rng(), rng(), rng(), rng()];
       if (!walkable(x, y)) continue;
       if (Math.hypot(x - BASE.x, y - BASE.y) < BASE.safe + 350) continue;
       if (Math.hypot(x - this.player.x, y - this.player.y) < 1200) continue;
-      const z2 = zoneTier(d);
+      const z2 = zoneAt(x, y);
       const r = rolls[0];
       const tier = Math.max(0, r < 0.55 ? z2 : r < 0.83 ? z2 - 1 : r < 0.95 ? z2 - 2 : z2 - 3);
       const spi = pickSpecies(x, y, () => rolls[1], z2);
@@ -1506,7 +1506,7 @@ export class Game {
     // a snake prowls the mythical core: at most one at a time
     if (zt >= 5 && BOSS_SP >= 0 && rng() < 0.55 && !this.bossAlive()) {
       const bx = cx * CH + rng() * CH, by = cy * CH + rng() * CH;
-      if (!walkable(bx, by)) return;
+      if (!walkable(bx, by) || zoneAt(bx, by) < 5) return;
       const boss = this.makeEnemy(BOSS_SP, 5, bx, by, key, hash2(cx, cy, 999));
       boss.aggro = true;
       this.enemies.push(boss);
@@ -1529,13 +1529,14 @@ export class Game {
       if (!walkable(ccx, ccy)) continue;
       keys.push(`${cx},${cy}`);
     }
-    const rng = mulberry32(hash2(7919, 104729, 17));
+    const rng = mulberry32(hash2(7919, 104729, this.worldSeed));
     for (let i = keys.length - 1; i > 0; i--) {
       const j = Math.floor(rng() * (i + 1));
       [keys[i], keys[j]] = [keys[j], keys[i]];
     }
     for (const key of keys) {
-      if (this.enemies.length >= HARD_MAX) break;
+      // Reserve capacity for local refills as the player explores the larger map.
+      if (this.enemies.length >= HARD_MAX - 80) break;
       const [cx, cy] = key.split(",").map(Number);
       this.chunks.add(key);
       this.spawnChunk(cx, cy, key, SEED_BUDGET);
@@ -1550,11 +1551,29 @@ export class Game {
     this.ensureNearby();
   }
 
+  /** Reuse a distant, non-aggro resident's slot rather than letting the global
+   * cap prevent the player's current neighbourhood from repopulating. */
+  private reserveLocalSpawn(): boolean {
+    if (this.enemies.length < HARD_MAX) return true;
+    const p = this.player;
+    const cutoff = Math.max(5000, this.viewRadius() * 2.5);
+    let index = -1, farthest = cutoff;
+    for (let i = 0; i < this.enemies.length; i++) {
+      const e = this.enemies[i];
+      if (e.aggro || e.spd.boss) continue;
+      const d = Math.hypot(e.x - p.x, e.y - p.y);
+      if (d > farthest) { farthest = d; index = i; }
+    }
+    if (index < 0) return false;
+    this.enemies.splice(index, 1);
+    return true;
+  }
+
   /** Refill the immediate neighbourhood toward ~85% of the local zone cap.
    *  The rest of the world keeps its own persistent population. */
   private topUp() {
     const p = this.player;
-    const zt = zoneTier(Math.hypot(p.x, p.y));
+    const zt = zoneAt(p.x, p.y);
     let near = 0;
     for (const e of this.enemies) if (!e.dead && Math.hypot(e.x - p.x, e.y - p.y) < CH * 1.8) near++;
     const target = Math.round(ZONE_CAP[zt] * 0.85);
@@ -1562,14 +1581,14 @@ export class Game {
     if (add <= 0) return;
     const viewR = this.viewRadius();
     for (let k = 0; k < add; k++) {
-      if (this.enemies.length >= HARD_MAX) return;
+      if (!this.reserveLocalSpawn()) return;
       for (let tries = 0; tries < 10; tries++) {
         const a = Math.random() * TAU;
         const d = clamp(viewR * 1.25, 700, 2100) + Math.random() * 500;
         const x = p.x + Math.cos(a) * d, y = p.y + Math.sin(a) * d;
         if (!walkable(x, y)) continue;
         if (Math.hypot(x - BASE.x, y - BASE.y) < BASE.safe + 350) continue;
-        const z2 = zoneTier(Math.hypot(x, y));
+        const z2 = zoneAt(x, y);
         const tier = Math.max(0, z2 - (Math.random() < 0.55 ? 0 : 1));
         const key = `${Math.floor(x / CH)},${Math.floor(y / CH)}`;
         this.enemies.push(this.makeEnemy(pickSpecies(x, y, Math.random, z2), tier, x, y, key, hash2(x | 0, y | 0, 21)));
@@ -1581,7 +1600,7 @@ export class Game {
   /** Keep a few enemies inside the player's view, even after a killing spree. */
   private ensureNearby() {
     const p = this.player;
-    const zt = zoneTier(Math.hypot(p.x, p.y));
+    const zt = zoneAt(p.x, p.y);
     const want = zt >= 4 ? 2 : 4;
     const viewR = this.viewRadius();
     let have = 0;
@@ -1589,14 +1608,14 @@ export class Game {
     let need = want - have;
     if (need <= 0) return;
     const base = clamp(viewR * 0.78, 300, 2200);
-    while (need-- > 0 && this.enemies.length < HARD_MAX) {
+    while (need-- > 0 && this.reserveLocalSpawn()) {
       for (let tries = 0; tries < 8; tries++) {
         const a = Math.random() * TAU;
         const d = base * (0.8 + Math.random() * 0.4);
         const x = p.x + Math.cos(a) * d, y = p.y + Math.sin(a) * d;
         if (!walkable(x, y)) continue;
         if (Math.hypot(x - BASE.x, y - BASE.y) < BASE.safe + 350) continue;
-        const z2 = zoneTier(Math.hypot(x, y));
+        const z2 = zoneAt(x, y);
         const key = `${Math.floor(x / CH)},${Math.floor(y / CH)}`;
         /* The visibility floor stays at rare tier even in epic+ rings: those
          * zones must feel sparse, not refill with one legendary per glance. */
@@ -1760,16 +1779,16 @@ export class Game {
     sev.forEach((p, i) => pieces.push({ poly: worldPolys[i].map((v, k) => (k % 2 === 0 ? v - cx : v - cy)), stroke: p.stroke, fill: p.fill }));
     const away = Math.atan2(cy - e.y, cx - e.x);
     this.debris.push({ x: cx, y: cy, vx: Math.cos(away) * 90 + e.vx, vy: Math.sin(away) * 90 + e.vy, rot: 0, vr: (Math.random() - 0.5) * 2.2, life: 1.3, max: 1.3, pieces });
-    // largest severed part may drop
-    let big = sev[0];
-    for (const p of sev) { e.tags[p.name] = (e.tags[p.name] ?? 1) - 1; if (p.area > big.area) big = p; }
-    for (const p of sev) p.alive = false;
+    for (const p of sev) {
+      e.tags[p.name] = (e.tags[p.name] ?? 1) - 1;
+      if (byPlayer) { const w = this.partWorld(e, p); this.maybeDrop(e, p, w[0], w[1]); }
+      p.alive = false;
+    }
     this.shake = Math.max(this.shake, 6);
     if (byPlayer) {
       const area = sev.reduce((sum, q) => sum + q.area, 0);
       this.dropCreditValue(e, cx, cy, area, "armor");
     }
-    if (Math.random() < 0.65) { const w = this.partWorld(e, big); this.maybeDrop(e, big, w[0], w[1], 1.0); }
     this.refreshMobility(e);
   }
   /** A base kill takes everything with it: loose parts and credit motes. */
@@ -3260,11 +3279,14 @@ export class Game {
    *  cannon is only data: dmg, rate and barrels for rounds, crit for seams,
    *  pierce for how deep a round cuts, spread for the spray, and a hitscan flag
    *  for guns that draw a line instead of throwing a slug. */
+  fencerCharge = 0;
+  private fencerDamage = 0;
   private mediatorBeamTime = 0;
   private mediatorBeamDamage = 0;
   private firePlayer(dt: number) {
     const p = this.player, st = this.stats;
-    if (p.dead) { this.mediatorBeamTime = 0; return; }
+    if (p.dead) { this.mediatorBeamTime = 0; this.fencerCharge = 0; return; }
+    if (st.cannonId !== "fencer" || this.inSafe()) this.fencerCharge = 0;
     if (!st.charge) this.mediatorBeamTime = 0;
     const want = this.input.lmb || this.input.keys.has("Space");
     p.fireCd -= dt;
@@ -3278,6 +3300,20 @@ export class Game {
       return;
     }
     const base = p.a;
+    if (this.fencerCharge > 0) {
+      this.fencerCharge -= dt;
+      if (this.fencerCharge <= 0) {
+        const m = st.muzzles[0] ?? { x: 14, y: 0 };
+        const x = p.x + Math.cos(base) * m.x - Math.sin(base) * m.y;
+        const y = p.y + Math.sin(base) * m.x + Math.cos(base) * m.y;
+        this.beam(x, y, base, st.bulletRange, this.fencerDamage, st.pierce + 2, false, "laser", "#c4a6ff");
+        this.burst(x, y, "#c4a6ff", 20, 8, 480); this.ringFx(x, y, 90, "#c4a6ff", 600);
+        this.shake = Math.max(this.shake, 12); p.recoil = 1; p.muzzleFlash = 1;
+        p.vx -= Math.cos(base) * 200; p.vy -= Math.sin(base) * 200;
+        p.fireCd = 1 / st.rate;
+      }
+      return;
+    }
     /* the Mediator charges its beam: hold the trigger to build charge, release
      * to fire a devastating beam whose damage scales with how long it was held */
     if (st.charge) {
@@ -3332,7 +3368,8 @@ export class Game {
         const skewer2 = st.cannonId === "skewer2";
         let chargeShot = false;
         if (fencer) { p.fenceShots++; chargeShot = p.fenceShots % 5 === 0; }
-        const energyShot = skewer2 && !chargeShot && Math.random() < st.energyChance;
+        if (chargeShot) { this.fencerCharge = 0.4; this.fencerDamage = dmg * 12.5; return; }
+        const energyShot = skewer2 && Math.random() < st.energyChance;
         const dShot = chargeShot ? dmg * 12.5 : dmg;
         const col = (energyShot || chargeShot) ? "#c4a6ff" : crit ? "#fff3b0" : "#e6fbff";
         this.beam(m0.x, m0.y, base, st.bulletRange, dShot, chargeShot ? st.pierce + 2 : st.pierce, energyShot, energyShot ? "laser" : "kinetic", col, 1, skewer2 ? st.armorDmg : 1);

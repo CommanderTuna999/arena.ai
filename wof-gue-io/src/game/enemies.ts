@@ -721,7 +721,7 @@ const SPECIES: SpeciesDef[] = [
     armed: { gun: false, missile: false, shield: true }, pack: [1, 1, 1, 1, 1, 1],
     abilities: [
       { type: "shoot", name: "Shot Burst", minTier: 0, wind: 0.4, dmg: 2, n: 5, spread: 1.2, speed: 600, life: 1.2, size: 5, kind: "bolt", maxS: 2, maxP: 800 },
-      { type: "beam", name: "Rotating Lasers", minTier: 3, wind: 0.6, dmg: 1, beams: 4, beamSpin: 1.5, dur: 4, maxS: 4, maxP: 200 },
+      { type: "beam", name: "Rotating Lasers", minTier: 3, wind: 0.6, dmg: 7, beams: 4, beamSpin: 1.5, dur: 4, maxS: 4, maxP: 200 },
       { type: "shoot", name: "Missiles", minTier: 4, wind: 0.6, dmg: 3, n: 20, spread: 0.3, speed: 1000, life: 3, size: 5, homing: 3.2, kind: "missile", orbit: true, maxS: 2, maxP: 900 },
       { type: "heal", name: "Shield", minTier: 0, wind: 1.2, dmg: 0, shieldHp: 0.05, shieldHeal: 0.05, shieldDur: 6, maxS: 0, maxP: 0 },
       { type: "domain", name: "Domain", minTier: 5, wind: 1.0, dmg: 0.1, dur: 180, maxS: 5, maxP: 200 },
