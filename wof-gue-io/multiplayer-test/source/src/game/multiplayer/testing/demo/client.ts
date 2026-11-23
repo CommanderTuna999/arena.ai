@@ -16,7 +16,7 @@ let displayClient: ExperimentalWorldClient | null=null, playback=new DemoPlaybac
 let frames=0,fps=0,fpsStarted=performance.now(),lastViewTime=-1,lastArrival=0,updateGap=0;
 const keys=new Set<string>();
 let localPilot:any=null;
-const menu=createDemoBaseMenu(id=>{client.equipDemoCannon(id);},(track,n,cannon)=>{client.upgradeDemoCannon(track,n,cannon);},()=>{});
+const menu=createDemoBaseMenu(id=>{client.equipDemoCannon(id);},(track,n,cannon)=>{client.upgradeDemoCannon(track,n,cannon);},(id,n)=>{client.upgradeDemoShip(id,n);},()=>{});
 function toggleBase(){if(menu.isOpen()){menu.setOpen(false);return;}if(client.state==='online' && localPilot && !localPilot.dead && Math.hypot(localPilot.x-BASE.x,localPilot.y-BASE.y)<BASE.r+40){keys.clear();fire=false;menu.update(localPilot);menu.setOpen(true);}}
 function resize(){viewportDirty=true;const d=Math.min(devicePixelRatio||1,1.5);canvas.width=Math.round(innerWidth*d);canvas.height=Math.round(innerHeight*d);ctx.setTransform(d,0,0,d,0,0);replica.resize(innerWidth,innerHeight,d);}
 window.addEventListener('resize',resize);resize();

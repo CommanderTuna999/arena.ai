@@ -92,6 +92,10 @@ export class ExperimentalWorldClient {
     if(this.state!=='online'||!this.socket||this.socket.readyState!==1||typeof track!=='string'||!Object.hasOwn(CANNON_BY_ID,cannon)||!Number.isSafeInteger(count)||count<1||count>30)return false;
     try{this.socket.send(JSON.stringify({type:'demo-upgrade',track,count,cannon}));return true;}catch{this.disconnect();return false;}
   }
+  upgradeDemoShip(upgrade:string,count:number):boolean {
+    if(this.state!=='online'||!this.socket||this.socket.readyState!==1||!['hull','regen','armor','shield','thrust','handling','boost'].includes(upgrade)||!Number.isSafeInteger(count)||count<1||count>30)return false;
+    try{this.socket.send(JSON.stringify({type:'demo-ship-upgrade',upgrade,count}));return true;}catch{this.disconnect();return false;}
+  }
   sendViewport(width: number, height: number): boolean {
     if (this.state !== 'online' || !this.socket || this.socket.readyState !== 1 ||
         !Number.isSafeInteger(width) || !Number.isSafeInteger(height) || width < 1 || height < 1 || width > 8192 || height > 8192) return false;

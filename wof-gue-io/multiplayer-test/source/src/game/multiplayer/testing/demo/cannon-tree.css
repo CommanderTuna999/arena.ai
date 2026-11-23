@@ -25,9 +25,12 @@
     --spacing: 0.25rem;
     --text-xs: 0.75rem;
     --text-xs--line-height: calc(1 / 0.75);
+    --text-sm: 0.875rem;
+    --text-sm--line-height: calc(1.25 / 0.875);
     --font-weight-bold: 700;
     --font-weight-black: 900;
     --tracking-wide: 0.025em;
+    --tracking-wider: 0.05em;
     --leading-tight: 1.25;
     --leading-snug: 1.375;
     --radius-sm: 0.25rem;
@@ -260,6 +263,9 @@
   }
   .h-1 {
     height: calc(var(--spacing) * 1);
+  }
+  .h-1\.5 {
+    height: calc(var(--spacing) * 1.5);
   }
   .h-4 {
     height: calc(var(--spacing) * 4);
@@ -518,6 +524,9 @@
   .p-2 {
     padding: calc(var(--spacing) * 2);
   }
+  .p-2\.5 {
+    padding: calc(var(--spacing) * 2.5);
+  }
   .p-3 {
     padding: calc(var(--spacing) * 3);
   }
@@ -559,6 +568,10 @@
   }
   .text-right {
     text-align: right;
+  }
+  .text-sm {
+    font-size: var(--text-sm);
+    line-height: var(--tw-leading, var(--text-sm--line-height));
   }
   .text-xs {
     font-size: var(--text-xs);
@@ -602,6 +615,10 @@
     --tw-tracking: 0.16em;
     letter-spacing: 0.16em;
   }
+  .tracking-\[0\.18em\] {
+    --tw-tracking: 0.18em;
+    letter-spacing: 0.18em;
+  }
   .tracking-\[0\.22em\] {
     --tw-tracking: 0.22em;
     letter-spacing: 0.22em;
@@ -609,6 +626,10 @@
   .tracking-wide {
     --tw-tracking: var(--tracking-wide);
     letter-spacing: var(--tracking-wide);
+  }
+  .tracking-wider {
+    --tw-tracking: var(--tracking-wider);
+    letter-spacing: var(--tracking-wider);
   }
   .whitespace-normal {
     white-space: normal;
@@ -816,6 +837,11 @@
           background-color: color-mix(in oklab, var(--color-yellow-300) 30%, transparent);
         }
       }
+    }
+  }
+  .md\:grid-cols-2 {
+    @media (width >= 48rem) {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
     }
   }
 }

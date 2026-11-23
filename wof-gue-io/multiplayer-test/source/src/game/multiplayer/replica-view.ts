@@ -29,9 +29,9 @@ export class ReplicaView {
     const g=this.game;
     g.t=renderTime;
     // Authoritative cosmetic projection only: never touch a real player save.
-    const cannonKey=JSON.stringify([me.cannonId,me.levels,me.shieldMax]);
+    const cannonKey=JSON.stringify([me.cannonId,me.levels,me.upgrades,me.shieldMax]);
     if (DEMO_CANNONS.includes(me.cannonId) && this.cannonKey!==cannonKey) {
-      this.cannonKey=cannonKey;g.save.upgrades.shield=me.shieldMax>0?1:0;g.save.cannon.id=me.cannonId;
+      this.cannonKey=cannonKey;g.save.upgrades={...(me.upgrades ?? {shield:me.shieldMax>0?1:0})};g.save.cannon.id=me.cannonId;
       g.save.cannon.lv=structuredClone(me.levels);g.stats=computeStats(g.save);
     }
     g.player.heat=me.heat;g.player.jam=me.jam;g.player.gatAngle=me.gatAngle;g.player.recoil=me.recoil;g.player.muzzleFlash=me.muzzleFlash;g.player.barrelRec=[...me.barrelRec];

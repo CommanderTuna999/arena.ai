@@ -47,13 +47,13 @@ export class PilotTransport {
     try { data = JSON.parse(text); } catch { return false; }
     if (!data || typeof data !== 'object' || Array.isArray(data)) return false;
     const message = data as Record<string, unknown>;
-    if (message.type === 'demo-equip' || message.type === 'demo-upgrade') {
+    if (message.type === 'demo-equip' || message.type === 'demo-upgrade' || message.type === 'demo-ship-upgrade') {
       if (!Number.isSafeInteger(nowMs)) return false;
       let limit=this.equipLimits.get(peer);
       if (limit && nowMs < limit.start) return false;
       if (!limit || nowMs-limit.start>=1000) {limit={start:nowMs,count:0};this.equipLimits.set(peer,limit);}
       if (++limit.count>8) return false;
-      return message.type==='demo-equip' ? this.room.roster.equipDemoCannon(id,message.cannon) : this.room.roster.upgradeDemoCannon(id,message.track,message.count,message.cannon);
+      return message.type==='demo-equip' ? this.room.roster.equipDemoCannon(id,message.cannon) : message.type==='demo-ship-upgrade' ? this.room.roster.upgradeDemoShip(id,message.upgrade,message.count) : this.room.roster.upgradeDemoCannon(id,message.track,message.count,message.cannon);
     }
     if (message.type !== 'input') return false;
     return this.room.input(id, message.frame, nowMs);

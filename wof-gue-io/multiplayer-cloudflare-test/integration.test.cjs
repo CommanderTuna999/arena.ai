@@ -22,6 +22,8 @@ function close(ws){return new Promise(resolve=>{if(ws.readyState===WebSocket.CLO
  await receive(a,v=>v.type==='world-snapshot'&&v.world.pilots.some(p=>p.id===welcomeA.pilotId&&p.cannonId==='skewer'));
  a.send(JSON.stringify({type:'demo-upgrade',track:'dmg',count:1,cannon:'skewer'}));
  await receive(a,v=>v.type==='world-snapshot'&&v.world.pilots.some(p=>p.id===welcomeA.pilotId&&p.levels?.skewer?.dmg===1));
+ a.send(JSON.stringify({type:'demo-ship-upgrade',upgrade:'hull',count:1,pilotId:welcomeB.pilotId}));
+ const upgraded=await receive(b,v=>v.type==='world-snapshot'&&v.world.pilots.some(p=>p.id===welcomeA.pilotId&&p.upgrades?.hull===1));assert.equal(upgraded.world.pilots.find(p=>p.id===welcomeA.pilotId).hpMax,119);assert.equal(upgraded.world.pilots.find(p=>p.id===welcomeB.pilotId).hpMax,100,'cannot upgrade another pilot');
  const first=await receive(a,v=>v.type==='world-snapshot'&&v.world.pilots.some(p=>p.id===welcomeB.pilotId));assert(first.world.pilots.some(p=>p.id===welcomeA.pilotId));
  a.send(JSON.stringify({type:'viewport',width:1000,height:700}));a.send(JSON.stringify({type:'input',frame:{seq:1,forward:true,backward:false,left:false,right:false,fire:false,boost:false,aim:0}}));
  const start=first.world.pilots.find(p=>p.id===welcomeA.pilotId);const next=await receive(a,v=>v.type==='world-snapshot'&&v.sequence>first.sequence&&v.world.pilots.some(p=>p.id===welcomeA.pilotId && Math.hypot(p.x-start.x,p.y-start.y)>0.01));assert(next.world.time>first.world.time,'accepted input advances the guest in the shared world');

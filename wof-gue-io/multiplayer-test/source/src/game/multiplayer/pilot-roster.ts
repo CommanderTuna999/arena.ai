@@ -1,5 +1,5 @@
 import { Game, type PilotPhaseContext } from '../engine';
-import { BASE, CANNONS, CANNON_BY_ID, CANNON_TRACK_BY_ID, computeStats, newSave } from '../data';
+import { BASE, CANNONS, CANNON_BY_ID, CANNON_TRACK_BY_ID, UPGRADE_BY_ID, computeStats, newSave } from '../data';
 import {createChairman} from '../chairman';
 
 // Demo-only free loadouts; never grant or modify a real account's equipment.
@@ -49,6 +49,18 @@ export class PilotRoster {
     const gun=CANNON_BY_ID[p.stats.cannonId],t=CANNON_TRACK_BY_ID[track];if(!gun || !t || !gun.tracks.includes(t.id))return false;
     const levels=p.save.cannon.lv[gun.id] ??= {};levels[track]=Math.min(t.max,(levels[track]??0)+(count as number));p.stats=computeStats(p.save);return true;
   }
+  /** Free, temporary hull and movement upgrades for this guest only. */
+  upgradeDemoShip(id:string,upgrade:unknown,count:unknown):boolean {
+    const p=this.pilots.get(id);
+    if(!p || p.player.dead || Math.hypot(p.player.x-BASE.x,p.player.y-BASE.y)>=BASE.r+40 || typeof upgrade!=='string' || !['hull','regen','armor','shield','thrust','handling','boost'].includes(upgrade) || !Number.isSafeInteger(count) || (count as number)<1 || (count as number)>30)return false;
+    const def=UPGRADE_BY_ID[upgrade],old=p.save.upgrades[upgrade]??0;
+    if(!def || old+(count as number)>def.max)return false;
+    const previous=p.stats;p.save.upgrades[upgrade]=old+(count as number);p.stats=computeStats(p.save);
+    // Match the live game's recompute: grant only the added maximum, not a heal.
+    p.player.hp=Math.min(p.stats.hull,p.player.hp+Math.max(0,p.stats.hull-previous.hull));
+    p.player.shield=Math.min(p.stats.shieldMax,p.player.shield+Math.max(0,p.stats.shieldMax-previous.shieldMax));
+    return true;
+  }
   remove(id: string): boolean { this.inputs.remove(id); return this.pilots.delete(id); }
   receive(id: string, frame: unknown, nowMs: number): boolean {
     return this.pilots.has(id) && this.inputs.receive(id, frame, nowMs);
@@ -66,7 +78,7 @@ export class PilotRoster {
     return Array.from(this.pilots, ([id, pilot]) => ({
       id, name: pilot.save.name || 'Pilot', x: pilot.player.x, y: pilot.player.y,
       angle: pilot.player.a, hp: pilot.player.hp, hpMax:pilot.stats.hull, shield: pilot.player.shield, shieldMax:pilot.stats.shieldMax,
-      dead: pilot.player.dead, cannonId:pilot.stats.cannonId, levels:structuredClone(pilot.save.cannon.lv), heat:pilot.player.heat,
+      dead: pilot.player.dead, cannonId:pilot.stats.cannonId, upgrades:{...pilot.save.upgrades}, levels:structuredClone(pilot.save.cannon.lv), heat:pilot.player.heat,
       gatAngle:pilot.player.gatAngle, revolutionaryScan:pilot.revolutionaryScan?{parts:[...pilot.revolutionaryScan.parts],elapsed:pilot.revolutionaryScan.elapsed,duration:pilot.revolutionaryScan.duration,enemyId:pilot.revolutionaryScan.enemy.id}:null, chairman:pilot.chairman?{...structuredClone(pilot.chairman),drones:pilot.chairman.drones.map(n=>Number.isFinite(n)?n:1e9)}:null,
       recoil:pilot.player.recoil, jam:pilot.player.jam, muzzleFlash:pilot.player.muzzleFlash, barrelRec:[...pilot.player.barrelRec], inputSequence: this.inputs.sequence(id),
     }));
