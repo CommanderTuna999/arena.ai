@@ -18,6 +18,7 @@ export class PilotTransport {
   private readonly peerRadii = new Map<PilotPeer, number>();
   private readonly congestedSince = new Map<PilotPeer, number>();
   private lastBroadcastMs = -Infinity;
+  private readonly equipLimits = new Map<PilotPeer, {start:number;count:number}>();
   constructor(private readonly room: PilotRoom, private readonly maxBufferedBytes = 65536, private readonly interestRadius = 20_000, private readonly broadcastIntervalMs = 0, private readonly compactGeometry = false) {
     if (!Number.isFinite(broadcastIntervalMs) || broadcastIntervalMs < 0) throw new Error('Invalid broadcast interval');
     if (!Number.isSafeInteger(maxBufferedBytes) || maxBufferedBytes < 1 || !Number.isFinite(interestRadius) || interestRadius <= 0 || interestRadius > 100_000) throw new Error('Invalid transport limits');
@@ -32,7 +33,7 @@ export class PilotTransport {
   detach(peer: PilotPeer): void {
     const id = this.peers.get(peer);
     if (id === undefined) return;
-    this.peers.delete(peer); this.congestedSince.delete(peer); this.geometry.delete(peer); this.peerRadii.delete(peer); this.room.leave(id);
+    this.peers.delete(peer); this.equipLimits.delete(peer); this.congestedSince.delete(peer); this.geometry.delete(peer); this.peerRadii.delete(peer); this.room.leave(id);
   }
   /** Server-validated demo viewport only; cannot change identity or inputs. */
   setInterestRadius(peer: PilotPeer, radius: number): boolean {
@@ -46,6 +47,14 @@ export class PilotTransport {
     try { data = JSON.parse(text); } catch { return false; }
     if (!data || typeof data !== 'object' || Array.isArray(data)) return false;
     const message = data as Record<string, unknown>;
+    if (message.type === 'demo-equip') {
+      if (!Number.isSafeInteger(nowMs)) return false;
+      let limit=this.equipLimits.get(peer);
+      if (limit && nowMs < limit.start) return false;
+      if (!limit || nowMs-limit.start>=1000) {limit={start:nowMs,count:0};this.equipLimits.set(peer,limit);}
+      if (++limit.count>2) return false;
+      return this.room.roster.equipDemoCannon(id,message.cannon);
+    }
     if (message.type !== 'input') return false;
     return this.room.input(id, message.frame, nowMs);
   }

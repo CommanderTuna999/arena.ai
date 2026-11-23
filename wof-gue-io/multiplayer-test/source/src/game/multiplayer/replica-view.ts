@@ -1,5 +1,6 @@
 import { Game, VISION_MUL, type Bullet, type EProj, type Enemy, type Other, type Puddle, type Ring } from '../engine';
-import { newSave } from '../data';
+import { computeStats, newSave } from '../data';
+import { DEMO_CANNONS } from './pilot-roster';
 import { SPECIES_LIST } from '../enemies';
 import type { CombatHarness } from './combat-harness';
 
@@ -25,6 +26,11 @@ export class ReplicaView {
     const me=pilots.find(p=>p.id===pilotId);if(!me)return false;
     const g=this.game;
     g.t=renderTime;
+    // Authoritative cosmetic projection only: never touch a real player save.
+    if ((DEMO_CANNONS as readonly string[]).includes(me.cannonId) && g.stats.cannonId!==me.cannonId) {
+      g.save.cannon.id=me.cannonId;g.stats=computeStats(g.save);
+    }
+    g.player.heat=me.heat;g.player.recoil=me.recoil;g.player.muzzleFlash=me.muzzleFlash;g.player.barrelRec=[...me.barrelRec];
     Object.assign(g.player,{x:me.x,y:me.y,a:me.angle,hp:me.hp,shield:me.shield,dead:me.dead});
     g.cam.x=me.x;g.cam.y=me.y;
     g.others=pilots.filter(p=>p.id!==pilotId).map(p=>({id:p.id,name:p.name,x:p.x,y:p.y,a:p.angle,tx:p.x,ty:p.y,ta:p.angle,seen:world.time} satisfies Other));

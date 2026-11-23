@@ -73,3 +73,8 @@ when the experiment is finished; leave the existing website and chat untouched.
 
 After changing the test Worker's production branch, start a new build from
 that branch; an older failed build still refers to its original commit.
+
+The demo's guest cannon test offers Stinger, Peashooter MK1 and Workhorse MK1
+on keys 1–3. The server chooses the actual guest loadout; it is not an account
+or inventory feature. Other ships' cannon models are not replicated yet.
+The `/health` build marker for this iteration is `cloudflare-arsenal-v1`.

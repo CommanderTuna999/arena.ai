@@ -78,6 +78,11 @@ export class ExperimentalWorldClient {
     socket.onerror = () => this.disconnect();
     socket.onclose = () => { if (this.socket === socket) this.disconnect(); };
   }
+  /** Demo-only selection; actual equipment always comes from server snapshots. */
+  equipDemoCannon(cannon: string): boolean {
+    if (this.state !== 'online' || !this.socket || this.socket.readyState !== 1 || !['sting','peashooter','workhorse'].includes(cannon)) return false;
+    try {this.socket.send(JSON.stringify({type:'demo-equip',cannon}));return true;} catch {this.disconnect();return false;}
+  }
   sendViewport(width: number, height: number): boolean {
     if (this.state !== 'online' || !this.socket || this.socket.readyState !== 1 ||
         !Number.isSafeInteger(width) || !Number.isSafeInteger(height) || width < 1 || height < 1 || width > 8192 || height > 8192) return false;

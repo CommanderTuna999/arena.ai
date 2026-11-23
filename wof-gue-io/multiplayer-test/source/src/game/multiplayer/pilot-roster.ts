@@ -1,5 +1,8 @@
 import { Game, type PilotPhaseContext } from '../engine';
-import { newSave } from '../data';
+import { computeStats, newSave } from '../data';
+
+// Demo-only free loadouts; never grant or modify a real account's equipment.
+export const DEMO_CANNONS = ['sting', 'peashooter', 'workhorse'] as const;
 import { InputBuffer } from './input';
 import { applyPlayerInput } from './apply-input';
 
@@ -23,6 +26,18 @@ export class PilotRoster {
     this.pilots.set(id, pilot.pilotPhaseContext());
     return true;
   }
+  equipDemoCannon(id: string, cannon: unknown): boolean {
+    const pilot=this.pilots.get(id);
+    if(!pilot || typeof cannon!=='string' || !(DEMO_CANNONS as readonly string[]).includes(cannon) || pilot.player.dead) return false;
+    if(pilot.save.cannon.id===cannon) return true;
+    // Only a disposable guest save is changed. The selected pilot's stats and
+    // weapon timers are isolated; switching cannot bypass a current cooldown.
+    pilot.save.cannon.id=cannon;
+    pilot.stats=computeStats(pilot.save);
+    Object.assign(pilot.player,{heat:0,jam:0,recoil:0,muzzle:0,muzzleFlash:0,fireCd:Math.max(pilot.player.fireCd,.5)});
+    pilot.player.barrelRec=[];
+    return true;
+  }
   remove(id: string): boolean { this.inputs.remove(id); return this.pilots.delete(id); }
   receive(id: string, frame: unknown, nowMs: number): boolean {
     return this.pilots.has(id) && this.inputs.receive(id, frame, nowMs);
@@ -40,7 +55,8 @@ export class PilotRoster {
     return Array.from(this.pilots, ([id, pilot]) => ({
       id, name: pilot.save.name || 'Pilot', x: pilot.player.x, y: pilot.player.y,
       angle: pilot.player.a, hp: pilot.player.hp, shield: pilot.player.shield,
-      dead: pilot.player.dead, inputSequence: this.inputs.sequence(id),
+      dead: pilot.player.dead, cannonId:pilot.stats.cannonId, heat:pilot.player.heat,
+      recoil:pilot.player.recoil, muzzleFlash:pilot.player.muzzleFlash, barrelRec:[...pilot.player.barrelRec], inputSequence: this.inputs.sequence(id),
     }));
   }
   step(dt: number, nowMs: number) {

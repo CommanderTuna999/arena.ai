@@ -18,3 +18,13 @@ The test omits unchanged enemy part geometry and visual metadata after first del
 The overlay shows approximate browser FPS and time between observed world updates; the latter is not network ping. Playback is monotonic and retains the last scene while reconnecting.
 
 The test uses the main game’s default no-optics zoom (1 / 1.3). It does not use saved equipment or optics. Viewport requests use CSS pixels, are rate limited and capped at 8192 by 8192; larger windows display a warning because the test cannot guarantee complete interest coverage.
+
+## Guest cannon test
+
+In this demo only, press **1** for Stinger, **2** for Peashooter MK1 or **3**
+for Workhorse MK1. Each temporary guest gets free test access to these three
+existing game weapons; choosing one updates that guest on the server and the
+client displays the server-selected cannon. Other players' shots and damage are
+shared, but other pilots' ship renderings do not yet show their fitted cannon.
+All choices reset on disconnect. This is not crafting, purchasing, inventory,
+account progression, or a complete port of later weapons such as Chairman.
