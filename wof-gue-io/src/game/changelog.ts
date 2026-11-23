@@ -8,7 +8,7 @@
  *   CHANGELOG and mirror the details in docs/CHANGELOG.md.
  */
 
-export const VERSION = "2.30.1";
+export const VERSION = "2.30.2";
 
 export interface ChangeEntry {
   version: string;
@@ -19,6 +19,7 @@ export interface ChangeEntry {
 }
 
 export const CHANGELOG: ChangeEntry[] = [
+  { version: "2.30.2", date: "23 Nov 2026", title: "Projectile visuals and dash shields", points: ["Scatter MK1 fires glowing orbs, and ordinary kinetic rounds are now round instead of tracer lines.", "Enemy shields no longer retract during dashes and charges."] },
   { version: "2.30.1", date: "23 Nov 2026", title: "Dragonfly aim", points: ["Dragonfly spray projectiles travel faster and lead moving targets more accurately."] },
   { version: "2.30.0", date: "23 Nov 2026", title: "Peashooter branches", points: ["Added Peashooter MK2, Gatler MK1 and Scatter MK1, with their own crafting bills and upgrades.", "The base prompt now displays E."] },
   { version: "2.29.22", date: "23 Nov 2026", title: "Multiplayer test smoothing", points: ["Smoothed projectile motion in the multiplayer test."] },

@@ -171,7 +171,7 @@ export interface Enemy {
   /** furthest shield panel from the body centre (0 when unshielded) */
   shieldReach: number;
   /** body-level shield retract: >0 retracts every panel so a body-contact
-   *  attack (grab, sting, charge, swing) is not blocked by its own shields */
+   *  attack (grab, sting, swing) is not blocked by its own shields */
   shieldDownT: number;
   abil: AbilityDef[]; abilCd: number[]; gap: number; act: Act | null; stun: number;
   wander: { x: number; y: number; t: number }; roleGroups: Record<string, number[]>;
@@ -218,6 +218,8 @@ export type DmgSrc = "kinetic" | "laser" | "shock" | "explosive" | "missile" | "
 export interface Bullet {
   x: number; y: number; vx: number; vy: number; life: number; dmg: number; pierce: number; hit: number[];
   kind: 0 | 1 | 2 | 3 | 4; target: Enemy | null; crit: boolean;
+  /** Optional visual only; does not change projectile collision. */
+  visual?: "scatter-orb";
   /** the base cannon's bolt: pops a small charge where it lands */
   boom?: number;
   /** what kind of damage this round carries (drives visuals + shield rules) */
@@ -2324,10 +2326,10 @@ export class Game {
     const a = e.act!, d = a.def, p = this.player;
     a.t += dt;
     /* body-contact attacks retract the shields for their whole run: a grab,
-     * sting, charge or swing puts the body on the ship, and the shields would
+     * sting or swing puts the body on the ship, and the shields would
      * block that contact. Keep the retract timer topped up while any of these
      * runs, so it holds for the lunge, the hold and the recoil. */
-    if (d.type === "grab" || d.type === "sting" || d.type === "charge" || d.type === "swing") {
+    if (d.type === "grab" || d.type === "sting" || d.type === "swing") {
       e.shieldDownT = Math.max(e.shieldDownT, 0.5);
     }
     const S = e.S;
@@ -2873,7 +2875,7 @@ export class Game {
     }
     // shields
     e.shields.length = 0;
-    /* a body-contact attack (grab / sting / charge / swing) retracts the
+    /* a body-contact attack (grab / sting / swing) retracts the
      * shields for its duration: a dragonfly cannot pincer-grab through its own
      * frontal wall, and no shielded body should. The timer is topped up by
      * runAct while the contact ability runs, and bleeds off once it ends. */
@@ -3566,7 +3568,7 @@ export class Game {
           const spread = st.spread > 0 ? (n > 1 ? (2 * i / (n - 1) - 1) : (Math.random() - 0.5) * 2) * st.spread * spreadMul : 0;
           const ang = base + spread;
           const m = at(i);
-          this.bullets.push({ x: m.x, y: m.y, vx: Math.cos(ang) * st.bulletSpeed + p.vx * 0.3, vy: Math.sin(ang) * st.bulletSpeed + p.vy * 0.3, life: st.bulletRange / st.bulletSpeed, dmg, pierce: st.pierce, hit: [], kind: 0, target: null, crit, elem: "kinetic", boom: st.boom || undefined });
+          this.bullets.push({ x: m.x, y: m.y, vx: Math.cos(ang) * st.bulletSpeed + p.vx * 0.3, vy: Math.sin(ang) * st.bulletSpeed + p.vy * 0.3, life: st.bulletRange / st.bulletSpeed, dmg, pierce: st.pierce, hit: [], kind: 0, target: null, crit, elem: "kinetic", boom: st.boom || undefined, visual: st.cannonId === "scattermk1" ? "scatter-orb" : undefined });
           this.burst(m.x, m.y, crit ? "#fff3b0" : `hsl(${CANNON_BY_ID[st.cannonId]?.look.hue ?? 40} 100% 76%)`, 3, 3.4, 190);
         }
       }

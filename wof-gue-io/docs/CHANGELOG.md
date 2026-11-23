@@ -1,3 +1,8 @@
+## 0.3. v2.30.2 — Projectile visuals and dash shields
+
+- Scatter MK1 fires glowing orbs, and ordinary kinetic rounds are now round instead of tracer lines.
+- Enemy shields no longer retract during dashes and charges.
+
 ## 0.3. v2.30.1 — Dragonfly aim
 
 - Dragonfly spray projectiles travel faster and lead moving targets more accurately.

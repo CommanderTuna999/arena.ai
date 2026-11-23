@@ -1,3 +1,4 @@
+import { drawKineticOrb } from "./projectile-render";
 import { salvageSpriteScale } from "./salvage-render";
 import { MAP_GRID, MAP_CELL, MAP_RADIUS } from "./world";
 import { TAU, clamp, fmtNum } from "./math";
@@ -593,8 +594,7 @@ export function render(g: Game, ctx: CanvasRenderingContext2D) {
       ctx.strokeStyle = "rgba(255,248,214,0.8)";
       ctx.beginPath(); ctx.arc(b.x, b.y, r, 0, TAU); ctx.stroke();
     } else {
-      ctx.lineWidth = (b.crit ? 4 : 3);
-      ctx.beginPath(); ctx.moveTo(b.x, b.y); ctx.lineTo(b.x - b.vx * 0.022, b.y - b.vy * 0.022); ctx.stroke();
+      drawKineticOrb(ctx, b);
     }
   }
   ctx.shadowBlur = 0;
