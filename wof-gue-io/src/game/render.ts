@@ -1,3 +1,4 @@
+import { plateHitIntensity } from "./plate-impact";
 import { drawCasings } from "./casing-fx";
 import { drawShieldImpacts } from "./shield-impact";
 import { drawKineticOrb } from "./projectile-render";
@@ -1897,14 +1898,12 @@ function drawEnemy(g: Game, ctx: CanvasRenderingContext2D, e: Enemy, z: number, 
   if (showPlate) {
     const top = e.shells[shellN - 1];
     const f = clamp(top.hp / Math.max(1, top.max), 0, 1);
-    const hit = e.shellHit > 0 ? 1 : 0;
     /* Neutral steel, not a species-tinted stroke: the slabs have to read as a
      * separate physical object bolted onto the body. */
     const steel = (l: number, a = 1) => `hsla(${e.spd.hue},9%,${l}%,${a})`;
     const under = steel(5, 0.92);
     const fill = steel(19 + 11 * f, 0.97);
     const lip = steel(36 + 14 * f, 0.95);
-    const rim = steel(62, 0.75 + 0.2 * f + 0.25 * hit);
     const rimW = 2.6 / (3 * z);
     /* The old plating was a 4-19u rim; the slabs now stand ~10x thicker, and
      * their width tracks the size of the plate they are bolted to. */
@@ -1942,7 +1941,7 @@ function drawEnemy(g: Game, ctx: CanvasRenderingContext2D, e: Enemy, z: number, 
       platePath(p, grow * 0.84);
       ctx.strokeStyle = lip; ctx.lineWidth = Math.max(2 / 3, grow * 0.22) / z; ctx.stroke();
       /* bright outer rim */
-      ctx.strokeStyle = rim; ctx.lineWidth = rimW; ctx.stroke();
+      ctx.strokeStyle = steel(62, 0.75 + 0.2 * f + 0.25 * plateHitIntensity(p, t)); ctx.lineWidth = rimW; ctx.stroke();
       /* one ridge per extra layer, so four bolted layers read as four */
       if (layersHere > 1) {
         for (let i = 1; i < layersHere; i++) {

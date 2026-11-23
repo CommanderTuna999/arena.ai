@@ -4,7 +4,9 @@ const impacts = new WeakMap<object, Impact[]>();
 export function recordShieldImpact(owner:object,x:number,y:number,at:number) {
   if (![x,y,at].every(Number.isFinite)) return;
   const old=impacts.get(owner) ?? [];
-  // Cap repeated beams and keep the freshest impacts only.
+  // Refresh a nearby hit instead of layering identical effects on top.
+  const i=old.findIndex(p=>(p.x-x)**2+(p.y-y)**2<16);
+  if(i>=0)old.splice(i,1);
   old.push({x,y,at}); if(old.length>8)old.splice(0,old.length-8);
   impacts.set(owner,old);
 }
@@ -14,21 +16,33 @@ export function shieldImpacts(owner:object,now:number):readonly Impact[] {
   if(active.length)impacts.set(owner,active);else impacts.delete(owner);
   return active;
 }
-/** A cluster of seven honeycomb cells, fading from a bright impact to nothing. */
-export function drawShieldImpacts(ctx:CanvasRenderingContext2D,owner:object,cx:number,cy:number,now:number,size:number,color:string) {
-  const hits=shieldImpacts(owner,now); if(!hits.length)return;
+/** Stable hexagonal grid: overlapping hit areas illuminate each cell once. */
+export function shieldCells(owner:object,now:number,size:number) {
   const r=Math.max(5,Math.min(20,size));
-  ctx.save();ctx.lineJoin='round';ctx.shadowColor=color;
-  for(const hit of hits){
+  const cells=new Map<string,{q:number;s:number;alpha:number}>();
+  const directions=[[0,0],[1,0],[1,-1],[0,-1],[-1,0],[-1,1],[0,1]];
+  for(const hit of shieldImpacts(owner,now)) {
+    // Round fractional axial coordinates to the closest hex.
+    const fq=(Math.sqrt(3)/3*hit.x-hit.y/3)/r, fs=(2*hit.y/3)/r, fy=-fq-fs;
+    let q=Math.round(fq), s=Math.round(fs), y=Math.round(fy);
+    const dq=Math.abs(q-fq), ds=Math.abs(s-fs), dy=Math.abs(y-fy);
+    if(dq>ds&&dq>dy)q=-s-y;else if(ds>dy)s=-q-y;else y=-q-s;
     const fade=Math.max(0,1-(now-hit.at)/0.8);
-    for(let i=-1;i<6;i++){
-      const a=i*Math.PI/3, dist=i<0?0:Math.sqrt(3)*r;
-      const x=cx+hit.x+Math.cos(a)*dist, y=cy+hit.y+Math.sin(a)*dist;
-      const alpha=fade*(i<0?1:0.45);
-      ctx.beginPath(); for(let k=0;k<6;k++) { const v=Math.PI/6+k*Math.PI/3, px=x+Math.cos(v)*r,py=y+Math.sin(v)*r; if(!k)ctx.moveTo(px,py);else ctx.lineTo(px,py); }ctx.closePath();
-      ctx.globalAlpha=alpha*.14;ctx.fillStyle=color;ctx.fill();
-      ctx.globalAlpha=alpha*.85;ctx.strokeStyle=color;ctx.lineWidth=Math.max(1,r*.11);ctx.shadowBlur=fade*8;ctx.stroke();
-    }
+    directions.forEach(([x,z],i)=>{
+      const a=q+x,b=s+z,k=`${a},${b}`,alpha=fade*(i?0.4:1),previous=cells.get(k);
+      if(!previous||previous.alpha<alpha)cells.set(k,{q:a,s:b,alpha});
+    });
+  }
+  return [...cells.values()];
+}
+export function drawShieldImpacts(ctx:CanvasRenderingContext2D,owner:object,cx:number,cy:number,now:number,size:number,color:string) {
+  const r=Math.max(5,Math.min(20,size)),cells=shieldCells(owner,now,r);if(!cells.length)return;
+  ctx.save();ctx.lineJoin='round';ctx.shadowColor=color;
+  for(const cell of cells){
+    const x=cx+Math.sqrt(3)*r*(cell.q+cell.s/2),y=cy+1.5*r*cell.s,alpha=cell.alpha;
+    ctx.beginPath();for(let k=0;k<6;k++){const a=Math.PI/6+k*Math.PI/3,px=x+Math.cos(a)*r,py=y+Math.sin(a)*r;if(!k)ctx.moveTo(px,py);else ctx.lineTo(px,py);}ctx.closePath();
+    ctx.globalAlpha=alpha*.10;ctx.fillStyle=color;ctx.fill();
+    ctx.globalAlpha=alpha*.65;ctx.strokeStyle=color;ctx.lineWidth=Math.max(0.8,r*.08);ctx.shadowBlur=alpha*5;ctx.stroke();
   }
   ctx.restore();
 }

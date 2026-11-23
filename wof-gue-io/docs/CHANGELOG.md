@@ -1,3 +1,8 @@
+## 0.3. v2.30.15 — Shield impact and kinetic damage fixes
+
+- Shield impacts illuminate a shared hexagonal grid instead of stacking repeated patterns.
+- Kinetic blasts respect shield panels and no longer damage distant armor merely because they overlap its broad bounding radius; breaking a plating layer no longer blasts its own whole body.
+
 ## 0.3. v2.30.14 — Spent casings and local admin
 
 - Guns eject themed spent casings or energy cores after firing.

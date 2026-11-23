@@ -1,3 +1,4 @@
+import { recordPlateHit } from "./plate-impact";
 import { ejectCasing, ejectCasingLimited } from "./casing-fx";
 import { recordShieldImpact } from "./shield-impact";
 import { interceptAngle } from "./projectile-aim";
@@ -1476,13 +1477,22 @@ export class Game {
     this.trackDamage(e, Math.min(dealt, Math.max(0, before)), fromBase);
     layer.hp -= dealt;
     e.shellHit = 0.12;
+    if (hx !== undefined && hy !== undefined) {
+      let closest: Part | null = null, best = Infinity;
+      for (const q of e.parts) {
+        if (!q.alive || (q.kind !== "segment" && q.kind !== "armor" && !(q.kind === "leg" && e.legPlate > 0))) continue;
+        const w = this.partWorld(e, q), distance = Math.hypot(w[0] - hx, w[1] - hy) / Math.max(1, q.r);
+        if (distance < best) { best = distance; closest = q; }
+      }
+      if (closest) recordPlateHit(closest, this.t);
+    }
     e.aggro = true;
     if (layer.hp <= 0) {
       e.shells.pop();
       /* A shattered shield lets go in a shockwave: it chews the hull it was
        * bolted to, everything nearby and the player if they are too close. */
       const R = e.shellR * 1.7 + 40;
-      this.shockwave(e.x, e.y, R, e.eDmg * 1.1, e.eDmg * 1.25, "#ffc46b");
+      this.shockwave(e.x, e.y, R, e.eDmg * 1.1, e.eDmg * 1.25, "#ffc46b", e);
     }
     return true;
   }
@@ -2044,14 +2054,14 @@ export class Game {
   /** Detonate a part or a shield layer. The blast is an expanding ring that
    *  hurts the player as it sweeps past, plus an immediate hull hit on every
    *  enemy part inside the radius (the breaker's own hull included). */
-  private shockwave(x: number, y: number, R: number, playerDmg: number, enemyDmg: number, color = "#ff9d4d") {
+  private shockwave(x: number, y: number, R: number, playerDmg: number, enemyDmg: number, color = "#ff9d4d", exclude?: Enemy) {
     this.rings.push({ x, y, r: 6, max: R, speed: Math.max(560, R * 5), dmg: playerDmg, hit: false, color, hurts: playerDmg > 0 });
     this.ringFx(x, y, R * 0.6, "#ffe3b8", Math.max(700, R * 7));
     this.burst(x, y, "#ffb04d", clamp(Math.round(R / 14), 8, 30), clamp(R * 0.08, 4, 22), 260 + R);
     this.shake = Math.max(this.shake, Math.min(18, 6 + R / 40));
     if (enemyDmg <= 0 || this.expDepth > 3) return;
     this.expDepth++;
-    this.areaDamage(x, y, R, enemyDmg, null);
+    this.areaDamage(x, y, R, enemyDmg, null, "explosive", exclude);
     this.expDepth--;
   }
   private explode(e: Enemy, p: Part, x: number, y: number, cascade: boolean) {
@@ -2071,21 +2081,38 @@ export class Game {
     }
     this.shockwave(x, y, R, playerDmg, p.maxHp * 0.5);
   }
-  areaDamage(x: number, y: number, R: number, dmg: number, skip: Part | null, src: DmgSrc = "explosive") {
+  /** Kinetic blasts cannot jump through a surviving shield panel. */
+  private blastBlocked(e: Enemy, x: number, y: number, tx: number, ty: number, src: DmgSrc): boolean {
+    if (src === "laser" || src === "shock" || src === "dot" || !e.shields.length) return false;
+    const dx = tx - x, dy = ty - y, length = Math.hypot(dx, dy);
+    const steps = Math.min(2048, Math.max(1, Math.ceil(length / 8)));
+    for (let i = 0; i <= steps; i++) if (this.shieldInfoAt(e, x + dx * i / steps, y + dy * i / steps)) return true;
+    return false;
+  }
+  areaDamage(x: number, y: number, R: number, dmg: number, skip: Part | null, src: DmgSrc = "explosive", exclude?: Enemy) {
     for (const e of this.enemies) {
-      if (e.dead) continue;
+      if (e.dead || e === exclude) continue;
       const dx = e.x - x, dy = e.y - y;
       if (dx * dx + dy * dy > (R + e.radius) * (R + e.radius)) continue;
-      if (e.shells.length && Math.hypot(dx, dy) < R + e.shellR) {
-        const len = Math.hypot(dx, dy) || 1;
-        this.shellHit(e, dmg, src, false, e.x - (dx / len) * e.shellR, e.y - (dy / len) * e.shellR);
-        continue;
+      // Only a blast that actually reaches a plated part can damage the shared
+      // armor layer; its enclosing shellR is not itself a solid hitbox.
+      let armorHit = false;
+      if (e.shells.length) for (const q of e.parts) {
+        const plated = q.kind === "segment" || q.kind === "armor" || (q.kind === "leg" && e.legPlate > 0);
+        if (!q.alive || !plated) continue;
+        const w = this.partWorld(e, q), px = w[0], py = w[1];
+        const dist = Math.hypot(px - x, py - y), radius = q.r + plateGrow(q.r, q.kind === "leg" ? e.legPlate : e.shells.length);
+        if (dist > R + radius) continue;
+        const fraction = dist > 0 ? Math.max(0, (dist - radius) / dist) : 0;
+        const tx = x + (px - x) * fraction, ty = y + (py - y) * fraction;
+        if (!this.blastBlocked(e, x, y, tx, ty, src)) { armorHit = true; break; }
       }
+      if (armorHit) { this.shellHit(e, dmg, src, false, x, y); continue; }
       for (const q of e.parts) {
         if (!q.alive || q === skip) continue;
-        const w = this.partWorld(e, q);
-        const d = Math.hypot(w[0] - x, w[1] - y);
-        if (d < R + q.r * 0.5) this.damagePart(e, q, dmg * (1 - clamp(d / (R + 1), 0, 1) * 0.5), 0, 0);
+        const w = this.partWorld(e, q), px = w[0], py = w[1];
+        const d = Math.hypot(px - x, py - y);
+        if (d < R + q.r * 0.5 && !this.blastBlocked(e, x, y, px, py, src)) this.damagePart(e, q, dmg * (1 - clamp(d / (R + 1), 0, 1) * 0.5), 0, 0, src);
       }
     }
   }
@@ -2103,7 +2130,9 @@ export class Game {
       const info = this.shieldInfoAt(e, p.x, p.y);
       if (!info) continue;
       const sp = info.part;
-      recordShieldImpact(e, dx, dy, this.t);
+      const perp = -dx * Math.sin(info.ang) + dy * Math.cos(info.ang);
+      const scale = dd > 0 ? info.r / dd : 0;
+      recordShieldImpact(e, info.bar ? Math.cos(info.ang) * info.r - Math.sin(info.ang) * perp : dx * scale, info.bar ? Math.sin(info.ang) * info.r + Math.cos(info.ang) * perp : dy * scale, this.t);
       const out = dd > 1 ? Math.atan2(dy, dx) : e.a;
       /* The panel is a wall, not a fence: the hull is lifted back onto the
        * outside face so a fast ship cannot tunnel through it. */
@@ -3216,16 +3245,6 @@ export class Game {
       const dx = b.x - e.x, dy = b.y - e.y;
       const rr = Math.max(e.radius, e.shellR, e.shieldReach) + 12;
       if (dx * dx + dy * dy > rr * rr) continue;
-      /* The plates are thin compared with a fast round's per-frame travel, so
-       * test the two intermediate points as well to avoid tunnelling. */
-      if (e.shells.length && b.kind !== 4 && (
-        this.plateAt(e, b.x, b.y) ||
-        this.plateAt(e, b.x - b.vx / 120, b.y - b.vy / 120) ||
-        this.plateAt(e, b.x - b.vx / 60, b.y - b.vy / 60)
-      )) {
-        this.shellHit(e, b.dmg, b.elem === "energy" || b.elem === "thermal" ? "laser" : b.elem === "shock" ? "shock" : b.kind === 1 ? "missile" : b.kind === 3 ? "explosive" : "kinetic", false, b.x, b.y, b.crit);
-        return true;
-      }
       /* the panels are thin, so sample the round's path like the plating does */
       const panel = this.shieldAt(e, b.x, b.y) ?? this.shieldAt(e, b.x - b.vx / 90, b.y - b.vy / 90);
       if (panel) {
@@ -3245,6 +3264,16 @@ export class Game {
           this.ringFx(b.x, b.y, 40, "#7df9ff", 500);
           return true;
         }
+      }
+      /* The plates are thin compared with a fast round's per-frame travel, so
+       * test the two intermediate points as well to avoid tunnelling. */
+      if (e.shells.length && b.kind !== 4 && (
+        this.plateAt(e, b.x, b.y) ||
+        this.plateAt(e, b.x - b.vx / 120, b.y - b.vy / 120) ||
+        this.plateAt(e, b.x - b.vx / 60, b.y - b.vy / 60)
+      )) {
+        this.shellHit(e, b.dmg, b.elem === "energy" || b.elem === "thermal" ? "laser" : b.elem === "shock" ? "shock" : b.kind === 1 ? "missile" : b.kind === 3 ? "explosive" : "kinetic", false, b.x, b.y, b.crit);
+        return true;
       }
       const ca = Math.cos(e.a), sa = Math.sin(e.a);
       const lx = dx * ca + dy * sa, ly = -dx * sa + dy * ca;
@@ -3398,11 +3427,6 @@ export class Game {
         const dx = bx - e.x, dy = by - e.y;
         const reach = Math.max(e.radius, e.shieldReach);
         if (dx * dx + dy * dy > (reach + 18 * width) * (reach + 18 * width)) continue;
-        if (e.shells.length && (bx - e.x) * (bx - e.x) + (by - e.y) * (by - e.y) < e.shellR * e.shellR && this.plateAt(e, bx, by)) {
-          this.shellHit(e, dmg * armorMul, src, false, bx, by, crit);
-          endLen = d;
-          break outer;
-        }
         if (!bypass) {
           const panel = this.shieldAt(e, bx, by);
           if (panel) {
@@ -3415,6 +3439,11 @@ export class Game {
               endLen = d; break outer;
             }
           }
+        }
+        if (e.shells.length && (bx - e.x) * (bx - e.x) + (by - e.y) * (by - e.y) < e.shellR * e.shellR && this.plateAt(e, bx, by)) {
+          this.shellHit(e, dmg * armorMul, src, false, bx, by, crit);
+          endLen = d;
+          break outer;
         }
         const ca = Math.cos(e.a), sa = Math.sin(e.a);
         let p = this.partAt(e, dx * ca + dy * sa, -dx * sa + dy * ca);
