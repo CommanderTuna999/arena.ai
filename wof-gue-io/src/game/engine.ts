@@ -972,7 +972,7 @@ export class Game {
   }
   private requestChairmanSun() {
     const cs=this.chairman;
-    if(this.stats.cannonId!=="chairman" || !cs || this.player.dead || this.inSafe() || cs.sunLocked || cs.charge>0 || cs.armourDispersing)return;
+    if(this.stats.cannonId!=="chairman" || !cs || this.player.dead || cs.sunLocked || cs.charge>0 || cs.armourDispersing)return;
     if(cs.armourActive || cs.drones.every(x=>x>0)) cs.sunRequested=true;
   }
   disperseChairman() {
@@ -3576,7 +3576,6 @@ export class Game {
       spendChairmanDrone(cs,index); cs.fireGlow[index]=.4; p.fireCd=1/st.rate;
       this.shake=Math.max(this.shake,5);
     };
-    if(this.inSafe()) {cs.scan=null;cs.charge=0;cs.sunRequested=false;this.fireWeapons(dt,p.a);return;}
     if(cs.charge>0) {
       cs.charge+=dt;
       if(cs.charge>=1) {
@@ -3671,8 +3670,8 @@ export class Game {
       p.gatSpin = Math.max(0, p.gatSpin - dt * 2);
       return; // includes automatic weapon rack
     }
-    if (st.cannonId !== "fencer" || this.inSafe()) this.fencerCharge = 0;
-    if (!st.charge || this.inSafe()) {
+    if (st.cannonId !== "fencer") this.fencerCharge = 0;
+    if (!st.charge) {
       if (this.mediatorBeamTime > 0) p.fireCd = Math.max(p.fireCd, 0.7);
       this.mediatorBeamTime = 0; p.charging = false; p.charge = 0;
     }
@@ -3683,7 +3682,7 @@ export class Game {
     let fireDt = dt;
     if (st.cannonId === "gatler") {
       const previous = p.gatSpin;
-      const revving = want && !this.inSafe() && p.jam <= 0;
+      const revving = want && p.jam <= 0;
       p.gatSpin = revving ? Math.min(1.5, previous + dt) : Math.max(0, previous - dt * 2);
       p.gatAngle = (p.gatAngle + (previous + p.gatSpin) / 3 * 12 * dt) % TAU;
       if (!revving || p.gatSpin < 1.5 - 1e-9) { p.fireCd = 0; return; }
@@ -3697,7 +3696,7 @@ export class Game {
     if (st.cannonId === "chairman") { this.revolutionaryScan = null; this.fireChairman(dt,want); return; }
     let revolutionReady = false;
     let revolutionTarget: Enemy | null = null;
-    if (st.cannonId !== "revolutionary" || this.inSafe()) this.revolutionaryScan = null;
+    if (st.cannonId !== "revolutionary") this.revolutionaryScan = null;
     if (this.revolutionaryScan) {
       const scan = this.revolutionaryScan;
       scan.elapsed += dt;
@@ -3706,7 +3705,7 @@ export class Game {
         this.revolutionaryScan = null;
         revolutionReady = true;
       }
-    } else if (st.cannonId === "revolutionary" && want && p.fireCd <= 0 && p.jam <= 0 && !this.inSafe()) {
+    } else if (st.cannonId === "revolutionary" && want && p.fireCd <= 0 && p.jam <= 0) {
       const [mx, my] = this.mouseWorld();
       for (const e of this.enemies) {
         if (e.dead || !e.parts[e.coreId]?.alive) continue;
@@ -3718,7 +3717,7 @@ export class Game {
         }
       }
     }
-    if (this.mediatorBeamTime > 0 && st.charge && !this.inSafe()) {
+    if (this.mediatorBeamTime > 0 && st.charge) {
       const step = Math.min(dt, this.mediatorBeamTime);
       this.mediatorBeamTime = Math.max(0, this.mediatorBeamTime - step);
       if (this.mediatorBeamTime <= 1e-9) { this.mediatorBeamTime = 0; p.fireCd = 0.7; ejectCasing(this, p.x, p.y, p.a, this.t, "core", p.vx, p.vy, st.cannonId); }
@@ -3765,7 +3764,7 @@ export class Game {
     /* the Mediator charges its beam: hold the trigger to build charge, release
      * to fire a devastating beam whose damage scales with how long it was held */
     if (st.charge) {
-      if (want && p.fireCd <= 0 && !this.inSafe()) {
+      if (want && p.fireCd <= 0) {
         p.charging = true;
         p.charge = Math.min(1, p.charge + dt * st.chargeRate / st.chargeTime);
       } else if (p.charging) {
@@ -3792,7 +3791,7 @@ export class Game {
       } else {
         p.charge = Math.max(0, p.charge - dt * 0.5);
       }
-    } else if ((want || revolutionReady) && !this.revolutionaryScan && p.fireCd <= 0 && p.jam <= 0 && !this.inSafe()) {
+    } else if ((want || revolutionReady) && !this.revolutionaryScan && p.fireCd <= 0 && p.jam <= 0) {
       do {
       const shotInterval = 1 / (st.rate * (p.overT > 0 ? 1.8 : 1));
       p.fireCd = rapid ? p.fireCd + shotInterval : shotInterval;
@@ -3913,7 +3912,7 @@ export class Game {
     for (let i = 0; i < n; i++) {
       const w = st.weapons[i];
       let want = W_SLOTS[i]?.rest ?? 0;
-      if (this.autoFire && !p.dead && !this.inSafe()) {
+      if (this.autoFire && !p.dead) {
         const range = Math.min(WEAPON_RANGE[w.rid] ?? 600, view);
         if (w.rid === "homing") {
           const L = this.lock;
@@ -3947,7 +3946,7 @@ export class Game {
     if (p.wCd.length < st.weapons.length) p.wCd = [...p.wCd, ...new Array(st.weapons.length - p.wCd.length).fill(0)];
     st.weapons.forEach((w, i) => {
       p.wCd[i] -= dt;
-      if (p.wCd[i] > 0 || this.inSafe()) return;
+      if (p.wCd[i] > 0) return;
       const eff = w.eff;
       const cd = (c: number) => c / (0.7 + 0.3 * eff);
       /* match the rotating hardpoint on the hull, with the muzzle nudged out
@@ -4198,7 +4197,7 @@ export class Game {
     for (const d of this.drones) {
       d.a += 1.3 * dt;
       d.cd -= dt;
-      if (d.cd > 0 || this.inSafe() || p.dead) continue;
+      if (d.cd > 0 || p.dead) continue;
       const x = p.x + Math.cos(d.a) * d.r, y = p.y + Math.sin(d.a) * d.r;
       const t = this.combatTarget(x, y, 720);
       if (!t) { d.cd = 0.3; continue; }
@@ -4581,7 +4580,7 @@ export class Game {
       const [mx, my] = this.mouseWorld();
       const want = Math.atan2(my - p.y, mx - p.x);
       // The sustained Mediator beam is deliberately difficult to steer.
-      const turnRate = st.charge && this.mediatorBeamTime > 0 && !this.inSafe() ? 1.4 : (CANNON_BY_ID[st.cannonId]?.turnRate ?? 14);
+      const turnRate = st.charge && this.mediatorBeamTime > 0 ? 1.4 : (CANNON_BY_ID[st.cannonId]?.turnRate ?? 14);
       p.a += clamp(angDiff(p.a, want), -turnRate * dt, turnRate * dt);
 
       // status

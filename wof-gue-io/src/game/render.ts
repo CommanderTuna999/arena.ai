@@ -793,9 +793,6 @@ function drawChairman(g:Game, ctx:CanvasRenderingContext2D, z:number, t:number) 
   const charge=clamp(s.charge,0,1), n=s.drones.length;
   const points=s.drones.map((_,i)=>s.armourActive ? chairmanArmourDronePosition(s,i,p.x,p.y) : s.drones[i]>0 ? chairmanDroneVisualPosition(s,i,p.x,p.y) : chairmanDronePosition(s,i,p.x,p.y));
   ctx.save();ctx.lineCap="round";
-  // Slim separate meter exposes the dome's finite capacity.
-  ctx.fillStyle="rgba(25,0,8,.8)";ctx.fillRect(p.x-35,p.y+62,70,4);
-  ctx.fillStyle="#ff344a";ctx.fillRect(p.x-35,p.y+62,70*clamp(s.shield/CHAIRMAN_SHIELD_MAX,0,1),4);
   // A transparent red dome is independent of the player's existing shield.
   if(s.shield>0) {
     const f=clamp(s.shield/CHAIRMAN_SHIELD_MAX,0,1),rad=54;

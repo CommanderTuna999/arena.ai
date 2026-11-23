@@ -10,5 +10,5 @@ const first=g.player.vx;for(let i=0;i<10;i++)g.firePlayer(.05);
 assert(g.player.vx < first - 300, 'recoil continues pushing while the beam fires');
 assert.equal(g.beams.filter((b:any)=>b.mediator).length,1,'sustained beam does not accumulate blurry overlapping effects');
 g.player.x=BASE.x;g.player.y=BASE.y;g.firePlayer(.05);
-assert.equal(g.mediatorBeamTime,0,'beam stops on entering safe zone');
+assert(g.mediatorBeamTime>0,'beam continues on entering the safe zone');
 console.log('mediator regression checks passed');

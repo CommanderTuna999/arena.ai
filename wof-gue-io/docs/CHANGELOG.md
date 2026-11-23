@@ -1,3 +1,8 @@
+## 0.3. v2.31.13 — Base firing
+
+- Weapons can fire inside the base while its existing protection remains active.
+- Removed the extra Chairman meter beneath the player.
+
 ## 0.3. v2.31.12 — Sun-forged armour
 
 - Only a sun blast sends Chairman drones into the wide orbit and spirals them inward to form armour.
