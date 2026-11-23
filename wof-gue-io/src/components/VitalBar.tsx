@@ -22,20 +22,21 @@ export function VitalBar({ kind, label, value, max, color }: {
   const health = kind === "health";
   return (
     <svg className="block w-56 max-w-[calc(100vw-1.5rem)]" viewBox="0 0 224 20" role="img"
+      style={{ filter: `drop-shadow(0 0 3px ${color}55)` }}
       aria-label={`${label}: ${fmtNum(value)} of ${fmtNum(max)}`}>
       <defs>
         <clipPath id={clip}><path d="M7 3 H218 L222 7 V13 L218 17 H7 L2 13 V7 Z" /></clipPath>
         <linearGradient id={gradient} x1="0" y1="0" x2="0" y2="1">
           <stop offset="0" stopColor="#fff" stopOpacity=".25" />
           <stop offset=".48" stopColor={color} stopOpacity="0" />
-          <stop offset="1" stopColor="#001019" stopOpacity=".58" />
+          <stop offset="1" stopColor={health ? "#11151a" : "#001019"} stopOpacity=".58" />
         </linearGradient>
         {health ? (
           <pattern id={pattern} width="28" height="14" patternUnits="userSpaceOnUse">
             {/* Overlapping, angular plates with bevels like insect carapace. */}
-            <path d="M-7 0 H14 L22 7 L14 14 H-7 L1 7 Z M14 0 H35 L43 7 L35 14 H14 L22 7 Z" fill="none" stroke="#071b17" strokeOpacity=".9" strokeWidth="1.5" />
-            <path d="M1 6 L7 1.5 H13 L19 6 M23 6 L29 1.5 H34" fill="none" stroke="#e2fff1" strokeOpacity=".52" strokeWidth=".8" />
-            <path d="M2 9 L7 12.5 H13 M24 9 L29 12.5 H34" fill="none" stroke="#00332a" strokeOpacity=".65" strokeWidth=".8" />
+            <path d="M-7 0 H14 L22 7 L14 14 H-7 L1 7 Z M14 0 H35 L43 7 L35 14 H14 L22 7 Z" fill="none" stroke="#20272d" strokeOpacity=".9" strokeWidth="1.5" />
+            <path d="M1 6 L7 1.5 H13 L19 6 M23 6 L29 1.5 H34" fill="none" stroke="#f4f9ff" strokeOpacity=".52" strokeWidth=".8" />
+            <path d="M2 9 L7 12.5 H13 M24 9 L29 12.5 H34" fill="none" stroke="#252c33" strokeOpacity=".65" strokeWidth=".8" />
           </pattern>
         ) : (
           <pattern id={pattern} width="24" height="14" patternUnits="userSpaceOnUse">
@@ -49,7 +50,10 @@ export function VitalBar({ kind, label, value, max, color }: {
       <g clipPath={`url(#${clip})`}>
         <rect x="2" y="3" width="220" height="14" fill="#07121b" />
         <rect x="2" y="3" width="220" height="14" fill={`url(#${pattern})`} opacity=".12" />
-        <rect x="2" y="3" width={220 * fraction} height="14" fill={color} fillOpacity={health ? ".82" : ".58"} style={{ transition: "width 100ms linear" }} />
+        {/* The delayed white layer keeps its old width briefly after damage,
+            then drains to the current level. Healing covers it immediately. */}
+        <rect data-damage-trail="true" x="2" y="3" width={220 * fraction} height="14" fill="#fff" style={{ transition: "width 700ms ease-out 180ms" }} />
+        <rect data-vital-fill="true" x="2" y="3" width={220 * fraction} height="14" fill={color} style={{ transition: "width 100ms linear" }} />
         <rect x="2" y="3" width={220 * fraction} height="14" fill={`url(#${gradient})`} style={{ transition: "width 100ms linear" }} />
         <rect x="2" y="3" width={220 * fraction} height="14" fill={`url(#${pattern})`} style={{ transition: "width 100ms linear" }} />
       </g>

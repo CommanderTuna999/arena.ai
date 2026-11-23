@@ -1,3 +1,8 @@
+## 0.3. v2.31.7 — Damage trails
+
+- Health uses grey insect armour, and damage briefly leaves a white trail on health and shield bars.
+- Removed the circular guide lines from Chairman’s drone halos.
+
 ## 0.3. v2.31.6 — Themed vital bars
 
 - Health and shield bars use compact neon armour and honeycomb designs without visible text.

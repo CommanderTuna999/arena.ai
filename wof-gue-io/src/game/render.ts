@@ -786,7 +786,7 @@ function drawScanHighlights(ctx:CanvasRenderingContext2D,e:Enemy,scan:TargetScan
   ctx.restore();
 }
 
-/** Chairman: nested counter-rotating halos, bright drone turrets and a red
+/** Chairman: orbiting drone turrets and a red
  * sun. Effects are bounded to the drone cap; no per-frame particles needed. */
 function drawChairman(g:Game, ctx:CanvasRenderingContext2D, z:number, t:number) {
   const s=g.chairman, p=g.player; if(!s)return;
@@ -801,14 +801,6 @@ function drawChairman(g:Game, ctx:CanvasRenderingContext2D, z:number, t:number) 
     const f=clamp(s.shield/CHAIRMAN_SHIELD_MAX,0,1),rad=54;
     ctx.fillStyle=`rgba(255,52,74,${.025+.035*f})`;ctx.beginPath();ctx.arc(p.x,p.y,rad,0,TAU);ctx.fill();
     ctx.strokeStyle=`rgba(255,52,74,${.24+.38*f})`;ctx.lineWidth=2/z;ctx.beginPath();ctx.arc(p.x,p.y,rad,0,TAU);ctx.stroke();
-  }
-  for(let ring=0;ring<3;ring++) {
-    const radius=94+ring*36+7*Math.sin(s.phase*2+ring*2);
-    const [hx,hy]=chairmanHaloCenter(s,ring,p.x,p.y);
-    ctx.lineWidth=(ring===1?2.2:1.2)/z;ctx.strokeStyle=`rgba(255,${35+ring*12},70,${.28+charge*.3})`;
-    ctx.beginPath();ctx.arc(hx,hy,radius,0,TAU);ctx.stroke();
-    ctx.strokeStyle=`rgba(255,110,120,${.35+charge*.5})`;ctx.lineWidth=2/z;
-    for(let a=0;a<4;a++){const start=s.phase*(ring===1?-1:1)+a*TAU/4+ring;ctx.beginPath();ctx.arc(hx,hy,radius,start,start+.28+charge*.15);ctx.stroke();}
   }
   if(charge>0) for(let i=0;i<n;i++) {
     const [x,y]=points[i];ctx.strokeStyle=`rgba(255,${Math.round(45+charge*150)},${Math.round(55+charge*150)},${.2+charge*.7})`;
