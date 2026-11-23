@@ -18,7 +18,7 @@ export class PilotRoom {
     this.roster = combat?.roster ?? new PilotRoster(world, capacity);
   }
   join(sessionId: string, verifiedName = 'Pilot'): boolean { return this.roster.add(sessionId, verifiedName); }
-  leave(sessionId: string): boolean { this.limits.delete(sessionId); return this.roster.remove(sessionId); }
+  leave(sessionId: string): boolean { this.limits.delete(sessionId); this.combat?.demoLoot.remove(sessionId); return this.roster.remove(sessionId); }
   input(sessionId: string, frame: unknown, nowMs: number): boolean {
     if (!Number.isFinite(nowMs) || !this.roster.get(sessionId)) return false;
     let limit = this.limits.get(sessionId);
@@ -34,6 +34,7 @@ export class PilotRoom {
   advance(nowMs: number): number {
     return this.clock.advance(nowMs, dt => this.combat ? this.combat.step(dt, nowMs) : this.roster.step(dt, nowMs));
   }
+  demoLoot(sessionId:string) {return this.roster.get(sessionId) ? this.combat?.demoLoot.list(sessionId) ?? [] : []; }
   snapshot() { return this.roster.snapshot(); }
   /** Debug-only world view; does not contain enough data for the real client. */
   sharedSnapshot(interestRadius?: number) { return this.combat?.snapshot(interestRadius) ?? null; }

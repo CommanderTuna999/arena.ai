@@ -1,5 +1,6 @@
 import { Game, type Beam } from '../engine';
 import {snapshotCasings} from '../casing-fx';
+import {DemoLoot} from './demo-loot';
 import { segmentDistance } from './demo-beams';
 import { PilotRoster } from './pilot-roster';
 import { PrivateLootVault } from './private-loot';
@@ -14,6 +15,7 @@ import type { RewardWriteQueue } from '../../server/multiplayer-reward-queue';
  * multiplayer until those systems are implemented and security reviewed. */
 export class CombatHarness {
   readonly roster: PilotRoster;
+  readonly demoLoot = new DemoLoot();
   // Cosmetic relay only; damage occurs once in the authoritative engine.
   // Retain flashes long enough for 125ms snapshots and delayed playback.
   private beamHistory: Array<Beam & {id:number;createdAt:number;expiresAt:number}> = [];
@@ -43,7 +45,7 @@ export class CombatHarness {
   }
   constructor(readonly world: Game, capacity = 64, private readonly populate = false, readonly privateLoot = new PrivateLootVault(), private readonly rewards?: RewardWriteQueue, private readonly discardRewards = false) {
     this.roster = new PilotRoster(world, capacity);
-    if (!discardRewards) world.enableExperimentalDamageTracking();
+    world.enableExperimentalDamageTracking();
   }
   step(dt: number, nowMs: number): void {
     if (!Number.isFinite(dt) || dt <= 0 || dt > .05 || !Number.isFinite(nowMs)) throw new Error('Invalid combat step');
@@ -63,9 +65,10 @@ export class CombatHarness {
     this.collectBeamEffects();
     // Settle once after all damage this tick, then discard dead enemy bodies.
     // In-memory only: crash recovery and durable accounts remain unimplemented.
-    for (const enemy of this.world.enemies) if (enemy.dead && !this.discardRewards) {
+    for (const enemy of this.world.enemies) if (enemy.dead) {
       const plan = this.world.experimentalLootReport(enemy);
-      if (plan) {
+      if (plan && this.discardRewards) this.demoLoot.settle(enemy,plan,id=>this.roster.get(id)?.stats.dropChance);
+      if (plan && !this.discardRewards) {
         this.privateLoot.settle(enemy, plan, id => this.dropChances.get(id));
         // Queue copies the exact already-rolled batch. A failed write retries the
         // same IDs and outcomes; never reroll on retry. Process crashes before a

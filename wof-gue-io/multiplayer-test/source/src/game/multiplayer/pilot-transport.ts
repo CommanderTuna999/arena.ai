@@ -81,10 +81,11 @@ export class PilotTransport {
           const view = interestSnapshot(shared, pilotId, this.peerRadii.get(peer) ?? this.interestRadius);
           if (!view) { peer.close(1011, 'Pilot missing'); this.detach(peer); }
           else if (this.compactGeometry) {
+            Object.assign(view,{demoLoot:this.room.demoLoot(pilotId)});
             const packed = packGeometry(view, this.geometry.get(peer) ?? new Map());
             peer.send(JSON.stringify({ type: 'world-snapshot', sequence, geometryCache: 1, world: packed.world }));
             this.geometry.set(peer, packed.cache);
-          } else peer.send(JSON.stringify({ type: 'world-snapshot', sequence, world: view }));
+          } else {Object.assign(view,{demoLoot:this.room.demoLoot(pilotId)});peer.send(JSON.stringify({ type: 'world-snapshot', sequence, world: view }));}
         } else peer.send(pilotMessage!);
       } catch { this.detach(peer); try { peer.close(1011, 'Send failed'); } catch {} }
     }

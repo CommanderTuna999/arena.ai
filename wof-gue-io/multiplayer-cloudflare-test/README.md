@@ -77,8 +77,12 @@ that branch; an older failed build still refers to its original commit.
 At the base, press **E** to open the real cannon tree. All 12 cannons and
 their upgrades are free temporary test access, not purchases or saved account
 progression. The server validates changes at the base. `/health` identifies
-this iteration as `cloudflare-vitals-v1`. A local DOM integration test
+this iteration as `cloudflare-loot-history-v1`. A local DOM integration test
 exercises the menu; real-browser visuals and deployed networking remain unverified.
 
 The base **UPGRADES** tab offers free guest hull, shield and mobility upgrades.
 Harpoon and salvage upgrades are not yet supported; no account is changed.
+
+**STORAGE** is a private, bounded and disposable drop history, not a saved
+inventory or pickup system. It is cleared on disconnect; production reward
+authority and full damage attribution remain unverified.

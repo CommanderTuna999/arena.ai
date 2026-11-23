@@ -65,6 +65,7 @@ export class ExperimentalWorldClient {
       if (world.beams !== undefined && (!Array.isArray(world.beams) || world.beams.length>512 || world.beams.some((b:any)=>!b || !Number.isSafeInteger(b.id) || b.id<1 || ![b.x1,b.y1,b.x2,b.y2,b.createdAt,b.expiresAt].every(Number.isFinite) || b.expiresAt<=b.createdAt || b.expiresAt-b.createdAt>1 || (b.color!==undefined && (typeof b.color!=='string' || b.color.length>80)) || (b.width!==undefined && (!Number.isFinite(b.width) || b.width<=0 || b.width>1000))))) return;
       // Cosmetic ejecta are bounded and contain no executable drawing data.
       if (world.casings !== undefined && (!Array.isArray(world.casings) || world.casings.length>48 || world.casings.some((c:any)=>!c || ![c.x,c.y,c.vx,c.vy,c.angle,c.spin,c.at,c.life].every(Number.isFinite) || c.life<=0 || c.life>3 || Math.abs(c.vx)>10000 || Math.abs(c.vy)>10000 || Math.abs(c.spin)>100 || !['small','shell','orb','core','vial'].includes(c.kind) || typeof c.weapon!=='string' || c.weapon.length>80))) return;
+      if (world.demoLoot !== undefined && (!Array.isArray(world.demoLoot) || world.demoLoot.length>100 || world.demoLoot.some((c:any)=>!c || typeof c.name!=='string' || c.name.length>200 || typeof c.kind!=='string' || c.kind.length>30 || !Number.isSafeInteger(c.tier) || c.tier<0 || c.tier>6))) return;
       // Validate both sets before mutating either history: a malformed snapshot
       // must not advance the stream or create inconsistent animation buffers.
       const compact = (b: Body): Body => ({id:b.id, x:b.x, y:b.y, angle:b.angle});

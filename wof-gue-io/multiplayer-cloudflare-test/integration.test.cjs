@@ -17,6 +17,7 @@ function close(ws){return new Promise(resolve=>{if(ws.readyState===WebSocket.CLO
  b.send(JSON.stringify({type:'demo-equip',cannon:'workhorse'}));
  const shared=await receive(a,v=>v.type==='world-snapshot'&&v.world.pilots.some(p=>p.id===welcomeA.pilotId&&p.cannonId==='peashooter')&&v.world.pilots.some(p=>p.id===welcomeB.pilotId&&p.cannonId==='workhorse'));
  assert(shared.world.pilots.find(p=>p.id===welcomeB.pilotId).cannonId==='workhorse','guest cannot change another pilot');
+ assert.deepEqual(shared.world.demoLoot,[],'new guest has private empty history');
  for(const id of [welcomeA.pilotId,welcomeB.pilotId]){const p=shared.world.pilots.find(p=>p.id===id);assert.equal(p.shieldMax,60);assert.equal(p.shield,60);assert.equal(p.hpMax,100);assert(Array.isArray(p.barrelRec));}
  a.send(JSON.stringify({type:'demo-equip',cannon:'skewer'}));
  await receive(a,v=>v.type==='world-snapshot'&&v.world.pilots.some(p=>p.id===welcomeA.pilotId&&p.cannonId==='skewer'));

@@ -1,0 +1,19 @@
+import assert from 'node:assert/strict';import {DamageLedger} from './source/src/game/multiplayer/damage-ledger';import {LootEntitlements} from './source/src/game/multiplayer/loot-entitlements';import {Game} from './source/src/game/engine';import {newSave} from './source/src/game/data';import {CombatHarness} from './source/src/game/multiplayer/combat-harness';import {DemoLoot} from './source/src/game/multiplayer/demo-loot';import {PilotRoom} from './source/src/game/multiplayer/pilot-room';import {PilotTransport} from './source/src/game/multiplayer/pilot-transport';
+// Real authoritative damage leads to one private normal reward history.
+const world:any=new Game(newSave(),'world'),h=new CombatHarness(world,3,false,undefined,undefined,true),room=new PilotRoom(world,3,60,h);room.join('a','Alpha');room.join('b','Beta');
+const enemy=world.makeEnemy(0,0,-50000,-65000,'test',42);world.enemies.push(enemy);enemy.shells=[];enemy.shields=[];const core=enemy.parts[enemy.coreId];core.hp=core.maxHp=100;
+world.multiplayerDamageOwner='a';world.damagePart(enemy,core,70,enemy.x,enemy.y,'laser');world.multiplayerDamageOwner='b';world.damagePart(enemy,core,100,enemy.x,enemy.y,'laser');world.multiplayerDamageOwner=null;assert(enemy.dead);const report=world.experimentalDamageReport(enemy);assert.deepEqual(report.eligible,['a']);
+// Guarantee an actual component by making its species a boss; winner remains
+// based on the already recorded normal encounter and no client chooses it.
+enemy.spd={...enemy.spd,boss:true};h.step(.05,1000);assert(h.demoLoot.list('a').length>0);assert.deepEqual(h.demoLoot.list('b'),[]);
+const sendsA:string[]=[],sendsB:string[]=[];const pa={bufferedAmount:0,send:(s:string)=>sendsA.push(s),close(){}},pb={bufferedAmount:0,send:(s:string)=>sendsB.push(s),close(){}};
+// Exercise the actual per-socket snapshot privacy boundary in a fresh room.
+const world2=new Game(newSave(),'other'),h2=new CombatHarness(world2,2,false,undefined,undefined,true),r2=new PilotRoom(world2,2,60,h2),transport=new PilotTransport(r2,262144,3500,0,true);assert(transport.attach(pa,'x','X'));assert(transport.attach(pb,'y','Y'));
+const ledger=new DamageLedger();ledger.record('x',90);ledger.record('y',5);ledger.record('z',4);ledger.record(null,1);const entitled=new LootEntitlements(ledger,true);entitled.recordPart(0);assert.deepEqual(entitled.finalize().map(p=>p.pilotId),['x','y'],'Ultra eligibility includes the 5% boundary');
+const guaranteed=new DemoLoot(()=>0);const ultra=world2.makeEnemy(0,6,-59000,-68000,'test',44);const part=ultra.parts[ultra.coreId];guaranteed.settle(ultra,[{pilotId:'x',partIds:[part.id]},{pilotId:'y',partIds:[part.id]}],()=>1);assert.deepEqual(guaranteed.list('x').map(i=>i.tier),[5,6]);assert.deepEqual(guaranteed.list('y').map(i=>i.tier),[5,6]);
+let n=0;const independent=new DemoLoot(()=>n++===0?0:0.9);independent.settle(ultra,[{pilotId:'x',partIds:[part.id]},{pilotId:'y',partIds:[part.id]}],()=>1);assert.deepEqual(independent.list('x').map(i=>i.tier),[5,6]);assert.deepEqual(independent.list('y').map(i=>i.tier),[5]);
+// Install an isolated precomputed history using the public internal method.
+h2.demoLoot.settle(enemy,[{pilotId:'x',partIds:[enemy.parts[enemy.coreId].id]}],()=>1);transport.advance(1000);transport.advance(1050);const wx=JSON.parse(sendsA.findLast(s=>JSON.parse(s).type==='world-snapshot')!).world,wy=JSON.parse(sendsB.findLast(s=>JSON.parse(s).type==='world-snapshot')!).world;assert(wx.demoLoot.length>0);assert.deepEqual(wy.demoLoot,[]);assert(!JSON.stringify(wy).includes('"demoLoot":[{'));
+transport.detach(pa);assert.deepEqual(h2.demoLoot.list('x'),[]);room.leave('a');assert.deepEqual(h.demoLoot.list('a'),[]);
+for(let i=0;i<110;i++)guaranteed.settle(ultra,[{pilotId:'x',partIds:[part.id]}],()=>1);assert.equal(guaranteed.list('x').length,100,'history is bounded');
+console.log('Guest loot: authoritative winner, Ultra rolls, private sockets, bounded history and disconnect cleanup');

@@ -49,7 +49,7 @@ export class DemoRoom extends DurableObject {
   async fetch(req:Request):Promise<Response>{
     const path=new URL(req.url).pathname;
     if(req.method!=='GET')return reply('Method not allowed',405);
-    if(path==='/health')return reply(JSON.stringify({ok:this.healthy,experimental:true,build:'cloudflare-vitals-v1',players:this.room.roster.size}),this.healthy?200:503,'application/json');
+    if(path==='/health')return reply(JSON.stringify({ok:this.healthy,experimental:true,build:'cloudflare-loot-history-v1',players:this.room.roster.size}),this.healthy?200:503,'application/json');
     if(path==='/session'){
       if(!this.healthy)return reply('Unavailable',503);
       if(!this.allowSession(req.headers.get('cf-connecting-ip')||'unknown',Date.now()))return reply('Rate limited',429);

@@ -27,7 +27,7 @@ test. The server validates loadout and upgrades at the base; they reset on
 disconnect. This is not purchasing, crafting, inventory or saved progression.
 The guest starts with the level-one shield. Weapon effects and special states
 are replicated, but visual fidelity and real-network performance still need
-browser and deployed testing. `/health` identifies `guest-vitals-v1`.
+browser and deployed testing. `/health` identifies `guest-loot-history-v1`.
 
 Shot casings are emitted by the authoritative simulation and relayed to nearby
 guests with their weapon and kinetic/energy profile. They are cosmetic, bounded
@@ -41,3 +41,10 @@ salvage tracks are deliberately omitted: their demo systems are not complete.
 The guest HUD uses the main game's angular health and shield gauges, including
 a red Chairman dome, drone armour and readiness, and an afterburner gauge.
 These display server state; the visual animations still need a real browser review.
+
+The base **STORAGE** tab shows up to 100 automatically credited, private guest
+drops. Normal enemies use highest recorded damage; Ultra uses independent rolls
+for contributors at or above 5% of recorded damage. This is an experimental
+encounter history, not world pickup, crafting, account inventory or persistence;
+ownership coverage and production reward durability are incomplete. Disconnect
+clears it.

@@ -15,9 +15,9 @@ let sequence=0,mouseX=innerWidth/2,mouseY=innerHeight/2,fire=false,viewportDirty
 let displayClient: ExperimentalWorldClient | null=null, playback=new DemoPlayback();
 let frames=0,fps=0,fpsStarted=performance.now(),lastViewTime=-1,lastArrival=0,updateGap=0;
 const keys=new Set<string>();
-let localPilot:any=null;
+let localPilot:any=null,localLoot:any[]=[];
 const menu=createDemoBaseMenu(id=>{client.equipDemoCannon(id);},(track,n,cannon)=>{client.upgradeDemoCannon(track,n,cannon);},(id,n)=>{client.upgradeDemoShip(id,n);},()=>{});
-function toggleBase(){if(menu.isOpen()){menu.setOpen(false);return;}if(client.state==='online' && localPilot && !localPilot.dead && Math.hypot(localPilot.x-BASE.x,localPilot.y-BASE.y)<BASE.r+40){keys.clear();fire=false;menu.update(localPilot);menu.setOpen(true);}}
+function toggleBase(){if(menu.isOpen()){menu.setOpen(false);return;}if(client.state==='online' && localPilot && !localPilot.dead && Math.hypot(localPilot.x-BASE.x,localPilot.y-BASE.y)<BASE.r+40){keys.clear();fire=false;menu.update(localPilot,localLoot);menu.setOpen(true);}}
 function resize(){viewportDirty=true;const d=Math.min(devicePixelRatio||1,1.5);canvas.width=Math.round(innerWidth*d);canvas.height=Math.round(innerHeight*d);ctx.setTransform(d,0,0,d,0,0);replica.resize(innerWidth,innerHeight,d);}
 window.addEventListener('resize',resize);resize();
 window.addEventListener('keydown',e=>{if(e.code==='KeyE'&&!e.repeat){e.preventDefault();toggleBase();return;}if(e.code==='Escape'&&menu.isOpen()){e.preventDefault();menu.setOpen(false);return;}if(menu.isOpen())return;if(['KeyW','KeyA','KeyS','KeyD','ShiftLeft','Space'].includes(e.code)){e.preventDefault();keys.add(e.code);}});
@@ -31,7 +31,7 @@ function draw(){
  const current=client.renderSnapshot();
  if(current && displayClient!==client){displayClient=client;playback=new DemoPlayback();lastViewTime=-1;lastArrival=0;updateGap=0;}
  if(current && current.time!==lastViewTime){if(lastArrival)updateGap=Math.round(now-lastArrival);lastArrival=now;lastViewTime=current.time;}
- if(client.state==='closed'){localPilot=null;keys.clear();fire=false;if(menu.isOpen())menu.setOpen(false);status.textContent='Disconnected — reconnecting…';scheduleReconnect();}
+ if(client.state==='closed'){localPilot=null;localLoot=[];keys.clear();fire=false;if(menu.isOpen())menu.setOpen(false);status.textContent='Disconnected — reconnecting…';scheduleReconnect();}
  else if(client.state!=='online' || !current) status.textContent=`${client.state}…`;
  const shown=displayClient, view=shown?.renderSnapshot() as any;
  if(!view || !shown?.pilotId){ctx.setTransform(1,0,0,1,0,0);ctx.fillStyle='#040b12';ctx.fillRect(0,0,canvas.width,canvas.height);return;}
@@ -40,7 +40,7 @@ function draw(){
  const pilotPositions=new Map(sampled.pilots.map((p:any)=>[p.id,p]));
  const pilots=view.pilots.map((p:any)=>({...p,...pilotPositions.get(p.id) as any}));
  const me=pilots.find((p:any)=>p.id===shown.pilotId);if(!me)return;
- if(client===shown && client.state==='online'){localPilot=me;menu.update(me);}if(menu.isOpen() && (me.dead || Math.hypot(me.x-BASE.x,me.y-BASE.y)>=BASE.r+40))menu.setOpen(false);
+ if(client===shown && client.state==='online'){localPilot=me;localLoot=view.demoLoot??[];menu.update(me,localLoot);}if(menu.isOpen() && (me.dead || Math.hypot(me.x-BASE.x,me.y-BASE.y)>=BASE.r+40))menu.setOpen(false);
  hud.update(me);
  if(client===shown && client.state==='online'){attempts=0;status.textContent=`${me.cannonId} · ${sampled.pilots.length} pilot${sampled.pilots.length===1?'':'s'} nearby · ${sampled.enemies.length} enemies · ${fps || "…"} FPS · updates ${updateGap || "…"} ms${innerWidth>MAX_VIEW_DIMENSION||innerHeight>MAX_VIEW_DIMENSION?" · viewport exceeds demo limit":""}`;}
  if(replica.apply(view,pilots,sampled.enemies,shown.pilotId,renderTime,sampled)) render(replica.game,ctx);
