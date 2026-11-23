@@ -8,7 +8,7 @@
  *   CHANGELOG and mirror the details in docs/CHANGELOG.md.
  */
 
-export const VERSION = "2.30.19";
+export const VERSION = "2.30.20";
 
 export interface ChangeEntry {
   version: string;
@@ -19,6 +19,7 @@ export interface ChangeEntry {
 }
 
 export const CHANGELOG: ChangeEntry[] = [
+  { version: "2.30.20", date: "23 Nov 2026", title: "Organized bestiary drops", points: ["Drop gallery groups components by type in collapsed expandable sections.", "Local admins can fill or clear bestiary unlocks with /bestiary fill or /bestiary clear."] },
   { version: "2.30.19", date: "23 Nov 2026", title: "Bestiary drop gallery", points: ["A View Drops button opens a scrollable gallery instead of crowding the bestiary hover card.", "Each named component has a representative illustration generated from its actual enemy part, with rarity rates preserved."] },
   { version: "2.30.18", date: "23 Nov 2026", title: "Exact bestiary drops", points: ["Bestiary entries list exact component names, including limbs and optional weapon and shield loadouts, from the enemy builder.", "Drop probabilities are shown per component rarity, with separate Mythical and Ultra rates and accurate Common and boss rates."] },
   { version: "2.30.17", date: "23 Nov 2026", title: "Distinct spent ammunition", points: ["Every cannon and crafted weapon now has its own spent round, battery, vial or launch cap, including a long glowing Mediator power rod.", "Mixed kinetic and energy weapons eject different designs for the actual shot fired; energy cells use layered luminous details without costly canvas blur."] },

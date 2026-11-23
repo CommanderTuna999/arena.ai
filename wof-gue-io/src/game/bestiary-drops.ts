@@ -1,6 +1,6 @@
 import { buildEnemy, SPECIES_LIST, type GunKind, type SpeciesDef } from './enemies';
 import { baseComponentRates } from './drop-roll';
-import type { PartKind } from './data';
+import { CAT_NAME, KIND_CAT, type Category, type PartKind } from './data';
 
 export interface BestiaryDrop { name:string; kind:PartKind; minCount:number; maxCount:number; rates:ReturnType<typeof baseComponentRates>; poly:number[] }
 const cache=new Map<string,BestiaryDrop[]>();
@@ -27,4 +27,10 @@ export function bestiaryDrops(sp:SpeciesDef,tier:number):BestiaryDrop[] {
   return {name:part.name,kind:part.kind,poly:part.poly,minCount:Math.min(...counts),maxCount:Math.max(...counts),rates:baseComponentRates(tier,part.kind,!!sp.boss)};
  });
  cache.set(key,result);return result;
+}
+
+/** Match the broad crafting categories while retaining exact named parts. */
+export function groupBestiaryDrops(drops:readonly BestiaryDrop[]) {
+ const order:Category[]=['core','body','plate','limb','wing','weapon','shield'];
+ return order.map(category=>({category,name:CAT_NAME[category],drops:drops.filter(d=>KIND_CAT[d.kind]===category)})).filter(group=>group.drops.length>0);
 }

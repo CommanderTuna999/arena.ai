@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {adminNumber,runAdminCommand,spawnSuggestions} from './src/game/admin-commands';
-import {Game} from './src/game/engine';import {newSave, BASE} from './src/game/data';
+import {Game} from './src/game/engine';import {newSave, BASE, RARITIES} from './src/game/data';
 assert.equal(adminNumber('inf'),Infinity);assert.equal(adminNumber('1.5M',true),1500000);assert.equal(adminNumber('-.5k',true),-500);assert.equal(adminNumber('NaN'),null);assert.equal(adminNumber('1e3'),null);
 const g:any=new Game(newSave(),'commands');let opened=0;const exec=(s:string)=>runAdminCommand(g,s,()=>opened++);
 assert.match(exec('/help'),/opened/);assert.equal(opened,1);assert.match(exec('/op other'),/Only your own/);assert.equal(g.admin.on,false);
@@ -11,3 +11,12 @@ g.save.credits=0;exec('/cr 1.5K');assert.equal(g.save.credits,1500);exec('/cr -0
 assert(spawnSuggestions('/spawn wid').some(s=>s.toLowerCase().includes('spider')));const n=g.enemies.length;exec('/spawn widow spider common');assert.equal(g.enemies.length,n+1);
 exec('/testmap');assert(g.admin.sandbox);exec('/home');assert(!g.admin.sandbox);assert(Math.hypot(g.player.x-BASE.x,g.player.y-BASE.y)<500);exec('/tp');assert.equal(opened,2);
 console.log('Local admin commands validate decimals, multipliers, credits, spawn and teleport');
+
+import {SPECIES_LIST} from './src/game/enemies';
+const h:any=new Game(newSave(),'bestiary-command');h.save.bestiary={old:2};const hExec=(v:string)=>runAdminCommand(h,v,()=>{});const before=JSON.stringify(h.save.bestiary);
+assert.match(hExec('/bestiary fill'),/Enable/);assert.equal(JSON.stringify(h.save.bestiary),before);
+h.setAdmin('on',true);assert.match(hExec('/bestiary nonsense'),/Usage/);assert.match(hExec('/bestiary fill extra'),/Usage/);assert.equal(JSON.stringify(h.save.bestiary),before);
+const other=h.save.credits;assert.match(hExec('/BESTIARY FILL'),/filled/);assert.equal(Object.keys(h.save.bestiary).length,SPECIES_LIST.length);for(const sp of SPECIES_LIST)assert.equal(h.save.bestiary[sp.id],RARITIES.length-1);assert.equal(h.save.credits,other);
+let saved:any;h.persistent=false;h.saveSink=(s:any)=>{saved=JSON.parse(JSON.stringify(s));};h.persist();assert.equal(saved.bestiary[SPECIES_LIST[0].id],6,'fill marks save dirty');
+assert.match(hExec('/bestiary clear'),/cleared/);h.persist();assert.deepEqual(saved.bestiary,{});assert.equal(saved.credits,other);assert.match(hExec('/bestiary'),/Usage/);
+console.log('Bestiary commands are admin-gated and saved');

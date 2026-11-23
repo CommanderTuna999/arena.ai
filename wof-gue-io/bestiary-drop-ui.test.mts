@@ -2,13 +2,17 @@ import assert from 'node:assert/strict';
 import React from 'react';
 import {renderToStaticMarkup} from 'react-dom/server';
 import {DropsDialog} from './src/components/Bestiary';
-import {bestiaryDrops} from './src/game/bestiary-drops';
+import {bestiaryDrops,groupBestiaryDrops} from './src/game/bestiary-drops';
+import {KIND_CAT} from './src/game/data';
 import {SPECIES_LIST,buildEnemy} from './src/game/enemies';
 import {readFileSync} from 'node:fs';
 const sp=SPECIES_LIST.find(s=>s.name==='Widow Spider')!, tier=6;
 const drops=bestiaryDrops(sp,tier);const html=renderToStaticMarkup(React.createElement(DropsDialog,{sp,tier,onClose:()=>{}}));
 assert(html.includes('role="dialog"')&&html.includes('aria-modal="true"'));
 assert(html.includes('Widow Spider Missile Pod'));assert(html.includes('Mythical</span><span>100%'));assert(html.includes('Ultra</span><span>2%'));assert(html.includes('Ultra</span><span>10%'));
+const groups=groupBestiaryDrops(drops);assert.equal((html.match(/<details/g)??[]).length,groups.length);assert(!/<details[^>]*\sopen(?:=|\s|>)/.test(html),'categories start collapsed');
+assert(!html.includes('Base chance per eligible piece') && !html.includes('Optional loadouts vary') && !html.includes('Images show representative'));
+for(const group of groups)assert(group.drops.every(d=>KIND_CAT[d.kind]===group.category));
 assert.equal((html.match(/<polygon /g)??[]).length,drops.length,'one actual piece illustration per named drop');
 assert.equal((html.match(/<linearGradient id=/g)??[]).length,drops.length,'ultra images have separate gradient identifiers');
 for(const [i,s] of SPECIES_LIST.entries())for(const t of [0,3,6]){

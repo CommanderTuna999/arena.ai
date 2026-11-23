@@ -3,6 +3,15 @@ import { SPECIES_LIST } from './enemies';
 import type { Game } from './engine';
 import { localAdminState, setLocalAdmin } from './local-admin';
 
+/** Changes the current pilot's saved unlocks, including Ultra entries. */
+export function adminBestiary(game:Game,action:'fill'|'clear'):string {
+  if(!game.admin.on)return 'Enable local admin mode in the panel first.';
+  if(action!=='fill' && action!=='clear')return 'Usage: /bestiary fill or /bestiary clear.';
+  game.save.bestiary=action==='fill' ? Object.fromEntries(SPECIES_LIST.map(s=>[s.id,RARITIES.length-1])) : {};
+  game.markDirty();
+  return action==='fill' ? 'Bestiary filled.' : 'Bestiary cleared.';
+}
+
 /** Local test commands. This is not authentication or a multiplayer authority. */
 export function adminNumber(text:string, allowSuffix=false):number | null {
   if (/^inf(?:inity)?$/i.test(text)) return Infinity;
@@ -26,6 +35,11 @@ export function runAdminCommand(game:Game,text:string,openPanel:()=>void,request
     game.setAdmin('on',cmd==='/op');return cmd==='/op'?'Browser-local admin enabled.':'Browser-local admin disabled.';
   }
   if(!game.admin.on)return 'Enable local admin mode in the panel first.';
+  if(cmd==='/bestiary') {
+    const action=parts[1]?.toLowerCase();
+    if(parts.length!==2 || (action!=='fill' && action!=='clear'))return 'Usage: /bestiary fill or /bestiary clear.';
+    return adminBestiary(game,action);
+  }
   if(cmd==='/tp' && parts.length===1){openPanel();return 'Choose a destination on the admin map.';}
   if(cmd==='/home' && parts.length===1){game.adminTeleport(BASE.x,BASE.y-180);return 'Teleported to base.';}
   if(cmd==='/testmap' && parts.length===1){if(!game.admin.sandbox)game.adminTestRange(true);return 'Testing map ready.';}

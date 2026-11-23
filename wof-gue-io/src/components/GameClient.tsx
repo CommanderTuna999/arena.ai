@@ -19,6 +19,7 @@ import { StorageWarning } from "@/components/StorageWarning";
 import RecipeIcon from "@/components/RecipeIcon";
 import Bestiary, { BeeIcon } from "@/components/Bestiary";
 import { localAdminState } from "@/game/local-admin";
+import { adminBestiary } from "@/game/admin-commands";
 import { guestName, readGuestSave, resolveSession, saveKeyFor, writeGuestSave } from "@/game/accounts";
 
 const PID_KEY = "neon-hive-pid";
@@ -1380,6 +1381,11 @@ function AdminPanel({ game, hud, onClose }: { game: Game; hud: Hud; onClose: () 
       </div>
       <button onClick={() => game.adminCredits(1_000_000)} className="mt-2 w-full rounded-sm border border-yellow-300 bg-yellow-300/15 px-2 py-1 text-[11px] font-black text-yellow-200 hover:bg-yellow-300/30">+1,000,000 CR</button>
       <div className="text-[10px] text-cyan-200/70">/cr amount · /help</div>
+      <div className="mt-2 flex gap-1">
+        <button disabled={!a.on} onClick={() => adminBestiary(game, "fill")} className="flex-1 rounded-sm border border-cyan-300/40 px-2 py-1 text-[10px] text-cyan-100 disabled:opacity-40">FILL BESTIARY</button>
+        <button disabled={!a.on} onClick={() => { if (window.confirm("Clear all bestiary unlocks?")) adminBestiary(game, "clear"); }} className="flex-1 rounded-sm border border-white/20 px-2 py-1 text-[10px] text-white/70 disabled:opacity-40">CLEAR BESTIARY</button>
+      </div>
+      <div className="text-[10px] text-cyan-200/70">/bestiary fill · /bestiary clear</div>
       <div className="mt-2 text-[9px] leading-tight text-white/35">Admin stays on when you return home. Flags are kept in this tab, not in your pilot save.</div>
     </div>
   );

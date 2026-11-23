@@ -2,7 +2,7 @@
 
 import { useEffect, useId, useMemo, useRef, useState, type MouseEvent } from "react";
 import { RARITIES } from "@/game/data";
-import { bestiaryDrops, type BestiaryDrop } from "@/game/bestiary-drops";
+import { bestiaryDrops, groupBestiaryDrops, type BestiaryDrop } from "@/game/bestiary-drops";
 import { buildEnemy, SPECIES_LIST, type SpeciesDef } from "@/game/enemies";
 import { fmtNum } from "@/game/math";
 
@@ -321,21 +321,24 @@ function DropIcon({ drop, tier }: { drop: BestiaryDrop; tier: number }) {
 }
 
 export function DropsDialog({ sp, tier, onClose }: { sp:SpeciesDef; tier:number; onClose:()=>void }) {
-  const drops=bestiaryDrops(sp,tier);
-  const closeButton=useRef<HTMLButtonElement>(null);
-  const scrollArea=useRef<HTMLDivElement>(null);
-  return <div className="fixed inset-0 z-[70] grid place-items-center bg-black/80 p-3" onMouseDown={(e)=>{if(e.target===e.currentTarget)onClose();}} onKeyDown={(e)=>{if(e.key==='Escape'){e.stopPropagation();onClose();} else if(e.key==='Tab'){e.preventDefault();if(e.target===closeButton.current)scrollArea.current?.focus();else closeButton.current?.focus();}}}>
+  const groups=groupBestiaryDrops(bestiaryDrops(sp,tier));
+  return <div className="fixed inset-0 z-[70] grid place-items-center bg-black/80 p-3" onMouseDown={(e)=>{if(e.target===e.currentTarget)onClose();}} onKeyDown={(e)=>{if(e.key==='Escape'){e.stopPropagation();onClose();} else if(e.key==='Tab'){const controls=Array.from(e.currentTarget.querySelectorAll<HTMLElement>('button, summary, [tabindex="0"]'));const first=controls[0],last=controls[controls.length-1];if(e.shiftKey && e.target===first){e.preventDefault();last?.focus();}else if(!e.shiftKey && e.target===last){e.preventDefault();first?.focus();}}}}>
     <section role="dialog" aria-modal="true" aria-labelledby="bestiary-drops-title" className="flex max-h-[90dvh] w-full max-w-2xl flex-col overflow-hidden rounded-md border border-cyan-300/40 bg-[#070b1a] shadow-[0_10px_40px_rgba(0,0,0,0.8)]">
       <header className="flex items-start justify-between gap-3 border-b border-white/10 p-4">
-        <div><h2 id="bestiary-drops-title" className="text-sm font-black tracking-[0.12em] text-cyan-100">{sp.name.toUpperCase()} · {RARITIES[tier].name.toUpperCase()} DROPS</h2><p className="mt-1 text-[11px] leading-snug text-white/50">Base chance per eligible piece. Break parts for salvage; base-majority kills yield none. Optional loadouts vary. Salvage upgrades affect ordinary rates, not boss or Ultra rates. Images show representative piece shapes.</p></div>
-        <button ref={closeButton} type="button" autoFocus onClick={onClose} className="shrink-0 rounded-sm border border-white/25 px-3 py-1.5 text-xs font-bold text-white/80 hover:bg-white/10">CLOSE</button>
+        <h2 id="bestiary-drops-title" className="text-sm font-black tracking-[0.12em] text-cyan-100">{sp.name.toUpperCase()} · {RARITIES[tier].name.toUpperCase()} DROPS</h2>
+        <button type="button" autoFocus onClick={onClose} className="shrink-0 rounded-sm border border-white/25 px-3 py-1.5 text-xs font-bold text-white/80 hover:bg-white/10">CLOSE</button>
       </header>
-      <div ref={scrollArea} tabIndex={0} aria-label="Component drops list" className="min-h-0 overflow-y-auto overscroll-contain p-3">
-        <div className="grid gap-2 sm:grid-cols-2">
-          {drops.map((d)=><div key={`${d.kind}:${d.name}`} className="flex gap-2 rounded-sm border border-white/10 bg-[#0a1020] p-2 text-[11px]">
-            <DropIcon drop={d} tier={tier}/><div className="min-w-0 flex-1"><div className="font-bold text-cyan-100">{d.name}</div><div className="text-white/40">{d.minCount===d.maxCount?`${d.maxCount} pieces`:d.minCount===0?`Optional, up to ${d.maxCount}`:`${d.minCount}–${d.maxCount} pieces`}</div>
-              {d.rates.map((r)=><div key={r.tier} className="flex justify-between gap-2 text-white/70"><span style={{color:r.tier===6?"#e6e6e6":RARITIES[r.tier].color}}>{RARITIES[r.tier].name}</span><span>{formatPercent(r.chance)}</span></div>)}
-            </div></div>)}
+      <div tabIndex={0} aria-label="Component drops list" className="min-h-0 overflow-y-auto overscroll-contain p-3">
+        <div className="grid gap-2">
+          {groups.map(group=><details key={group.category} className="group rounded-sm border border-white/15 bg-[#0a1020]">
+            <summary className="flex cursor-pointer items-center justify-between px-3 py-2 text-xs font-bold text-cyan-100 hover:bg-white/5"><span>{group.name}</span><span aria-hidden="true" className="text-white/50 group-open:rotate-90">▶</span></summary>
+            <div className="grid gap-2 border-t border-white/10 p-2 sm:grid-cols-2">
+              {group.drops.map(d=><div key={`${d.kind}:${d.name}`} className="flex gap-2 rounded-sm border border-white/10 bg-[#070c19] p-2 text-[11px]">
+                <DropIcon drop={d} tier={tier}/><div className="min-w-0 flex-1"><div className="font-bold text-cyan-100">{d.name}</div>
+                  {d.rates.map(r=><div key={r.tier} className="flex justify-between gap-2 text-white/70"><span style={{color:r.tier===6?"#e6e6e6":RARITIES[r.tier].color}}>{RARITIES[r.tier].name}</span><span>{formatPercent(r.chance)}</span></div>)}
+                </div></div>)}
+            </div>
+          </details>)}
         </div>
       </div>
     </section>

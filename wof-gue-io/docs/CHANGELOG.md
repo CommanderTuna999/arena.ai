@@ -1,3 +1,8 @@
+## 0.3. v2.30.20 — Organized bestiary drops
+
+- Drop gallery groups components by type in collapsed expandable sections.
+- Local admins can fill or clear bestiary unlocks with /bestiary fill or /bestiary clear.
+
 ## 0.3. v2.30.19 — Bestiary drop gallery
 
 - A View Drops button opens a scrollable gallery instead of crowding the bestiary hover card.
