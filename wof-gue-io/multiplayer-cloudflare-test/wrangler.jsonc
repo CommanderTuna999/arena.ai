@@ -1,0 +1,8 @@
+{
+  "name": "wof-guest-multiplayer-test",
+  "main": "src/worker.mts",
+  "compatibility_date": "2026-01-15",
+  "compatibility_flags": ["nodejs_compat"],
+  "durable_objects": { "bindings": [{"name":"DEMO_ROOM", "class_name":"DemoRoom"}] },
+  "migrations": [{"tag":"v1", "new_sqlite_classes":["DemoRoom"]}]
+}

@@ -1,0 +1,12 @@
+{
+  "name": "isolated-cloudflare-multiplayer-demo",
+  "private": true,
+  "scripts": {
+    "build": "node build.cjs",
+    "dev": "npm run build && wrangler dev --local --ip 0.0.0.0"
+  },
+  "devDependencies": {
+    "esbuild": "0.25.12",
+    "wrangler": "4.167.0"
+  }
+}
