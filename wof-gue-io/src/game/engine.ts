@@ -1,5 +1,5 @@
 import { createTargetScan, type TargetScan } from "./target-scan";
-import { CHAIRMAN_SHIELD_MAX, spendChairmanDrone, updateChairmanSwarm, disperseChairmanArmour, damageChairmanArmour, chairmanDronePosition, moveChairmanHalos, chairmanDroneCount, chairmanOrbChance, chairmanOrbRadius, chairmanOrbDamage, chairmanCoreMul, createChairman, syncChairman, tickChairman, type ChairmanState } from "./chairman";
+import { CHAIRMAN_SHIELD_MAX, spendChairmanDrone, launchChairmanDrone, updateChairmanSwarm, disperseChairmanArmour, damageChairmanArmour, chairmanDronePosition, moveChairmanHalos, chairmanDroneCount, chairmanOrbChance, chairmanOrbRadius, chairmanOrbDamage, chairmanCoreMul, createChairman, syncChairman, tickChairman, type ChairmanState } from "./chairman";
 import { rollComponentTiers } from "./drop-roll";
 import { recordPlateHit } from "./plate-impact";
 import { ejectCasing, ejectCasingLimited } from "./casing-fx";
@@ -2186,7 +2186,7 @@ export class Game {
     if (st.kinetic > 0 && p.shield > 0 && !o.energy) d *= 1 - st.kinetic;
     p.hitT = 0; p.shieldT = st.shieldDelay;
     // Each lit drone absorbs one entire damage instance, independently of
-    // damage size or dome capacity. Exhaustion gathers the swarm into armour.
+    // damage size or dome capacity. Only a sun blast starts recharge.
     if (st.cannonId === "chairman" && d > 0) {
       const cs = this.chairman ??= createChairman();
       syncChairman(cs, chairmanDroneCount(this.cannonViewLevels("chairman").drones ?? 0));
@@ -2194,7 +2194,7 @@ export class Game {
       const ang = (o.kbx || o.kby) ? Math.atan2(-(o.kby ?? 0), -(o.kbx ?? 0)) : p.a + Math.PI;
       if (available.length) {
         const i = available[Math.floor(Math.random() * available.length)];
-        spendChairmanDrone(cs,i,p.x,p.y);
+        spendChairmanDrone(cs,i);
         recordShieldImpact(p, Math.cos(ang) * (SHIP_R + 35), Math.sin(ang) * (SHIP_R + 35), this.t);
         return;
       }
@@ -3573,7 +3573,7 @@ export class Game {
       this.beam(x,y,angle,st.bulletRange,damage,st.pierce,false,"laser","#ff344a",1,1,crit,false,true,chairmanCoreMul(lv.coreDmg ?? 0));
       this.burst(x,y,"#ff4254",10,5,300);
       ejectCasing(this,x,y,angle,this.t,"core",p.vx,p.vy,"chairman");
-      spendChairmanDrone(cs,index,p.x,p.y); cs.fireGlow[index]=.4; p.fireCd=1/st.rate;
+      spendChairmanDrone(cs,index); cs.fireGlow[index]=.4; p.fireCd=1/st.rate;
       this.shake=Math.max(this.shake,5);
     };
     if(this.inSafe()) {cs.scan=null;cs.charge=0;cs.sunRequested=false;this.fireWeapons(dt,p.a);return;}
@@ -3583,7 +3583,7 @@ export class Game {
         cs.charge=0; cs.flash=.34;
         // After a blast, all drones fly to the outer orbit before regrouping.
         // Snapshot positions first, including any partially assembled armour.
-        for(let i=0;i<cs.drones.length;i++) spendChairmanDrone(cs,i,p.x,p.y);
+        for(let i=0;i<cs.drones.length;i++) launchChairmanDrone(cs,i,p.x,p.y);
         cs.armourActive=false;cs.armourDispersing=false;cs.armourReturnPath=false;
         cs.armour=0;cs.armourMax=0;cs.armourBlend=0;cs.armourLostPieces=0;
         cs.reload=0;cs.scan=null;cs.sunLocked=true;cs.sunRequested=false;
@@ -3601,8 +3601,8 @@ export class Game {
       }
       this.fireWeapons(dt,p.a);return;
     }
-    // A deliberate fresh trigger may fire the sun while exhausted drones
-    // orbit or assemble. A post-blast lock prevents automatic retriggers.
+    // A deliberate fresh trigger fires the sun when all drones are dark.
+    // A post-blast lock prevents automatic retriggers during recharge.
     if(cs.sunRequested && !cs.sunLocked && p.fireCd<=0 && p.jam<=0) {
       cs.sunRequested=false;cs.scan=null;p.fireCd=1/st.rate;cs.charge=.000001;
       this.fireWeapons(dt,p.a);return;

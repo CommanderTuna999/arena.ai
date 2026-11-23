@@ -8,7 +8,7 @@
  *   CHANGELOG and mirror the details in docs/CHANGELOG.md.
  */
 
-export const VERSION = "2.31.11";
+export const VERSION = "2.31.12";
 
 export interface ChangeEntry {
   version: string;
@@ -19,6 +19,7 @@ export interface ChangeEntry {
 }
 
 export const CHANGELOG: ChangeEntry[] = [
+  { version: "2.31.12", date: "23 Nov 2026", title: "Sun-forged armour", points: ["Only a sun blast sends Chairman drones into the wide orbit and spirals them inward to form armour.", "Drones exhausted by firing or blocking stay dark in their normal orbits until the sun fires."] },
   { version: "2.31.11", date: "23 Nov 2026", title: "The gathering swarm", points: ["Spent Chairman drones drift into a wide, slow orbit, then assemble into armour from their own shapes over two seconds.", "A fresh left click can fire the sun while the exhausted swarm gathers; after a sun blast, recharging still prevents a repeat blast."] },
   { version: "2.31.10", date: "23 Nov 2026", title: "Drone armour motion", points: ["Chairman drones visibly gather into armour and fan back out when dispersed with a left click.", "Each lost armour segment uncharges its drone, which must recharge again before dispersal."] },
   { version: "2.31.9", date: "23 Nov 2026", title: "Drone armour", points: ["Exhausted Chairman drones gather into an armour layer with ten times maximum hull health.", "Drones recharge sequentially after exhaustion or a sun blast; press Q or the HUD button to disperse them once all are ready."] },

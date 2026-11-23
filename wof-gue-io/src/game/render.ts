@@ -807,7 +807,7 @@ function drawChairman(g:Game, ctx:CanvasRenderingContext2D, z:number, t:number) 
     ctx.lineWidth=(1+charge*3)/z;ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(p.x,p.y);ctx.stroke();
   }
   for(let i=0;i<n;i++) {
-    const [x,y]=points[i], firing=(s.fireGlow[i] ?? 0)>0, lit=firing || charge>0 || s.drones[i]<=0, pulse=.8+.2*Math.sin(t*5+i);
+    const [x,y]=points[i], firing=(s.fireGlow[i] ?? 0)>0, lit=firing || s.drones[i]<=0, pulse=.8+.2*Math.sin(t*5+i);
     if(firing){const glow=ctx.createRadialGradient(x,y,0,x,y,42);glow.addColorStop(0,"rgba(255,255,255,.98)");glow.addColorStop(.2,"rgba(255,115,125,.95)");glow.addColorStop(.5,"rgba(255,35,60,.55)");glow.addColorStop(1,"rgba(255,35,60,0)");ctx.fillStyle=glow;ctx.beginPath();ctx.arc(x,y,42,0,TAU);ctx.fill();}
     const [hx,hy]=chairmanHaloCenter(s,i%3,p.x,p.y);
     // The real turret silhouette becomes each overlapping armour segment;

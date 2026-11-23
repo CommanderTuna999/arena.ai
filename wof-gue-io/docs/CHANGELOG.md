@@ -1,3 +1,8 @@
+## 0.3. v2.31.12 — Sun-forged armour
+
+- Only a sun blast sends Chairman drones into the wide orbit and spirals them inward to form armour.
+- Drones exhausted by firing or blocking stay dark in their normal orbits until the sun fires.
+
 ## 0.3. v2.31.11 — The gathering swarm
 
 - Spent Chairman drones drift into a wide, slow orbit, then assemble into armour from their own shapes over two seconds.

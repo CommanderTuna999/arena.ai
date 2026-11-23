@@ -35,8 +35,12 @@ export function chairmanDronePosition(s:ChairmanState,index:number,x:number,y:nu
   const [cx,cy]=chairmanHaloCenter(s,index%3,x,y);
   return chairmanPosition(index,s.drones.length,s.phase,cx,cy);
 }
-/** Capture the drone's actual position when it goes dark, avoiding a jump. */
-export function spendChairmanDrone(s:ChairmanState,index:number,x:number,y:number) {
+/** Ordinary exhaustion only turns a drone dark in its existing orbit. */
+export function spendChairmanDrone(s:ChairmanState,index:number) {
+  s.drones[index]=Infinity;
+}
+/** A sun blast launches every drone from its current position. */
+export function launchChairmanDrone(s:ChairmanState,index:number,x:number,y:number) {
   const [px,py]=s.armourActive ? chairmanArmourDronePosition(s,index,x,y) : chairmanDroneVisualPosition(s,index,x,y);
   const dx=px-x,dy=py-y;
   s.outerStart[index]={x:dx,y:dy,angle:Math.atan2(dy,dx)-s.outerPhase};
@@ -57,14 +61,18 @@ export function chairmanArmourDronePosition(s:ChairmanState,index:number,x:numbe
   const angle=index*2*Math.PI/s.drones.length-Math.PI/2;
   const blend=Math.max(0,Math.min(1,s.armourBlend));
   const t=blend*blend*(3-2*blend);
-  return [ox+(x+Math.cos(angle)*69-ox)*t,oy+(y+Math.sin(angle)*69-oy)*t];
+  if(s.armourReturnPath) return [ox+(x+Math.cos(angle)*69-ox)*t,oy+(y+Math.sin(angle)*69-oy)*t];
+  // Arc inward while rotating rather than taking a straight shortcut.
+  const startAngle=Math.atan2(oy-y,ox-x), delta=Math.atan2(Math.sin(angle-startAngle),Math.cos(angle-startAngle));
+  const a=startAngle+delta*t+.7*Math.sin(Math.PI*t);
+  const radius=Math.hypot(ox-x,oy-y)*(1-t)+69*t;
+  return [x+Math.cos(a)*radius,y+Math.sin(a)*radius];
 }
-/** Move each spent drone outward. Armour formation begins only once the last
- * one reaches the outer orbit. Sun charge pauses assembly until it resolves. */
+/** Only a sun blast launches the swarm and starts armour formation. */
 export function updateChairmanSwarm(s:ChairmanState,dt:number,x:number,y:number,hull:number) {
-  if(s.armourActive)return;
+  if(s.armourActive || !s.sunLocked)return;
   for(let i=0;i<s.drones.length;i++) if(s.drones[i]>0) {
-    if(!s.outerStart[i])spendChairmanDrone(s,i,x,y);
+    if(!s.outerStart[i])launchChairmanDrone(s,i,x,y);
     s.outerTravel[i]=Math.min(CHAIRMAN_OUTER_TRAVEL,s.outerTravel[i]+Math.max(0,dt));
   }
   if(s.charge<=0 && s.drones.length>0 && s.drones.every(v=>v>0) && s.outerTravel.every(v=>v>=CHAIRMAN_OUTER_TRAVEL)) gatherChairmanArmour(s,hull);
@@ -118,7 +126,7 @@ export function damageChairmanArmour(s:ChairmanState,damage:number):number {
   return absorbed;
 }
 export function syncChairman(s:ChairmanState,count:number) {
-  while(s.drones.length<count){s.drones.push(s.armourActive?s.reload:0);s.fireGlow.push(0);s.outerTravel.push(0);s.outerStart.push(null);}
+  while(s.drones.length<count){s.drones.push(s.armourActive?s.reload:s.sunLocked?Infinity:0);s.fireGlow.push(0);s.outerTravel.push(0);s.outerStart.push(null);}
   s.drones.length=count;s.fireGlow.length=count;s.outerTravel.length=count;s.outerStart.length=count;
 }
 export function tickChairman(s:ChairmanState,dt:number) {
