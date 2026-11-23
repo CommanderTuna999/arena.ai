@@ -1,3 +1,8 @@
+## 0.3. v2.30.4 — Cannon tree and admin
+
+- The cannon tree fills the tab; selecting a cannon opens its full upgrade page with complete names.
+- Scatter fires larger glowing orbs. Admin mode can temporarily test any cannon, and infinite credits applies to cannon purchases.
+
 ## 0.3. v2.30.3 — Shields and cannon handling
 
 - Enemy energy shields stay active through all attacks until their generators are destroyed.

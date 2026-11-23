@@ -457,6 +457,9 @@ export class Game {
   private miniLost = 0;
   private baseAlarmCd = 0;
   admin: AdminState = readAdminFlags();
+  /** Admin-only test fit and upgrades are temporary, never added to a save. */
+  private adminCannon: string | null = null;
+  private adminCannonLevels: Record<string, Record<string, number>> = {};
   autoFire = true;
   private bossT = 12;
   aCd: number[] = [0, 0, 0, 0, 0];
@@ -526,7 +529,7 @@ export class Game {
   setAdmin(k: keyof AdminState, v: boolean) {
     (this.admin as unknown as Record<string, boolean>)[k] = v;
     if (k === "on" && v) this.toast("ADMIN MODE ONLINE", "#ff7ad9");
-    if (k === "on" && !v) this.toast("Admin mode offline", "#9db4c9");
+    if (k === "on" && !v) { this.adminCannon = null; this.adminCannonLevels = {}; this.recompute(); this.toast("Admin mode offline", "#9db4c9"); }
     writeAdminFlags(this.admin);
     this.rev++;
   }
@@ -629,7 +632,8 @@ export class Game {
 
   recompute() {
     const old = this.stats;
-    this.stats = computeStats(this.save);
+    const temporary = this.admin.on && this.adminCannon;
+    this.stats = computeStats(temporary ? { ...this.save, cannon: { ...this.save.cannon, id: temporary, lv: { ...this.save.cannon.lv, [temporary]: this.adminCannonLevels[temporary] ?? {} } } } : this.save);
     const p = this.player;
     if (this.stats.hull !== old.hull) p.hp = Math.min(this.stats.hull, p.hp + Math.max(0, this.stats.hull - old.hull));
     p.hp = Math.min(p.hp, this.stats.hull);
@@ -671,8 +675,13 @@ export class Game {
     this.markDirty();
     return bought;
   }
+  /** Read a cannon's upgrade levels without changing the saved inventory. */
+  cannonViewLevels(id: string): Readonly<Record<string, number>> {
+    return this.admin.on && this.adminCannon === id ? (this.adminCannonLevels[id] ?? {}) : (this.save.cannon?.lv?.[id] ?? {});
+  }
   /** the tree's level map for one chassis, created on demand */
   cannonLevels(id: string): Record<string, number> {
+    if (this.admin.on && this.adminCannon === id) return (this.adminCannonLevels[id] ??= {});
     const cs = this.cannonSave();
     return (cs.lv[id] ??= {});
   }
@@ -690,20 +699,22 @@ export class Game {
   /** the cannon currently bolted to the hull */
   cannon() {
     const cs = this.cannonSave();
-    const c = CANNON_BY_ID[cs.id];
+    const c = CANNON_BY_ID[(this.admin.on && this.adminCannon) || cs.id];
     if (!c) { cs.id = CANNONS[0].id; return CANNONS[0]; }
     return c;
   }
   /** fit a different gun; free, the tree charges for the chassis, not for swapping */
   selectCannon(id: string) {
-    if (!CANNON_BY_ID[id] || !cannonOwned(this.save, id)) return false;
-    if (this.cannonSave().id === id) return false;
-    this.cannonSave().id = id;
+    if (!CANNON_BY_ID[id] || (!this.admin.on && !cannonOwned(this.save, id))) return false;
+    if (this.stats.cannonId === id) return false;
+    const temporary = this.admin.on && !cannonOwned(this.save, id);
+    this.adminCannon = temporary ? id : null;
+    if (!temporary) this.cannonSave().id = id;
     /* a different gun is a different bore: no inherited heat, no inherited jam */
     this.player.heat = 0;
     this.player.jam = 0;
     this.recompute();
-    this.markDirty();
+    if (temporary) this.rev++; else this.markDirty();
     return true;
   }
   /** Build a chassis from the tree: credits plus the component bill, then fit it.
@@ -714,7 +725,7 @@ export class Game {
     if (cannonOwned(this.save, id)) { this.selectCannon(id); return null; }
     /* admin mode's infinite components skip the bill, never the credit price */
     const free = this.admin.on && this.admin.components;
-    const prob = cannonBillProblem(this.save, c, free, this.admin.on);
+    const prob = cannonBillProblem(this.save, c, free, this.admin.on, this.admin.on && this.admin.credits);
     if (prob) return prob;
     const picks = free ? [] : cannonBillPicks(this.save, c);
     if (!free && picks.length !== c.parts.reduce((n, b) => n + b.count, 0)) return "Missing components";
@@ -726,6 +737,7 @@ export class Game {
     const cs = this.cannonSave();
     if (!cs.owned.includes(id)) cs.owned.push(id);
     cs.id = id;
+    this.adminCannon = null;
     this.recompute();
     this.markDirty();
     this.toast(`Built the ${c.name}`, "#ffd24d");

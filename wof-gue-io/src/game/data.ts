@@ -499,9 +499,9 @@ export const cannonOwned = (s: SaveData, id: string) => id === CANNONS[0].id || 
 /** what is standing between the pilot and this chassis (null = buildable).
  *  `freeParts` is admin mode's infinite components: the bill is skipped, the
  *  credit price is not (that is what the infinite-credits flag is for). */
-export function cannonBillProblem(s: SaveData, c: CannonDef, freeParts = false, admin = false): string | null {
+export function cannonBillProblem(s: SaveData, c: CannonDef, freeParts = false, admin = false, freeCredits = false): string | null {
   if (cannonOwned(s, c.id)) return null;
-  if (c.requires && !cannonOwned(s, c.requires)) {
+  if (!admin && c.requires && !cannonOwned(s, c.requires)) {
     return `Requires the ${CANNON_BY_ID[c.requires]?.name ?? c.requires}`;
   }
   /* the sheet's rule: one gun per tier, so a tier 1 purchase is a choice, not a
@@ -510,7 +510,7 @@ export function cannonBillProblem(s: SaveData, c: CannonDef, freeParts = false, 
     const taken = CANNONS.find((o) => o.id !== c.id && o.tier === c.tier && cannonOwned(s, o.id));
     if (taken) return `One gun per tier — you already fly the ${taken.name}`;
   }
-  if (s.credits < c.credits) return `Needs ${fmtNum(c.credits)} credits`;
+  if (!freeCredits && s.credits < c.credits) return `Needs ${fmtNum(c.credits)} credits`;
   if (freeParts) return null;
   for (let i = 0; i < c.parts.length; i++) {
     const parts = c.parts.slice(0, i + 1);

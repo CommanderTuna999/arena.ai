@@ -670,23 +670,24 @@ function TrackIcon({ id, hue, className }: { id: CannonTrackId; hue: number; cla
  * and the build button) while you are on it. Take a gun in a tier and the rest
  * of that row greys out: one gun per tier is not a rule to be read, it is a row
  * that is no longer for sale. */
-function CannonTree({ game }: { game: Game }) {
+export function CannonTree({ game }: { game: Game }) {
   const save = game.save;
-  const fitted = CANNON_BY_ID[save.cannon?.id ?? ""] ?? CANNONS[0];
+  const fitted = CANNON_BY_ID[game.stats.cannonId] ?? CANNONS[0];
   const free = game.admin.on && game.admin.credits;
   const [msg, setMsg] = useState<string | null>(null);
   const [open, setOpen] = useState<string | null>(null);
-  const fittedLv = save.cannon?.lv?.[fitted.id] ?? {};
+  const [branch, setBranch] = useState(false);
+  const fittedLv = game.cannonViewLevels(fitted.id);
   const freeParts = game.admin.on && game.admin.components;
 
   /* one node: compact by default, the whole card while it is open */
   const node = (c: CannonDef, down: boolean, align: "left" | "mid" | "right") => {
-    const owned = cannonOwned(save, c.id);
+    const owned = cannonOwned(save, c.id) || game.admin.on;
     const selected = fitted.id === c.id;
     const cl = save.cannon?.lv?.[c.id] ?? {};
-    const problem = cannonBillProblem(save, c, freeParts, game.admin.on);
+    const problem = cannonBillProblem(save, c, freeParts, game.admin.on, free);
     /* the row is decided: everything else in it is out of the running */
-    const dim = !owned && CANNONS.some((o) => o.id !== c.id && o.tier === c.tier && cannonOwned(save, o.id));
+    const dim = !game.admin.on && !owned && CANNONS.some((o) => o.id !== c.id && o.tier === c.tier && cannonOwned(save, o.id));
     const heats = (c.heatMax ?? 1) > 1;
     const hot = Math.round(cannonDmg(c, cl) * (c.heatMax ?? 1));
     const isOpen = open === c.id;
@@ -699,29 +700,29 @@ function CannonTree({ game }: { game: Game }) {
       >
         <button
           onClick={() => {
-            setOpen((v) => (v === c.id ? null : c.id));
-            if (owned) { game.selectCannon(c.id); setMsg(null); }
+            if (owned) { game.selectCannon(c.id); setMsg(null); setOpen(null); setBranch(true); }
+            else setOpen((v) => (v === c.id ? null : c.id));
           }}
-          title={owned ? `${c.name} — click to fit` : c.name}
-          className={`flex h-[52px] w-full flex-col items-center justify-center gap-0 rounded-sm border px-0.5 transition duration-150 ${
+          title={owned ? `${c.name} — view upgrades` : c.name}
+          className={`flex h-[80px] w-full flex-col items-center justify-center gap-0 rounded-sm border px-0.5 transition duration-150 ${
             selected ? "border-yellow-300/80 bg-yellow-300/10 shadow-[0_0_20px_rgba(255,225,77,0.22)]"
               : owned ? "border-cyan-300/50 bg-cyan-400/5 hover:border-cyan-200/80 hover:bg-cyan-400/10"
                 : dim ? "border-white/10 bg-black/30 opacity-35 grayscale"
                   : "border-white/20 bg-black/40 hover:border-white/45 hover:bg-white/5"
           } ${isOpen ? "scale-[1.05]" : ""}`}
         >
-          <CannonIcon c={c} className="h-5 w-10 shrink-0" />
-          <span className={`w-full truncate text-center text-[9px] font-black leading-tight tracking-wide ${selected ? "text-yellow-100" : owned ? "text-cyan-100" : "text-white/80"}`}>
+          <CannonIcon c={c} className="h-7 w-14 shrink-0" />
+          <span className={`w-full whitespace-normal text-center text-[11px] font-black leading-tight tracking-wide ${selected ? "text-yellow-100" : owned ? "text-cyan-100" : "text-white/80"}`}>
             {c.name}
           </span>
           <span className="text-[7px] font-black tracking-[0.16em]">
             {selected ? <span className="text-yellow-300">FITTED</span>
-              : owned ? <span className="text-cyan-300/80">OWNED</span>
+              : owned ? <span className="text-cyan-300/80">{cannonOwned(save, c.id) ? "OWNED" : "ADMIN TEST"}</span>
                 : <span className="text-white/30">T{c.tier}</span>}
           </span>
         </button>
 
-        {isOpen && !dim && (
+        {isOpen && !dim && !owned && (
           <div
             className={`absolute z-40 w-[248px] ${align === "left" ? "left-0" : align === "right" ? "right-0" : "left-1/2 -translate-x-1/2"} ${
               down ? "top-full pt-1" : "bottom-full pb-1"
@@ -730,7 +731,7 @@ function CannonTree({ game }: { game: Game }) {
             <div className={`rounded-sm border p-2 shadow-[0_14px_44px_rgba(0,0,0,0.8)] ${selected ? "border-yellow-300/60" : owned ? "border-cyan-300/50" : "border-white/25"}`} style={{ backgroundColor: "#050e16" }}>
               <div className="flex items-center gap-1.5">
                 <CannonIcon c={c} className="h-6 w-12 shrink-0" />
-                <span className={`min-w-0 flex-1 truncate text-[12px] font-black ${selected ? "text-yellow-100" : "text-white"}`}>{c.name}</span>
+                <span className={`min-w-0 flex-1 text-[12px] font-black ${selected ? "text-yellow-100" : "text-white"}`}>{c.name}</span>
                 <span className="shrink-0 rounded-sm border border-yellow-300/40 bg-yellow-300/10 px-1 py-0.5 text-[8px] font-black text-yellow-200">TIER {c.tier}</span>
               </div>
               <p className="mt-1 text-[10px] italic leading-snug text-white/55">&ldquo;{c.desc}&rdquo;</p>
@@ -759,7 +760,7 @@ function CannonTree({ game }: { game: Game }) {
                     <div className="text-yellow-200/80">· {fmtNum(c.credits)} CR</div>
                   </div>
                   <button
-                    onClick={() => { const m = game.buyCannonChassis(c.id); setMsg(m); }}
+                    onClick={() => { const m = game.buyCannonChassis(c.id); setMsg(m); if (!m) { setOpen(null); setBranch(true); } }}
                     disabled={!!problem}
                     title={problem ?? `Build the ${c.name}`}
                     className={`mt-1.5 w-full rounded-sm border px-2 py-1 text-[10px] font-black tracking-[0.16em] ${
@@ -794,24 +795,25 @@ function CannonTree({ game }: { game: Game }) {
   };
   CANNONS.filter((c) => !c.requires || !CANNON_BY_ID[c.requires]).forEach((c) => layout(c, 0, new Set()));
   const pointX = (p: TreePoint) => p.x / Math.max(leaves, 1) * 1000;
-  const pointY = (p: TreePoint) => 10 + (deepest - p.depth) * 76;
-  const height = 62 + deepest * 76;
+  const pointY = (p: TreePoint) => 14 + (deepest - p.depth) * 142;
+  const height = 96 + deepest * 142;
   const byId = new Map(points.map((p) => [p.c.id, p]));
 
   return (
-    <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)]">
-      {/* ---- the tree ---- */}
-      <div className="relative z-20 rounded-sm border border-white/10 bg-white/[0.02] p-3">
+    <div className="h-full min-h-0">
+      {/* ---- the tree fills the cannon tab; no drag navigation yet ---- */}
+      {!branch && <div className="relative z-20 min-h-full rounded-sm border border-white/10 bg-white/[0.02] p-3">
         <div className="mb-1 flex items-baseline justify-between">
           <div className="text-[10px] font-bold tracking-[0.22em] text-cyan-200/60">CANNON TREE</div>
         </div>
         {msg && <div className="mb-1 rounded-sm border border-red-400/40 bg-red-500/10 px-2 py-1 text-[11px] text-red-200">{msg}</div>}
-        <div className="relative mt-2 w-full" style={{ height }}>
+        <div className="overflow-x-auto pb-4">
+        <div className="relative mt-2" style={{ height, width: `max(100%, ${Math.max(1, leaves) * 130}px)` }}>
           <svg className="pointer-events-none absolute inset-0 h-full w-full" viewBox={`0 0 1000 ${height}`} preserveAspectRatio="none" aria-hidden="true">
             {points.flatMap((p) => p.children.map((id) => {
               const child = byId.get(id); if (!child) return null;
               const x1 = pointX(p), x2 = pointX(child);
-              const y1 = pointY(p), y2 = pointY(child) + 52;
+              const y1 = pointY(p), y2 = pointY(child) + 80;
               const mid = (y1 + y2) / 2;
               return <path key={`${p.c.id}-${id}`} d={`M ${x1} ${y1} V ${mid} H ${x2} V ${y2}`} fill="none" stroke="rgba(103,232,249,.42)" vectorEffect="non-scaling-stroke" />;
             }))}
@@ -820,10 +822,19 @@ function CannonTree({ game }: { game: Game }) {
             {node(p.c, true, p.x < 1.5 ? "left" : p.x > leaves - 1.5 ? "right" : "mid")}
           </div>)}
         </div>
-      </div>
+        </div>
+      </div>}
 
-      {/* ---- the fitted gun's branch ---- */}
-      <div className="rounded-sm border border-white/10 bg-white/[0.02] p-3">
+      {/* ---- the selected gun's upgrades take over the cannon tab ---- */}
+      {branch && <div className="min-h-full rounded-sm border border-white/10 bg-white/[0.02] p-3">
+        <button onClick={() => { setBranch(false); setOpen(null); }} className="mb-3 rounded-sm border border-cyan-300/50 px-3 py-1 text-xs font-bold text-cyan-100 hover:bg-cyan-400/15">← BACK TO CANNON TREE</button>
+        {game.admin.on && !cannonOwned(save, fitted.id) && <div className="mb-3 rounded-sm border border-fuchsia-300/40 bg-fuchsia-400/10 p-2 text-xs text-fuchsia-100">
+          <div>Admin test fit — this cannon and its test upgrades are temporary until purchased.</div>
+          <div className="mt-1">{fitted.parts.map((b) => partBillText(b)).join(" · ")} · {fmtNum(fitted.credits)} CR</div>
+          <button className="mt-2 rounded-sm border border-fuchsia-300 px-2 py-1 font-bold disabled:opacity-40" disabled={!!cannonBillProblem(save, fitted, freeParts, true, free)} onClick={() => setMsg(game.buyCannonChassis(fitted.id) ?? "Built")}>BUILD PERMANENTLY</button>
+          {cannonBillProblem(save, fitted, freeParts, true, free) && <div className="mt-1 text-red-200">{cannonBillProblem(save, fitted, freeParts, true, free)}</div>}
+          {msg && <div className="mt-1 text-red-200">{msg}</div>}
+        </div>}
         <div className="flex items-baseline justify-between">
           <div className="text-[10px] font-bold tracking-[0.22em] text-cyan-200/60">BRANCH · {fitted.name.toUpperCase()}</div>
           <div className="text-[10px] text-white/40">tier {fitted.tier}</div>
@@ -911,7 +922,7 @@ function CannonTree({ game }: { game: Game }) {
             })}
           </div>
         </div>
-      </div>
+      </div>}
     </div>
   );
 }

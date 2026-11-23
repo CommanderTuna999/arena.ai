@@ -9,9 +9,9 @@ const g=new Game(save,'test') as any;g.player.x=-50000;g.player.y=-65000;g.playe
 assert.equal(g.bullets.length,8);assert(g.bullets.every((b:any)=>b.visual==='scatter-orb' && b.dmg===35));
 const circles:number[]=[];let strokes=0;
 const ctx:any={beginPath(){},arc(_x:number,_y:number,r:number){circles.push(r)},fill(){},stroke(){strokes++}};
-drawKineticOrb(ctx,g.bullets[0]);assert.deepEqual(circles,[7.5,3.5999999999999996,1.2]);assert.equal(strokes,0,'scatter renders as layered circular fills, never a line');
+drawKineticOrb(ctx,g.bullets[0]);assert.deepEqual(circles,[16,8.8]);assert.equal(strokes,0,'scatter renders as layered circular fills, never a line');
 circles.length=0;drawKineticOrb(ctx,{x:0,y:0,crit:false});assert.equal(circles[0],4.5,'default kinetic rounds are also round');
-circles.length=0;drawKineticOrb(ctx,{x:0,y:0,crit:true,visual:'scatter-orb'});assert.equal(circles[0],8.5);
+circles.length=0;drawKineticOrb(ctx,{x:0,y:0,crit:true,visual:'scatter-orb'});assert.equal(circles[0],18);
 
 const idx=SPECIES_LIST.findIndex(s=>s.id==='dragonfly');
 const e=g.makeEnemy(idx,4,g.player.x-500,g.player.y,'test',7);e.aggro=true;e.a=0;e.swatCd=100;
