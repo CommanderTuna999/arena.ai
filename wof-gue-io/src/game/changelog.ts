@@ -8,7 +8,7 @@
  *   CHANGELOG and mirror the details in docs/CHANGELOG.md.
  */
 
-export const VERSION = "2.30.5";
+export const VERSION = "2.30.6";
 
 export interface ChangeEntry {
   version: string;
@@ -19,6 +19,7 @@ export interface ChangeEntry {
 }
 
 export const CHANGELOG: ChangeEntry[] = [
+  { version: "2.30.6", date: "23 Nov 2026", title: "Cannon purchases", points: ["Purchase cannons directly from their hover card; already-owned cannons show a disabled Owned button."] },
   { version: "2.30.5", date: "23 Nov 2026", title: "Cannon details", points: ["Cannon details return on hover; clicking an owned cannon opens its upgrades. Cannon labels now say purchase and equipped.", "Restored Peashooter and Gatler projectile visuals while keeping Scatter energy orbs."] },
   { version: "2.30.4", date: "23 Nov 2026", title: "Cannon tree and admin", points: ["The cannon tree fills the tab; selecting a cannon opens its full upgrade page with complete names.", "Scatter fires larger glowing orbs. Admin mode can temporarily test any cannon, and infinite credits applies to cannon purchases."] },
   { version: "2.30.3", date: "23 Nov 2026", title: "Shields and cannon handling", points: ["Enemy energy shields stay active through all attacks until their generators are destroyed.", "Scatter upgrades tighten the shotgun spread; Gatler now spins up before firing and slows down when released."] },

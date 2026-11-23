@@ -1,3 +1,7 @@
+## 0.3. v2.30.6 — Cannon purchases
+
+- Purchase cannons directly from their hover card; already-owned cannons show a disabled Owned button.
+
 ## 0.3. v2.30.5 — Cannon details
 
 - Cannon details return on hover; clicking an owned cannon opens its upgrades. Cannon labels now say purchase and equipped.

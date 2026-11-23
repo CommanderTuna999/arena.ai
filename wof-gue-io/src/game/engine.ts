@@ -740,7 +740,7 @@ export class Game {
     this.adminCannon = null;
     this.recompute();
     this.markDirty();
-    this.toast(`Built the ${c.name}`, "#ffd24d");
+    this.toast(`Purchased the ${c.name}`, "#ffd24d");
     return null;
   }
   buy(id: string, count = 1) {

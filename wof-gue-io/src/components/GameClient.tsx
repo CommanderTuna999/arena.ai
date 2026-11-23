@@ -682,7 +682,8 @@ export function CannonTree({ game }: { game: Game }) {
 
   /* one node: compact by default, the whole card while it is open */
   const node = (c: CannonDef, down: boolean, align: "left" | "mid" | "right") => {
-    const owned = cannonOwned(save, c.id) || game.admin.on;
+    const purchased = cannonOwned(save, c.id);
+    const owned = purchased || game.admin.on;
     const selected = fitted.id === c.id;
     const cl = save.cannon?.lv?.[c.id] ?? {};
     const problem = cannonBillProblem(save, c, freeParts, game.admin.on, free);
@@ -743,34 +744,21 @@ export function CannonTree({ game }: { game: Game }) {
                 <span><b className="text-white/90">{cannonRate(c, cl).toFixed(c.hitscan ? 2 : 1)}</b>/s</span>
                 <span>{c.hitscan ? "hitscan" : `${c.range}u`}</span>
               </div>
-              {owned ? (
-                <button
-                  onClick={() => { game.selectCannon(c.id); setMsg(null); setOpen(null); setBranch(true); }}
-                  className={`mt-1.5 w-full rounded-sm border px-2 py-1 text-[10px] font-black tracking-[0.16em] ${
-                    selected ? "border-yellow-300/50 text-yellow-200/80" : "border-cyan-300 bg-cyan-400/15 text-cyan-100 hover:bg-cyan-400/30"
-                  }`}
-                >
-                  VIEW UPGRADES
-                </button>
-              ) : (
-                <>
-                  <div className="mt-1.5 space-y-0.5 rounded-sm border border-white/10 bg-black/40 px-1.5 py-1 text-[9px] leading-tight text-white/50">
-                    {c.parts.map((b, i) => <div key={`${b.kind}-${b.tier}-${i}`}>· {partBillText(b)}</div>)}
-                    <div className="text-yellow-200/80">· {fmtNum(c.credits)} CR</div>
-                  </div>
-                  <button
-                    onClick={() => { const m = game.buyCannonChassis(c.id); setMsg(m); if (!m) { setOpen(null); setBranch(true); } }}
-                    disabled={!!problem}
-                    title={problem ?? `Purchase the ${c.name}`}
-                    className={`mt-1.5 w-full rounded-sm border px-2 py-1 text-[10px] font-black tracking-[0.16em] ${
-                      problem ? "border-white/10 text-white/25" : "border-yellow-300 bg-yellow-300/15 text-yellow-200 hover:bg-yellow-300/30"
-                    }`}
-                  >
-                    {problem ? "LOCKED" : "PURCHASE"}
-                  </button>
-                  {problem && <div className="mt-1 text-[9px] leading-tight text-red-300/70">{problem}</div>}
-                </>
-              )}
+              {!purchased && <div className="mt-1.5 space-y-0.5 rounded-sm border border-white/10 bg-black/40 px-1.5 py-1 text-[9px] leading-tight text-white/50">
+                {c.parts.map((b, i) => <div key={`${b.kind}-${b.tier}-${i}`}>· {partBillText(b)}</div>)}
+                <div className="text-yellow-200/80">· {fmtNum(c.credits)} CR</div>
+              </div>}
+              <button
+                onClick={() => { const m = game.buyCannonChassis(c.id); setMsg(m ?? `Purchased ${c.name}`); }}
+                disabled={purchased || !!problem}
+                title={purchased ? `${c.name} is owned` : problem ?? `Purchase the ${c.name}`}
+                className={`mt-1.5 w-full rounded-sm border px-2 py-1 text-[10px] font-black tracking-[0.16em] ${
+                  purchased || problem ? "border-white/10 text-white/25" : "border-yellow-300 bg-yellow-300/15 text-yellow-200 hover:bg-yellow-300/30"
+                }`}
+              >
+                {purchased ? "OWNED" : "PURCHASE"}
+              </button>
+              {!purchased && problem && <div className="mt-1 text-[9px] leading-tight text-red-300/70">{problem}</div>}
             </div>
           </div>
         )}
