@@ -252,7 +252,10 @@ export interface Harpoon {
   slot: number; state: 0 | 1 | 2 | 3; hx: number; hy: number; hvx: number; hvy: number; nodes: RopeNode[];
   len: number; hp: number; maxHp: number; comp: LComp | null; travelled: number; cool: number; taut: number; ang: number;
 }
-export interface Other { id: string; name: string; x: number; y: number; a: number; tx: number; ty: number; ta: number; seen: number }
+export interface Other { id: string; name: string; x: number; y: number; a: number; tx: number; ty: number; ta: number; seen: number;
+  // Optional demo visual state; legacy other-player messages remain valid.
+  dead?: boolean; cannonId?: string; heat?: number; jam?: number; recoil?: number; muzzleFlash?: number; barrelRec?: number[]; shield?: number; shieldMax?: number;
+}
 export interface Toast { id: number; msg: string; color: string; t: number }
 export interface Mine { x: number; y: number; vx: number; vy: number; arm: number; life: number; dmg: number; r: number }
 /** a credit coin thrown by a broken part; it is pure HUD animation that pays out on landing */

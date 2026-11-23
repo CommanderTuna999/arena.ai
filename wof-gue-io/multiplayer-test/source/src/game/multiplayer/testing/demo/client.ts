@@ -4,6 +4,8 @@ import { DemoPlayback } from '../../demo-playback';
 import { MAX_VIEW_DIMENSION } from '../../demo-view';
 import { render } from '../../../render';
 const canvas=document.querySelector('canvas')!,ctx=canvas.getContext('2d')!,status=document.querySelector('#status')!;
+const hullFill=document.querySelector<HTMLElement>('#hull-fill'),shieldFill=document.querySelector<HTMLElement>('#shield-fill');
+function updateVital(el:HTMLElement|null,current:number,max:number){if(!el)return;const pct=max>0&&Number.isFinite(current)&&Number.isFinite(max)?Math.max(0,Math.min(100,current/max*100)):0;el.style.width=`${pct}%`;el.parentElement?.setAttribute('aria-valuenow',String(Math.round(pct)));}
 const replica=new ReplicaView();
 let client=new ExperimentalWorldClient(url=>new WebSocket(url),15000,window.location.origin,true);
 let stopped=false, connecting=false, retryTimer: ReturnType<typeof setTimeout> | null=null, attempts=0;
@@ -33,6 +35,7 @@ function draw(){
  const pilotPositions=new Map(sampled.pilots.map((p:any)=>[p.id,p]));
  const pilots=view.pilots.map((p:any)=>({...p,...pilotPositions.get(p.id) as any}));
  const me=pilots.find((p:any)=>p.id===shown.pilotId);if(!me)return;
+ updateVital(hullFill,me.hp,me.hpMax);updateVital(shieldFill,me.shield,me.shieldMax);
  if(client===shown && client.state==='online'){attempts=0;status.textContent=`${({sting:'Stinger',peashooter:'Peashooter MK1',workhorse:'Workhorse MK1'} as Record<string,string>)[me.cannonId] ?? 'Stinger'} · ${sampled.pilots.length} pilot${sampled.pilots.length===1?'':'s'} nearby · ${sampled.enemies.length} enemies · ${fps || "…"} FPS · updates ${updateGap || "…"} ms${innerWidth>MAX_VIEW_DIMENSION||innerHeight>MAX_VIEW_DIMENSION?" · viewport exceeds demo limit":""}`;}
  if(replica.apply(view,pilots,sampled.enemies,shown.pilotId,renderTime,sampled)) render(replica.game,ctx);
 }

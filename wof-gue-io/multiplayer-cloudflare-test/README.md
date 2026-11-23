@@ -76,5 +76,5 @@ that branch; an older failed build still refers to its original commit.
 
 The demo's guest cannon test offers Stinger, Peashooter MK1 and Workhorse MK1
 on keys 1–3. The server chooses the actual guest loadout; it is not an account
-or inventory feature. Other ships' cannon models are not replicated yet.
-The `/health` build marker for this iteration is `cloudflare-arsenal-v1`.
+or inventory feature. Other guests' cannons and starter shields render from server snapshots.
+The `/health` build marker for this iteration is `cloudflare-shield-v1`.

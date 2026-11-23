@@ -22,6 +22,8 @@ export class PilotRoster {
     if (!/^[A-Za-z0-9_.-]{1,32}$/.test(verifiedName) || !id || this.pilots.has(id) || this.pilots.size >= this.capacity) return false;
     // Test/default ship only. This does not accept a client-submitted save.
     const save = newSave(); save.name = verifiedName;
+    // Free level-one shield for the disposable demo only, not a real upgrade.
+    save.upgrades.shield = 1;
     const pilot = new Game(save, id);
     this.pilots.set(id, pilot.pilotPhaseContext());
     return true;
@@ -54,9 +56,9 @@ export class PilotRoster {
   snapshot() {
     return Array.from(this.pilots, ([id, pilot]) => ({
       id, name: pilot.save.name || 'Pilot', x: pilot.player.x, y: pilot.player.y,
-      angle: pilot.player.a, hp: pilot.player.hp, shield: pilot.player.shield,
+      angle: pilot.player.a, hp: pilot.player.hp, hpMax:pilot.stats.hull, shield: pilot.player.shield, shieldMax:pilot.stats.shieldMax,
       dead: pilot.player.dead, cannonId:pilot.stats.cannonId, heat:pilot.player.heat,
-      recoil:pilot.player.recoil, muzzleFlash:pilot.player.muzzleFlash, barrelRec:[...pilot.player.barrelRec], inputSequence: this.inputs.sequence(id),
+      recoil:pilot.player.recoil, jam:pilot.player.jam, muzzleFlash:pilot.player.muzzleFlash, barrelRec:[...pilot.player.barrelRec], inputSequence: this.inputs.sequence(id),
     }));
   }
   step(dt: number, nowMs: number) {

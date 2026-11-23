@@ -24,7 +24,12 @@ The test uses the main game’s default no-optics zoom (1 / 1.3). It does not us
 In this demo only, press **1** for Stinger, **2** for Peashooter MK1 or **3**
 for Workhorse MK1. Each temporary guest gets free test access to these three
 existing game weapons; choosing one updates that guest on the server and the
-client displays the server-selected cannon. Other players' shots and damage are
-shared, but other pilots' ship renderings do not yet show their fitted cannon.
+client displays the server-selected cannon. Other players' shots and damage are shared, and their selected cannon and
+shield are now rendered from server snapshots.
 All choices reset on disconnect. This is not crafting, purchasing, inventory,
 account progression, or a complete port of later weapons such as Chairman.
+
+Every temporary guest starts with the main game's level-one shield upgrade.
+Enemy damage drains it before hull and, after the normal delay, it recharges.
+The demo HUD shows text-free hull and shield bars; this is not an account
+upgrade, saved equipment, or the newer Chairman shield system.

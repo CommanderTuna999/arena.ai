@@ -631,9 +631,14 @@ export function render(g: Game, ctx: CanvasRenderingContext2D) {
 
   /* ---- other players ---- */
   for (const o of g.others) {
+    if (o.dead) continue;
     ctx.save(); ctx.translate(o.x, o.y); ctx.rotate(o.a);
     drawShipShape(ctx, "#ff7ad9", 0.85, z, t);
+    const cannon=o.cannonId && CANNON_BY_ID[o.cannonId];
+    if (cannon) drawCannon(ctx,z,t,{recoil:o.recoil ?? 0,heat:o.heat ?? 0,jam:o.jam ?? 0,
+      muzzleFlash:o.muzzleFlash ?? 0,barrelRec:o.barrelRec ?? []},{cannonId:cannon.id,overheat:cannon.overheat ?? 0});
     ctx.restore();
+    if ((o.shieldMax ?? 0)>0 && (o.shield ?? 0)>0) drawPilotShield(ctx,o.x,o.y,o.shield!,o.shieldMax!,"#7df9ff",z,t);
     ctx.fillStyle = "rgba(255,170,230,0.9)";
     ctx.font = `${12 / z}px ui-monospace, monospace`; ctx.textAlign = "center";
     ctx.fillText(o.name, o.x, o.y - 30);
@@ -1241,8 +1246,20 @@ function drawRope(g: Game, ctx: CanvasRenderingContext2D, h: { state: number; no
  * trigger, heat tints the shroud and puts a glow in the bore, and the barrel
  * that actually fired flashes. Silhouettes differ per gun: fat bolt thrower,
  * long lance, three stubby spigots, or a genuine twin. */
-function drawCannon(g: Game, ctx: CanvasRenderingContext2D, z: number, t: number) {
-  const p = g.player, st = g.stats;
+/** Same visual for local and other guests; values come from the server. */
+function drawPilotShield(ctx:CanvasRenderingContext2D,x:number,y:number,current:number,max:number,color:string,z:number,t:number) {
+  const f=clamp(current/max,0,1);
+  ctx.save();ctx.strokeStyle=color;ctx.globalAlpha=0.2+0.5*f;ctx.lineWidth=2/z;
+  ctx.shadowColor=color;ctx.shadowBlur=10;hexPath(ctx,x,y,SHIP_R+20,t*0.8);
+  ctx.stroke();ctx.fillStyle=color;ctx.globalAlpha=0.04+0.06*f;ctx.fill();
+  ctx.globalAlpha=0.5+0.35*Math.sin(t*4);
+  for(const dir of [1,-1]) {ctx.beginPath();ctx.arc(x,y,SHIP_R+26,t*dir*1.1,t*dir*1.1+1.1);ctx.stroke();}
+  ctx.restore();
+}
+
+function drawCannon(ctx: CanvasRenderingContext2D, z: number, t: number,
+  p: Pick<Game["player"], "recoil" | "heat" | "jam" | "muzzleFlash" | "barrelRec">,
+  st: Pick<Game["stats"], "cannonId" | "overheat">) {
   const c = CANNON_BY_ID[st.cannonId] ?? CANNONS[0];
   const look = c.look;
   const rec = p.recoil * p.recoil;                     // fast out, settles in
@@ -1721,7 +1738,7 @@ function drawPlayer(g: Game, ctx: CanvasRenderingContext2D, z: number, t: number
     ctx.restore(); ctx.shadowBlur = 0;
   }
   drawShipShape(ctx, p.flash > 0 ? "#ff6b81" : "#7df9ff", 1, z, t);
-  drawCannon(g, ctx, z, t);
+  drawCannon(ctx, z, t, p, st);
   if (st.cannonId === "mediator" && p.charging && p.charge > 0) {
     // Converging segmented rings and orbiting sparks build into a sharp core.
     const q = clamp(p.charge, 0, 1), mx = st.muzzles[0]?.x ?? 44;
@@ -1778,17 +1795,8 @@ function drawPlayer(g: Game, ctx: CanvasRenderingContext2D, z: number, t: number
   ctx.restore();
 
   if (st.shieldMax > 0 && p.shield > 0) {
-    const f = p.shield / st.shieldMax;
     const sc = shield ? SHIELD_ART[shield.rid] ?? "#7df9ff" : "#7df9ff";
-    ctx.strokeStyle = sc; ctx.globalAlpha = 0.2 + 0.5 * f; ctx.lineWidth = 2 / z;
-    ctx.shadowColor = sc; ctx.shadowBlur = 10;
-    hexPath(ctx, p.x, p.y, SHIP_R + 20, t * 0.8);
-    ctx.stroke(); ctx.fillStyle = sc; ctx.globalAlpha = 0.04 + 0.06 * f; ctx.fill();
-    ctx.globalAlpha = 0.5 + 0.35 * Math.sin(t * 4);
-    for (const dir of [1, -1]) {
-      ctx.beginPath(); ctx.arc(p.x, p.y, SHIP_R + 26, t * dir * 1.1, t * dir * 1.1 + 1.1); ctx.stroke();
-    }
-    ctx.globalAlpha = 1; ctx.shadowBlur = 0;
+    drawPilotShield(ctx,p.x,p.y,p.shield,st.shieldMax,sc,z,t);
   }
   if (p.barrier > 0 && p.barrierMax > 0) {
     const f = p.barrier / p.barrierMax;
