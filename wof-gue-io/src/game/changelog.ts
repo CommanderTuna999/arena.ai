@@ -8,7 +8,7 @@
  *   CHANGELOG and mirror the details in docs/CHANGELOG.md.
  */
 
-export const VERSION = "2.31.0";
+export const VERSION = "2.31.1";
 
 export interface ChangeEntry {
   version: string;
@@ -19,6 +19,7 @@ export interface ChangeEntry {
 }
 
 export const CHANGELOG: ChangeEntry[] = [
+  { version: "2.31.1", date: "23 Nov 2026", title: "Targeting clarity", points: ["Revolutionary and Chairman highlight each scanned enemy component in red before targeting its core.", "Chairman drones aim at the cursor from their own positions for more accurate shots."] },
   { version: "2.31.0", date: "23 Nov 2026", title: "Chairman", points: ["Added the first tier-three cannon: Chairman, with orbiting drones, a red sun blast and an additional energy dome.", "Worker Ant laser pointers and the required high-rarity ant and dragonfly components can now be found."] },
   { version: "2.30.22", date: "23 Nov 2026", title: "Revolutionary targeting", points: ["Revolutionary scans a targeted enemy, flashes at its core, and aims its shot there; its barrels recharge independently.", "Parts with no living connection to the core break away and can drop components."] },
   { version: "2.30.21", date: "23 Nov 2026", title: "Revolutionary", points: ["Added Revolutionary to the Workhorse MK1 branch: a powerful red energy hitscan cannon.", "Mediator MK1 is now named Mediator."] },

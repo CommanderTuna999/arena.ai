@@ -1,3 +1,4 @@
+import { scanPartIndex, scanHighlight, type TargetScan } from "./target-scan";
 import { CHAIRMAN_SHIELD_MAX, chairmanPosition } from "./chairman";
 import { plateHitIntensity } from "./plate-impact";
 import { drawCasings } from "./casing-fx";
@@ -626,31 +627,20 @@ export function render(g: Game, ctx: CanvasRenderingContext2D) {
   const scan = g.revolutionaryScan;
   if (scan && !scan.enemy.dead) {
     const e = scan.enemy, core = e.parts[e.coreId];
-    const [tx, ty] = pw(e, core);
-    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-    for (const part of e.parts) if (part.alive) {
-      const [x, y] = pw(e, part);
-      minX = Math.min(minX, x - part.r); maxX = Math.max(maxX, x + part.r);
-      minY = Math.min(minY, y - part.r); maxY = Math.max(maxY, y + part.r);
-    }
-    let x = tx, y = ty;
-    if (scan.elapsed < 0.85 && Number.isFinite(minX)) {
-      const progress = clamp(scan.elapsed / 0.85, 0, 1);
-      const passes = 4, row = Math.min(passes - 1, Math.floor(progress * passes));
-      const across = progress * passes - row;
-      x = minX + (maxX - minX) * (row % 2 ? 1 - across : across);
-      y = minY + (maxY - minY) * progress;
-    }
+    drawScanHighlights(ctx, e, scan, z);
+    const index = scanPartIndex(scan);
+    const part = index < 0 ? core : (e.parts[scan.parts[index]] ?? core);
+    const [x, y] = pw(e, part);
     const p = g.player, mz = g.stats.muzzles[p.muzzle % g.stats.muzzles.length] ?? {x: 14, y: 0};
     const c = Math.cos(p.a), si = Math.sin(p.a);
     const mx = p.x + c * mz.x - si * mz.y, my = p.y + si * mz.x + c * mz.y;
-    const flash = scan.elapsed >= 0.85;
+    const flash = scan.elapsed >= scan.duration - 0.2;
     ctx.save(); ctx.strokeStyle = flash ? "#ff9ba2" : "#ff3348";
     ctx.globalAlpha = flash ? 0.95 : 0.65; ctx.lineWidth = (flash ? 2.5 : 1) / z;
     ctx.beginPath(); ctx.moveTo(mx, my); ctx.lineTo(x, y); ctx.stroke();
     ctx.fillStyle = flash ? "#fff0f0" : "#ff3348";
     ctx.beginPath(); ctx.arc(x, y, (flash ? 6 : 2.5) / z, 0, TAU); ctx.fill();
-    if (flash) { ctx.strokeStyle = "#ff243a"; ctx.lineWidth = 2 / z; ctx.beginPath(); ctx.arc(x, y, (10 + 5 * (scan.elapsed - 0.85) / 0.2) / z, 0, TAU); ctx.stroke(); }
+    if (flash) { ctx.strokeStyle = "#ff243a"; ctx.lineWidth = 2 / z; ctx.beginPath(); ctx.arc(x, y, (10 + 5 * (scan.elapsed - (scan.duration - 0.2)) / 0.2) / z, 0, TAU); ctx.stroke(); }
     ctx.restore();
   }
 
@@ -776,6 +766,26 @@ export function render(g: Game, ctx: CanvasRenderingContext2D) {
   drawCutscene(g, ctx);
 }
 
+/** Paint actual animated part polygons on top of the body so scanning is
+ * visible even through overlapping armour and at low zoom. */
+function drawScanHighlights(ctx:CanvasRenderingContext2D,e:Enemy,scan:TargetScan,z:number) {
+  ctx.save();ctx.translate(e.x,e.y);ctx.rotate(e.a);ctx.lineJoin="round";
+  const active=scanPartIndex(scan);
+  const ids=active<0?[e.coreId]:scan.parts.slice(Math.max(0,active-3),active+1);
+  ids.forEach((id,j)=>{
+    const part=e.parts[id];if(!part?.alive)return;
+    const index=active<0?-1:Math.max(0,active-3)+j;
+    const alpha=active<0?1:scanHighlight(scan,index);
+    if(alpha<=0)return;
+    ctx.save();const group=part.g>=0?e.groups[part.g]:null;
+    if(group && group.ang!==0){ctx.translate(group.px,group.py);ctx.rotate(group.ang);ctx.translate(-group.px,-group.py);}
+    const bo=bend(e,part);if(bo)ctx.translate(0,bo);
+    polyPath(ctx,part.poly);ctx.fillStyle=`rgba(255,24,46,${.36*alpha})`;ctx.fill();
+    ctx.strokeStyle=`rgba(255,90,100,${.95*alpha})`;ctx.lineWidth=2.5/z;ctx.stroke();ctx.restore();
+  });
+  ctx.restore();
+}
+
 /** Chairman: nested counter-rotating halos, bright drone turrets and a red
  * sun. Effects are bounded to the drone cap; no per-frame particles needed. */
 function drawChairman(g:Game, ctx:CanvasRenderingContext2D, z:number, t:number) {
@@ -824,9 +834,11 @@ function drawChairman(g:Game, ctx:CanvasRenderingContext2D, z:number, t:number) 
   if(s.scan) {
     const e=g.enemies.find(e=>e.id===s.scan!.enemyId&&!e.dead), drone=points[s.scan.drone];
     if(e && drone) {
-      const living=e.parts.filter(q=>q.alive), scanTime=s.scan.duration-.2;
+      drawScanHighlights(ctx,e,s.scan,z);
+      const scanTime=s.scan.duration-.2;
       const flash=s.scan.elapsed>=scanTime;
-      const q=flash?e.parts[e.coreId]:living[Math.min(living.length-1,Math.floor(clamp(s.scan.elapsed/scanTime,0,.999999)*living.length))];
+      const index=scanPartIndex(s.scan);
+      const q=index<0?e.parts[e.coreId]:e.parts[s.scan.parts[index]];
       if(q){const [x,y]=pw(e,q);ctx.strokeStyle=flash?"#ffe4e4":"#ff3349";ctx.globalAlpha=flash?1:.8;ctx.lineWidth=(flash?2:1)/z;ctx.beginPath();ctx.moveTo(drone[0],drone[1]);ctx.lineTo(x,y);ctx.stroke();ctx.fillStyle=flash?"#fff":"#ff3349";ctx.beginPath();ctx.arc(x,y,(flash?6:3)/z,0,TAU);ctx.fill();}
     }
   }

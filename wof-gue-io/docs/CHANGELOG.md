@@ -1,3 +1,8 @@
+## 0.3. v2.31.1 — Targeting clarity
+
+- Revolutionary and Chairman highlight each scanned enemy component in red before targeting its core.
+- Chairman drones aim at the cursor from their own positions for more accurate shots.
+
 ## 0.3. v2.31.0 — Chairman
 
 - Added the first tier-three cannon: Chairman, with orbiting drones, a red sun blast and an additional energy dome.

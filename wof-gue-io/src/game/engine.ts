@@ -1,3 +1,4 @@
+import { createTargetScan, type TargetScan } from "./target-scan";
 import { CHAIRMAN_DRONE_COOLDOWN, CHAIRMAN_SHIELD_MAX, chairmanPosition, chairmanDroneCount, chairmanOrbChance, chairmanOrbRadius, chairmanOrbDamage, chairmanCoreMul, createChairman, syncChairman, tickChairman, type ChairmanState } from "./chairman";
 import { rollComponentTiers } from "./drop-roll";
 import { recordPlateHit } from "./plate-impact";
@@ -441,7 +442,7 @@ export class Game {
   online = 1;
   lock: LockOn | null = null;
   /** Local-only Revolutionary targeting sequence, committed on trigger. */
-  revolutionaryScan: { enemy: Enemy; elapsed: number } | null = null;
+  revolutionaryScan: (TargetScan & { enemy: Enemy }) | null = null;
   chairman: ChairmanState | null = null;
   mines: Mine[] = [];
   drones: Drone[] = [];
@@ -3538,9 +3539,9 @@ export class Game {
     const p=this.player, st=this.stats, cs=this.chairman ??= createChairman();
     const lv=this.cannonViewLevels("chairman");
     syncChairman(cs,chairmanDroneCount(lv.drones ?? 0));
-    const fireDrone=(index:number, target:Enemy|null, fallback:number) => {
+    const fireDrone=(index:number, target:Enemy|null, aimX:number, aimY:number) => {
       const [x,y]=chairmanPosition(index,cs.drones.length,cs.phase,p.x,p.y);
-      let angle=fallback;
+      let angle=Math.atan2(aimY-y,aimX-x);
       if(target && !target.dead && target.parts[target.coreId]?.alive && this.enemies.includes(target)) {
         const [tx,ty]=this.partWorld(target,target.parts[target.coreId]); angle=Math.atan2(ty-y,tx-x);
       }
@@ -3580,7 +3581,7 @@ export class Game {
         // A drone may have intercepted incoming damage during its scan.
         // Never fire a dark turret; choose another ready one or charge the sun.
         const index=cs.drones[scan.drone] <= 0 ? scan.drone : cs.drones.findIndex(cool=>cool<=0);
-        if(index < 0) cs.charge=0.000001; else fireDrone(index,e,scan.aim);
+        if(index < 0) cs.charge=0.000001; else fireDrone(index,e,scan.aimX,scan.aimY);
       }
       this.fireWeapons(dt,p.a);return;
     }
@@ -3597,8 +3598,8 @@ export class Game {
           const ca=Math.cos(e.a),sa=Math.sin(e.a);
           if(this.partAt(e,dx*ca+dy*sa,-dx*sa+dy*ca)){target=e;break;}
         }
-        if(target) cs.scan={enemyId:target.id,drone:index,elapsed:0,duration:Math.max(.85,Math.min(3,target.parts.filter(q=>q.alive).length*.025))+.2,aim:p.a};
-        else fireDrone(index,null,p.a);
+        if(target) cs.scan={...createTargetScan(target.parts),enemyId:target.id,drone:index,aimX:mx,aimY:my};
+        else fireDrone(index,null,mx,my);
       }
     }
     this.fireWeapons(dt,p.a);
@@ -3645,7 +3646,7 @@ export class Game {
     if (this.revolutionaryScan) {
       const scan = this.revolutionaryScan;
       scan.elapsed += dt;
-      if (scan.elapsed >= 1.05 || scan.enemy.dead || !this.enemies.includes(scan.enemy) || !scan.enemy.parts[scan.enemy.coreId]?.alive) {
+      if (scan.elapsed >= scan.duration || scan.enemy.dead || !this.enemies.includes(scan.enemy) || !scan.enemy.parts[scan.enemy.coreId]?.alive) {
         if (!scan.enemy.dead && this.enemies.includes(scan.enemy) && scan.enemy.parts[scan.enemy.coreId]?.alive) revolutionTarget = scan.enemy;
         this.revolutionaryScan = null;
         revolutionReady = true;
@@ -3658,7 +3659,7 @@ export class Game {
         if (dx * dx + dy * dy > (e.radius + 30) ** 2) continue;
         const ca = Math.cos(e.a), sa = Math.sin(e.a);
         if (this.partAt(e, dx * ca + dy * sa, -dx * sa + dy * ca)) {
-          this.revolutionaryScan = { enemy: e, elapsed: 0 }; break;
+          this.revolutionaryScan = { ...createTargetScan(e.parts), enemy: e }; break;
         }
       }
     }

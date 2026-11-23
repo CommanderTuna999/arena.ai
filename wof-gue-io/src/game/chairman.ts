@@ -1,10 +1,11 @@
+import type {TargetScan} from "./target-scan";
 /** Chairman combat/visual constants. Transient per-pilot state is deliberately
  * not persisted and is not used by the experimental multiplayer authority. */
 export const CHAIRMAN_SHIELD_MAX = 1000; // 1000% of the unupgraded 100 HP hull
 export const CHAIRMAN_DRONE_COOLDOWN = 5;
 export type ChairmanState = {
   drones:number[]; phase:number; shield:number; shieldDelay:number; flash:number;
-  scan:{enemyId:number; drone:number; elapsed:number; duration:number; aim:number}|null;
+  scan:(TargetScan & {enemyId:number; drone:number; aimX:number; aimY:number})|null;
   charge:number; // 0 idle; negative one denotes the beginning of a charge
 };
 export const chairmanDroneCount = (level:number) => 15 + Math.max(0, Math.min(15, Math.floor(level || 0)));
