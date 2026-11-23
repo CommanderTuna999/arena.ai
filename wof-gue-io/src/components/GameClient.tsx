@@ -340,6 +340,7 @@ function Hud_({ hud, creditRef, onOpen, onHelp, onAdmin, onSettings, onBestiary,
       <div className="pointer-events-none absolute left-3 top-16 flex flex-col gap-1.5">
         <Bar v={hud.hp} max={hud.maxHp} color={hpCol} h={12} />
         {hud.maxShield > 0 && <Bar v={hud.shield} max={hud.maxShield} color="#4dd2ff" h={8} />}
+        {hud.chairmanShieldMax > 0 && <Bar v={hud.chairmanShield} max={hud.chairmanShieldMax} color="#ff344a" h={8} />}
         {hud.hasBoost && <Bar v={hud.boost} max={100} color="#ff9d4d" h={6} />}
         {/* the gauge only means something on a gun that cooks: damage climbs with
             it, and a full gauge is three seconds of dead trigger */}

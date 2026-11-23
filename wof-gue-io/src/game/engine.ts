@@ -326,7 +326,7 @@ export interface Player {
 }
 
 export interface Hud {
-  hp: number; maxHp: number; shield: number; maxShield: number; boost: number; hasBoost: boolean; credits: number;
+  hp: number; maxHp: number; shield: number; maxShield: number; chairmanShield: number; chairmanShieldMax: number; boost: number; hasBoost: boolean; credits: number;
   /** increments every time a credit flight lands, so the HUD can pulse the counter */
   creditTick: number;
   /** the running collection: value collected "at once" and the coin scale for it */
@@ -2171,17 +2171,22 @@ export class Game {
     let d = dmg * (1 - st.armor) * (1 - st.reactive);
     if (st.kinetic > 0 && p.shield > 0 && !o.energy) d *= 1 - st.kinetic;
     p.hitT = 0; p.shieldT = st.shieldDelay;
-    // The additional dome has its own finite pool. A lit drone intercepts
-    // each hit; overflow continues through the normal shields and hull.
+    // Each lit drone absorbs one entire damage instance, independently of
+    // damage size or dome capacity. Spent drones return only after an orb.
     if (st.cannonId === "chairman" && d > 0) {
       const cs = this.chairman ??= createChairman();
       syncChairman(cs, chairmanDroneCount(this.cannonViewLevels("chairman").drones ?? 0));
       const available = cs.drones.map((cool, i) => cool <= 0 ? i : -1).filter(i => i >= 0);
-      if (available.length && cs.shield > 0) {
+      const ang = (o.kbx || o.kby) ? Math.atan2(-(o.kby ?? 0), -(o.kbx ?? 0)) : p.a + Math.PI;
+      if (available.length) {
         const i = available[Math.floor(Math.random() * available.length)];
-        cs.drones[i] = CHAIRMAN_DRONE_COOLDOWN; cs.shieldDelay = 4;
+        cs.drones[i] = Infinity;
+        recordShieldImpact(p, Math.cos(ang) * (SHIP_R + 35), Math.sin(ang) * (SHIP_R + 35), this.t);
+        return;
+      }
+      if (cs.shield > 0) {
+        cs.shieldDelay = 4;
         const absorbed = Math.min(cs.shield, d); cs.shield -= absorbed; d -= absorbed;
-        const ang = (o.kbx || o.kby) ? Math.atan2(-(o.kby ?? 0), -(o.kbx ?? 0)) : p.a + Math.PI;
         recordShieldImpact(p, Math.cos(ang) * (SHIP_R + 35), Math.sin(ang) * (SHIP_R + 35), this.t);
       }
     }
@@ -3550,7 +3555,7 @@ export class Game {
       this.beam(x,y,angle,st.bulletRange,damage,st.pierce,false,"laser","#ff344a",1,1,crit,false,true,chairmanCoreMul(lv.coreDmg ?? 0));
       this.burst(x,y,"#ff4254",10,5,300);
       ejectCasing(this,x,y,angle,this.t,"core",p.vx,p.vy,"chairman");
-      cs.drones[index]=CHAIRMAN_DRONE_COOLDOWN;
+      cs.drones[index]=Infinity; cs.fireGlow[index]=.4;
       this.shake=Math.max(this.shake,5);
     };
     if(this.inSafe()) {cs.scan=null;cs.charge=0;this.fireWeapons(dt,p.a);return;}
@@ -3558,7 +3563,7 @@ export class Game {
       cs.charge+=dt;
       if(cs.charge>=1) {
         cs.charge=0; cs.flash=.34;
-        cs.drones.fill(CHAIRMAN_DRONE_COOLDOWN);
+        cs.reload=CHAIRMAN_DRONE_COOLDOWN; cs.drones.fill(CHAIRMAN_DRONE_COOLDOWN);
         const crit=st.crit>0 && Math.random()<st.crit;
         const damage=chairmanOrbDamage(lv.dmg ?? 0,lv.drones ?? 0)*chairmanCoreMul(lv.coreDmg ?? 0)*(crit?st.critMul:1)*this.dmgMul();
         const radius=chairmanOrbRadius(lv.orbRange ?? 0);
@@ -3581,11 +3586,11 @@ export class Game {
         // A drone may have intercepted incoming damage during its scan.
         // Never fire a dark turret; choose another ready one or charge the sun.
         const index=cs.drones[scan.drone] <= 0 ? scan.drone : cs.drones.findIndex(cool=>cool<=0);
-        if(index < 0) cs.charge=0.000001; else fireDrone(index,e,scan.aimX,scan.aimY);
+        if(index < 0) { if(cs.reload<=0) cs.charge=0.000001; } else fireDrone(index,e,scan.aimX,scan.aimY);
       }
       this.fireWeapons(dt,p.a);return;
     }
-    if(want && p.fireCd<=0 && p.jam<=0) {
+    if(want && p.fireCd<=0 && p.jam<=0 && cs.reload<=0) {
       p.fireCd=1/st.rate;
       const ready=cs.drones.map((cool,i)=>cool<=0?i:-1).filter(i=>i>=0);
       if(!ready.length || Math.random()<chairmanOrbChance(lv.orbChance ?? 0)) cs.charge=0.000001;
@@ -4711,7 +4716,7 @@ export class Game {
   hud(): Hud {
     const p = this.player, st = this.stats;
     return {
-      hp: p.hp, maxHp: st.hull, shield: p.shield, maxShield: st.shieldMax, boost: p.boost, hasBoost: st.hasBoost, credits: this.save.credits, creditTick: this.creditTick,
+      hp: p.hp, maxHp: st.hull, shield: p.shield, maxShield: st.shieldMax, chairmanShield: st.cannonId === "chairman" ? this.chairman?.shield ?? CHAIRMAN_SHIELD_MAX : 0, chairmanShieldMax: st.cannonId === "chairman" ? CHAIRMAN_SHIELD_MAX : 0, boost: p.boost, hasBoost: st.hasBoost, credits: this.save.credits, creditTick: this.creditTick,
       creditPop: { v: this.creditPopValue, s: this.creditPopScale },
       harp: this.harpoons.map((h) => ({ state: h.state, load: h.comp ? h.comp.c.mass / (h.comp.hooks.length * st.hStr) : 0, hp: h.hp / h.maxHp })),
       toasts: [...this.toasts], ultraNotices: [...this.ultraNotices], nearBase: this.nearBase(),

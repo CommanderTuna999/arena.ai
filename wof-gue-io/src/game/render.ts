@@ -795,12 +795,12 @@ function drawChairman(g:Game, ctx:CanvasRenderingContext2D, z:number, t:number) 
   ctx.save();ctx.lineCap="round";
   // Slim separate meter exposes the dome's finite capacity.
   ctx.fillStyle="rgba(25,0,8,.8)";ctx.fillRect(p.x-35,p.y+62,70,4);
-  ctx.fillStyle="#ff425a";ctx.fillRect(p.x-35,p.y+62,70*clamp(s.shield/CHAIRMAN_SHIELD_MAX,0,1),4);
+  ctx.fillStyle="#ff344a";ctx.fillRect(p.x-35,p.y+62,70*clamp(s.shield/CHAIRMAN_SHIELD_MAX,0,1),4);
   // A transparent red dome is independent of the player's existing shield.
   if(s.shield>0) {
     const f=clamp(s.shield/CHAIRMAN_SHIELD_MAX,0,1),rad=54;
-    ctx.fillStyle=`rgba(255,18,46,${.025+.035*f})`;ctx.beginPath();ctx.arc(p.x,p.y,rad,0,TAU);ctx.fill();
-    ctx.strokeStyle=`rgba(255,55,75,${.24+.38*f})`;ctx.lineWidth=2/z;ctx.beginPath();ctx.arc(p.x,p.y,rad,0,TAU);ctx.stroke();
+    ctx.fillStyle=`rgba(255,52,74,${.025+.035*f})`;ctx.beginPath();ctx.arc(p.x,p.y,rad,0,TAU);ctx.fill();
+    ctx.strokeStyle=`rgba(255,52,74,${.24+.38*f})`;ctx.lineWidth=2/z;ctx.beginPath();ctx.arc(p.x,p.y,rad,0,TAU);ctx.stroke();
   }
   for(let ring=0;ring<3;ring++) {
     const radius=94+ring*36+7*Math.sin(s.phase*2+ring*2);
@@ -814,23 +814,25 @@ function drawChairman(g:Game, ctx:CanvasRenderingContext2D, z:number, t:number) 
     ctx.lineWidth=(1+charge*3)/z;ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(p.x,p.y);ctx.stroke();
   }
   for(let i=0;i<n;i++) {
-    const [x,y]=points[i], lit=charge>0 || s.drones[i]<=0, pulse=.8+.2*Math.sin(t*5+i);
+    const [x,y]=points[i], firing=(s.fireGlow[i] ?? 0)>0, lit=firing || charge>0 || s.drones[i]<=0, pulse=.8+.2*Math.sin(t*5+i);
+    if(firing){const glow=ctx.createRadialGradient(x,y,0,x,y,42);glow.addColorStop(0,"rgba(255,255,255,.98)");glow.addColorStop(.2,"rgba(255,115,125,.95)");glow.addColorStop(.5,"rgba(255,35,60,.55)");glow.addColorStop(1,"rgba(255,35,60,0)");ctx.fillStyle=glow;ctx.beginPath();ctx.arc(x,y,42,0,TAU);ctx.fill();}
     ctx.save();ctx.translate(x,y);ctx.rotate(Math.atan2(y-p.y,x-p.x));
     ctx.globalAlpha=lit?1:.35;ctx.fillStyle=lit?"#3f0715":"#190b11";ctx.strokeStyle=lit?"#ff364c":"#74303b";ctx.lineWidth=1.5/z;
-    if(lit){ctx.shadowColor="#ff1d42";ctx.shadowBlur=10+charge*20;}
+    if(lit){ctx.shadowColor="#ff1d42";ctx.shadowBlur=firing?45:10+charge*20;}
     ctx.beginPath();ctx.moveTo(11,0);ctx.lineTo(3,-5);ctx.lineTo(-7,-5);ctx.lineTo(-11,0);ctx.lineTo(-7,5);ctx.lineTo(3,5);ctx.closePath();ctx.fill();ctx.stroke();
-    ctx.shadowBlur=0;ctx.fillStyle=lit?`rgba(255,${Math.round(80+charge*150)},${Math.round(90+charge*150)},${pulse})`:"#521520";
+    ctx.shadowBlur=0;ctx.fillStyle=firing?"#ffffff":lit?`rgba(255,${Math.round(80+charge*150)},${Math.round(90+charge*150)},${pulse})`:"#521520";
     ctx.beginPath();ctx.arc(0,0,3.4,0,TAU);ctx.fill();ctx.restore();
   }
-  // Dormant plate blooms into a layered stellar core during charging.
+  // The sun shines at full intensity when ready, and dims during reload.
+  const sunReady=s.reload<=0;
   const r=22+charge*12;
   const sun=ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,r*2.5);
-  sun.addColorStop(0,charge?"#fff5ed":"#ef5764");sun.addColorStop(.14,charge?"#ff8a80":"#a4152a");sun.addColorStop(.35,"#8d1024");sun.addColorStop(1,"rgba(255,12,48,0)");
+  sun.addColorStop(0,sunReady?"#fff5ed":"#ef5764");sun.addColorStop(.14,sunReady?"#ff8a80":"#a4152a");sun.addColorStop(.35,"#8d1024");sun.addColorStop(1,"rgba(255,12,48,0)");
   ctx.fillStyle=sun;ctx.beginPath();ctx.arc(p.x,p.y,r*2.5,0,TAU);ctx.fill();
   ctx.fillStyle="#390815";ctx.strokeStyle=`rgba(255,70,85,${.6+charge*.4})`;ctx.lineWidth=2/z;
   ctx.beginPath();ctx.arc(p.x,p.y,r,0,TAU);ctx.fill();ctx.stroke();
   for(let i=0;i<10;i++) {const a=i*TAU/10+s.phase*.3;ctx.strokeStyle=`rgba(255,70,80,${.4+charge*.5})`;ctx.beginPath();ctx.moveTo(p.x+Math.cos(a)*r*.8,p.y+Math.sin(a)*r*.8);ctx.lineTo(p.x+Math.cos(a)*r*(1.2+charge*.3),p.y+Math.sin(a)*r*(1.2+charge*.3));ctx.stroke();}
-  const center=ctx.createRadialGradient(p.x-4,p.y-4,0,p.x,p.y,r*.75);center.addColorStop(0,charge?"#fff":"#ff727c");center.addColorStop(.45,charge?"#ff6760":"#a7162c");center.addColorStop(1,"#4a0917");ctx.fillStyle=center;ctx.beginPath();ctx.arc(p.x,p.y,r*.75,0,TAU);ctx.fill();
+  const center=ctx.createRadialGradient(p.x-4,p.y-4,0,p.x,p.y,r*.75);center.addColorStop(0,sunReady?"#fff":"#ff727c");center.addColorStop(.45,sunReady?"#ff6760":"#a7162c");center.addColorStop(1,"#4a0917");ctx.fillStyle=center;ctx.beginPath();ctx.arc(p.x,p.y,r*.75,0,TAU);ctx.fill();
   if(s.scan) {
     const e=g.enemies.find(e=>e.id===s.scan!.enemyId&&!e.dead), drone=points[s.scan.drone];
     if(e && drone) {
@@ -1899,7 +1901,7 @@ function drawPlayer(g: Game, ctx: CanvasRenderingContext2D, z: number, t: number
   ctx.restore();
 
   // The shield is invisible until struck; impacts reveal local honeycomb cells.
- drawShieldImpacts(ctx, p, p.x, p.y, t, 8, shield ? SHIELD_ART[shield.rid] ?? "#7df9ff" : "#7df9ff");
+ drawShieldImpacts(ctx, p, p.x, p.y, t, 8, st.cannonId === "chairman" ? "#ff344a" : shield ? SHIELD_ART[shield.rid] ?? "#7df9ff" : "#7df9ff");
   if (p.barrier > 0 && p.barrierMax > 0) {
     const f = p.barrier / p.barrierMax;
     ctx.strokeStyle = `rgba(120,220,255,${0.35 + 0.5 * f})`; ctx.lineWidth = 4 / z; ctx.shadowColor = "#4dd2ff"; ctx.shadowBlur = 16;

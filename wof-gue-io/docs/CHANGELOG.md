@@ -1,3 +1,8 @@
+## 0.3. v2.31.2 — Chairman defenses
+
+- Each lit drone blocks one full damage instance and stays dark until the sun blast reloads the swarm.
+- The sun cannot retrigger while reloading; firing drones and the ready sun glow brighter, and the Chairman dome and its HUD bar are red.
+
 ## 0.3. v2.31.1 — Targeting clarity
 
 - Revolutionary and Chairman highlight each scanned enemy component in red before targeting its core.
