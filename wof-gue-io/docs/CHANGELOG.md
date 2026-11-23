@@ -1,3 +1,7 @@
+## 0.3. v2.30.1 — Dragonfly aim
+
+- Dragonfly spray projectiles travel faster and lead moving targets more accurately.
+
 ## 0.3. v2.30.0 — Peashooter branches
 
 - Added Peashooter MK2, Gatler MK1 and Scatter MK1, with their own crafting bills and upgrades.

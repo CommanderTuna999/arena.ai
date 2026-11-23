@@ -1,3 +1,4 @@
+import { interceptAngle } from "./projectile-aim";
 import { MAP_CELL, MAP_GRID, MAP_RADIUS, isUltraZone, walkable, circleWalkable } from "./world";
 import { TAU, angDiff, clamp, distToPoly, hash2, lerp, mulberry32, pointInPoly } from "./math";
 import {
@@ -2383,7 +2384,9 @@ export class Game {
         if (!a.fired && a.t >= d.wind) {
           a.fired = true;
           const sp = d.speed ?? 500;
-          const base = aim(sp);
+          const base = e.spd.id === "dragonfly"
+            ? interceptAngle(mx, my, p.x, p.y, p.vx, p.vy, sp)
+            : aim(sp);
           const n = count();
           const spread = d.spread ?? 0.3;
           for (let i = 0; i < n; i++) {

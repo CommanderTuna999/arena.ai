@@ -8,7 +8,7 @@
  *   CHANGELOG and mirror the details in docs/CHANGELOG.md.
  */
 
-export const VERSION = "2.30.0";
+export const VERSION = "2.30.1";
 
 export interface ChangeEntry {
   version: string;
@@ -19,6 +19,7 @@ export interface ChangeEntry {
 }
 
 export const CHANGELOG: ChangeEntry[] = [
+  { version: "2.30.1", date: "23 Nov 2026", title: "Dragonfly aim", points: ["Dragonfly spray projectiles travel faster and lead moving targets more accurately."] },
   { version: "2.30.0", date: "23 Nov 2026", title: "Peashooter branches", points: ["Added Peashooter MK2, Gatler MK1 and Scatter MK1, with their own crafting bills and upgrades.", "The base prompt now displays E."] },
   { version: "2.29.22", date: "23 Nov 2026", title: "Multiplayer test smoothing", points: ["Smoothed projectile motion in the multiplayer test."] },
   { version: "2.29.21", date: "23 Nov 2026", title: "Respawn timer", points: ["The respawn countdown catches up when returning to a background tab."] },

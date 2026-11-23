@@ -561,7 +561,7 @@ const SPECIES: SpeciesDef[] = [
     armed: { gun: true, missile: false, shield: true }, pack: [1, 1, 1, 1, 1, 1],
     abilities: [
       { type: "charge", name: "Dash", minTier: 0, wind: 0.4, dmg: 1, speed: 620, dur: 0.4, minP: 150, maxS: 2, maxP: 900 },
-      { type: "shoot", name: "Spray", minTier: 0, wind: 0.5, dmg: 5, n: 4, ns: 1, spread: 0.6, speed: 220, life: 3, size: 11, kind: "orb", maxS: 2, maxP: 900 },
+      { type: "shoot", name: "Spray", minTier: 0, wind: 0.5, dmg: 5, n: 4, ns: 1, spread: 0.14, speed: 800, life: 2, size: 11, kind: "orb", maxS: 2, maxP: 900 },
       { type: "grab", name: "Chomp", minTier: 3, wind: 0.5, dmg: 7, chomps: 4, chompCd: 0.8, hold: 3, maxS: 4, maxP: 500, lunge: 950 },
       { type: "ring", name: "Shockwave", minTier: 4, wind: 0.7, dmg: 8, size: 6, speed: 520, maxS: 4, maxP: 300 },
     ],
