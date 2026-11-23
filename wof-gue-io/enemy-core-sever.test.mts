@@ -14,8 +14,11 @@ for(const p of e.parts){p.links=[];if(p!==core&&!chain.includes(p))p.alive=false
 for(const p of [core,...chain])p.alive=true;
 function link(a:any,b:any){a.links.push(b.id);b.links.push(a.id)}
 link(core,chain[0]);link(chain[0],chain[1]);link(chain[1],chain[2]);link(chain[2],chain[3]);
-let drops=0;g.maybeDrop=()=>{drops++};chain[0].alive=false;g.checkSever(e,true);
-assert(chain.slice(1).every((p:any)=>p.alive),'one broken joint does not drop healthy connected pieces');assert.equal(drops,0);
-chain[2].alive=false;g.checkSever(e,true);assert(chain[1].alive,'piece before second broken joint stays');assert(!chain[3].alive,'two broken joints sever unsupported section');assert.equal(drops,1,'severed part still gets its drop roll');
-g.checkSever(e,true);assert.equal(drops,1,'detached piece is not dropped twice');
-console.log('Core geometry fits every species and rarity; healthy parts tolerate one broken joint');
+let drops=0;g.maybeDrop=()=>{drops++};
+// A second intact path is genuine support, not an imaginary bridge through a dead part.
+link(core,chain[1]);chain[0].alive=false;g.checkSever(e,true);
+assert(chain.slice(1).every((p:any)=>p.alive),'alternate living path preserves the entire chain');assert.equal(drops,0);
+core.links=core.links.filter((id:number)=>id!==chain[1].id);chain[1].links=chain[1].links.filter((id:number)=>id!==core.id);
+g.checkSever(e,true);assert(chain.slice(1).every((p:any)=>!p.alive&&p.hp===0),'all completely disconnected parts are destroyed');assert.equal(drops,3,'each detached part gets one drop roll');
+g.checkSever(e,true);assert.equal(drops,3,'detached pieces are not dropped twice');
+console.log('Core geometry fits every species and rarity; disconnected parts sever and roll drops');

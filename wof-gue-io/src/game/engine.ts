@@ -439,6 +439,8 @@ export class Game {
   holdComp: LComp | null = null;
   online = 1;
   lock: LockOn | null = null;
+  /** Local-only Revolutionary targeting sequence, committed on trigger. */
+  revolutionaryScan: { enemy: Enemy; elapsed: number } | null = null;
   mines: Mine[] = [];
   drones: Drone[] = [];
   wells: Well[] = [];
@@ -1864,21 +1866,19 @@ export class Game {
     this.checkSever(e, byPlayer);
   }
   private checkSever(e: Enemy, byPlayer: boolean) {
-    // Internal bracing can bridge one destroyed part. A single broken joint
-    // therefore doesn't drop an entire healthy limb, but a second break along
-    // every path still severs the unsupported pieces. Broken parts themselves
-    // have already dropped and do not regain health or function.
-    const breaks = new Uint8Array(e.parts.length); breaks.fill(255);
-    const stack = [e.coreId]; breaks[e.coreId] = 0;
+    // A piece is supported only by a path of living pieces to the core.
+    // Alternative intact paths remain valid; a destroyed joint cannot connect
+    // a fully detached limb to the core. Detached pieces still roll drops.
+    const connected = new Uint8Array(e.parts.length);
+    const stack = [e.coreId]; connected[e.coreId] = 1;
     while (stack.length) {
       const i = stack.pop()!;
       for (const l of e.parts[i].links) {
-        const next = breaks[i] + (e.parts[l].alive ? 0 : 1);
-        if (next <= 1 && next < breaks[l]) { breaks[l] = next; stack.push(l); }
+        if (e.parts[l]?.alive && !connected[l]) { connected[l] = 1; stack.push(l); }
       }
     }
     const sev: Part[] = [];
-    for (const p of e.parts) if (p.alive && breaks[p.id] > 1) sev.push(p);
+    for (const p of e.parts) if (p.alive && !connected[p.id]) sev.push(p);
     if (!sev.length) return;
     const ca = Math.cos(e.a), sa = Math.sin(e.a);
     const pieces: DebrisPiece[] = [];
@@ -1905,7 +1905,7 @@ export class Game {
     for (const p of sev) {
       e.tags[p.name] = (e.tags[p.name] ?? 1) - 1;
       if (byPlayer) { const w = this.partWorld(e, p); this.maybeDrop(e, p, w[0], w[1]); }
-      p.alive = false;
+      p.alive = false; p.hp = 0;
     }
     this.shake = Math.max(this.shake, 6);
     if (byPlayer) {
@@ -3513,9 +3513,10 @@ export class Game {
   private mediatorSparkClock = 0;
   private firePlayer(dt: number) {
     const p = this.player, st = this.stats;
-    if (p.dead) { this.mediatorBeamTime = 0; this.fencerCharge = 0; return; }
+    if (p.dead) { this.revolutionaryScan = null; this.mediatorBeamTime = 0; this.fencerCharge = 0; return; }
     if (p.pull?.e.act?.def.type === "grab" && p.pull.e.act.ph === 1) {
       if (this.mediatorBeamTime > 0) p.fireCd = Math.max(p.fireCd, 0.7);
+      this.revolutionaryScan = null;
       this.mediatorBeamTime = 0; this.fencerCharge = 0; p.charge = 0; p.charging = false;
       p.gatSpin = Math.max(0, p.gatSpin - dt * 2);
       return; // includes automatic weapon rack
@@ -3543,6 +3544,29 @@ export class Game {
     const rapid = st.cannonId === "peashooter2" || st.cannonId === "gatler";
     if (rapid && p.fireCd < 0) p.fireCd = 0;
     p.fireCd -= fireDt;
+    let revolutionReady = false;
+    let revolutionTarget: Enemy | null = null;
+    if (st.cannonId !== "revolutionary" || this.inSafe()) this.revolutionaryScan = null;
+    if (this.revolutionaryScan) {
+      const scan = this.revolutionaryScan;
+      scan.elapsed += dt;
+      if (scan.elapsed >= 1.05 || scan.enemy.dead || !this.enemies.includes(scan.enemy) || !scan.enemy.parts[scan.enemy.coreId]?.alive) {
+        if (!scan.enemy.dead && this.enemies.includes(scan.enemy) && scan.enemy.parts[scan.enemy.coreId]?.alive) revolutionTarget = scan.enemy;
+        this.revolutionaryScan = null;
+        revolutionReady = true;
+      }
+    } else if (st.cannonId === "revolutionary" && want && p.fireCd <= 0 && p.jam <= 0 && !this.inSafe()) {
+      const [mx, my] = this.mouseWorld();
+      for (const e of this.enemies) {
+        if (e.dead || !e.parts[e.coreId]?.alive) continue;
+        const dx = mx - e.x, dy = my - e.y;
+        if (dx * dx + dy * dy > (e.radius + 30) ** 2) continue;
+        const ca = Math.cos(e.a), sa = Math.sin(e.a);
+        if (this.partAt(e, dx * ca + dy * sa, -dx * sa + dy * ca)) {
+          this.revolutionaryScan = { enemy: e, elapsed: 0 }; break;
+        }
+      }
+    }
     if (this.mediatorBeamTime > 0 && st.charge && !this.inSafe()) {
       const step = Math.min(dt, this.mediatorBeamTime);
       this.mediatorBeamTime = Math.max(0, this.mediatorBeamTime - step);
@@ -3617,7 +3641,7 @@ export class Game {
       } else {
         p.charge = Math.max(0, p.charge - dt * 0.5);
       }
-    } else if (want && p.fireCd <= 0 && p.jam <= 0 && !this.inSafe()) {
+    } else if ((want || revolutionReady) && !this.revolutionaryScan && p.fireCd <= 0 && p.jam <= 0 && !this.inSafe()) {
       do {
       const shotInterval = 1 / (st.rate * (p.overT > 0 ? 1.8 : 1));
       p.fireCd = rapid ? p.fireCd + shotInterval : shotInterval;
@@ -3642,6 +3666,11 @@ export class Game {
         return { x: p.x + ca * m.x - sa * lateral, y: p.y + sa * m.x + ca * lateral };
       };
       const m0 = at(0);
+      let shotAngle = base;
+      if (revolutionTarget) {
+        const [tx, ty] = this.partWorld(revolutionTarget, revolutionTarget.parts[revolutionTarget.coreId]);
+        shotAngle = Math.atan2(ty - m0.y, tx - m0.x);
+      }
       let casingKind: "small" | "shell" | "core" = (rapid || st.cannonId === "peashooter") ? "small" : "shell";
       if (st.hitscan) {
         /* the Skewer: a hard line, drawn from the muzzle to whatever it stops in.
@@ -3658,7 +3687,7 @@ export class Game {
         casingKind = energyShot ? "core" : "shell";
         const dShot = chargeShot ? dmg * 12.5 : dmg;
         const col = revolutionary ? "#ff263b" : (energyShot || chargeShot) ? "#c4a6ff" : crit ? "#fff3b0" : "#e6fbff";
-        this.beam(m0.x, m0.y, base, st.bulletRange, dShot, chargeShot ? st.pierce + 2 : st.pierce, energyShot && !revolutionary, energyShot ? "laser" : "kinetic", col, 1, (skewer2 || revolutionary) ? st.armorDmg : 1, crit, revolutionary);
+        this.beam(m0.x, m0.y, shotAngle, st.bulletRange, dShot, chargeShot ? st.pierce + 2 : st.pierce, energyShot && !revolutionary, energyShot ? "laser" : "kinetic", col, 1, (skewer2 || revolutionary) ? st.armorDmg : 1, crit, revolutionary);
         this.burst(m0.x, m0.y, col, chargeShot ? 20 : crit ? 12 : 7, chargeShot ? 8 : 5.5, chargeShot ? 480 : 340);
         this.ringFx(m0.x, m0.y, chargeShot ? 90 : crit ? 60 : 40, col, chargeShot ? 600 : 420);
         this.shake = Math.max(this.shake, revolutionary ? 20 : chargeShot ? 12 : crit ? 6 : 3.5);
@@ -3689,7 +3718,7 @@ export class Game {
         this.toast("OVERHEATED — COOLING", "#ff8a5c");
         this.burst(p.x, p.y, "#ffb04d", 10, 5, 220);
       }
-      p.vx -= ca * st.kick; p.vy -= sa * st.kick;
+      p.vx -= Math.cos(shotAngle) * st.kick; p.vy -= Math.sin(shotAngle) * st.kick;
       } while (rapid && p.fireCd <= 1e-9 && p.jam <= 0);
     }
     this.fireWeapons(dt, base);
@@ -4410,7 +4439,7 @@ export class Game {
       if (p.thornCd > 0) p.thornCd -= dt;
       /* recoil spring, muzzle flash and barrel heat */
       if (p.recoil > 0) p.recoil = Math.max(0, p.recoil - dt * 5.5);
-      for (let i = 0; i < p.barrelRec.length; i++) if (p.barrelRec[i] > 0) p.barrelRec[i] = Math.max(0, p.barrelRec[i] - dt * 6.5);
+      for (let i = 0; i < p.barrelRec.length; i++) if (p.barrelRec[i] > 0) p.barrelRec[i] = Math.max(0, p.barrelRec[i] - dt * (st.cannonId === "revolutionary" ? st.rate / st.muzzles.length : 6.5));
       if (p.muzzleFlash > 0) p.muzzleFlash = Math.max(0, p.muzzleFlash - dt * 16);
       /* a jammed gun cools on the clock: the gauge is the jam timer, so it is
        * empty exactly when the trigger works again */

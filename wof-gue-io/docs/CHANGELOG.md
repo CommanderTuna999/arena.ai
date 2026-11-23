@@ -1,3 +1,8 @@
+## 0.3. v2.30.22 — Revolutionary targeting
+
+- Revolutionary scans a targeted enemy, flashes at its core, and aims its shot there; its barrels recharge independently.
+- Parts with no living connection to the core break away and can drop components.
+
 ## 0.3. v2.30.21 — Revolutionary
 
 - Added Revolutionary to the Workhorse MK1 branch: a powerful red energy hitscan cannon.

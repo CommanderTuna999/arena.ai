@@ -619,6 +619,40 @@ export function render(g: Game, ctx: CanvasRenderingContext2D) {
   }
   ctx.shadowBlur = 0;
 
+  // Targeting sweep is cosmetic; the committed shot uses the moving core's
+  // current world position. Sweep the living body's full bounds, then flash
+  // once over the core just before firing.
+  const scan = g.revolutionaryScan;
+  if (scan && !scan.enemy.dead) {
+    const e = scan.enemy, core = e.parts[e.coreId];
+    const [tx, ty] = pw(e, core);
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    for (const part of e.parts) if (part.alive) {
+      const [x, y] = pw(e, part);
+      minX = Math.min(minX, x - part.r); maxX = Math.max(maxX, x + part.r);
+      minY = Math.min(minY, y - part.r); maxY = Math.max(maxY, y + part.r);
+    }
+    let x = tx, y = ty;
+    if (scan.elapsed < 0.85 && Number.isFinite(minX)) {
+      const progress = clamp(scan.elapsed / 0.85, 0, 1);
+      const passes = 4, row = Math.min(passes - 1, Math.floor(progress * passes));
+      const across = progress * passes - row;
+      x = minX + (maxX - minX) * (row % 2 ? 1 - across : across);
+      y = minY + (maxY - minY) * progress;
+    }
+    const p = g.player, mz = g.stats.muzzles[p.muzzle % g.stats.muzzles.length] ?? {x: 14, y: 0};
+    const c = Math.cos(p.a), si = Math.sin(p.a);
+    const mx = p.x + c * mz.x - si * mz.y, my = p.y + si * mz.x + c * mz.y;
+    const flash = scan.elapsed >= 0.85;
+    ctx.save(); ctx.strokeStyle = flash ? "#ff9ba2" : "#ff3348";
+    ctx.globalAlpha = flash ? 0.95 : 0.65; ctx.lineWidth = (flash ? 2.5 : 1) / z;
+    ctx.beginPath(); ctx.moveTo(mx, my); ctx.lineTo(x, y); ctx.stroke();
+    ctx.fillStyle = flash ? "#fff0f0" : "#ff3348";
+    ctx.beginPath(); ctx.arc(x, y, (flash ? 6 : 2.5) / z, 0, TAU); ctx.fill();
+    if (flash) { ctx.strokeStyle = "#ff243a"; ctx.lineWidth = 2 / z; ctx.beginPath(); ctx.arc(x, y, (10 + 5 * (scan.elapsed - 0.85) / 0.2) / z, 0, TAU); ctx.stroke(); }
+    ctx.restore();
+  }
+
   /* ---- rings ---- */
   for (const r of g.rings) {
     const a = clamp(1 - r.r / r.max, 0, 1);
@@ -1274,21 +1308,22 @@ function drawCannon(g: Game, ctx: CanvasRenderingContext2D, z: number, t: number
   const own = (i: number) => p.barrelRec[i] ?? 0;
   const barrel = (y: number, w: number, len: number, alpha: number, spring = 0) => {
     const b = back + spring * look.len * 0.24;
+    const charge = c.id === "revolutionary" ? 1 - clamp(spring, 0, 1) : 1;
     ctx.globalAlpha = alpha;
     ctx.fillStyle = steel;
-    ctx.strokeStyle = edge;
+    ctx.strokeStyle = c.id === "revolutionary" ? `hsl(0 75% ${10 + 36 * charge}%)` : edge;
     ctx.lineWidth = 1;
     ctx.beginPath();
     ctx.rect(9 - b, y - w, Math.max(1, len - 9), w * 2);
     ctx.fill(); ctx.stroke();
     /* energy seam down the barrel: this is what heats up */
     ctx.strokeStyle = heat > 0.05 ? `hsl(${Math.max(6, 40 - 34 * heat)} 100% ${62 + 8 * heat}%)` : trim;
-    ctx.globalAlpha = alpha * (0.55 + 0.45 * heat);
+    ctx.globalAlpha = alpha * (c.id === "revolutionary" ? 0.08 + 0.92 * charge : 0.55 + 0.45 * heat);
     ctx.lineWidth = 1.1;
     ctx.beginPath(); ctx.moveTo(11 - b, y); ctx.lineTo(len - b - 2, y); ctx.stroke();
     ctx.globalAlpha = alpha;
     /* muzzle ring */
-    ctx.strokeStyle = `hsla(${look.hue} 90% 78% / 0.9)`;
+    ctx.strokeStyle = c.id === "revolutionary" ? `hsla(0 90% ${15 + 63 * charge}% / 0.9)` : `hsla(${look.hue} 90% 78% / 0.9)`;
     ctx.lineWidth = 1.2;
     ctx.beginPath(); ctx.ellipse(len - b, y, 1.4, w + 0.6, 0, 0, TAU); ctx.stroke();
   };
