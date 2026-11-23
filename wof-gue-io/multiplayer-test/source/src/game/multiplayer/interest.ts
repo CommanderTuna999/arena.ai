@@ -17,6 +17,7 @@ export function interestSnapshot(snapshot: Snapshot, pilotId: string, radius: nu
     pilots:snapshot.pilots.filter(p=>p.id===pilotId||near(p.x,p.y)),
     enemies:snapshot.enemies.filter(e=>near(e.x,e.y,e.radius)),
     beams:(snapshot.beams ?? []).filter(b=>segmentDistance(observer.x,observer.y,b)<=radius),
+    casings:(snapshot.casings ?? []).filter(c=>near(c.x,c.y,300)),
     bullets:snapshot.bullets.filter(b=>near(b.x,b.y)),
     enemyProjectiles:snapshot.enemyProjectiles.filter(p=>near(p.x,p.y,p.radius)),
     puddles:snapshot.puddles.filter(p=>near(p.x,p.y,p.radius)),

@@ -1,4 +1,5 @@
 import { Game, type Beam } from '../engine';
+import {snapshotCasings} from '../casing-fx';
 import { segmentDistance } from './demo-beams';
 import { PilotRoster } from './pilot-roster';
 import { PrivateLootVault } from './private-loot';
@@ -87,6 +88,7 @@ export class CombatHarness {
       pilots,
       beams: this.beamHistory.filter(b=>interestRadius===undefined || pilots.some(p=>segmentDistance(p.x,p.y,b)<=interestRadius))
         .map(({id,x1,y1,x2,y2,color,width,mediator,createdAt,expiresAt})=>({id,x1,y1,x2,y2,color,width,mediator,createdAt,expiresAt})),
+      casings: snapshotCasings(this.world,this.world.t).filter(c=>near(c.x,c.y,300)),
       bullets: this.world.bullets.filter(b => near(b.x,b.y)).map(b => ({ id:this.projectileId(b), x:b.x, y:b.y, vx:b.vx, vy:b.vy, kind:b.kind, elem:b.elem, crit:b.crit, visual:b.visual })),
       enemyProjectiles: this.world.eprojs.filter(p => near(p.x,p.y,p.r)).map(p => ({ id:this.projectileId(p), x:p.x, y:p.y, vx:p.vx, vy:p.vy, type:p.type, radius:p.r, hue:p.hue, speed:p.speed, tether:p.tether, srcId:p.src?.id })),
       puddles: this.world.puddles.filter(p => near(p.x,p.y,p.r)).map(p => ({ x:p.x, y:p.y, radius:p.r, arm:p.arm, life:p.life, max:p.max, hue:p.hue, web:p.web })),

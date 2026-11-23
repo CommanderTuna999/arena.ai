@@ -27,4 +27,8 @@ test. The server validates loadout and upgrades at the base; they reset on
 disconnect. This is not purchasing, crafting, inventory or saved progression.
 The guest starts with the level-one shield. Weapon effects and special states
 are replicated, but visual fidelity and real-network performance still need
-browser and deployed testing. `/health` identifies `guest-cannon-tree-v1`.
+browser and deployed testing. `/health` identifies `guest-casing-relay-v1`.
+
+Shot casings are emitted by the authoritative simulation and relayed to nearby
+guests with their weapon and kinetic/energy profile. They are cosmetic, bounded
+and ephemeral; dropped snapshots can still cause missed effects.

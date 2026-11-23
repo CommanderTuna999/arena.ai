@@ -77,5 +77,5 @@ that branch; an older failed build still refers to its original commit.
 At the base, press **E** to open the real cannon tree. All 12 cannons and
 their upgrades are free temporary test access, not purchases or saved account
 progression. The server validates changes at the base. `/health` identifies
-this iteration as `cloudflare-cannon-tree-v1`. A local DOM integration test
+this iteration as `cloudflare-casing-relay-v1`. A local DOM integration test
 exercises the menu; real-browser visuals and deployed networking remain unverified.

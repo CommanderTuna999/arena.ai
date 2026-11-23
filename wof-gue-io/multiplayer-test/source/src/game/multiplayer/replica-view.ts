@@ -1,3 +1,4 @@
+import {applyDemoCasings} from '../casing-fx';
 import { Game, VISION_MUL, type Bullet, type EProj, type Enemy, type Other, type Puddle, type Ring } from '../engine';
 import { computeStats, newSave } from '../data';
 import { DEMO_CANNONS } from './pilot-roster';
@@ -40,6 +41,7 @@ export class ReplicaView {
     g.others=pilots.filter(p=>p.id!==pilotId).map(p=>({id:p.id,name:p.name,x:p.x,y:p.y,a:p.angle,tx:p.x,ty:p.y,ta:p.angle,seen:world.time,dead:p.dead,cannonId:p.cannonId,gatAngle:p.gatAngle,chairman:p.chairman?structuredClone(p.chairman):null,heat:p.heat,jam:p.jam,recoil:p.recoil,muzzleFlash:p.muzzleFlash,barrelRec:[...p.barrelRec],shield:p.shield,shieldMax:p.shieldMax} satisfies Other));
     if (this.previousWorld !== world) {
     this.previousWorld = world;
+    applyDemoCasings(g,world.casings ?? []);
     g.enemies=[];
     for(const e of world.enemies) {
       const sp=SPECIES_LIST.findIndex(s=>s.id===e.species);if(sp<0)continue;

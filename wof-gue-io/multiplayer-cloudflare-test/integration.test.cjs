@@ -28,6 +28,7 @@ function close(ws){return new Promise(resolve=>{if(ws.readyState===WebSocket.CLO
  const otherSeesBeam=receive(b,v=>v.type==='world-snapshot'&&Array.isArray(v.world.beams)&&v.world.beams.some(beam=>{const p=v.world.pilots.find(p=>p.id===welcomeA.pilotId);return p && Math.hypot(beam.x1-p.x,beam.y1-p.y)<120;}));
  a.send(JSON.stringify({type:'input',frame:{seq:2,forward:false,backward:false,left:false,right:false,fire:true,boost:false,aim:0}}));
  const beamFrame=await otherSeesBeam;assert(beamFrame.world.beams.length>0,'another guest sees the server simulated hitscan');
+ const casingFrame=beamFrame.world.casings?.some(c=>c.weapon==='skewer') ? beamFrame : await receive(b,v=>v.type==='world-snapshot'&&v.world.casings?.some(c=>c.weapon==='skewer'));assert(casingFrame.world.casings.some(c=>c.weapon==='skewer'&&c.kind==='shell'),'other guest receives the actual shot casing');
  const health=await (await fetch(base+'/health')).json();assert.equal(health.players,2);
  await Promise.all([close(a),close(b)]);await wait(200);assert.equal((await (await fetch(base+'/health')).json()).players,0);
  console.log('Local demo: HTTP, origin guard, two guest sockets, replay rejection, shared loadouts, hitscan effects, input and cleanup passed');

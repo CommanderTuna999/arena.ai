@@ -63,8 +63,17 @@ export function ejectCasing(owner:object,x:number,y:number,angle:number,at:numbe
 }
 export function casingsAt(owner:object,now:number):readonly Casing[]{
  const list=pools.get(owner)??[];let n=0;
- for(const q of list)if(now>=q.at&&now-q.at<q.life)list[n++]=q;
+ for(const q of list)if(now-q.at<q.life)list[n++]=q;
  list.length=n;if(!n)pools.delete(owner);return list;
+}
+/** Disposable demo wire projection: server emits the actual shot's kind and
+ * trajectory, never a client-side guess. Profiles remain local renderer data. */
+export type DemoCasing = Omit<Casing, 'profile'>;
+export function snapshotCasings(owner:object,now:number):DemoCasing[]{
+ return casingsAt(owner,now).map(({profile,...c})=>({...c}));
+}
+export function applyDemoCasings(owner:object,items:readonly DemoCasing[]){
+ pools.set(owner,items.map(c=>({...c,profile:casingProfile(c.weapon,c.kind)})));
 }
 /** Layered luminous geometry instead of canvas blur: bright batteries without
  * expensive shadows when rapid-fire guns are on screen. */
@@ -97,7 +106,8 @@ function drawProfile(ctx:CanvasRenderingContext2D,p:CasingProfile){
 export function drawCasings(ctx:CanvasRenderingContext2D,owner:object,now:number){
  const list=casingsAt(owner,now);if(!list.length)return;ctx.save();
  for(const q of list){
-  const age=now-q.at,drag=(1-Math.exp(-3*age))/3,alpha=Math.min(1,(q.life-age)*3);
+  const age=now-q.at;if(age<0)continue;
+  const drag=(1-Math.exp(-3*age))/3,alpha=Math.min(1,(q.life-age)*3);
   const x=q.x+q.vx*drag,y=q.y+q.vy*drag+110*age*age,angle=q.angle+age*q.spin;
   ctx.translate(x,y);ctx.rotate(angle);ctx.globalAlpha=alpha;drawProfile(ctx,q.profile);
   ctx.rotate(-angle);ctx.translate(-x,-y);
