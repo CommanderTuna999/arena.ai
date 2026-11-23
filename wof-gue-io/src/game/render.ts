@@ -1,4 +1,4 @@
-import { scanPartIndex, scanHighlight, type TargetScan } from "./target-scan";
+import { scanPartIndex, scanHighlight, scanFlashDuration, type TargetScan } from "./target-scan";
 import { CHAIRMAN_SHIELD_MAX, chairmanDronePosition, chairmanHaloCenter } from "./chairman";
 import { plateHitIntensity } from "./plate-impact";
 import { drawCasings } from "./casing-fx";
@@ -634,13 +634,13 @@ export function render(g: Game, ctx: CanvasRenderingContext2D) {
     const p = g.player, mz = g.stats.muzzles[p.muzzle % g.stats.muzzles.length] ?? {x: 14, y: 0};
     const c = Math.cos(p.a), si = Math.sin(p.a);
     const mx = p.x + c * mz.x - si * mz.y, my = p.y + si * mz.x + c * mz.y;
-    const flash = scan.elapsed >= scan.duration - 0.2;
+    const flash = scan.elapsed >= scan.duration - scanFlashDuration(scan);
     ctx.save(); ctx.strokeStyle = flash ? "#ff9ba2" : "#ff3348";
     ctx.globalAlpha = flash ? 0.95 : 0.65; ctx.lineWidth = (flash ? 2.5 : 1) / z;
     ctx.beginPath(); ctx.moveTo(mx, my); ctx.lineTo(x, y); ctx.stroke();
     ctx.fillStyle = flash ? "#fff0f0" : "#ff3348";
     ctx.beginPath(); ctx.arc(x, y, (flash ? 6 : 2.5) / z, 0, TAU); ctx.fill();
-    if (flash) { ctx.strokeStyle = "#ff243a"; ctx.lineWidth = 2 / z; ctx.beginPath(); ctx.arc(x, y, (10 + 5 * (scan.elapsed - (scan.duration - 0.2)) / 0.2) / z, 0, TAU); ctx.stroke(); }
+    if (flash) { ctx.strokeStyle = "#ff243a"; ctx.lineWidth = 2 / z; ctx.beginPath(); ctx.arc(x, y, (10 + 5 * (scan.elapsed - (scan.duration - scanFlashDuration(scan))) / scanFlashDuration(scan)) / z, 0, TAU); ctx.stroke(); }
     ctx.restore();
   }
 
@@ -831,7 +831,7 @@ function drawChairman(g:Game, ctx:CanvasRenderingContext2D, z:number, t:number) 
     const e=g.enemies.find(e=>e.id===s.scan!.enemyId&&!e.dead), drone=points[s.scan.drone];
     if(e && drone) {
       drawScanHighlights(ctx,e,s.scan,z);
-      const scanTime=s.scan.duration-.2;
+      const scanTime=s.scan.duration-scanFlashDuration(s.scan);
       const flash=s.scan.elapsed>=scanTime;
       const index=scanPartIndex(s.scan);
       const q=index<0?e.parts[e.coreId]:e.parts[s.scan.parts[index]];

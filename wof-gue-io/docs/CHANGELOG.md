@@ -1,3 +1,8 @@
+## 0.3. v2.31.8 — Neon gauges and drone cadence
+
+- Chairman drones scan during their firing interval, with scan speed adapting to the fire rate.
+- Vital gauges now use glowing neon outlines and dark interiors while keeping their white damage trails.
+
 ## 0.3. v2.31.7 — Damage trails
 
 - Health uses grey insect armour, and damage briefly leaves a white trail on health and shield bars.

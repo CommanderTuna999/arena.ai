@@ -8,7 +8,7 @@
  *   CHANGELOG and mirror the details in docs/CHANGELOG.md.
  */
 
-export const VERSION = "2.31.7";
+export const VERSION = "2.31.8";
 
 export interface ChangeEntry {
   version: string;
@@ -19,6 +19,7 @@ export interface ChangeEntry {
 }
 
 export const CHANGELOG: ChangeEntry[] = [
+  { version: "2.31.8", date: "23 Nov 2026", title: "Neon gauges and drone cadence", points: ["Chairman drones scan during their firing interval, with scan speed adapting to the fire rate.", "Vital gauges now use glowing neon outlines and dark interiors while keeping their white damage trails."] },
   { version: "2.31.7", date: "23 Nov 2026", title: "Damage trails", points: ["Health uses grey insect armour, and damage briefly leaves a white trail on health and shield bars.", "Removed the circular guide lines from Chairman’s drone halos."] },
   { version: "2.31.6", date: "23 Nov 2026", title: "Themed vital bars", points: ["Health and shield bars use compact neon armour and honeycomb designs without visible text."] },
   { version: "2.31.5", date: "23 Nov 2026", title: "Armour and shield gauges", points: ["Health now appears as interlocking insect armour plates, while shield gauges use glowing hexagonal cells.", "Chairman’s dome has its own red hexagonal gauge; all three gauges show their current and maximum values."] },

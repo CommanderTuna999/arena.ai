@@ -9,5 +9,5 @@ g.input.lmb=false;e.x+=30;e.y+=80;const duration=g.revolutionaryScan.duration;g.
 const [cx,cy]=g.partWorld(e,e.parts[e.coreId]);assert(Math.abs(shot[2]-Math.atan2(cy-shot[1],cx-shot[0]))<1e-10,'actual muzzle aims at moving core');
 const free=setup();let freeShot:any[]=[];free.beam=(...args:any[])=>freeShot=args;free.firePlayer(.01);assert(freeShot.length>0,'empty mouse skips targeting');assert.equal(freeShot[2],0);
 const cancelled=setup();const target=cancelled.makeEnemy(0,2,5400,0,'test',7);cancelled.enemies=[target];cancelled.partAt=()=>target.parts[0];cancelled.beam=()=>{throw Error('cancelled shot fired')};cancelled.firePlayer(.01);cancelled.player.dead=true;cancelled.firePlayer(.01);assert.equal(cancelled.revolutionaryScan,null);
-const r=readFileSync(new URL('./src/game/render.ts',import.meta.url),'utf8');assert.match(r,/const scan = g\.revolutionaryScan/);assert.match(r,/scan\.elapsed >= scan\.duration - 0\.2/);assert.match(r,/1 - clamp\(spring, 0, 1\)/);
+const r=readFileSync(new URL('./src/game/render.ts',import.meta.url),'utf8');assert.match(r,/const scan = g\.revolutionaryScan/);assert.match(r,/scan\.elapsed >= scan\.duration - scanFlashDuration\(scan\)/);assert.match(r,/1 - clamp\(spring, 0, 1\)/);
 console.log('Target scan, flash, committed shot, moving-core aim, empty mouse and cancellation verified');

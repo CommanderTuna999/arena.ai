@@ -3555,7 +3555,7 @@ export class Game {
       this.beam(x,y,angle,st.bulletRange,damage,st.pierce,false,"laser","#ff344a",1,1,crit,false,true,chairmanCoreMul(lv.coreDmg ?? 0));
       this.burst(x,y,"#ff4254",10,5,300);
       ejectCasing(this,x,y,angle,this.t,"core",p.vx,p.vy,"chairman");
-      cs.drones[index]=Infinity; cs.fireGlow[index]=.4;
+      cs.drones[index]=Infinity; cs.fireGlow[index]=.4; p.fireCd=1/st.rate;
       this.shake=Math.max(this.shake,5);
     };
     if(this.inSafe()) {cs.scan=null;cs.charge=0;this.fireWeapons(dt,p.a);return;}
@@ -3580,25 +3580,25 @@ export class Game {
     }
     if(cs.scan) {
       cs.scan.elapsed+=dt;
-      if(cs.scan.elapsed>=cs.scan.duration) {
+      if(cs.scan.elapsed>=cs.scan.duration && p.fireCd<=0) {
         const scan=cs.scan;cs.scan=null;
         const e=this.enemies.find(e=>e.id===scan.enemyId && !e.dead) ?? null;
         // A drone may have intercepted incoming damage during its scan.
         // Never fire a dark turret; choose another ready one or charge the sun.
         const index=cs.drones[scan.drone] <= 0 ? scan.drone : cs.drones.findIndex(cool=>cool<=0);
-        if(index < 0) { if(scan.manual && cs.reload<=0) cs.charge=0.000001; }
+        if(index < 0) { if(scan.manual && cs.reload<=0) { p.fireCd=1/st.rate; cs.charge=0.000001; } }
+        else if(scan.manual && Math.random()<chairmanOrbChance(lv.orbChance ?? 0)) { p.fireCd=1/st.rate; cs.charge=0.000001; }
         else if(scan.manual || (this.autoFire && e?.parts[e.coreId]?.alive)) fireDrone(index,e,scan.aimX,scan.aimY);
       }
       this.fireWeapons(dt,p.a);return;
     }
-    if((want || this.autoFire) && p.fireCd<=0 && p.jam<=0 && cs.reload<=0) {
+    if((want || this.autoFire) && p.jam<=0 && cs.reload<=0) {
       const ready=cs.drones.map((cool,i)=>cool<=0?i:-1).filter(i=>i>=0);
       // Only an explicit trigger can charge the sun, including the guaranteed
       // blast when all drones have been spent. Auto never rolls orb chance.
-      if(want && (!ready.length || Math.random()<chairmanOrbChance(lv.orbChance ?? 0))) {
+      if(want && !ready.length && p.fireCd<=0) {
         p.fireCd=1/st.rate;cs.charge=0.000001;
       } else if(ready.length && want) {
-        p.fireCd=1/st.rate;
         const index=ready[Math.floor(Math.random()*ready.length)];
         const [mx,my]=this.mouseWorld();let target:Enemy|null=null;
         for(const e of this.enemies) {
@@ -3607,8 +3607,11 @@ export class Game {
           const ca=Math.cos(e.a),sa=Math.sin(e.a);
           if(this.partAt(e,dx*ca+dy*sa,-dx*sa+dy*ca)){target=e;break;}
         }
-        if(target) cs.scan={...createTargetScan(target.parts),enemyId:target.id,drone:index,aimX:mx,aimY:my,manual:true};
-        else fireDrone(index,null,mx,my);
+        if(target) { const scan=createTargetScan(target.parts); scan.duration=Math.min(scan.duration,.8/st.rate); cs.scan={...scan,enemyId:target.id,drone:index,aimX:mx,aimY:my,manual:true}; }
+        else if(p.fireCd<=0) {
+          if(Math.random()<chairmanOrbChance(lv.orbChance ?? 0)){p.fireCd=1/st.rate;cs.charge=0.000001;}
+          else fireDrone(index,null,mx,my);
+        }
       } else if(ready.length && this.autoFire) {
         // Choose a target actually reachable from the selected orbiting drone.
         const index=ready[Math.floor(Math.random()*ready.length)];
@@ -3621,8 +3624,8 @@ export class Game {
         }
         if(target) {
           const [aimX,aimY]=this.partWorld(target,target.parts[target.coreId]);
-          p.fireCd=1/st.rate;
-          cs.scan={...createTargetScan(target.parts),enemyId:target.id,drone:index,aimX,aimY,manual:false};
+          const scan=createTargetScan(target.parts);scan.duration=Math.min(scan.duration,.8/st.rate);
+          cs.scan={...scan,enemyId:target.id,drone:index,aimX,aimY,manual:false};
         }
       }
     }

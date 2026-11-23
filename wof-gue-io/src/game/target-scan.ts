@@ -5,9 +5,11 @@ export function createTargetScan(parts:readonly {id:number;alive:boolean;kind:st
  const ids=parts.filter(p=>p.alive&&p.kind!=='core').map(p=>p.id);
  return {parts:ids,elapsed:0,duration:Math.max(.85,ids.length*.045)+.2};
 }
+export const scanFlashDuration = (scan:TargetScan) => Math.min(.2, scan.duration * .2);
 export function scanPartIndex(scan:TargetScan):number {
- if(!scan.parts.length||scan.elapsed>=scan.duration-.2)return -1;
- return Math.min(scan.parts.length-1,Math.floor(Math.max(0,scan.elapsed)/(scan.duration-.2)*scan.parts.length));
+ const sweep=scan.duration-scanFlashDuration(scan);
+ if(!scan.parts.length||scan.elapsed>=sweep)return -1;
+ return Math.min(scan.parts.length-1,Math.floor(Math.max(0,scan.elapsed)/sweep*scan.parts.length));
 }
 /** A brief red trail follows the currently scanned component. */
 export function scanHighlight(scan:TargetScan,index:number):number {
