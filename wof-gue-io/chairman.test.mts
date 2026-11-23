@@ -1,0 +1,25 @@
+import assert from 'node:assert/strict';
+import {Game} from './src/game/engine';
+import {CANNON_BY_ID,cannonBillPicks,cannonBillProblem,cannonTrackValue,cannonTracks,newSave,type Comp} from './src/game/data';
+import {SPECIES_LIST,buildEnemy} from './src/game/enemies';
+import {bestiaryDrops} from './src/game/bestiary-drops';
+import {CHAIRMAN_SHIELD_MAX,chairmanDroneCount,chairmanOrbChance,chairmanOrbDamage,chairmanOrbRadius,chairmanCoreMul} from './src/game/chairman';
+const c=CANNON_BY_ID.chairman;assert.deepEqual([c.tier,c.requires,c.dmg,c.interval,c.credits],[3,'revolutionary',50000,2,15000000]);
+assert.deepEqual(cannonTracks(c).map(x=>x.id),['dmg','rate','pen','drones','crit','critDmg','coreDmg','orbChance','orbRange']);
+assert.equal(cannonTrackValue(c,'coreDmg',10),'+750% vs core');assert.equal(chairmanCoreMul(10),8.5);assert.equal(chairmanOrbChance(10),.15);assert.equal(chairmanDroneCount(0),15);assert.equal(chairmanOrbDamage(0,0),15000000);assert.equal(chairmanOrbDamage(0,3),19500000);assert.equal(chairmanOrbRadius(0),1600);
+const mk=(species:string,kind:Comp['kind'],tier:number,name:string,n:number)=>Array.from({length:n},(_,i)=>({id:`${species}-${name}-${i}`,species,kind,tier,name:`${species} ${name}`,poly:[],area:1,mass:1,hue:1,value:1}));
+const s=newSave();s.credits=15000000;s.cannon.owned.push('revolutionary');s.inventory=[...mk('Dragonfly','armor',4,'Compound Eye',50),...mk('Worker Ant','spike',4,'Spine',20),...mk('Worker Ant','arm',4,'Mandible',15),...mk('Worker Ant','leg',4,'Leg',25),...mk('Worker Ant','weapon',5,'Laser Pointer',5),...mk('Soldier Ant','core',5,'Core',8),...mk('Worker Ant','core',5,'Core',8),...mk('Dragonfly','core',5,'Core',4)];
+assert.equal(cannonBillProblem(s,c),null);assert.equal(cannonBillPicks(s,c).length,135);const game:any=new Game(s,'craft');assert.equal(game.buyCannonChassis('chairman'),null);assert.equal(game.save.inventory.length,0);assert.equal(game.stats.dmg,50000);
+for(const name of ['Worker Ant','Soldier Ant','Dragonfly'])assert.equal(SPECIES_LIST.find(x=>x.name===name)!.maxZone,5,`${name} must reach mythical zones`);
+const wi=SPECIES_LIST.findIndex(x=>x.name==='Worker Ant'),worker=SPECIES_LIST[wi];const b=buildEnemy(wi,5,7,{optionalGun:true,optionalShield:false,gunKind:'laser'});assert(b.parts.some(p=>p.name==='Laser Pointer'&&p.kind==='weapon'));assert(bestiaryDrops(worker,5).some(p=>p.name==='Worker Ant Laser Pointer'));
+function setup(){const save=newSave();save.cannon.id='chairman';save.cannon.owned.push('chairman');const g:any=new Game(save,'pilot');g.player.x=5200;g.player.y=0;g.player.a=0;g.cam={x:5200,y:0,z:1};g.input.lmb=true;return g;}
+const oldRandom=Math.random;
+try{
+ Math.random=()=>.5;
+ const g=setup();let beam:any[]=[];g.beam=(...x:any[])=>beam=x;g.firePlayer(.01);assert.equal(beam[4],50000);assert.equal(beam[7],'laser');assert.equal(beam[14],1);assert.equal(g.chairman.drones.filter((x:number)=>x>0).length,1);
+ const h=setup();h.input.lmb=false;h.hurtPlayer(200,{energy:true});assert.equal(h.chairman.shield,CHAIRMAN_SHIELD_MAX-200);assert.equal(h.player.hp,h.stats.hull);assert.equal(h.chairman.drones.filter((x:number)=>x>0).length,1);h.hurtPlayer(1000,{energy:true});assert.equal(h.chairman.shield,0);assert(h.player.hp<h.stats.hull,'only shield overflow hits the pilot');
+ const shot=setup(),enemy=shot.makeEnemy(0,2,5400,0,'test',1);shot.enemies=[enemy];shot.input.mx=600;shot.input.my=300;shot.partAt=()=>enemy.parts[0];let aimed:any[]=[];shot.beam=(...a:any[])=>aimed=a;shot.firePlayer(.01);assert(shot.chairman.scan);shot.input.lmb=false;enemy.y=100;shot.firePlayer(shot.chairman.scan.duration+.01);const [cx,cy]=shot.partWorld(enemy,enemy.parts[enemy.coreId]);assert(Math.abs(aimed[2]-Math.atan2(cy-aimed[1],cx-aimed[0]))<1e-9);
+ Math.random=()=>0;const sun=setup();const a=sun.makeEnemy(0,2,5400,0,'test',3),b=sun.makeEnemy(0,2,5450,0,'test',4),far=sun.makeEnemy(0,2,14000,0,'test',5);sun.enemies=[a,b,far];const hits:any[]=[];sun.damagePart=(...x:any[])=>hits.push(x);sun.firePlayer(.01);assert(sun.chairman.charge>0);sun.input.lmb=false;sun.firePlayer(1);assert.equal(hits.length,2);assert(hits.every(x=>x[2]===15000000 && x[5]==='laser'));assert(sun.chairman.drones.every((x:number)=>x>0));assert(sun.chairman.flash>0);
+ Math.random=()=>.5;const depleted=setup();depleted.chairman.drones.fill(2);depleted.firePlayer(.01);assert(depleted.chairman.charge>0,'all dark drones force the orb');
+}finally{Math.random=oldRandom;}
+console.log('Chairman recipe, attainable parts, tracks, shields, drone shots, core scan and orb verified');

@@ -1,3 +1,8 @@
+## 0.3. v2.31.0 — Chairman
+
+- Added the first tier-three cannon: Chairman, with orbiting drones, a red sun blast and an additional energy dome.
+- Worker Ant laser pointers and the required high-rarity ant and dragonfly components can now be found.
+
 ## 0.3. v2.30.22 — Revolutionary targeting
 
 - Revolutionary scans a targeted enemy, flashes at its core, and aims its shot there; its barrels recharge independently.

@@ -1,3 +1,4 @@
+import { CHAIRMAN_DRONE_COOLDOWN, CHAIRMAN_SHIELD_MAX, chairmanPosition, chairmanDroneCount, chairmanOrbChance, chairmanOrbRadius, chairmanOrbDamage, chairmanCoreMul, createChairman, syncChairman, tickChairman, type ChairmanState } from "./chairman";
 import { rollComponentTiers } from "./drop-roll";
 import { recordPlateHit } from "./plate-impact";
 import { ejectCasing, ejectCasingLimited } from "./casing-fx";
@@ -441,6 +442,7 @@ export class Game {
   lock: LockOn | null = null;
   /** Local-only Revolutionary targeting sequence, committed on trigger. */
   revolutionaryScan: { enemy: Enemy; elapsed: number } | null = null;
+  chairman: ChairmanState | null = null;
   mines: Mine[] = [];
   drones: Drone[] = [];
   wells: Well[] = [];
@@ -501,6 +503,7 @@ export class Game {
       flash: 0, thornCd: 0, tpT: 0, tpCd: 0, tow: 1, thrust: 0,
       barrier: 0, barrierMax: 0, barrierT: 0, overT: 0, nullCd: 0,
     };
+    if (this.stats.cannonId === "chairman") this.chairman = createChairman();
     this.autoFire = save.autoFire !== false;
     this.syncHarpoons();
     this.cam.x = this.player.x;
@@ -654,6 +657,8 @@ export class Game {
     this.stats = computeStats(temporary ? { ...this.save, cannon: { ...this.save.cannon, id: temporary, lv: { ...this.save.cannon.lv, [temporary]: this.adminCannonLevels[temporary] ?? {} } } } : this.save);
     if (this.admin.on) this.stats.hull *= this.adminHealthMultiplier;
     const p = this.player;
+    if (this.stats.cannonId === "chairman") { this.chairman ??= createChairman(); syncChairman(this.chairman, chairmanDroneCount(this.cannonViewLevels("chairman").drones ?? 0)); }
+    else if (this.chairman) { this.chairman.scan = null; this.chairman.charge = 0; }
     if (this.stats.hull !== old.hull) p.hp = Math.min(this.stats.hull, p.hp + Math.max(0, this.stats.hull - old.hull));
     p.hp = Math.min(p.hp, this.stats.hull);
     p.shield = Math.min(this.stats.shieldMax, p.shield + Math.max(0, this.stats.shieldMax - old.shieldMax));
@@ -2068,7 +2073,7 @@ export class Game {
     for (let i = 0; i <= steps; i++) if (this.shieldInfoAt(e, x + dx * i / steps, y + dy * i / steps)) return true;
     return false;
   }
-  areaDamage(x: number, y: number, R: number, dmg: number, skip: Part | null, src: DmgSrc = "explosive", exclude?: Enemy) {
+  areaDamage(x: number, y: number, R: number, dmg: number, skip: Part | null, src: DmgSrc = "explosive", exclude?: Enemy, coreMul = 1) {
     for (const e of this.enemies) {
       if (e.dead || e === exclude) continue;
       const dx = e.x - x, dy = e.y - y;
@@ -2091,7 +2096,7 @@ export class Game {
         if (!q.alive || q === skip) continue;
         const w = this.partWorld(e, q), px = w[0], py = w[1];
         const d = Math.hypot(px - x, py - y);
-        if (d < R + q.r * 0.5 && !this.blastBlocked(e, x, y, px, py, src)) this.damagePart(e, q, dmg * (1 - clamp(d / (R + 1), 0, 1) * 0.5), 0, 0, src);
+        if (d < R + q.r * 0.5 && !this.blastBlocked(e, x, y, px, py, src)) this.damagePart(e, q, dmg * (q.kind === "core" ? coreMul : 1) * (1 - clamp(d / (R + 1), 0, 1) * 0.5), 0, 0, src);
       }
     }
   }
@@ -2165,6 +2170,20 @@ export class Game {
     let d = dmg * (1 - st.armor) * (1 - st.reactive);
     if (st.kinetic > 0 && p.shield > 0 && !o.energy) d *= 1 - st.kinetic;
     p.hitT = 0; p.shieldT = st.shieldDelay;
+    // The additional dome has its own finite pool. A lit drone intercepts
+    // each hit; overflow continues through the normal shields and hull.
+    if (st.cannonId === "chairman" && d > 0) {
+      const cs = this.chairman ??= createChairman();
+      syncChairman(cs, chairmanDroneCount(this.cannonViewLevels("chairman").drones ?? 0));
+      const available = cs.drones.map((cool, i) => cool <= 0 ? i : -1).filter(i => i >= 0);
+      if (available.length && cs.shield > 0) {
+        const i = available[Math.floor(Math.random() * available.length)];
+        cs.drones[i] = CHAIRMAN_DRONE_COOLDOWN; cs.shieldDelay = 4;
+        const absorbed = Math.min(cs.shield, d); cs.shield -= absorbed; d -= absorbed;
+        const ang = (o.kbx || o.kby) ? Math.atan2(-(o.kby ?? 0), -(o.kbx ?? 0)) : p.a + Math.PI;
+        recordShieldImpact(p, Math.cos(ang) * (SHIP_R + 35), Math.sin(ang) * (SHIP_R + 35), this.t);
+      }
+    }
     if (p.barrier > 0) { const a = Math.min(p.barrier, d); p.barrier -= a; d -= a; }
     const shieldBefore = p.shield;
     if (p.shield > 0) { const a = Math.min(p.shield, d); p.shield -= a; d -= a; }
@@ -2201,6 +2220,7 @@ export class Game {
   }
   private killPlayer() {
     const p = this.player;
+    if (this.chairman) { this.chairman.scan = null; this.chairman.charge = 0; }
     p.dead = true; p.hp = 0; p.respawn = 3; p.tpT = 0; p.pull = null; p.gatSpin = 0; p.stingDots = [];
     p.barrier = 0; p.barrierMax = 0; p.barrierT = 0; p.overT = 0;
     this.lock = null;
@@ -2213,6 +2233,7 @@ export class Game {
   }
   private respawnPlayer() {
     const p = this.player;
+    if (this.stats.cannonId === "chairman") { this.chairman = createChairman(); syncChairman(this.chairman, chairmanDroneCount(this.cannonViewLevels("chairman").drones ?? 0)); }
     p.dead = false; p.x = BASE.x; p.y = BASE.y - 180; p.vx = p.vy = 0; p.hp = this.stats.hull; p.shield = this.stats.shieldMax;
     p.poison = 0; p.slowT = 0; p.stingDots = []; p.pull = null;
     p.barrier = 0; p.barrierMax = 0; p.barrierT = 0; p.overT = 0;
@@ -3393,7 +3414,7 @@ export class Game {
     }
     return best;
   }
-  private beam(x: number, y: number, ang: number, len: number, dmg: number, pierce: number, bypass = false, src: DmgSrc = "laser", color = "#baffff", width = 1, armorMul = 1, crit = false, revolutionary = false) {
+  private beam(x: number, y: number, ang: number, len: number, dmg: number, pierce: number, bypass = false, src: DmgSrc = "laser", color = "#baffff", width = 1, armorMul = 1, crit = false, revolutionary = false, chairmanShot = false, coreMul = 1) {
     const st = this.stats;
     const hits = new Set<number>();
     const cos = Math.cos(ang), sin = Math.sin(ang);
@@ -3421,7 +3442,7 @@ export class Game {
           }
         }
         if (e.shells.length && (bx - e.x) * (bx - e.x) + (by - e.y) * (by - e.y) < e.shellR * e.shellR && this.plateAt(e, bx, by)) {
-          if (revolutionary && !splash) splash = {x: bx, y: by, skip: null};
+          if ((revolutionary || chairmanShot) && !splash) splash = {x: bx, y: by, skip: null};
           this.shellHit(e, dmg * armorMul, src, false, bx, by, crit);
           endLen = d;
           break outer;
@@ -3439,15 +3460,15 @@ export class Game {
         const key = e.id * 100000 + p.id;
         if (hits.has(key)) continue;
         hits.add(key);
-        if (revolutionary && !splash) splash = {x: bx, y: by, skip: p};
+        if ((revolutionary || chairmanShot) && !splash) splash = {x: bx, y: by, skip: p};
         let dm = dmg * (1 + e.melt);
-        this.damagePart(e, p, dm * (p.kind === "armor" ? armorMul : 1), bx, by, src, false, crit);
+        this.damagePart(e, p, dm * (p.kind === "armor" ? armorMul : p.kind === "core" ? coreMul : 1), bx, by, src, false, crit);
         pierced++;
         if (pierced > pierce) { endLen = d; break outer; }
       }
     }
     if (splash) {
-      this.areaDamage(splash.x, splash.y, 90, dmg * 0.2, splash.skip, "laser");
+      this.areaDamage(splash.x, splash.y, chairmanShot ? 60 : 90, dmg * 0.2, splash.skip, "laser", undefined, chairmanShot ? coreMul : 1);
       this.burst(splash.x, splash.y, "#ff263b", 16, 6, 360);
       this.ringFx(splash.x, splash.y, 90, "#ff263b", 440);
     }
@@ -3511,12 +3532,85 @@ export class Game {
   private mediatorBeamDamage = 0;
   private mediatorCrit = false;
   private mediatorSparkClock = 0;
+  /** Local Chairman weapon state machine. A trigger commits either one drone
+   * shot (including its target at trigger time) or the one-second sun charge. */
+  private fireChairman(dt:number, want:boolean) {
+    const p=this.player, st=this.stats, cs=this.chairman ??= createChairman();
+    const lv=this.cannonViewLevels("chairman");
+    syncChairman(cs,chairmanDroneCount(lv.drones ?? 0));
+    const fireDrone=(index:number, target:Enemy|null, fallback:number) => {
+      const [x,y]=chairmanPosition(index,cs.drones.length,cs.phase,p.x,p.y);
+      let angle=fallback;
+      if(target && !target.dead && target.parts[target.coreId]?.alive && this.enemies.includes(target)) {
+        const [tx,ty]=this.partWorld(target,target.parts[target.coreId]); angle=Math.atan2(ty-y,tx-x);
+      }
+      const crit=st.crit>0 && Math.random()<st.crit;
+      const damage=st.dmg*(crit?st.critMul:1)*this.dmgMul();
+      this.beam(x,y,angle,st.bulletRange,damage,st.pierce,false,"laser","#ff344a",1,1,crit,false,true,chairmanCoreMul(lv.coreDmg ?? 0));
+      this.burst(x,y,"#ff4254",10,5,300);
+      ejectCasing(this,x,y,angle,this.t,"core",p.vx,p.vy,"chairman");
+      cs.drones[index]=CHAIRMAN_DRONE_COOLDOWN;
+      this.shake=Math.max(this.shake,5);
+    };
+    if(this.inSafe()) {cs.scan=null;cs.charge=0;this.fireWeapons(dt,p.a);return;}
+    if(cs.charge>0) {
+      cs.charge+=dt;
+      if(cs.charge>=1) {
+        cs.charge=0; cs.flash=.34;
+        cs.drones.fill(CHAIRMAN_DRONE_COOLDOWN);
+        const crit=st.crit>0 && Math.random()<st.crit;
+        const damage=chairmanOrbDamage(lv.dmg ?? 0,lv.drones ?? 0)*chairmanCoreMul(lv.coreDmg ?? 0)*(crit?st.critMul:1)*this.dmgMul();
+        const radius=chairmanOrbRadius(lv.orbRange ?? 0);
+        // Apply once per enemy via its core: do not multiply the orb damage by
+        // its number of parts, and keep ordinary player kill/drop attribution.
+        for(const e of [...this.enemies]) {
+          if(e.dead || Math.hypot(e.x-p.x,e.y-p.y)>radius+e.radius)continue;
+          const core=e.parts[e.coreId]; if(!core?.alive)continue;
+          const [x,y]=this.partWorld(e,core);this.damagePart(e,core,damage,x,y,"laser",false,crit);
+        }
+        this.ringFx(p.x,p.y,radius,"#ff283e",1800);this.burst(p.x,p.y,"#ff4050",44,12,900);this.shake=Math.max(this.shake,25);
+      }
+      this.fireWeapons(dt,p.a);return;
+    }
+    if(cs.scan) {
+      cs.scan.elapsed+=dt;
+      if(cs.scan.elapsed>=cs.scan.duration) {
+        const scan=cs.scan;cs.scan=null;
+        const e=this.enemies.find(e=>e.id===scan.enemyId && !e.dead) ?? null;
+        // A drone may have intercepted incoming damage during its scan.
+        // Never fire a dark turret; choose another ready one or charge the sun.
+        const index=cs.drones[scan.drone] <= 0 ? scan.drone : cs.drones.findIndex(cool=>cool<=0);
+        if(index < 0) cs.charge=0.000001; else fireDrone(index,e,scan.aim);
+      }
+      this.fireWeapons(dt,p.a);return;
+    }
+    if(want && p.fireCd<=0 && p.jam<=0) {
+      p.fireCd=1/st.rate;
+      const ready=cs.drones.map((cool,i)=>cool<=0?i:-1).filter(i=>i>=0);
+      if(!ready.length || Math.random()<chairmanOrbChance(lv.orbChance ?? 0)) cs.charge=0.000001;
+      else {
+        const index=ready[Math.floor(Math.random()*ready.length)];
+        const [mx,my]=this.mouseWorld();let target:Enemy|null=null;
+        for(const e of this.enemies) {
+          if(e.dead || !e.parts[e.coreId]?.alive)continue;
+          const dx=mx-e.x,dy=my-e.y;if(dx*dx+dy*dy>(e.radius+30)**2)continue;
+          const ca=Math.cos(e.a),sa=Math.sin(e.a);
+          if(this.partAt(e,dx*ca+dy*sa,-dx*sa+dy*ca)){target=e;break;}
+        }
+        if(target) cs.scan={enemyId:target.id,drone:index,elapsed:0,duration:Math.max(.85,Math.min(3,target.parts.filter(q=>q.alive).length*.025))+.2,aim:p.a};
+        else fireDrone(index,null,p.a);
+      }
+    }
+    this.fireWeapons(dt,p.a);
+  }
   private firePlayer(dt: number) {
     const p = this.player, st = this.stats;
-    if (p.dead) { this.revolutionaryScan = null; this.mediatorBeamTime = 0; this.fencerCharge = 0; return; }
+    if (st.cannonId === "chairman" && !p.dead) { this.chairman ??= createChairman(); tickChairman(this.chairman,dt); }
+    if (p.dead) { if (this.chairman) { this.chairman.scan = null; this.chairman.charge = 0; } this.revolutionaryScan = null; this.mediatorBeamTime = 0; this.fencerCharge = 0; return; }
     if (p.pull?.e.act?.def.type === "grab" && p.pull.e.act.ph === 1) {
       if (this.mediatorBeamTime > 0) p.fireCd = Math.max(p.fireCd, 0.7);
       this.revolutionaryScan = null;
+      if (this.chairman) { this.chairman.scan = null; this.chairman.charge = 0; }
       this.mediatorBeamTime = 0; this.fencerCharge = 0; p.charge = 0; p.charging = false;
       p.gatSpin = Math.max(0, p.gatSpin - dt * 2);
       return; // includes automatic weapon rack
@@ -3544,6 +3638,7 @@ export class Game {
     const rapid = st.cannonId === "peashooter2" || st.cannonId === "gatler";
     if (rapid && p.fireCd < 0) p.fireCd = 0;
     p.fireCd -= fireDt;
+    if (st.cannonId === "chairman") { this.revolutionaryScan = null; this.fireChairman(dt,want); return; }
     let revolutionReady = false;
     let revolutionTarget: Enemy | null = null;
     if (st.cannonId !== "revolutionary" || this.inSafe()) this.revolutionaryScan = null;

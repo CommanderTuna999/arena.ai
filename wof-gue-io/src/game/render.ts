@@ -1,3 +1,4 @@
+import { CHAIRMAN_SHIELD_MAX, chairmanPosition } from "./chairman";
 import { plateHitIntensity } from "./plate-impact";
 import { drawCasings } from "./casing-fx";
 import { drawShieldImpacts } from "./shield-impact";
@@ -707,7 +708,7 @@ export function render(g: Game, ctx: CanvasRenderingContext2D) {
   }
 
   /* ---- player ---- */
-  if (!pl.dead) drawPlayer(g, ctx, z, t);
+  if (!pl.dead) { drawPlayer(g, ctx, z, t); if (g.stats.cannonId === "chairman") drawChairman(g, ctx, z, t); }
 
   /* ---- particles ----
    * Small sparks are point sprites: one fillRect each, no path construction.
@@ -770,7 +771,66 @@ export function render(g: Game, ctx: CanvasRenderingContext2D) {
   if (redFlash > 0) { ctx.save(); ctx.globalAlpha = 0.32 * clamp(redFlash / 0.12, 0, 1); ctx.fillStyle = "#ff1024"; ctx.fillRect(0, 0, w, h); ctx.restore(); }
 
   if (hoveredComp) drawCompTooltip(g, ctx, hoveredComp);
+  const sunFlash = g.stats.cannonId === "chairman" ? g.chairman?.flash ?? 0 : 0;
+  if (sunFlash > 0) { ctx.save(); ctx.globalAlpha = clamp(sunFlash / .34, 0, 1); ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, w, h); ctx.restore(); }
   drawCutscene(g, ctx);
+}
+
+/** Chairman: nested counter-rotating halos, bright drone turrets and a red
+ * sun. Effects are bounded to the drone cap; no per-frame particles needed. */
+function drawChairman(g:Game, ctx:CanvasRenderingContext2D, z:number, t:number) {
+  const s=g.chairman, p=g.player; if(!s)return;
+  const charge=clamp(s.charge,0,1), n=s.drones.length;
+  const points=s.drones.map((_,i)=>chairmanPosition(i,n,s.phase,p.x,p.y));
+  ctx.save();ctx.lineCap="round";
+  // Slim separate meter exposes the dome's finite capacity.
+  ctx.fillStyle="rgba(25,0,8,.8)";ctx.fillRect(p.x-35,p.y+62,70,4);
+  ctx.fillStyle="#ff425a";ctx.fillRect(p.x-35,p.y+62,70*clamp(s.shield/CHAIRMAN_SHIELD_MAX,0,1),4);
+  // A transparent red dome is independent of the player's existing shield.
+  if(s.shield>0) {
+    const f=clamp(s.shield/CHAIRMAN_SHIELD_MAX,0,1),rad=54;
+    ctx.fillStyle=`rgba(255,18,46,${.025+.035*f})`;ctx.beginPath();ctx.arc(p.x,p.y,rad,0,TAU);ctx.fill();
+    ctx.strokeStyle=`rgba(255,55,75,${.24+.38*f})`;ctx.lineWidth=2/z;ctx.beginPath();ctx.arc(p.x,p.y,rad,0,TAU);ctx.stroke();
+  }
+  for(let ring=0;ring<3;ring++) {
+    const radius=94+ring*36+7*Math.sin(s.phase*2+ring*2);
+    ctx.lineWidth=(ring===1?2.2:1.2)/z;ctx.strokeStyle=`rgba(255,${35+ring*12},70,${.28+charge*.3})`;
+    ctx.beginPath();ctx.ellipse(p.x,p.y,radius,radius*(.82+.05*Math.sin(s.phase+ring)),s.phase*(ring===1?-.13:.11),0,TAU);ctx.stroke();
+    ctx.strokeStyle=`rgba(255,110,120,${.35+charge*.5})`;ctx.lineWidth=2/z;
+    for(let a=0;a<4;a++){const start=s.phase*(ring===1?-1:1)+a*TAU/4+ring;ctx.beginPath();ctx.arc(p.x,p.y,radius,start,start+.28+charge*.15);ctx.stroke();}
+  }
+  if(charge>0) for(let i=0;i<n;i++) {
+    const [x,y]=points[i];ctx.strokeStyle=`rgba(255,${Math.round(45+charge*150)},${Math.round(55+charge*150)},${.2+charge*.7})`;
+    ctx.lineWidth=(1+charge*3)/z;ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(p.x,p.y);ctx.stroke();
+  }
+  for(let i=0;i<n;i++) {
+    const [x,y]=points[i], lit=charge>0 || s.drones[i]<=0, pulse=.8+.2*Math.sin(t*5+i);
+    ctx.save();ctx.translate(x,y);ctx.rotate(Math.atan2(y-p.y,x-p.x));
+    ctx.globalAlpha=lit?1:.35;ctx.fillStyle=lit?"#3f0715":"#190b11";ctx.strokeStyle=lit?"#ff364c":"#74303b";ctx.lineWidth=1.5/z;
+    if(lit){ctx.shadowColor="#ff1d42";ctx.shadowBlur=10+charge*20;}
+    ctx.beginPath();ctx.moveTo(11,0);ctx.lineTo(3,-5);ctx.lineTo(-7,-5);ctx.lineTo(-11,0);ctx.lineTo(-7,5);ctx.lineTo(3,5);ctx.closePath();ctx.fill();ctx.stroke();
+    ctx.shadowBlur=0;ctx.fillStyle=lit?`rgba(255,${Math.round(80+charge*150)},${Math.round(90+charge*150)},${pulse})`:"#521520";
+    ctx.beginPath();ctx.arc(0,0,3.4,0,TAU);ctx.fill();ctx.restore();
+  }
+  // Dormant plate blooms into a layered stellar core during charging.
+  const r=22+charge*12;
+  const sun=ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,r*2.5);
+  sun.addColorStop(0,charge?"#fff5ed":"#ef5764");sun.addColorStop(.14,charge?"#ff8a80":"#a4152a");sun.addColorStop(.35,"#8d1024");sun.addColorStop(1,"rgba(255,12,48,0)");
+  ctx.fillStyle=sun;ctx.beginPath();ctx.arc(p.x,p.y,r*2.5,0,TAU);ctx.fill();
+  ctx.fillStyle="#390815";ctx.strokeStyle=`rgba(255,70,85,${.6+charge*.4})`;ctx.lineWidth=2/z;
+  ctx.beginPath();ctx.arc(p.x,p.y,r,0,TAU);ctx.fill();ctx.stroke();
+  for(let i=0;i<10;i++) {const a=i*TAU/10+s.phase*.3;ctx.strokeStyle=`rgba(255,70,80,${.4+charge*.5})`;ctx.beginPath();ctx.moveTo(p.x+Math.cos(a)*r*.8,p.y+Math.sin(a)*r*.8);ctx.lineTo(p.x+Math.cos(a)*r*(1.2+charge*.3),p.y+Math.sin(a)*r*(1.2+charge*.3));ctx.stroke();}
+  const center=ctx.createRadialGradient(p.x-4,p.y-4,0,p.x,p.y,r*.75);center.addColorStop(0,charge?"#fff":"#ff727c");center.addColorStop(.45,charge?"#ff6760":"#a7162c");center.addColorStop(1,"#4a0917");ctx.fillStyle=center;ctx.beginPath();ctx.arc(p.x,p.y,r*.75,0,TAU);ctx.fill();
+  if(s.scan) {
+    const e=g.enemies.find(e=>e.id===s.scan!.enemyId&&!e.dead), drone=points[s.scan.drone];
+    if(e && drone) {
+      const living=e.parts.filter(q=>q.alive), scanTime=s.scan.duration-.2;
+      const flash=s.scan.elapsed>=scanTime;
+      const q=flash?e.parts[e.coreId]:living[Math.min(living.length-1,Math.floor(clamp(s.scan.elapsed/scanTime,0,.999999)*living.length))];
+      if(q){const [x,y]=pw(e,q);ctx.strokeStyle=flash?"#ffe4e4":"#ff3349";ctx.globalAlpha=flash?1:.8;ctx.lineWidth=(flash?2:1)/z;ctx.beginPath();ctx.moveTo(drone[0],drone[1]);ctx.lineTo(x,y);ctx.stroke();ctx.fillStyle=flash?"#fff":"#ff3349";ctx.beginPath();ctx.arc(x,y,(flash?6:3)/z,0,TAU);ctx.fill();}
+    }
+  }
+  ctx.restore();
 }
 
 /** Screen-space Ultra encounter bars and legible black announcements. */

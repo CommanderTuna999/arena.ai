@@ -11,6 +11,7 @@ export const CASING_PROFILES: Readonly<Record<string,CasingProfile>> = {
  peashooter:P('brass',8,3,'#be944c','#ffe0a1',1),
  peashooter2:P('brass',10,3,'#9ca78b','#d7ebba',2),
  gatler:P('brass',7,3.8,'#b79552','#ffdd83',3),
+ chairman:P('battery',30,10,'#3e111c','#ff334d',4,3),
  revolutionary:P('battery',44,12,'#591620','#ff5962',4,3),
  workhorse:P('brass',14,5,'#bd8750','#fbd19a',2),
  scattermk1:P('brass',11,8,'#974f39','#ffd488',2),

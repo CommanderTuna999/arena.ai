@@ -529,7 +529,7 @@ function loadout(b: Builder, mounts: Mount[], sp: SpeciesDef, override?: Loadout
     const bw = missile ? r * 0.5 : r * (kind === "laser" ? 0.14 : kind === "heavy" ? 0.28 : 0.18);
     const gi = b.group(c.x, c.y * side, "turret", side, 0, 0);
     const poly = turretPoly(c.x, c.y, r, len, bw);
-    const id = b.add("weapon", missile ? "Missile Pod" : spec!.name, side > 0 ? poly : mirror(poly), { layer: 8, g: gi, links: [c.host] });
+    const id = b.add("weapon", missile ? "Missile Pod" : sp.id === "workerant" && kind === "laser" ? "Laser Pointer" : spec!.name, side > 0 ? poly : mirror(poly), { layer: 8, g: gi, links: [c.host] });
     const p = b.parts[id];
     p.wpn = missile ? "missile" : kind;
     p.muzzle = len * b.S;
@@ -1635,8 +1635,8 @@ function buildSnake(b: Builder, t: number, n: number): Mount[] {
 
 /* species id → spawn zone range (existing roster) */
 const ZONES: Record<string, [number, number]> = {
-  dragonfly: [0, 4], scorpion: [0, 3], spider: [0, 4], moth: [0, 4], mantis: [0, 4],
-  centipede: [0, 3], wasp: [0, 4], beetle: [0, 5], ant: [0, 4], firefly: [1, 5],
+  dragonfly: [0, 5], scorpion: [0, 3], spider: [0, 4], moth: [0, 4], mantis: [0, 4],
+  centipede: [0, 3], wasp: [0, 4], beetle: [0, 5], ant: [0, 5], workerant: [0, 5], firefly: [1, 5],
 };
 for (const sp of SPECIES) {
   const z = ZONES[sp.id];

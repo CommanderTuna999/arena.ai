@@ -149,7 +149,7 @@ export const UPGRADE_BY_ID: Record<string, UpgradeDef> = Object.fromEntries(UPGR
  * Chassis prices are paid twice over — credits and a component bill. Tier 1 guns ask
  * for a handful of common parts of a named kind plus one uncommon core, so the hull
  * you scrap for a new gun is a shopping list, not a pile. */
-export type CannonTrackId = "dmg" | "rate" | "crit" | "critDmg" | "pen" | "acc" | "spread" | "speed" | "barrels" | "armorDmg" | "energyChance" | "chargeRate" | "beamWidth";
+export type CannonTrackId = "dmg" | "rate" | "crit" | "critDmg" | "pen" | "acc" | "spread" | "speed" | "barrels" | "armorDmg" | "energyChance" | "chargeRate" | "beamWidth" | "drones" | "coreDmg" | "orbChance" | "orbRange";
 
 export interface CannonTrack {
   id: CannonTrackId;
@@ -319,6 +319,24 @@ export const CANNONS: CannonDef[] = [
     look: { len: 48, bore: 6, hue: 0, style: "lance" },
   },
   {
+    id: "chairman", name: "Chairman", tier: 3,
+    desc: "Political power grows out of the barrel of a gun",
+    dmg: 50000, interval: 2, speed: 0, range: 3200, hitscan: true,
+    credits: 15000000, requires: "revolutionary", costMul: 5,
+    parts: [
+      {kind:"armor",tier:4,count:50,name:"Compound Eye",species:"Dragonfly",label:"Dragonfly compound eye"},
+      {kind:"spike",tier:4,count:20,name:"Spine",species:"Worker Ant",label:"Worker Ant spine"},
+      {kind:"arm",tier:4,count:15,name:"Mandible",species:"Worker Ant",label:"Worker Ant mandible"},
+      {kind:"leg",tier:4,count:25,name:"Leg",species:"Worker Ant",label:"Worker Ant leg"},
+      {kind:"weapon",tier:5,count:5,name:"Laser Pointer",species:"Worker Ant",label:"Worker Ant laser pointer"},
+      {kind:"core",tier:5,count:8,species:"Soldier Ant",label:"Soldier Ant core"},
+      {kind:"core",tier:5,count:8,species:"Worker Ant",label:"Worker Ant core"},
+      {kind:"core",tier:5,count:4,species:"Dragonfly",label:"Dragonfly core"},
+    ],
+    tracks:["dmg","rate","pen","drones","crit","critDmg","coreDmg","orbChance","orbRange"],
+    muzzles:[{x:0,y:0}],kick:0,heat:0,look:{len:20,bore:8,hue:0,style:"bolt"},
+  },
+  {
     id: "peashooter2", name: "Peashooter MK2", tier: 2,
     desc: "Spray and pray, now with more barrels.",
     dmg: 80, interval: 0.03, speed: 1150, range: 1050, spread: 0.36,
@@ -434,6 +452,10 @@ export const CANNON_TRACKS: CannonTrack[] = [
   { id: "energyChance", name: "Energy Shot Chance", desc: "Chance each shot throws an energy bolt that bypasses enemy shielding.", max: 10, base: 120, growth: 1.5 },
   { id: "chargeRate", name: "Charge Rate", desc: "Reduces full charge time from 70 seconds to 10 seconds at maximum level.", max: 10, base: 90, growth: 1.5 },
   { id: "beamWidth", name: "Beam Width", desc: "A wider energy beam, striking more of the target.", max: 8, base: 110, growth: 1.5 },
+  {id:"drones",name:"Drones",desc:"Adds one drone and increases orb damage by 10% per level.",max:15,base:10000,growth:1.45},
+  {id:"coreDmg",name:"Extra Core Damage",desc:"Increases damage against cores up to +750%.",max:10,base:12000,growth:1.5},
+  {id:"orbChance",name:"Orb Fire Chance",desc:"Raises orb fire chance from 5% to 15%.",max:10,base:12000,growth:1.5},
+  {id:"orbRange",name:"Orb Fire Range",desc:"Increases the orb blast radius by 10% per level.",max:10,base:10000,growth:1.5},
 ];
 export const CANNON_TRACK_BY_ID: Record<string, CannonTrack> = Object.fromEntries(CANNON_TRACKS.map((t) => [t.id, t]));
 /** the tracks a chassis actually carries, in display order */
@@ -499,6 +521,11 @@ export function cannonTrackValue(c: CannonDef, id: CannonTrackId, level: number)
     case "energyChance": return `${Math.round(cannonEnergyChance(one) * 100)}% energy shot`;
     case "chargeRate": return `${(70 / cannonChargeRate(one)).toFixed(0)}s to full`;
     case "beamWidth": return `${cannonBeamWidth(one).toFixed(2)}x wide`;
+    case "drones": return `${15 + level} drones · +${level * 10}% orb dmg`;
+    case "coreDmg": return `+${Math.round(level * 75)}% vs core`;
+    case "orbChance": return `${5 + level}% orb chance`;
+    case "orbRange": return `${Math.round(1600 * (1 + .1 * level))} range`;
+
   }
 }
 
