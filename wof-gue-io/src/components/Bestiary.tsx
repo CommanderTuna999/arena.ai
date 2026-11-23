@@ -122,11 +122,11 @@ function referenceExtent() {
   }
   return mythicExtent;
 }
-function BugArt({ sp, tier, seen, size, showcase = false }: { sp: SpeciesDef; tier: number; seen: boolean; size: number; showcase?: boolean }) {
+function BugArt({ sp, tier, seen, size }: { sp: SpeciesDef; tier: number; seen: boolean; size: number }) {
   const built = preview(sp, tier);
-  const extent = referenceExtent() * (showcase ? 1 : 3);
+  const extent = referenceExtent() * 0.3;
   return (
-    <svg width={showcase ? "100%" : size} height={showcase ? "100%" : size} viewBox={`${-extent} ${-extent} ${extent * 2} ${extent * 2}`} aria-hidden="true">
+    <svg width={size} height={size} viewBox={`${-extent} ${-extent} ${extent * 2} ${extent * 2}`} aria-hidden="true">
       {built.parts.map((p, i) => (
         <polygon
           key={i}
@@ -209,7 +209,7 @@ export default function Bestiary({ bestiary, onClose }: { bestiary: Record<strin
                                 onClick={(e) => show(e, s.id, k)}
                                 onMouseLeave={() => setHover(null)}
                                 title={tierKnown ? `${s.name} · ${RARITIES[k].name}` : `${RARITIES[k].name} · not yet defeated`}
-                                className="relative grid h-[3.4rem] w-[2.55rem] place-items-center rounded-sm border transition hover:scale-[1.06]"
+                                className="relative grid h-[3.4rem] w-[2.55rem] place-items-center overflow-hidden rounded-sm border transition"
                                 style={{
                                   borderColor: active ? col : tierKnown ? col + "88" : "#1b2230",
                                   background: active ? "#1a2033" : tierKnown ? "#0d1526" : "#070b14",
@@ -234,11 +234,6 @@ export default function Bestiary({ bestiary, onClose }: { bestiary: Record<strin
         </div>
       </div>
 
-      {sp && hover && (
-        <div className="pointer-events-none fixed inset-0 z-[55] opacity-70" aria-hidden="true">
-          <BugArt sp={sp} tier={hover.tier} seen={!!seen} size={0} showcase />
-        </div>
-      )}
       {sp && hover && (
         <div className="pointer-events-none fixed z-[60] max-h-[85dvh] overflow-hidden rounded-md border border-yellow-300/50 bg-[#070b1a] p-3 shadow-[0_10px_40px_rgba(0,0,0,0.7)]" style={{ left: hover.x, top: hover.y, width: hover.w }}>
           {!seen ? (
@@ -269,7 +264,7 @@ function EntryInfo({ sp, tier }: { sp: SpeciesDef; tier: number }) {
   return (
     <div>
       <div className="flex items-center gap-3">
-        <div className="shrink-0 rounded-sm border border-white/10 bg-[#0a1020] p-1" style={{ borderColor: RARITIES[tier].color + "66" }}>
+        <div className="shrink-0 overflow-hidden rounded-sm border border-white/10 bg-[#0a1020] p-1" style={{ borderColor: RARITIES[tier].color + "66" }}>
           <BugArt sp={sp} tier={tier} seen size={84} />
         </div>
         <div className="min-w-0">

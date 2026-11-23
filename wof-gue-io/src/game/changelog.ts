@@ -8,7 +8,7 @@
  *   CHANGELOG and mirror the details in docs/CHANGELOG.md.
  */
 
-export const VERSION = "2.30.15";
+export const VERSION = "2.30.16";
 
 export interface ChangeEntry {
   version: string;
@@ -19,6 +19,7 @@ export interface ChangeEntry {
 }
 
 export const CHANGELOG: ChangeEntry[] = [
+  { version: "2.30.16", date: "23 Nov 2026", title: "Lighter ejecta and larger bestiary portraits", points: ["Spent casings scatter with varied trajectories, lower rendering cost and shot-appropriate shells, batteries or chemical canisters.", "Bestiary portraits are enlarged and clipped to their frames; hovering no longer places a giant image over the screen."] },
   { version: "2.30.15", date: "23 Nov 2026", title: "Shield impact and kinetic damage fixes", points: ["Shield impacts illuminate a shared hexagonal grid instead of stacking repeated patterns.", "Kinetic blasts respect shield panels and no longer damage distant armor merely because they overlap its broad bounding radius; breaking a plating layer no longer blasts its own whole body."] },
   { version: "2.30.14", date: "23 Nov 2026", title: "Spent casings and local admin", points: ["Guns eject themed spent casings or energy cores after firing.", "Admin spawns can reclaim distant enemy slots and now report when spawning fails.", "Self-admin can be verified and remembered in this browser using /op and /unop."] },
   { version: "2.30.13", date: "23 Nov 2026", title: "Shield impacts and test commands", points: ["Shields reveal glowing hexagonal cells only where they are hit.", "Added local admin chat commands for multipliers, spawning, credits and teleportation; the existing admin panel remains available."] },

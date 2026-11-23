@@ -1,3 +1,8 @@
+## 0.3. v2.30.16 — Lighter ejecta and larger bestiary portraits
+
+- Spent casings scatter with varied trajectories, lower rendering cost and shot-appropriate shells, batteries or chemical canisters.
+- Bestiary portraits are enlarged and clipped to their frames; hovering no longer places a giant image over the screen.
+
 ## 0.3. v2.30.15 — Shield impact and kinetic damage fixes
 
 - Shield impacts illuminate a shared hexagonal grid instead of stacking repeated patterns.

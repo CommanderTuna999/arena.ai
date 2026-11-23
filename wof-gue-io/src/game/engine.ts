@@ -3559,7 +3559,7 @@ export class Game {
     if (this.mediatorBeamTime > 0 && st.charge && !this.inSafe()) {
       const step = Math.min(dt, this.mediatorBeamTime);
       this.mediatorBeamTime = Math.max(0, this.mediatorBeamTime - step);
-      if (this.mediatorBeamTime <= 1e-9) { this.mediatorBeamTime = 0; p.fireCd = 0.7; ejectCasing(this, p.x, p.y, p.a, this.t, "core", p.vx, p.vy); }
+      if (this.mediatorBeamTime <= 1e-9) { this.mediatorBeamTime = 0; p.fireCd = 0.7; ejectCasing(this, p.x, p.y, p.a, this.t, "core", p.vx, p.vy, st.cannonId); }
       const m = st.muzzles[0] ?? { x: 14, y: 0 };
       const x = p.x + Math.cos(p.a) * m.x - Math.sin(p.a) * m.y;
       const y = p.y + Math.sin(p.a) * m.x + Math.cos(p.a) * m.y;
@@ -3592,7 +3592,7 @@ export class Game {
         const x = p.x + Math.cos(base) * m.x - Math.sin(base) * m.y;
         const y = p.y + Math.sin(base) * m.x + Math.cos(base) * m.y;
         this.beam(x, y, base, st.bulletRange, this.fencerDamage, st.pierce + 2, false, "laser", "#c4a6ff", 1, 1, this.fencerCrit);
-        ejectCasing(this, p.x, p.y, base, this.t, "core", p.vx, p.vy);
+        ejectCasing(this, p.x, p.y, base, this.t, "core", p.vx, p.vy, st.cannonId);
         this.burst(x, y, "#c4a6ff", 20, 8, 480); this.ringFx(x, y, 90, "#c4a6ff", 600);
         this.shake = Math.max(this.shake, 12); p.recoil = 1; p.muzzleFlash = 1;
         p.vx -= Math.cos(base) * 200; p.vy -= Math.sin(base) * 200;
@@ -3655,6 +3655,7 @@ export class Game {
         return { x: p.x + ca * m.x - sa * lateral, y: p.y + sa * m.x + ca * lateral };
       };
       const m0 = at(0);
+      let casingKind: "small" | "shell" | "core" = (rapid || st.cannonId === "peashooter") ? "small" : "shell";
       if (st.hitscan) {
         /* the Skewer: a hard line, drawn from the muzzle to whatever it stops in.
          * The Fencer counts its jabs and every fifth unleashes a charged energy
@@ -3666,6 +3667,7 @@ export class Game {
         if (fencer) { p.fenceShots++; chargeShot = p.fenceShots % 5 === 0; }
         if (chargeShot) { this.fencerCharge = 0.4; this.fencerDamage = dmg * 12.5; this.fencerCrit = crit; return; }
         const energyShot = skewer2 && Math.random() < st.energyChance;
+        casingKind = energyShot ? "core" : "shell";
         const dShot = chargeShot ? dmg * 12.5 : dmg;
         const col = (energyShot || chargeShot) ? "#c4a6ff" : crit ? "#fff3b0" : "#e6fbff";
         this.beam(m0.x, m0.y, base, st.bulletRange, dShot, chargeShot ? st.pierce + 2 : st.pierce, energyShot, energyShot ? "laser" : "kinetic", col, 1, skewer2 ? st.armorDmg : 1, crit);
@@ -3682,7 +3684,7 @@ export class Game {
           this.burst(m.x, m.y, crit ? "#fff3b0" : `hsl(${CANNON_BY_ID[st.cannonId]?.look.hue ?? 40} 100% 76%)`, 3, 3.4, 190);
         }
       }
-      ejectCasing(this, p.x, p.y, base, this.t, st.hitscan ? "core" : st.cannonId === "scattermk1" ? "orb" : (rapid || st.cannonId === "peashooter") ? "small" : "shell", p.vx, p.vy);
+      ejectCasing(this, p.x, p.y, base, this.t, casingKind, p.vx, p.vy, st.cannonId);
       /* each barrel carries its own kick: a twin recoils one barrel at a time */
       p.barrelRec[first] = 1;
       p.muzzle = (first + n) % mz.length;
@@ -3961,10 +3963,10 @@ export class Game {
         default: break;
       }
       if (p.wCd[i] > 0 && ["pulse","scatter","hmg","flak","rail","venom","acid","lance","bypass","cutter"].includes(w.rid)) {
-        if (["lance","bypass","cutter"].includes(w.rid)) ejectCasingLimited(this, `${i}:${w.rid}`, ox, oy, base + aimRel, this.t, p.vx, p.vy);
+        if (["lance","bypass","cutter"].includes(w.rid)) ejectCasingLimited(this, JSON.stringify([this.pid, i, w.rid]), ox, oy, base + aimRel, this.t, p.vx, p.vy, w.rid);
         else {
-          const kind = w.rid === "rail" ? "core" : ["hmg","pulse","venom","acid"].includes(w.rid) ? "small" : "shell";
-          ejectCasing(this, ox, oy, base + aimRel, this.t, kind, p.vx, p.vy);
+          const kind = elem === "kinetic" || elem === "explosive" ? (w.rid === "hmg" ? "small" : "shell") : elem === "corrosive" ? "vial" : "orb";
+          ejectCasing(this, ox, oy, base + aimRel, this.t, kind, p.vx, p.vy, w.rid);
         }
       }
     });
