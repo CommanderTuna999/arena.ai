@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Game, Toast } from '@/game/engine';
 import { ChatOutbox, type QueuedChatMessage } from '@/game/chat-outbox';
+import { showChatBubble } from '@/game/chat-bubble';
 
 type Message = { id: string; name: string; text: string; time: number; local?: boolean; clientId?: string };
 // This is a public endpoint, not a credential. The fallback also configures
@@ -148,6 +149,7 @@ export default function Chat({ game, notices }: { game: Game; notices: Toast[] }
     const queue = outbox.current ?? (outbox.current = new ChatOutbox(storage()));
     const id = messageId();
     if (!queue.enqueue(id, game.save.name || 'Pilot', clean, Date.now())) { setQueueError('Queue full; wait for messages to send.'); return; }
+    showChatBubble(game, queue.list().find(m => m.id === id)!.text);
     ownIds.current.add(id);
     while (ownIds.current.size > 200) ownIds.current.delete(ownIds.current.values().next().value!);
     try { storage()?.setItem(OWN_MESSAGE_KEY, JSON.stringify([...ownIds.current])); } catch { /* memory-only when storage is blocked */ }

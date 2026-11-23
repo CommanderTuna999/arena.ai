@@ -14,6 +14,7 @@ class Socket {
 (globalThis as any).WebSocket=Socket;
 const React=await import('react');const {render,fireEvent,screen,act}=await import('@testing-library/react');
 const Chat=(await import('./src/components/Chat')).default;
+const {chatBubbleAt}=await import('./src/game/chat-bubble');
 const game={save:{name:'Pilot'},blur:()=>{}} as any;
 const mounted=render(React.createElement(Chat,{game,notices:[]}));
 try {
@@ -28,6 +29,7 @@ try {
  input.focus();fireEvent.pointerDown(screen.getByRole('button',{name:'SEND'}));assert.notEqual(dom.window.document.activeElement,input,'clicking send releases focus');
  fireEvent.change(input,{target:{value:'Offline hello'}});
  fireEvent.click(screen.getByRole('button',{name:'SEND'}));
+ assert.equal(chatBubbleAt(game)?.text,'Offline hello','submitted message appears immediately above own ship even offline');
  assert(screen.getByText('(queued)'));assert.equal(input.value,'');assert.equal(mounted.container.querySelector('[data-chat-owner=self]')?.textContent?.includes('Offline hello'),true);
  assert(dom.window.localStorage.getItem('wof-chat-outbox-v1')?.includes('Offline hello'));
  await act(async()=>{await new Promise(r=>setTimeout(r,5200));});
@@ -45,7 +47,7 @@ try {
  assert(!mounted.container.querySelector('[aria-hidden="true"]'),'new message reveals expanded chat');
  assert.equal(JSON.parse(dom.window.localStorage.getItem('wof-chat-outbox-v1')!).length,0);
  await act(async()=>ws.message({type:'message',message:{id:'different',clientId:'other-client-id',name:'Pilot',text:'same name',time:1}}));
- assert.equal(screen.getByText('same name').getAttribute('data-chat-owner'),'other','matching names do not impersonate own messages');
+ assert.equal(screen.getByText('same name').getAttribute('data-chat-owner'),'other','matching names do not impersonate own messages');assert.equal(chatBubbleAt(game),null,'incoming chat does not attach to the local ship or replay expired bubbles');
  await act(async()=>ws.message({type:'history',messages:[{id:'server-1',clientId:sent.clientId,name:'Pilot',text:'Offline hello',time:1}],protocol:2}));
  assert.equal(screen.getByText('Offline hello').getAttribute('data-chat-owner'),'self','history keeps own colour');
  assert(screen.getByText('Offline hello').className.includes('text-white'));

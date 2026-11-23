@@ -1,4 +1,5 @@
 import { drawKineticOrb } from "./projectile-render";
+import { drawChatBubble } from "./chat-bubble";
 import { salvageSpriteScale } from "./salvage-render";
 import { MAP_GRID, MAP_CELL, MAP_RADIUS } from "./world";
 import { TAU, clamp, fmtNum } from "./math";
@@ -712,6 +713,8 @@ export function render(g: Game, ctx: CanvasRenderingContext2D) {
     if (e.x + e.radius < vx0 || e.x - e.radius > vx1 || e.y + e.radius < vy0 || e.y - e.radius > vy1) continue;
     drawBars(g, ctx, e, z);
   }
+
+  if (!pl.dead) drawChatBubble(ctx, g, pl.x, pl.y, z, w);
 
   /* ---- screen space HUD in canvas ---- */
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);

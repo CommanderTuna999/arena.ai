@@ -8,7 +8,7 @@
  *   CHANGELOG and mirror the details in docs/CHANGELOG.md.
  */
 
-export const VERSION = "2.30.9";
+export const VERSION = "2.30.10";
 
 export interface ChangeEntry {
   version: string;
@@ -19,6 +19,7 @@ export interface ChangeEntry {
 }
 
 export const CHANGELOG: ChangeEntry[] = [
+  { version: "2.30.10", date: "23 Nov 2026", title: "Overhead chat", points: ["Your chat messages appear in a fading text box above your ship."] },
   { version: "2.30.9", date: "23 Nov 2026", title: "Spider and scorpion holds", points: ["Widow Spiders hold ships against their head when their fangs are destroyed.", "Scorpion grabs prevent firing; Epic and stronger scorpions sting after 0.7 seconds, dealing 18 times base damage over five seconds."] },
   { version: "2.30.8", date: "23 Nov 2026", title: "Enemy grabs and cannon recipes", points: ["Widow Spider bites hold ships at its fangs; Scorpions close their real pincers and only lunge when out of reach.", "Swapped Gatler MK1 and Scatter MK1 purchase costs and materials."] },
   { version: "2.30.7", date: "23 Nov 2026", title: "Cannon equipment and damage", points: ["Equip owned cannons from their hover cards; equipped cannons show a disabled Equipped button. Removed the admin test equipment block from upgrades.", "Gatler MK1 now deals 70 base damage per shot and Scatter MK1 deals 75 per projectile."] },

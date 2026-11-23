@@ -1,3 +1,7 @@
+## 0.3. v2.30.10 — Overhead chat
+
+- Your chat messages appear in a fading text box above your ship.
+
 ## 0.3. v2.30.9 — Spider and scorpion holds
 
 - Widow Spiders hold ships against their head when their fangs are destroyed.

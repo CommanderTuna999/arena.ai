@@ -1,0 +1,13 @@
+import assert from 'node:assert/strict';
+import {showChatBubble,chatBubbleAt,wrapChatBubble,drawChatBubble} from './src/game/chat-bubble';
+const owner={},other={};showChatBubble(owner,'  hello\nworld  ',1000);
+assert.deepEqual(chatBubbleAt(owner,1000),{text:'hello world',alpha:1,progress:0});assert.equal(chatBubbleAt(other,1000),null);
+assert.equal(chatBubbleAt(owner,3000)?.alpha,1);assert(Math.abs(chatBubbleAt(owner,4500)!.alpha-.5)<1e-9);assert.equal(chatBubbleAt(owner,6000),null);
+showChatBubble(owner,'first',7000);showChatBubble(owner,'second',8000);assert.equal(chatBubbleAt(owner,8000)?.text,'second','new chat replaces the previous bubble and restarts the timer');showChatBubble(owner,'   ',8100);assert.equal(chatBubbleAt(owner,8100)?.text,'second','empty message cannot replace the bubble');
+assert.deepEqual(wrapChatBubble('alpha beta abcdefghijkl',s=>Array.from(s).length,5),['alpha','beta','abcde','fghij','kl']);
+assert.deepEqual(wrapChatBubble('😀😀😀',s=>Array.from(s).length,2),['😀😀','😀']);
+const operations:any[]=[];const fake:any={save(){operations.push(['save'])},restore(){operations.push(['restore'])},translate(...v:any[]){operations.push(['translate',...v])},scale(...v:any[]){operations.push(['scale',...v])},measureText(s:string){return {width:Array.from(s).length*7}},beginPath(){},moveTo(){},lineTo(){},closePath(){},fill(){},stroke(){},fillRect(){},fillText(...args:any[]){operations.push(['text',...args])}};
+showChatBubble(owner,'A message from the ship',10000);drawChatBubble(fake,owner,12,34,.5,1000,13500);
+assert.deepEqual(operations.find(o=>o[0]==='translate'),['translate',12,34]);assert.deepEqual(operations.find(o=>o[0]==='scale'),['scale',2,2]);assert.equal(fake.globalAlpha,.5);assert(operations.some(o=>o[0]==='text'&&o[1].includes('message')));assert.deepEqual(operations.at(-1),['restore']);
+operations.length=0;drawChatBubble(fake,owner,12,34,.5,1000,15000);assert.equal(operations.length,0,'expired message is not drawn');
+console.log('Overhead chat bubble wraps text, follows its owner, fades and expires');
