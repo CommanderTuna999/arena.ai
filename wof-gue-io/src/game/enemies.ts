@@ -245,6 +245,23 @@ const ell = (cx: number, cy: number, rx: number, ry: number, n = 8, rot = 0): nu
   return out;
 };
 const secPoly = (s: Sec) => ell(s.cx, s.cy, s.rx, s.ry, s.n);
+/** Largest centred regular hexagon of this rotation contained by the actual
+ * convex body polygon. Evaluate its six vertex rays against every edge; a
+ * small inset keeps the core clear of the outline at all resolutions. */
+function coreRadius(s: Sec, rotation: number): number {
+  const poly = secPoly(s); let radius = Infinity;
+  for (let i = 0; i < poly.length; i += 2) {
+    const j = (i + 2) % poly.length, ax = poly[i], ay = poly[i + 1];
+    const ex = poly[j] - ax, ey = poly[j + 1] - ay;
+    const inside = ex * (s.cy - ay) - ey * (s.cx - ax);
+    for (let k = 0; k < 6; k++) {
+      const a = rotation + k * TAU / 6, dx = Math.cos(a), dy = Math.sin(a);
+      const toward = ex * dy - ey * dx;
+      if (toward < -1e-12) radius = Math.min(radius, inside / -toward);
+    }
+  }
+  return radius * 0.97;
+}
 const secSector = (s: Sec, f0: number, f1: number, k0: number, k1: number) => {
   const out: number[] = [];
   for (let k = k0; k <= k1; k++) {
@@ -360,13 +377,12 @@ export class Builder {
     return this.add("segment", name, secPoly(s), { layer: o.layer ?? 1, hpM: o.hpM, style: o.style, seg: o.seg });
   }
   core(s: Sec, host: number, nbrs: number[], seg = -1) {
-    /* Compact weak point tucked under the body. Layer 0 means the segments and
-     * plates draw over it, so the core only shows through gaps instead of
-     * swallowing the insect's silhouette. */
-    const r = Math.max(0.24, Math.min(s.rx, s.ry) * 0.36);
+    /* Fill the host segment without crossing its actual polygon. The core is
+     * still underneath the body; guards are also capped to that same outline. */
+    const r = coreRadius(s, Math.PI / 6), guard = coreRadius(s, 0);
     const id = this.add("core", "Core", ell(s.cx, s.cy, r, r, 6, Math.PI / 6), { layer: 0, links: [host, ...nbrs], seg });
-    if (this.tier >= 2) this.add("armor", "Core Guard", ell(s.cx, s.cy, r * 1.55, r * 1.55, 6), { layer: 6, links: [host], hpM: 1.6, style: 1, seg });
-    if (this.tier >= 4) this.add("armor", "Core Guard", ell(s.cx, s.cy, r * 1.12, r * 1.12, 6, Math.PI / 6), { layer: 7, links: [host], hpM: 2.2, style: 2, seg });
+    if (this.tier >= 2) this.add("armor", "Core Guard", ell(s.cx, s.cy, guard, guard, 6), { layer: 6, links: [host], hpM: 1.6, style: 1, seg });
+    if (this.tier >= 4) this.add("armor", "Core Guard", ell(s.cx, s.cy, r, r, 6, Math.PI / 6), { layer: 7, links: [host], hpM: 2.2, style: 2, seg });
     this.coreId = id;
     return id;
   }

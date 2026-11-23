@@ -1839,15 +1839,21 @@ export class Game {
     this.checkSever(e, byPlayer);
   }
   private checkSever(e: Enemy, byPlayer: boolean) {
-    const seen = new Uint8Array(e.parts.length);
-    const stack = [e.coreId];
-    seen[e.coreId] = 1;
+    // Internal bracing can bridge one destroyed part. A single broken joint
+    // therefore doesn't drop an entire healthy limb, but a second break along
+    // every path still severs the unsupported pieces. Broken parts themselves
+    // have already dropped and do not regain health or function.
+    const breaks = new Uint8Array(e.parts.length); breaks.fill(255);
+    const stack = [e.coreId]; breaks[e.coreId] = 0;
     while (stack.length) {
       const i = stack.pop()!;
-      for (const l of e.parts[i].links) if (!seen[l] && e.parts[l].alive) { seen[l] = 1; stack.push(l); }
+      for (const l of e.parts[i].links) {
+        const next = breaks[i] + (e.parts[l].alive ? 0 : 1);
+        if (next <= 1 && next < breaks[l]) { breaks[l] = next; stack.push(l); }
+      }
     }
     const sev: Part[] = [];
-    for (const p of e.parts) if (p.alive && !seen[p.id]) sev.push(p);
+    for (const p of e.parts) if (p.alive && breaks[p.id] > 1) sev.push(p);
     if (!sev.length) return;
     const ca = Math.cos(e.a), sa = Math.sin(e.a);
     const pieces: DebrisPiece[] = [];

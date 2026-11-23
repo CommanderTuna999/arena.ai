@@ -1,3 +1,8 @@
+## 0.3. v2.30.11 — Enemy cores and attachments
+
+- Enemy cores now fill their host body section while remaining inside its outline.
+- Healthy enemy parts withstand one broken joint before an unsupported chain falls off.
+
 ## 0.3. v2.30.10 — Overhead chat
 
 - Your chat messages appear in a fading text box above your ship.
