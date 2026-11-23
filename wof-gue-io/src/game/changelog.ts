@@ -8,7 +8,7 @@
  *   CHANGELOG and mirror the details in docs/CHANGELOG.md.
  */
 
-export const VERSION = "2.31.5";
+export const VERSION = "2.31.6";
 
 export interface ChangeEntry {
   version: string;
@@ -19,6 +19,7 @@ export interface ChangeEntry {
 }
 
 export const CHANGELOG: ChangeEntry[] = [
+  { version: "2.31.6", date: "23 Nov 2026", title: "Themed vital bars", points: ["Health and shield bars use compact neon armour and honeycomb designs without visible text."] },
   { version: "2.31.5", date: "23 Nov 2026", title: "Armour and shield gauges", points: ["Health now appears as interlocking insect armour plates, while shield gauges use glowing hexagonal cells.", "Chairman’s dome has its own red hexagonal gauge; all three gauges show their current and maximum values."] },
   { version: "2.31.4", date: "23 Nov 2026", title: "Trailing halos", points: ["Chairman’s three drone halos now trail smoothly behind the ship, then settle into place when it stops.", "Drone shots and scans follow their moving halos, and teleporting brings the halos along immediately."] },
   { version: "2.31.3", date: "23 Nov 2026", title: "Chairman automatic targeting", points: ["In automatic mode, ready Chairman drones scan and fire at nearby enemies; only a manual trigger can activate the sun.", "The drones accelerate around the ship as the sun charges."] },

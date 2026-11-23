@@ -1,3 +1,7 @@
+## 0.3. v2.31.6 — Themed vital bars
+
+- Health and shield bars use compact neon armour and honeycomb designs without visible text.
+
 ## 0.3. v2.31.5 — Armour and shield gauges
 
 - Health now appears as interlocking insect armour plates, while shield gauges use glowing hexagonal cells.
