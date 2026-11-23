@@ -1,3 +1,9 @@
+import { createTargetScan, type TargetScan } from "./target-scan";
+import { CHAIRMAN_SHIELD_MAX, spendChairmanDrone, launchChairmanDrone, updateChairmanSwarm, disperseChairmanArmour, damageChairmanArmour, chairmanDronePosition, moveChairmanHalos, chairmanDroneCount, chairmanOrbChance, chairmanOrbRadius, chairmanOrbDamage, chairmanCoreMul, createChairman, syncChairman, tickChairman, type ChairmanState } from "./chairman";
+import { recordPlateHit } from "./plate-impact";
+import { ejectCasing, ejectCasingLimited } from "./casing-fx";
+import { recordShieldImpact } from "./shield-impact";
+import { interceptAngle } from "./projectile-aim";
 import { rollComponentTiers } from "./drop-roll";
 import { DamageLedger } from "./multiplayer/damage-ledger";
 import { LootEntitlements } from "./multiplayer/loot-entitlements";
@@ -27,7 +33,7 @@ import { ABILITY_INTERVALS, GUN_SPECS, LASER_RAMP, LASER_RAMP_MIN, SPECIES_LIST,
  *                      fly straight into the HUD counter and pay out when they land —
  *                      there is nothing to pick up.
  *   Loose cargo      : only light parts (mass <= 7) can be handled without machinery —
- *                      the magnet drags them and the ship scoops them up on contact.
+ *                      the magnet collects them in range and the ship scoops them on contact.
  *                      Anything heavier needs the harpoon and a tow back to the base
  *                      dock, and refuses both the magnet and the scoop.
  *   Crafted weapons  : fully automatic; damage = st.dmg * multiplier * efficiency.
@@ -101,7 +107,7 @@ export const plateGrow = (r: number, layers: number) =>
  * a fixed chunk so they stay a genuine end-game threat. */
 const SHELL_DMG = 2_500_000;
 const MYTHIC_SHELL_FRAC = 0.55;
-/** Only parts this light can be dragged by the magnet or scooped on contact. */
+/** Only parts this light can be collected by the magnet or scooped on contact. */
 const PICKUP_MASS = 7;
 /* How far a bug notices the player, per rarity (common -> mythical). A big body
  * adds a little reach on top; the leash is only a hair longer than the notice
@@ -172,9 +178,6 @@ export interface Enemy {
   crippledLegs: boolean[];
   /** furthest shield panel from the body centre (0 when unshielded) */
   shieldReach: number;
-  /** body-level shield retract: >0 retracts every panel so a body-contact
-   *  attack (grab, sting, charge, swing) is not blocked by its own shields */
-  shieldDownT: number;
   abil: AbilityDef[]; abilCd: number[]; gap: number; act: Act | null; stun: number;
   wander: { x: number; y: number; t: number }; roleGroups: Record<string, number[]>;
   walk: number; dead: boolean; eDmg: number; keep: number; strafe: number; strafeT: number;
@@ -220,6 +223,8 @@ export type DmgSrc = "kinetic" | "laser" | "shock" | "explosive" | "missile" | "
 export interface Bullet {
   x: number; y: number; vx: number; vy: number; life: number; dmg: number; pierce: number; hit: number[];
   kind: 0 | 1 | 2 | 3 | 4; target: Enemy | null; crit: boolean;
+  /** Optional visual only; does not change projectile collision. */
+  visual?: "scatter-orb";
   /** the base cannon's bolt: pops a small charge where it lands */
   boom?: number;
   /** what kind of damage this round carries (drives visuals + shield rules) */
@@ -250,11 +255,10 @@ export interface LComp { id: number; c: Comp; x: number; y: number; vx: number; 
 export interface RopeNode { x: number; y: number; px: number; py: number }
 export interface Harpoon {
   slot: number; state: 0 | 1 | 2 | 3; hx: number; hy: number; hvx: number; hvy: number; nodes: RopeNode[];
-  len: number; hp: number; maxHp: number; comp: LComp | null; travelled: number; cool: number; taut: number; ang: number;
+  len: number; hp: number; maxHp: number; comp: LComp | null; target?: LComp | null; targetX?: number; targetY?: number; travelled: number; cool: number; taut: number; ang: number;
 }
 export interface Other { id: string; name: string; x: number; y: number; a: number; tx: number; ty: number; ta: number; seen: number;
-  // Optional demo visual state; legacy other-player messages remain valid.
-  dead?: boolean; cannonId?: string; heat?: number; jam?: number; recoil?: number; muzzleFlash?: number; barrelRec?: number[]; shield?: number; shieldMax?: number;
+  dead?: boolean; cannonId?: string; gatAngle?:number; chairman?:ChairmanState|null; heat?: number; jam?: number; recoil?: number; muzzleFlash?: number; barrelRec?: number[]; shield?: number; shieldMax?: number;
 }
 export interface Toast { id: number; msg: string; color: string; t: number }
 export interface Mine { x: number; y: number; vx: number; vy: number; arm: number; life: number; dmg: number; r: number }
@@ -304,6 +308,7 @@ export interface Player {
   x: number; y: number; vx: number; vy: number; a: number;
   hp: number; shield: number; boost: number; boosting: boolean;
   slowF: number; slowT: number; poison: number; poisonT: number;
+  stingDots: { dps: number; remaining: number }[];
   pull: { e: Enemy; x: number; y: number; t: number; max: number } | null; dead: boolean; respawn: number;
   fireCd: number; wCd: number[]; hitT: number; shieldT: number; flash: number; thornCd: number;
   /** fitted cannon: recoil spring, barrel heat, the barrel that fires next, its
@@ -311,6 +316,8 @@ export interface Player {
    *  cool-down a jammed gun is stuck in (seconds left, 0 = ready) */
   recoil: number; heat: number; muzzle: number; muzzleFlash: number; barrelRec: number[];
   jam: number;
+  /** Gatler spin-up progress (seconds) and current barrel rotation. */
+  gatSpin: number; gatAngle: number;
   /** the Mediator's charge beam: how charged the hold is (0..1) and whether the
    *  trigger is currently held to build it */
   charge: number; charging: boolean;
@@ -323,7 +330,7 @@ export interface Player {
 }
 
 export interface Hud {
-  hp: number; maxHp: number; shield: number; maxShield: number; boost: number; hasBoost: boolean; credits: number;
+  hp: number; maxHp: number; shield: number; maxShield: number; chairmanShield: number; chairmanShieldMax: number; chairmanArmour: number; chairmanArmourMax: number; chairmanArmourReady: boolean; boost: number; hasBoost: boolean; credits: number;
   /** increments every time a credit flight lands, so the HUD can pulse the counter */
   creditTick: number;
   /** the running collection: value collected "at once" and the coin scale for it */
@@ -403,6 +410,8 @@ export interface PilotPhaseContext {
   lock: LockOn | null;
   drones: Drone[];
   weaponState: { fencerCharge: number; fencerDamage: number; fencerCrit: boolean; mediatorBeamTime: number; mediatorBeamDamage: number; mediatorCrit: boolean; mediatorSparkClock: number };
+  revolutionaryScan: (TargetScan & { enemy: Enemy }) | null;
+  chairman: ChairmanState | null;
 }
 
 export class Game {
@@ -430,6 +439,8 @@ export class Game {
   debris: Debris[] = [];
   beams: Beam[] = [];
   comps: LComp[] = [];
+  /** Cosmetic copies only; the real components are already collected. */
+  magnetFlights: { comp: LComp; life: number; max: number }[] = [];
   creditDrops: CreditDrop[] = [];
   /** screen position of the HUD credit counter; credit coins fly here */
   creditHud = { x: 40, y: 210 };
@@ -454,6 +465,9 @@ export class Game {
   holdComp: LComp | null = null;
   online = 1;
   lock: LockOn | null = null;
+  /** Local-only Revolutionary targeting sequence, committed on trigger. */
+  revolutionaryScan: (TargetScan & { enemy: Enemy }) | null = null;
+  chairman: ChairmanState | null = null;
   mines: Mine[] = [];
   drones: Drone[] = [];
   wells: Well[] = [];
@@ -477,6 +491,11 @@ export class Game {
   private miniLost = 0;
   private baseAlarmCd = 0;
   admin: AdminState = readAdminFlags();
+  private adminHealthMultiplier = 1;
+  private adminDamageMultiplier = 1;
+  /** Admin-only test fit and upgrades are temporary, never added to a save. */
+  private adminCannon: string | null = null;
+  private adminCannonLevels: Record<string, Record<string, number>> = {};
   autoFire = true;
   private bossT = 12;
   aCd: number[] = [0, 0, 0, 0, 0];
@@ -504,11 +523,12 @@ export class Game {
     this.stats = computeStats(save);
     this.player = {
       x: BASE.x, y: BASE.y - 200, vx: 0, vy: 0, a: -Math.PI / 2, hp: this.stats.hull, shield: this.stats.shieldMax, boost: 100, boosting: false,
-      slowF: 1, slowT: 0, poison: 0, poisonT: 0, pull: null, dead: false, respawn: 0, fireCd: 0, wCd: [0, 0, 0], wAim: W_SLOTS.map((s) => s.rest), hitT: 99, shieldT: 0,
-      recoil: 0, heat: 0, muzzle: 0, muzzleFlash: 0, barrelRec: [], jam: 0, charge: 0, charging: false, fenceShots: 0,
+      slowF: 1, slowT: 0, poison: 0, poisonT: 0, stingDots: [], pull: null, dead: false, respawn: 0, fireCd: 0, wCd: [0, 0, 0], wAim: W_SLOTS.map((s) => s.rest), hitT: 99, shieldT: 0,
+      recoil: 0, heat: 0, muzzle: 0, muzzleFlash: 0, barrelRec: [], jam: 0, gatSpin: 0, gatAngle: 0, charge: 0, charging: false, fenceShots: 0,
       flash: 0, thornCd: 0, tpT: 0, tpCd: 0, tow: 1, thrust: 0,
       barrier: 0, barrierMax: 0, barrierT: 0, overT: 0, nullCd: 0,
     };
+    if (this.stats.cannonId === "chairman") this.chairman = createChairman();
     this.autoFire = save.autoFire !== false;
     this.syncHarpoons();
     this.cam.x = this.player.x;
@@ -545,8 +565,8 @@ export class Game {
   markDirty() { this.dirty = true; this.rev++; this.save.ts = Date.now(); }
   setAdmin(k: keyof AdminState, v: boolean) {
     (this.admin as unknown as Record<string, boolean>)[k] = v;
-    if (k === "on" && v) this.toast("ADMIN MODE ONLINE", "#ff7ad9");
-    if (k === "on" && !v) this.toast("Admin mode offline", "#9db4c9");
+    if (k === "on" && v) { this.recompute(); this.toast("ADMIN MODE ONLINE", "#ff7ad9"); }
+    if (k === "on" && !v) { this.adminCannon = null; this.adminCannonLevels = {}; this.recompute(); this.toast("Admin mode offline", "#9db4c9"); }
     writeAdminFlags(this.admin);
     this.rev++;
   }
@@ -579,8 +599,8 @@ export class Game {
       const [tx, ty] = clampWorld(Math.cos(a) * (WORLD_R - 900), Math.sin(a) * (WORLD_R - 900));
       p.x = tx; p.y = ty; p.vx = p.vy = 0;
       p.dead = false; p.respawn = 0; p.hp = this.stats.hull; p.shield = this.stats.shieldMax;
-      p.recoil = 0; p.heat = 0; p.muzzle = 0; p.muzzleFlash = 0; p.barrelRec.length = 0; p.jam = 0; p.charge = 0; p.charging = false; p.fenceShots = 0;
-      p.slowF = 1; p.slowT = 0; p.poison = 0; p.poisonT = 0; p.pull = null;
+      p.recoil = 0; p.heat = 0; p.muzzle = 0; p.muzzleFlash = 0; p.barrelRec.length = 0; p.jam = 0; p.gatSpin = 0; p.gatAngle = 0; p.charge = 0; p.charging = false; p.fenceShots = 0;
+      p.slowF = 1; p.slowT = 0; p.poison = 0; p.poisonT = 0; p.stingDots = []; p.pull = null;
       this.cam.x = tx; this.cam.y = ty;
       this.toast("TEST RANGE — NO SPAWNS", "#ff7ad9");
     } else {
@@ -618,8 +638,8 @@ export class Game {
   }
 
   /** Spawn n copies of one species at one rarity, in front of the cursor. */
-  adminSpawn(spi: number, tier: number, n = 1) {
-    if (!this.admin.on) return;
+  adminSpawn(spi: number, tier: number, n = 1): number {
+    if (!this.admin.on) return 0;
     const p = this.player;
     const sp = clamp(Math.round(spi), 0, SPECIES_LIST.length - 1);
     const t = clamp(Math.round(tier), 0, 6);
@@ -627,30 +647,43 @@ export class Game {
     let dx = mx - p.x, dy = my - p.y;
     let d = Math.hypot(dx, dy);
     if (d < 120) { dx = 0; dy = -1; d = 1; }
-    const dist = clamp(d, 520, 1100);
+    const dist = clamp(d, 260, Math.max(260, Math.min(650, this.viewRadius() * 0.65)));
     const ux = dx / d, uy = dy / d;
     let made = 0;
     const count = clamp(Math.round(n), 1, 20);
     for (let i = 0; i < count; i++) {
-      if (this.enemies.length >= HARD_MAX) break;
+      if (this.enemies.length >= HARD_MAX && !this.reserveLocalSpawn()) break;
       const off = (i - (count - 1) / 2) * 110;
       const [x, y] = clampWorld(p.x + ux * dist - uy * off, p.y + uy * dist + ux * off);
       const e = this.makeEnemy(sp, t, x, y, "sandbox", (Math.random() * 1e9) | 0);
       e.aggro = true;
+      e.dist = Math.hypot(e.x - p.x, e.y - p.y);
       this.enemies.push(e);
       made++;
     }
     if (made) this.toast(`SPAWNED ${made} × ${SPECIES_LIST[sp].name.toUpperCase()} · ${RARITIES[t].name}`, "#ff7ad9");
-    else this.toast("SPAWN LIMIT REACHED", "#ff7ad9");
+    else this.toast("SPAWN LIMIT REACHED — TRY TEST RANGE", "#ff7ad9");
     this.rev++;
+    return made;
   }
 
-  private dmgMul() { return this.admin.on && this.admin.damage ? Infinity : 1; }
+  /** Local test multipliers only; they are not an authenticated multiplayer permission. */
+  adminMultiplier(kind: "health" | "damage", value: number) {
+    if (!this.admin.on || !(value > 0) || (value !== Infinity && (!Number.isFinite(value) || value > 1e12))) return false;
+    if (kind === "health") { this.adminHealthMultiplier = value === Infinity ? 1 : value; this.setAdmin("health", value === Infinity); this.recompute(); }
+    else { this.adminDamageMultiplier = value === Infinity ? 1 : value; this.setAdmin("damage", value === Infinity); }
+    return true;
+  }
+  private dmgMul() { return !this.admin.on ? 1 : this.admin.damage ? Infinity : this.adminDamageMultiplier; }
 
   recompute() {
     const old = this.stats;
-    this.stats = computeStats(this.save);
+    const temporary = this.admin.on && this.adminCannon;
+    this.stats = computeStats(temporary ? { ...this.save, cannon: { ...this.save.cannon, id: temporary, lv: { ...this.save.cannon.lv, [temporary]: this.adminCannonLevels[temporary] ?? {} } } } : this.save);
+    if (this.admin.on) this.stats.hull *= this.adminHealthMultiplier;
     const p = this.player;
+    if (this.stats.cannonId === "chairman") { this.chairman ??= createChairman(); syncChairman(this.chairman, chairmanDroneCount(this.cannonViewLevels("chairman").drones ?? 0)); }
+    else if (this.chairman) { this.chairman.scan = null; this.chairman.charge = 0; }
     if (this.stats.hull !== old.hull) p.hp = Math.min(this.stats.hull, p.hp + Math.max(0, this.stats.hull - old.hull));
     p.hp = Math.min(p.hp, this.stats.hull);
     p.shield = Math.min(this.stats.shieldMax, p.shield + Math.max(0, this.stats.shieldMax - old.shieldMax));
@@ -691,8 +724,13 @@ export class Game {
     this.markDirty();
     return bought;
   }
+  /** Read a cannon's upgrade levels without changing the saved inventory. */
+  cannonViewLevels(id: string): Readonly<Record<string, number>> {
+    return this.admin.on && this.adminCannon === id ? (this.adminCannonLevels[id] ?? {}) : (this.save.cannon?.lv?.[id] ?? {});
+  }
   /** the tree's level map for one chassis, created on demand */
   cannonLevels(id: string): Record<string, number> {
+    if (this.admin.on && this.adminCannon === id) return (this.adminCannonLevels[id] ??= {});
     const cs = this.cannonSave();
     return (cs.lv[id] ??= {});
   }
@@ -710,20 +748,22 @@ export class Game {
   /** the cannon currently bolted to the hull */
   cannon() {
     const cs = this.cannonSave();
-    const c = CANNON_BY_ID[cs.id];
+    const c = CANNON_BY_ID[(this.admin.on && this.adminCannon) || cs.id];
     if (!c) { cs.id = CANNONS[0].id; return CANNONS[0]; }
     return c;
   }
   /** fit a different gun; free, the tree charges for the chassis, not for swapping */
   selectCannon(id: string) {
-    if (!CANNON_BY_ID[id] || !cannonOwned(this.save, id)) return false;
-    if (this.cannonSave().id === id) return false;
-    this.cannonSave().id = id;
+    if (!CANNON_BY_ID[id] || (!this.admin.on && !cannonOwned(this.save, id))) return false;
+    if (this.stats.cannonId === id) return false;
+    const temporary = this.admin.on && !cannonOwned(this.save, id);
+    this.adminCannon = temporary ? id : null;
+    if (!temporary) this.cannonSave().id = id;
     /* a different gun is a different bore: no inherited heat, no inherited jam */
     this.player.heat = 0;
     this.player.jam = 0;
     this.recompute();
-    this.markDirty();
+    if (temporary) this.rev++; else this.markDirty();
     return true;
   }
   /** Build a chassis from the tree: credits plus the component bill, then fit it.
@@ -734,7 +774,7 @@ export class Game {
     if (cannonOwned(this.save, id)) { this.selectCannon(id); return null; }
     /* admin mode's infinite components skip the bill, never the credit price */
     const free = this.admin.on && this.admin.components;
-    const prob = cannonBillProblem(this.save, c, free, this.admin.on);
+    const prob = cannonBillProblem(this.save, c, free, this.admin.on, this.admin.on && this.admin.credits);
     if (prob) return prob;
     const picks = free ? [] : cannonBillPicks(this.save, c);
     if (!free && picks.length !== c.parts.reduce((n, b) => n + b.count, 0)) return "Missing components";
@@ -746,9 +786,10 @@ export class Game {
     const cs = this.cannonSave();
     if (!cs.owned.includes(id)) cs.owned.push(id);
     cs.id = id;
+    this.adminCannon = null;
     this.recompute();
     this.markDirty();
-    this.toast(`Built the ${c.name}`, "#ffd24d");
+    this.toast(`Purchased the ${c.name}`, "#ffd24d");
     return null;
   }
   buy(id: string, count = 1) {
@@ -937,17 +978,31 @@ export class Game {
     if (code === "KeyM") this.mapMode = ((this.mapMode + 1) % 3) as 0 | 1 | 2;
     if (code === "KeyT") this.toggleRecall();
     if (code === "KeyB") this.toggleAutoFire();
+    if (code === "Space") this.requestChairmanSun();
     const ai = (["KeyZ", "KeyX", "KeyC", "KeyV", "KeyF"] as const).indexOf(code as never);
     if (ai >= 0) this.useAbility(ai);
   }
   keyUp(code: string) { this.input.keys.delete(code); }
   mouseDown(btn: number) {
-    if (btn === 0) this.input.lmb = true;
+    if (btn === 0) {
+      if (!this.input.lmb && !this.disperseChairman()) this.requestChairmanSun();
+      this.input.lmb = true;
+    }
     if (btn !== 2) return;
     // with a missile launcher fitted, right-click marks a precise target.
     // hovering empty space (or no launcher) still fires the harpoon.
     if (this.hasHoming() && this.markTarget()) return;
     this.fireHarpoon();
+  }
+  private requestChairmanSun() {
+    const cs=this.chairman;
+    if(this.stats.cannonId!=="chairman" || !cs || this.player.dead || cs.sunLocked || cs.charge>0 || cs.armourDispersing)return;
+    if(cs.armourActive || cs.drones.every(x=>x>0)) cs.sunRequested=true;
+  }
+  disperseChairman() {
+    if (this.stats.cannonId === "chairman" && this.chairman && !this.player.dead)
+      return disperseChairmanArmour(this.chairman);
+    return false;
   }
   toggleAutoFire() { this.setAutoFire(!this.autoFire); }
   private hasHoming() { return this.stats.weapons.some((w) => w.rid === "homing"); }
@@ -1110,7 +1165,13 @@ export class Game {
     h.ang = ang;
     h.hx = p.x + Math.cos(ang) * 16; h.hy = p.y + Math.sin(ang) * 16;
     h.hvx = Math.cos(ang) * sp + p.vx * 0.4; h.hvy = Math.sin(ang) * sp + p.vy * 0.4;
-    h.travelled = 0; h.comp = null; h.hp = this.stats.hHp; h.maxHp = this.stats.hHp; h.len = 30; h.taut = 0;
+    h.travelled = 0; h.comp = null; h.target = this.compUnderCursor();
+    if (h.target) {
+      const dx = mx - h.target.x, dy = my - h.target.y;
+      const ca = Math.cos(-h.target.a), sa = Math.sin(-h.target.a);
+      h.targetX = dx * ca - dy * sa; h.targetY = dx * sa + dy * ca;
+    }
+    h.hp = this.stats.hHp; h.maxHp = this.stats.hHp; h.len = 30; h.taut = 0;
     const px = -Math.sin(ang), py = Math.cos(ang);
     for (let i = 0; i < N_ROPE; i++) {
       const n = h.nodes[i];
@@ -1125,12 +1186,13 @@ export class Game {
   }
   private retract(h: Harpoon) {
     this.unhook(h);
+    h.target = null;
     h.state = 3;
   }
   private snapHarpoon(h: Harpoon, why: string) {
     for (let i = 0; i < N_ROPE; i += 2) this.addParticle(h.nodes[i].x, h.nodes[i].y, (Math.random() - 0.5) * 240, (Math.random() - 0.5) * 240, i % 4 === 0 ? "#ff5d73" : "#7df9ff", 5, 0.7, 4);
     this.unhook(h);
-    h.state = 0; h.cool = 2;
+    h.target = null; h.state = 0; h.cool = 2;
     this.shake = Math.max(this.shake, 5);
     this.toast(why, "#ff8a8a");
   }
@@ -1172,23 +1234,44 @@ export class Game {
       if (h.state === 0) continue;
       if (p.dead) { this.retract(h); }
       if (h.state === 1) {
-        h.hx += h.hvx * dt; h.hy += h.hvy * dt;
-        h.travelled += Math.hypot(h.hvx, h.hvy) * dt;
+        if (h.target && !this.comps.includes(h.target)) h.target = null;
+        const oldX = h.hx, oldY = h.hy;
+        if (h.target) {
+          // Lock the piece selected at launch. Ignore intervening pieces and
+          // follow its current position so moving salvage remains selectable.
+          const ca = Math.cos(h.target.a), sa = Math.sin(h.target.a);
+          const tx = h.target.x + (h.targetX ?? 0) * ca - (h.targetY ?? 0) * sa;
+          const ty = h.target.y + (h.targetX ?? 0) * sa + (h.targetY ?? 0) * ca;
+          const dx = tx - h.hx, dy = ty - h.hy;
+          const dist = Math.hypot(dx, dy);
+          const travel = Math.min(dist, st.hSpeed * dt, Math.max(0, st.hRange - h.travelled));
+          if (dist > 0) { h.hx += dx / dist * travel; h.hy += dy / dist * travel; }
+          h.travelled += travel;
+        } else {
+          h.hx += h.hvx * dt; h.hy += h.hvy * dt;
+          h.travelled += Math.hypot(h.hvx, h.hvy) * dt;
+        }
         let hit: LComp | null = null;
-        for (const c of this.comps) {
-          const dx = h.hx - c.x, dy = h.hy - c.y;
+        const candidates = h.target ? [h.target] : this.comps;
+        for (const c of candidates) {
+          // Test the closest point on the travelled segment to avoid tunnelling
+          // through a small component during a long frame.
+          const vx = h.hx - oldX, vy = h.hy - oldY, length2 = vx * vx + vy * vy;
+          const fraction = length2 ? clamp(((c.x-oldX)*vx + (c.y-oldY)*vy) / length2, 0, 1) : 0;
+          const dx = oldX + vx * fraction - c.x, dy = oldY + vy * fraction - c.y;
           if (dx * dx + dy * dy > (c.r + 14) * (c.r + 14)) continue;
           const ca = Math.cos(-c.a), sa = Math.sin(-c.a);
           const lx = dx * ca - dy * sa, ly = dx * sa + dy * ca;
-          if (distToPoly(lx, ly, c.c.poly) < 12) { hit = c; break; }
+          const endX = h.hx - c.x, endY = h.hy - c.y;
+          if (distToPoly(lx, ly, c.c.poly) < 12 || distToPoly(endX * ca - endY * sa, endX * sa + endY * ca, c.c.poly) < 12) { hit = c; break; }
         }
         const d = Math.hypot(h.hx - p.x, h.hy - p.y);
         if (hit) {
-          h.state = 2; h.comp = hit; hit.hooks.push(h.slot);
+          h.state = 2; h.comp = hit; h.target = null; hit.hooks.push(h.slot);
           h.len = clamp(d, 60, st.hRange);
           this.shake = Math.max(this.shake, 3);
           for (let i = 0; i < 8; i++) this.addParticle(hit.x, hit.y, (Math.random() - 0.5) * 200, (Math.random() - 0.5) * 200, "#7df9ff", 5, 0.5, 4);
-        } else if (h.travelled > st.hRange) h.state = 3;
+        } else if (h.travelled >= st.hRange) { h.target = null; h.state = 3; }
         this.stepRope(h, Math.max(3, (d * 1.12 + 20) / (N_ROPE - 1)));
       } else if (h.state === 2) {
         const c = h.comp;
@@ -1213,6 +1296,14 @@ export class Game {
   private updateComps(dt: number) {
     const p = this.player, st = this.stats;
     p.tow = 1;
+    for (let i = this.magnetFlights.length - 1; i >= 0; i--) {
+      const flight = this.magnetFlights[i];
+      flight.life -= dt;
+      if (flight.life <= 0) { this.magnetFlights.splice(i, 1); continue; }
+      const fraction = Math.min(1, dt / (flight.life + dt));
+      flight.comp.x += (p.x - flight.comp.x) * fraction;
+      flight.comp.y += (p.y - flight.comp.y) * fraction;
+    }
     for (let i = this.comps.length - 1; i >= 0; i--) {
       const c = this.comps[i];
       c.ttl -= dt;
@@ -1251,19 +1342,22 @@ export class Game {
           else c.hooks.pop();
         }
       } else {
-        if (st.magnet > 0 && c.c.mass <= PICKUP_MASS) {
-          const dx = p.x - c.x, dy = p.y - c.y, d = Math.hypot(dx, dy);
-          if (d < st.magnetRange && d > 1) {
-            const f = 780 * (1 - d / st.magnetRange);
-            c.vx += (dx / d) * f * dt; c.vy += (dy / d) * f * dt;
-          }
+        const distance = Math.hypot(p.x - c.x, p.y - c.y);
+        if (st.magnet > 0 && c.c.mass <= PICKUP_MASS && distance < st.magnetRange) {
+          this.comps.splice(i, 1);
+          // Award before animating: the cosmetic flight cannot be picked up,
+          // hooked, expired or awarded a second time.
+          this.dockComp(c);
+          if (distance > SHIP_R + c.r + 12 && this.magnetFlights.length < 100)
+            this.magnetFlights.push({ comp: { ...c, hooks: [] }, life: 0.35, max: 0.35 });
+          continue;
         }
         const damp = Math.exp(-1.3 * dt);
         c.vx *= damp; c.vy *= damp;
         c.stress = 0;
         /* Light salvage is scooped up on contact: no harpoon, no tow. Heavy
          * pieces still need a cable and the base dock. */
-        if (c.c.mass <= PICKUP_MASS && Math.hypot(p.x - c.x, p.y - c.y) < SHIP_R + c.r + 12) {
+        if (c.c.mass <= PICKUP_MASS && distance < SHIP_R + c.r + 12) {
           this.comps.splice(i, 1);
           this.dockComp(c);
           continue;
@@ -1430,13 +1524,22 @@ export class Game {
     this.trackDamage(e, Math.min(dealt, Math.max(0, before)), fromBase);
     layer.hp -= dealt;
     e.shellHit = 0.12;
+    if (hx !== undefined && hy !== undefined) {
+      let closest: Part | null = null, best = Infinity;
+      for (const q of e.parts) {
+        if (!q.alive || (q.kind !== "segment" && q.kind !== "armor" && !(q.kind === "leg" && e.legPlate > 0))) continue;
+        const w = this.partWorld(e, q), distance = Math.hypot(w[0] - hx, w[1] - hy) / Math.max(1, q.r);
+        if (distance < best) { best = distance; closest = q; }
+      }
+      if (closest) recordPlateHit(closest, this.t);
+    }
     e.aggro = true;
     if (layer.hp <= 0) {
       e.shells.pop();
       /* A shattered shield lets go in a shockwave: it chews the hull it was
        * bolted to, everything nearby and the player if they are too close. */
       const R = e.shellR * 1.7 + 40;
-      this.shockwave(e.x, e.y, R, e.eDmg * 1.1, e.eDmg * 1.25, "#ffc46b");
+      this.shockwave(e.x, e.y, R, e.eDmg * 1.1, e.eDmg * 1.25, "#ffc46b", e);
     }
     return true;
   }
@@ -1514,7 +1617,7 @@ export class Game {
       speed: spd.speed * (1 + 0.04 * tier), turn: (spd.turn * TIER_TURN[clamp(tier, 0, 5)]) / (1 + b.radius / (b.size * 6)), mobility: 1, legCount: b.legCount, wingCount: b.wingCount, turnFrac: 1, legPlate: tier >= 4 ? tier - 3 : 0, crippledLegs: [], shieldReach: shieldParts.reduce((m, id) => Math.max(m, b.parts[id].shieldR), 0),
       abil, abilCd: abil.map(() => 1 + Math.random() * 3), gap: 1, act: null, stun: 0, wander: { x, y, t: 0 }, roleGroups,
       walk: Math.random() * 6, dead: false, eDmg: spd.dmg * DMG_MUL[tier], keep: spd.keep + b.radius * 0.9, strafe: Math.random() < 0.5 ? 1 : -1, strafeT: 2,
-      provoked: 0, mgHeat: 0, mgCool: 0, domainT: 0, domainMul: 1, baseEDmg: spd.dmg * DMG_MUL[tier], domainOrig: [], buffT: 0, buffHp: 0, buffMax: 0, domainFxT: 0, tags, shields: [], weaponParts, shieldParts, dist: 9999, bdist: 9999, contactCd: 0, swatCd: 0, hasChange: false, gen: 0, shieldDownT: 0,
+      provoked: 0, mgHeat: 0, mgCool: 0, domainT: 0, domainMul: 1, baseEDmg: spd.dmg * DMG_MUL[tier], domainOrig: [], buffT: 0, buffHp: 0, buffMax: 0, domainFxT: 0, tags, shields: [], weaponParts, shieldParts, dist: 9999, bdist: 9999, contactCd: 0, swatCd: 0, hasChange: false, gen: 0,
       dmgTaken: 0, baseDmg: 0,
       dot: 0, dotT: 0, melt: 0, slowT: 0, slowF: 1,
       shells: Array.from({ length: shellN }, () => ({ hp: shellMax, max: shellMax })), shellMaxTotal: shellN * shellMax,
@@ -1781,6 +1884,32 @@ export class Game {
     }
     return loot;
   }
+  /** EXPERIMENTAL: capture only combat attribution for a separately persisted
+   * enemy. This is not a world serializer and contains no rewards or saves. */
+  experimentalEncounterCheckpoint(e: Enemy) {
+    if (!this.multiplayerDamage || !this.multiplayerLoot || !this.enemies.includes(e)) throw Error("Invalid experimental encounter");
+    return { version: 1, enemyId: e.id, tier: e.tier,
+      damage: this.multiplayerDamage.get(e)?.snapshot() ?? null,
+      loot: this.multiplayerLoot.get(e)?.snapshot() ?? null,
+      dotOwner: this.multiplayerDotOwners.get(e) ?? null };
+  }
+  /** Restore attribution onto an already-restored matching enemy. Validate the
+   * entire fragment before mutating any tracking maps. Caller is responsible
+   * for authentic server-only checkpoint data and restoring the actual world. */
+  restoreExperimentalEncounterCheckpoint(e: Enemy, value: unknown) {
+    if (!this.multiplayerDamage || !this.multiplayerLoot || !this.enemies.includes(e) || !value || typeof value !== "object") throw Error("Invalid experimental encounter checkpoint");
+    const v = value as {version:unknown; enemyId:unknown; tier:unknown; damage:unknown; loot:unknown; dotOwner:unknown};
+    if (v.version !== 1 || v.enemyId !== e.id || v.tier !== e.tier || !(v.dotOwner === null || (typeof v.dotOwner === "string" && /^[A-Za-z0-9_-]{1,128}$/.test(v.dotOwner)))) throw Error("Invalid experimental encounter checkpoint");
+    const damage = v.damage === null ? null : DamageLedger.fromSnapshot(v.damage);
+    const loot = v.loot === null ? null : LootEntitlements.fromSnapshot(v.loot);
+    if (loot) {
+      const state=loot.snapshot();
+      if (!damage || (state.finished !== null && !e.dead) || state.ultra !== (e.tier === 6) || JSON.stringify(state.damage) !== JSON.stringify(damage.snapshot()) || state.parts.some(id=>!e.parts.some(p=>p.id===id))) throw Error("Invalid experimental encounter checkpoint");
+    }
+    if (loot) { this.multiplayerLoot.set(e, loot); this.multiplayerDamage.set(e, loot.ledger()); }
+    else { this.multiplayerLoot.delete(e); if (damage) this.multiplayerDamage.set(e,damage); else this.multiplayerDamage.delete(e); }
+    if (v.dotOwner === null) this.multiplayerDotOwners.delete(e); else this.multiplayerDotOwners.set(e,v.dotOwner as string);
+  }
   experimentalLootReport(e: Enemy) {
     if (!e.dead) return null;
     return this.multiplayerLoot?.get(e)?.finalize() ?? [];
@@ -1888,15 +2017,19 @@ export class Game {
     this.checkSever(e, byPlayer);
   }
   private checkSever(e: Enemy, byPlayer: boolean) {
-    const seen = new Uint8Array(e.parts.length);
-    const stack = [e.coreId];
-    seen[e.coreId] = 1;
+    // A piece is supported only by a path of living pieces to the core.
+    // Alternative intact paths remain valid; a destroyed joint cannot connect
+    // a fully detached limb to the core. Detached pieces still roll drops.
+    const connected = new Uint8Array(e.parts.length);
+    const stack = [e.coreId]; connected[e.coreId] = 1;
     while (stack.length) {
       const i = stack.pop()!;
-      for (const l of e.parts[i].links) if (!seen[l] && e.parts[l].alive) { seen[l] = 1; stack.push(l); }
+      for (const l of e.parts[i].links) {
+        if (e.parts[l]?.alive && !connected[l]) { connected[l] = 1; stack.push(l); }
+      }
     }
     const sev: Part[] = [];
-    for (const p of e.parts) if (p.alive && !seen[p.id]) sev.push(p);
+    for (const p of e.parts) if (p.alive && !connected[p.id]) sev.push(p);
     if (!sev.length) return;
     const ca = Math.cos(e.a), sa = Math.sin(e.a);
     const pieces: DebrisPiece[] = [];
@@ -1924,7 +2057,7 @@ export class Game {
       if (!e.dead) this.experimentalEncounter(e)?.recordPart(p.id);
       e.tags[p.name] = (e.tags[p.name] ?? 1) - 1;
       if (byPlayer) { const w = this.partWorld(e, p); this.maybeDrop(e, p, w[0], w[1]); }
-      p.alive = false;
+      p.alive = false; p.hp = 0;
     }
     this.shake = Math.max(this.shake, 6);
     if (byPlayer) {
@@ -2063,14 +2196,14 @@ export class Game {
   /** Detonate a part or a shield layer. The blast is an expanding ring that
    *  hurts the player as it sweeps past, plus an immediate hull hit on every
    *  enemy part inside the radius (the breaker's own hull included). */
-  private shockwave(x: number, y: number, R: number, playerDmg: number, enemyDmg: number, color = "#ff9d4d") {
+  private shockwave(x: number, y: number, R: number, playerDmg: number, enemyDmg: number, color = "#ff9d4d", exclude?: Enemy) {
     this.rings.push({ x, y, r: 6, max: R, speed: Math.max(560, R * 5), dmg: playerDmg, hit: false, color, hurts: playerDmg > 0 });
     this.ringFx(x, y, R * 0.6, "#ffe3b8", Math.max(700, R * 7));
     this.burst(x, y, "#ffb04d", clamp(Math.round(R / 14), 8, 30), clamp(R * 0.08, 4, 22), 260 + R);
     this.shake = Math.max(this.shake, Math.min(18, 6 + R / 40));
     if (enemyDmg <= 0 || this.expDepth > 3) return;
     this.expDepth++;
-    this.areaDamage(x, y, R, enemyDmg, null);
+    this.areaDamage(x, y, R, enemyDmg, null, "explosive", exclude);
     this.expDepth--;
   }
   private explode(e: Enemy, p: Part, x: number, y: number, cascade: boolean) {
@@ -2090,21 +2223,38 @@ export class Game {
     }
     this.shockwave(x, y, R, playerDmg, p.maxHp * 0.5);
   }
-  areaDamage(x: number, y: number, R: number, dmg: number, skip: Part | null, src: DmgSrc = "explosive") {
+  /** Kinetic blasts cannot jump through a surviving shield panel. */
+  private blastBlocked(e: Enemy, x: number, y: number, tx: number, ty: number, src: DmgSrc): boolean {
+    if (src === "laser" || src === "shock" || src === "dot" || !e.shields.length) return false;
+    const dx = tx - x, dy = ty - y, length = Math.hypot(dx, dy);
+    const steps = Math.min(2048, Math.max(1, Math.ceil(length / 8)));
+    for (let i = 0; i <= steps; i++) if (this.shieldInfoAt(e, x + dx * i / steps, y + dy * i / steps)) return true;
+    return false;
+  }
+  areaDamage(x: number, y: number, R: number, dmg: number, skip: Part | null, src: DmgSrc = "explosive", exclude?: Enemy, coreMul = 1) {
     for (const e of this.enemies) {
-      if (e.dead) continue;
+      if (e.dead || e === exclude) continue;
       const dx = e.x - x, dy = e.y - y;
       if (dx * dx + dy * dy > (R + e.radius) * (R + e.radius)) continue;
-      if (e.shells.length && Math.hypot(dx, dy) < R + e.shellR) {
-        const len = Math.hypot(dx, dy) || 1;
-        this.shellHit(e, dmg, src, false, e.x - (dx / len) * e.shellR, e.y - (dy / len) * e.shellR);
-        continue;
+      // Only a blast that actually reaches a plated part can damage the shared
+      // armor layer; its enclosing shellR is not itself a solid hitbox.
+      let armorHit = false;
+      if (e.shells.length) for (const q of e.parts) {
+        const plated = q.kind === "segment" || q.kind === "armor" || (q.kind === "leg" && e.legPlate > 0);
+        if (!q.alive || !plated) continue;
+        const w = this.partWorld(e, q), px = w[0], py = w[1];
+        const dist = Math.hypot(px - x, py - y), radius = q.r + plateGrow(q.r, q.kind === "leg" ? e.legPlate : e.shells.length);
+        if (dist > R + radius) continue;
+        const fraction = dist > 0 ? Math.max(0, (dist - radius) / dist) : 0;
+        const tx = x + (px - x) * fraction, ty = y + (py - y) * fraction;
+        if (!this.blastBlocked(e, x, y, tx, ty, src)) { armorHit = true; break; }
       }
+      if (armorHit) { this.shellHit(e, dmg, src, false, x, y); continue; }
       for (const q of e.parts) {
         if (!q.alive || q === skip) continue;
-        const w = this.partWorld(e, q);
-        const d = Math.hypot(w[0] - x, w[1] - y);
-        if (d < R + q.r * 0.5) this.damagePart(e, q, dmg * (1 - clamp(d / (R + 1), 0, 1) * 0.5), 0, 0);
+        const w = this.partWorld(e, q), px = w[0], py = w[1];
+        const d = Math.hypot(px - x, py - y);
+        if (d < R + q.r * 0.5 && !this.blastBlocked(e, x, y, px, py, src)) this.damagePart(e, q, dmg * (q.kind === "core" ? coreMul : 1) * (1 - clamp(d / (R + 1), 0, 1) * 0.5), 0, 0, src);
       }
     }
   }
@@ -2122,6 +2272,9 @@ export class Game {
       const info = this.shieldInfoAt(e, p.x, p.y);
       if (!info) continue;
       const sp = info.part;
+      const perp = -dx * Math.sin(info.ang) + dy * Math.cos(info.ang);
+      const scale = dd > 0 ? info.r / dd : 0;
+      recordShieldImpact(e, info.bar ? Math.cos(info.ang) * info.r - Math.sin(info.ang) * perp : dx * scale, info.bar ? Math.sin(info.ang) * info.r + Math.cos(info.ang) * perp : dy * scale, this.t);
       const out = dd > 1 ? Math.atan2(dy, dx) : e.a;
       /* The panel is a wall, not a fence: the hull is lifted back onto the
        * outside face so a fast ship cannot tunnel through it. */
@@ -2175,9 +2328,36 @@ export class Game {
     let d = dmg * (1 - st.armor) * (1 - st.reactive);
     if (st.kinetic > 0 && p.shield > 0 && !o.energy) d *= 1 - st.kinetic;
     p.hitT = 0; p.shieldT = st.shieldDelay;
+    // Each lit drone absorbs one entire damage instance, independently of
+    // damage size or dome capacity. Only a sun blast starts recharge.
+    if (st.cannonId === "chairman" && d > 0) {
+      const cs = this.chairman ??= createChairman();
+      syncChairman(cs, chairmanDroneCount(this.cannonViewLevels("chairman").drones ?? 0));
+      const available = cs.armourActive ? [] : cs.drones.map((cool, i) => cool <= 0 ? i : -1).filter(i => i >= 0);
+      const ang = (o.kbx || o.kby) ? Math.atan2(-(o.kby ?? 0), -(o.kbx ?? 0)) : p.a + Math.PI;
+      if (available.length) {
+        const i = available[Math.floor(Math.random() * available.length)];
+        spendChairmanDrone(cs,i);
+        recordShieldImpact(p, Math.cos(ang) * (SHIP_R + 35), Math.sin(ang) * (SHIP_R + 35), this.t);
+        return;
+      }
+      if (cs.armourActive && cs.armour > 0) {
+        const absorbed = damageChairmanArmour(cs,d); d -= absorbed;
+        recordShieldImpact(p, Math.cos(ang) * (SHIP_R + 42), Math.sin(ang) * (SHIP_R + 42), this.t);
+      }
+      if (cs.shield > 0 && d > 0) {
+        cs.shieldDelay = 4;
+        const absorbed = Math.min(cs.shield, d); cs.shield -= absorbed; d -= absorbed;
+        recordShieldImpact(p, Math.cos(ang) * (SHIP_R + 35), Math.sin(ang) * (SHIP_R + 35), this.t);
+      }
+    }
     if (p.barrier > 0) { const a = Math.min(p.barrier, d); p.barrier -= a; d -= a; }
     const shieldBefore = p.shield;
     if (p.shield > 0) { const a = Math.min(p.shield, d); p.shield -= a; d -= a; }
+    if (p.shield < shieldBefore) {
+      const ang = (o.kbx || o.kby) ? Math.atan2(-(o.kby ?? 0), -(o.kbx ?? 0)) : p.a + Math.PI;
+      recordShieldImpact(p, Math.cos(ang) * (SHIP_R + 20), Math.sin(ang) * (SHIP_R + 20), this.t);
+    }
     if (shieldBefore > 0 && p.shield <= 0 && st.novaOnHit > 0) {
       this.ringFx(p.x, p.y, 300, "#ffb04d", 800);
       this.areaDamage(p.x, p.y, 300, st.dmg * 4 * st.novaOnHit, null);
@@ -2194,9 +2374,21 @@ export class Game {
     }
     if (p.hp <= 0) this.killPlayer();
   }
+  private tickScorpionStings(dt: number) {
+    const p = this.player;
+    if (p.dead || this.inSafe()) { p.stingDots = []; return; }
+    for (const sting of p.stingDots) {
+      const step = Math.min(dt, sting.remaining);
+      sting.remaining = Math.max(0, sting.remaining - step);
+      this.hurtPlayer(sting.dps * step, { dot: true });
+      if (p.dead) break;
+    }
+    p.stingDots = p.stingDots.filter(sting => sting.remaining > 1e-9);
+  }
   private killPlayer() {
     const p = this.player;
-    p.dead = true; p.hp = 0; p.respawn = 3; p.tpT = 0; p.pull = null;
+    if (this.chairman) { this.chairman.scan = null; this.chairman.charge = 0; }
+    p.dead = true; p.hp = 0; p.respawn = 3; p.tpT = 0; p.pull = null; p.gatSpin = 0; p.stingDots = [];
     p.barrier = 0; p.barrierMax = 0; p.barrierT = 0; p.overT = 0;
     this.lock = null;
     this.wells = [];
@@ -2208,8 +2400,9 @@ export class Game {
   }
   private respawnPlayer() {
     const p = this.player;
+    if (this.stats.cannonId === "chairman") { this.chairman = createChairman(); syncChairman(this.chairman, chairmanDroneCount(this.cannonViewLevels("chairman").drones ?? 0)); }
     p.dead = false; p.x = BASE.x; p.y = BASE.y - 180; p.vx = p.vy = 0; p.hp = this.stats.hull; p.shield = this.stats.shieldMax;
-    p.poison = 0; p.slowT = 0; p.pull = null;
+    p.poison = 0; p.slowT = 0; p.stingDots = []; p.pull = null;
     p.barrier = 0; p.barrierMax = 0; p.barrierT = 0; p.overT = 0;
     this.cam.x = p.x; this.cam.y = p.y;
   }
@@ -2391,6 +2584,8 @@ export class Game {
     e.abilCd[i] = (def.cd ?? ABILITY_INTERVALS[clamp(e.tier, 0, 5) | 0]) * (0.85 + Math.random() * 0.3);
   }
   private alive(e: Enemy, name?: string) { return !name || (e.tags[name] ?? 0) > 0; }
+  // Inherently legless serpents do not lose a limb-based dash capability.
+  private legsDisabled(e: Enemy) { return e.spd.id !== "serpent" && e.legCount > 0 && e.turnFrac <= 0; }
   private chooseAct(e: Enemy, dist: number, toP: number) {
     const n = e.abil.length;
     if (!n) return;
@@ -2403,6 +2598,7 @@ export class Game {
       if (e.abilCd[i] > 0) continue;
       if (!this.alive(e, a.needs)) continue;
       if (a.type === "swing" && !(e.roleGroups[a.role!] ?? []).length) continue;
+      if (this.legsDisabled(e) && (a.type === "charge" || a.type === "sting")) continue;
       const minD = (a.minS ?? 0) * e.S + (a.minP ?? 0);
       let maxD = (a.maxS ?? 0) * e.S + (a.maxP ?? 0);
       if (!a.maxS && !a.maxP) maxD = Infinity;
@@ -2448,13 +2644,6 @@ export class Game {
   private runAct(e: Enemy, dt: number, toP: number, dist: number) {
     const a = e.act!, d = a.def, p = this.player;
     a.t += dt;
-    /* body-contact attacks retract the shields for their whole run: a grab,
-     * sting, charge or swing puts the body on the ship, and the shields would
-     * block that contact. Keep the retract timer topped up while any of these
-     * runs, so it holds for the lunge, the hold and the recoil. */
-    if (d.type === "grab" || d.type === "sting" || d.type === "charge" || d.type === "swing") {
-      e.shieldDownT = Math.max(e.shieldDownT, 0.5);
-    }
     const S = e.S;
     const turnTo = (rate: number) => { const tr = e.turn * e.turnFrac * rate; e.a += clamp(angDiff(e.a, toP), -tr * dt, tr * dt); };
     const damp = (k: number) => { const f = Math.exp(-k * dt); e.vx *= f; e.vy *= f; };
@@ -2492,6 +2681,7 @@ export class Game {
         break;
       }
       case "charge": {
+        if (this.legsDisabled(e)) { e.vx = e.vy = 0; done(); break; }
         if (a.ph === 0) {
           turnTo(1.6); damp(5);
           if (a.t >= d.wind) { a.ph = 1; a.t = 0; a.dir = e.a; }
@@ -2514,7 +2704,9 @@ export class Game {
         if (!a.fired && a.t >= d.wind) {
           a.fired = true;
           const sp = d.speed ?? 500;
-          const base = aim(sp);
+          const base = e.spd.id === "dragonfly"
+            ? interceptAngle(mx, my, p.x, p.y, p.vx, p.vy, sp)
+            : aim(sp);
           const n = count();
           const spread = d.spread ?? 0.3;
           for (let i = 0; i < n; i++) {
@@ -2670,30 +2862,36 @@ export class Game {
         break;
       }
       case "grab": {
-        /* the enemy lunges in and holds the player: the ship is pinned, cannot
-         * fire, and takes a chomp every chompCd seconds for hold seconds. A
-         * scorpion's tail sting or a dragonfly's four mouth-chomps both ride
-         * this: the hold is the setup, the chomps are the payoff. */
+        // These anchors match the model's fangs and pincer tips, not its
+        // radius (which also includes long legs, wings and tails).
+        const anatomical = e.spd.id === "spider" || e.spd.id === "scorpion" || e.spd.id === "dragonfly";
+        const anchor = e.spd.id === "spider" ? (e.parts.some(q => q.name === "Fang" && q.alive) ? 1.9 * S : 1.45 * S + SHIP_R) : e.spd.id === "scorpion" ? 3.35 * S : e.spd.id === "dragonfly" ? 2.35 * S + SHIP_R : e.radius + SHIP_R + 2;
+        const point = () => ({ x: e.x + Math.cos(e.a) * anchor, y: e.y + Math.sin(e.a) * anchor });
+        const pincers = e.spd.id === "scorpion" ? e.parts.filter(q => q.name === "Pincer" && q.alive) : [];
         if (a.ph === 0) {
           turnTo(1.4);
-          /* lunge toward the ship so a ranged enemy closes the gap and can pin
-           * it: without this a kite hovers at keep distance and the grab never
-           * reaches. The lunge runs until contact or the wind-up timeout. */
-          const ls = d.lunge ?? 900;
-          e.vx = Math.cos(toP) * ls; e.vy = Math.sin(toP) * ls;
-          if (this.touching(e, 10)) {
+          const tip = point();
+          const reach = Math.hypot(p.x - tip.x, p.y - tip.y);
+          const inReach = anatomical ? reach <= SHIP_R + S * 0.65 : this.touching(e, 10);
+          // A scorpion already in claw range closes its arms, not its body.
+          if ((e.spd.id === "scorpion" && dist <= 3.75 * S + SHIP_R) || (anatomical && inReach)) { e.vx = e.vy = 0; }
+          else if (this.legsDisabled(e)) { e.vx = e.vy = 0; }
+          else { const ls = d.lunge ?? 900; e.vx = Math.cos(toP) * ls; e.vy = Math.sin(toP) * ls; }
+          const canClamp = e.spd.id !== "scorpion" || pincers.some(q => e.groups[q.g]?.sign === 1) && pincers.some(q => e.groups[q.g]?.sign === -1);
+          if (inReach && canClamp && (!anatomical || a.t >= d.wind) && circleWalkable(tip.x, tip.y, SHIP_R)) {
             a.ph = 1; a.t = 0;
-            p.pull = { e, x: e.x, y: e.y, t: 0, max: d.hold ?? 2 };
+            p.pull = { e, x: e.x, y: e.y, t: d.hold ?? 2, max: d.hold ?? 2 };
             p.fireCd = Math.max(p.fireCd, 1);
-            e.vx *= 0.2; e.vy *= 0.2;
+            e.vx = e.vy = 0;
           } else if (a.t >= d.wind + 2) { a.ph = 2; a.t = 0; }
         } else if (a.ph === 1) {
-          /* the enemy stays clamped onto the ship */
-          const gx = e.x + Math.cos(e.a) * (e.radius + SHIP_R + 2);
-          const gy = e.y + Math.sin(e.a) * (e.radius + SHIP_R + 2);
-          if (circleWalkable(gx, p.y, SHIP_R)) p.x = gx;
-          if (circleWalkable(p.x, gy, SHIP_R)) p.y = gy;
-          p.vx *= Math.exp(-8 * dt); p.vy *= Math.exp(-8 * dt);
+          const tip = point();
+          const canClamp = e.spd.id !== "scorpion" || pincers.some(q => e.groups[q.g]?.sign === 1) && pincers.some(q => e.groups[q.g]?.sign === -1);
+          if (!canClamp || !circleWalkable(tip.x, tip.y, SHIP_R) || p.dead || this.inSafe()) {
+            if (p.pull?.e === e) p.pull = null;
+            a.ph = 2; a.t = 0; break;
+          }
+          p.x = tip.x; p.y = tip.y; p.vx = p.vy = 0; p.fireCd = Math.max(p.fireCd, 0.1);
           a.chompT = (a.chompT ?? 0) - dt;
           if (a.chompT <= 0) {
             a.chompT = d.chompCd ?? 0.8;
@@ -2701,14 +2899,25 @@ export class Game {
             this.burst(p.x, p.y, `hsl(${e.spd.hue},100%,60%)`, 8, 4, 200);
             this.shake = Math.max(this.shake, 6);
           }
-          if (a.t >= (d.hold ?? 2)) { a.ph = 2; a.t = 0; }
+          // Epic and stronger scorpions sting once after 0.7 seconds of
+          // holding. Each sting has its own five-second damage budget, even
+          // after the victim is released; a destroyed stinger cannot strike.
+          if (e.spd.id === "scorpion" && e.tier >= 3 && !a.fired && a.t + 1e-9 >= 0.7) {
+            a.fired = true;
+            if (!p.dead && e.parts.some(q => q.name === "Stinger" && q.alive)) {
+              p.stingDots.push({ dps: e.eDmg * 18 / 5, remaining: 5 });
+              this.burst(p.x, p.y, "#baff78", 10, 4, 180);
+            }
+          }
+          if (a.t >= (d.hold ?? 2)) { a.ph = 2; a.t = 0; if (p.pull?.e === e) p.pull = null; }
         } else {
-          p.pull = null;
+          if (p.pull?.e === e) p.pull = null;
           if (a.t >= 0.3) done();
         }
         break;
       }
       case "sting": {
+        if (this.legsDisabled(e)) { e.vx = e.vy = 0; done(); break; }
         /* the scorpion extends its tail and lunges in to sting the ship: a
          * quick high-damage venom hit on contact, then it recoils. The strike
          * is the payoff, not a hold. */
@@ -3005,34 +3214,32 @@ export class Game {
         case "wing": g.ang = Math.sin(this.t * (e.spd.flying ? 24 : 7) + g.phase) * g.amp * g.sign * (e.spd.flying ? Math.max(0.3, e.mobility) : 0.2); break;
         case "sway": g.ang = Math.sin(this.t * 2 + g.phase) * g.amp; break;
         case "arm": case "mandible": case "tail":
-          if (!(e.act && e.act.def.type === "swing" && e.act.def.role === g.role)) g.ang = Math.sin(this.t * 1.4 + g.phase + g.sign) * (g.role === "tail" ? 0.07 : 0.05) * g.sign;
+          if (e.spd.id === "scorpion" && g.role === "tail" && e.tier >= 3 && e.act?.def.type === "grab" && e.act.ph === 1) {
+            const swing = Math.max(0, 1 - Math.abs(e.act.t - 0.7) / 0.35);
+            g.ang = -0.22 * swing;
+          } else if (e.spd.id === "scorpion" && g.role === "arm" && e.act?.def.type === "grab" && e.act.ph < 2) {
+            // Rotate the actual claw groups inward as they close on the ship.
+            const close = e.act.ph === 1 ? 1 : Math.min(1, e.act.t / Math.max(0.01, e.act.def.wind));
+            g.ang = -g.sign * 0.22 * close;
+          } else if (!(e.act && e.act.def.type === "swing" && e.act.def.role === g.role)) g.ang = Math.sin(this.t * 1.4 + g.phase + g.sign) * (g.role === "tail" ? 0.07 : 0.05) * g.sign;
           break;
         default: break;
       }
     }
     // shields
     e.shields.length = 0;
-    /* a body-contact attack (grab / sting / charge / swing) retracts the
-     * shields for its duration: a dragonfly cannot pincer-grab through its own
-     * frontal wall, and no shielded body should. The timer is topped up by
-     * runAct while the contact ability runs, and bleeds off once it ends. */
-    if (e.shieldDownT > 0) e.shieldDownT -= dt;
-    else for (const id of e.shieldParts) {
+    // Panels remain active during every attack while their generators survive.
+    for (const id of e.shieldParts) {
       const q = e.parts[id];
       if (!q.alive) continue;
-      if (q.shieldDown > 0) { q.shieldDown -= dt; if (q.shieldDown <= 0) q.shieldHp = q.shieldMax * 0.4; }
-      else {
-        if (q.shieldHit > 0) q.shieldHit -= dt;
-        else if (q.shieldHp < q.shieldMax) q.shieldHp = Math.min(q.shieldMax, q.shieldHp + q.shieldMax * 0.15 * dt);
-        /* One panel per generator: an arc of the hull ring or a straight bar on it.
-         * It faces outward along the generator's own angle and can sweep. */
-        const ang = e.a + q.shieldAng + q.shieldSpin * this.t;
-        e.shields.push({
-          part: q, cx: e.x, cy: e.y, ang,
-          r: q.shieldR, span: q.shieldSpan, bar: q.shieldKind === 1,
-          thick: Math.max(9, q.shieldR * 0.07),
-        });
-      }
+      if (q.shieldHit > 0) q.shieldHit -= dt;
+      else if (q.shieldHp < q.shieldMax) q.shieldHp = Math.min(q.shieldMax, q.shieldHp + q.shieldMax * 0.15 * dt);
+      const ang = e.a + q.shieldAng + q.shieldSpin * this.t;
+      e.shields.push({
+        part: q, cx: e.x, cy: e.y, ang,
+        r: q.shieldR, span: q.shieldSpan, bar: q.shieldKind === 1,
+        thick: Math.max(9, q.shieldR * 0.07),
+      });
     }
     // weapons
     for (const id of e.weaponParts) {
@@ -3189,6 +3396,7 @@ export class Game {
       cooldown = Math.max(0, (cooldowns.get(p) ?? 0) - dt);
       cooldowns.set(p, cooldown);
     }
+    if (p.pull?.e === e && e.act?.def.type === "grab" && e.act.ph === 1) return;
     if (!p.dead && dist < e.radius + SHIP_R + 30 && !this.inSafe()) {
       if (this.touching(e, 0, true)) {
         // Determine damaging contact before separation. Pushing the ship first
@@ -3311,19 +3519,10 @@ export class Game {
       const dx = b.x - e.x, dy = b.y - e.y;
       const rr = Math.max(e.radius, e.shellR, e.shieldReach) + 12;
       if (dx * dx + dy * dy > rr * rr) continue;
-      /* The plates are thin compared with a fast round's per-frame travel, so
-       * test the two intermediate points as well to avoid tunnelling. */
-      if (e.shells.length && b.kind !== 4 && (
-        this.plateAt(e, b.x, b.y) ||
-        this.plateAt(e, b.x - b.vx / 120, b.y - b.vy / 120) ||
-        this.plateAt(e, b.x - b.vx / 60, b.y - b.vy / 60)
-      )) {
-        this.shellHit(e, b.dmg, b.elem === "energy" || b.elem === "thermal" ? "laser" : b.elem === "shock" ? "shock" : b.kind === 1 ? "missile" : b.kind === 3 ? "explosive" : "kinetic", false, b.x, b.y, b.crit);
-        return true;
-      }
       /* the panels are thin, so sample the round's path like the plating does */
       const panel = this.shieldAt(e, b.x, b.y) ?? this.shieldAt(e, b.x - b.vx / 90, b.y - b.vy / 90);
       if (panel) {
+        recordShieldImpact(e, b.x - e.x, b.y - e.y, this.t);
         const energy = b.elem === "energy" || b.elem === "shock" || b.elem === "thermal";
         if (e.spd.reflectShell && energy) {
           this.eprojs.push({ x: b.x, y: b.y, vx: -b.vx * 0.9, vy: -b.vy * 0.9, life: 1.5, dmg: b.dmg * 0.6, r: 6, hue: e.spd.hue, type: "bolt", homing: 0, slow: 0, slowT: 0, poison: 0, pierce: false, hp: 1, speed: 620, src: e, puddle: null });
@@ -3339,6 +3538,16 @@ export class Game {
           this.ringFx(b.x, b.y, 40, "#7df9ff", 500);
           return true;
         }
+      }
+      /* The plates are thin compared with a fast round's per-frame travel, so
+       * test the two intermediate points as well to avoid tunnelling. */
+      if (e.shells.length && b.kind !== 4 && (
+        this.plateAt(e, b.x, b.y) ||
+        this.plateAt(e, b.x - b.vx / 120, b.y - b.vy / 120) ||
+        this.plateAt(e, b.x - b.vx / 60, b.y - b.vy / 60)
+      )) {
+        this.shellHit(e, b.dmg, b.elem === "energy" || b.elem === "thermal" ? "laser" : b.elem === "shock" ? "shock" : b.kind === 1 ? "missile" : b.kind === 3 ? "explosive" : "kinetic", false, b.x, b.y, b.crit);
+        return true;
       }
       const ca = Math.cos(e.a), sa = Math.sin(e.a);
       const lx = dx * ca + dy * sa, ly = -dx * sa + dy * ca;
@@ -3511,12 +3720,13 @@ export class Game {
     }
     return best;
   }
-  private beam(x: number, y: number, ang: number, len: number, dmg: number, pierce: number, bypass = false, src: DmgSrc = "laser", color = "#baffff", width = 1, armorMul = 1, crit = false) {
+  private beam(x: number, y: number, ang: number, len: number, dmg: number, pierce: number, bypass = false, src: DmgSrc = "laser", color = "#baffff", width = 1, armorMul = 1, crit = false, revolutionary = false, chairmanShot = false, coreMul = 1) {
     const st = this.stats;
     const hits = new Set<number>();
     const cos = Math.cos(ang), sin = Math.sin(ang);
     let endLen = len;
     let pierced = 0;
+    let splash: {x: number; y: number; skip: Part | null} | null = null;
     const cands = this.enemies.filter((e) => !e.dead && Math.hypot(e.x - x, e.y - y) < len + Math.max(e.radius, e.shieldReach));
     outer: for (let d = 10; d <= len; d += 8) {
       const bx = x + cos * d, by = y + sin * d;
@@ -3524,14 +3734,10 @@ export class Game {
         const dx = bx - e.x, dy = by - e.y;
         const reach = Math.max(e.radius, e.shieldReach);
         if (dx * dx + dy * dy > (reach + 18 * width) * (reach + 18 * width)) continue;
-        if (e.shells.length && (bx - e.x) * (bx - e.x) + (by - e.y) * (by - e.y) < e.shellR * e.shellR && this.plateAt(e, bx, by)) {
-          this.shellHit(e, dmg * armorMul, src, false, bx, by, crit);
-          endLen = d;
-          break outer;
-        }
         if (!bypass) {
           const panel = this.shieldAt(e, bx, by);
           if (panel) {
+            recordShieldImpact(e, bx - e.x, by - e.y, this.t);
             const energy = src === "laser" || src === "shock";
             if (!energy) {
               /* anything else stops at the panel without draining it */
@@ -3540,6 +3746,12 @@ export class Game {
               endLen = d; break outer;
             }
           }
+        }
+        if (e.shells.length && (bx - e.x) * (bx - e.x) + (by - e.y) * (by - e.y) < e.shellR * e.shellR && this.plateAt(e, bx, by)) {
+          if ((revolutionary || chairmanShot) && !splash) splash = {x: bx, y: by, skip: null};
+          this.shellHit(e, dmg * armorMul, src, false, bx, by, crit);
+          endLen = d;
+          break outer;
         }
         const ca = Math.cos(e.a), sa = Math.sin(e.a);
         let p = this.partAt(e, dx * ca + dy * sa, -dx * sa + dy * ca);
@@ -3554,11 +3766,17 @@ export class Game {
         const key = e.id * 100000 + p.id;
         if (hits.has(key)) continue;
         hits.add(key);
+        if ((revolutionary || chairmanShot) && !splash) splash = {x: bx, y: by, skip: p};
         let dm = dmg * (1 + e.melt);
-        this.damagePart(e, p, dm * (p.kind === "armor" ? armorMul : 1), bx, by, src, false, crit);
+        this.damagePart(e, p, dm * (p.kind === "armor" ? armorMul : p.kind === "core" ? coreMul : 1), bx, by, src, false, crit);
         pierced++;
         if (pierced > pierce) { endLen = d; break outer; }
       }
+    }
+    if (splash) {
+      this.areaDamage(splash.x, splash.y, chairmanShot ? 60 : 90, dmg * 0.2, splash.skip, "laser", undefined, chairmanShot ? coreMul : 1);
+      this.burst(splash.x, splash.y, "#ff263b", 16, 6, 360);
+      this.ringFx(splash.x, splash.y, 90, "#ff263b", 440);
     }
     const mediator = src === "laser" && color === "#e9d5ff";
     if (mediator) this.beams = this.beams.filter((b) => !b.mediator);
@@ -3630,20 +3848,171 @@ export class Game {
   private set mediatorCrit(value: boolean) { this.weaponState.mediatorCrit = value; }
   private get mediatorSparkClock() { return this.weaponState.mediatorSparkClock; }
   private set mediatorSparkClock(value: number) { this.weaponState.mediatorSparkClock = value; }
+  /** Local Chairman weapon state machine. A trigger commits either one drone
+   * shot (including its target at trigger time) or the one-second sun charge. */
+  private fireChairman(dt:number, want:boolean) {
+    const p=this.player, st=this.stats, cs=this.chairman ??= createChairman();
+    const lv=this.cannonViewLevels("chairman");
+    syncChairman(cs,chairmanDroneCount(lv.drones ?? 0));
+    const fireDrone=(index:number, target:Enemy|null, aimX:number, aimY:number) => {
+      const [x,y]=chairmanDronePosition(cs,index,p.x,p.y);
+      let angle=Math.atan2(aimY-y,aimX-x);
+      if(target && !target.dead && target.parts[target.coreId]?.alive && this.enemies.includes(target)) {
+        const [tx,ty]=this.partWorld(target,target.parts[target.coreId]); angle=Math.atan2(ty-y,tx-x);
+      }
+      const crit=st.crit>0 && Math.random()<st.crit;
+      const damage=st.dmg*(crit?st.critMul:1)*this.dmgMul();
+      this.beam(x,y,angle,st.bulletRange,damage,st.pierce,false,"laser","#ff344a",1,1,crit,false,true,chairmanCoreMul(lv.coreDmg ?? 0));
+      this.burst(x,y,"#ff4254",10,5,300);
+      ejectCasing(this,x,y,angle,this.t,"core",p.vx,p.vy,"chairman");
+      spendChairmanDrone(cs,index); cs.fireGlow[index]=.4; p.fireCd=1/st.rate;
+      this.shake=Math.max(this.shake,5);
+    };
+    if(cs.charge>0) {
+      cs.charge+=dt;
+      if(cs.charge>=1) {
+        cs.charge=0; cs.flash=.34;
+        // After a blast, all drones fly to the outer orbit before regrouping.
+        // Snapshot positions first, including any partially assembled armour.
+        for(let i=0;i<cs.drones.length;i++) launchChairmanDrone(cs,i,p.x,p.y);
+        cs.armourActive=false;cs.armourDispersing=false;cs.armourReturnPath=false;
+        cs.armour=0;cs.armourMax=0;cs.armourBlend=0;cs.armourLostPieces=0;
+        cs.reload=0;cs.scan=null;cs.sunLocked=true;cs.sunRequested=false;
+        const crit=st.crit>0 && Math.random()<st.crit;
+        const damage=chairmanOrbDamage(lv.dmg ?? 0,lv.drones ?? 0)*chairmanCoreMul(lv.coreDmg ?? 0)*(crit?st.critMul:1)*this.dmgMul();
+        const radius=chairmanOrbRadius(lv.orbRange ?? 0);
+        // Apply once per enemy via its core: do not multiply the orb damage by
+        // its number of parts, and keep ordinary player kill/drop attribution.
+        for(const e of [...this.enemies]) {
+          if(e.dead || Math.hypot(e.x-p.x,e.y-p.y)>radius+e.radius)continue;
+          const core=e.parts[e.coreId]; if(!core?.alive)continue;
+          const [x,y]=this.partWorld(e,core);this.damagePart(e,core,damage,x,y,"laser",false,crit);
+        }
+        this.ringFx(p.x,p.y,radius,"#ff283e",1800);this.burst(p.x,p.y,"#ff4050",44,12,900);this.shake=Math.max(this.shake,25);
+      }
+      this.fireWeapons(dt,p.a);return;
+    }
+    // A deliberate fresh trigger fires the sun when all drones are dark.
+    // A post-blast lock prevents automatic retriggers during recharge.
+    if(cs.sunRequested && !cs.sunLocked && p.fireCd<=0 && p.jam<=0) {
+      cs.sunRequested=false;cs.scan=null;p.fireCd=1/st.rate;cs.charge=.000001;
+      this.fireWeapons(dt,p.a);return;
+    }
+    if(cs.armourActive) { this.fireWeapons(dt,p.a); return; }
+    if(cs.scan) {
+      cs.scan.elapsed+=dt;
+      if(cs.scan.elapsed>=cs.scan.duration && p.fireCd<=0) {
+        const scan=cs.scan;cs.scan=null;
+        const e=this.enemies.find(e=>e.id===scan.enemyId && !e.dead) ?? null;
+        // A drone may have intercepted incoming damage during its scan.
+        // Never fire a dark turret; choose another ready one or charge the sun.
+        const index=cs.drones[scan.drone] <= 0 ? scan.drone : cs.drones.findIndex(cool=>cool<=0);
+        if(index < 0) { if(scan.manual && cs.reload<=0) { p.fireCd=1/st.rate; cs.charge=0.000001; } }
+        else if(scan.manual && Math.random()<chairmanOrbChance(lv.orbChance ?? 0)) { p.fireCd=1/st.rate; cs.charge=0.000001; }
+        else if(scan.manual || (this.autoFire && e?.parts[e.coreId]?.alive)) fireDrone(index,e,scan.aimX,scan.aimY);
+      }
+      this.fireWeapons(dt,p.a);return;
+    }
+    if((want || this.autoFire) && p.jam<=0 && cs.reload<=0) {
+      const ready=cs.drones.map((cool,i)=>cool<=0?i:-1).filter(i=>i>=0);
+      // Only an explicit trigger can charge the sun, including the guaranteed
+      // blast when all drones have been spent. Auto never rolls orb chance.
+      if(ready.length && want) {
+        const index=ready[Math.floor(Math.random()*ready.length)];
+        const [mx,my]=this.mouseWorld();let target:Enemy|null=null;
+        for(const e of this.enemies) {
+          if(e.dead || !e.parts[e.coreId]?.alive)continue;
+          const dx=mx-e.x,dy=my-e.y;if(dx*dx+dy*dy>(e.radius+30)**2)continue;
+          const ca=Math.cos(e.a),sa=Math.sin(e.a);
+          if(this.partAt(e,dx*ca+dy*sa,-dx*sa+dy*ca)){target=e;break;}
+        }
+        if(target) { const scan=createTargetScan(target.parts); scan.duration=Math.min(scan.duration,.8/st.rate); cs.scan={...scan,enemyId:target.id,drone:index,aimX:mx,aimY:my,manual:true}; }
+        else if(p.fireCd<=0) {
+          if(Math.random()<chairmanOrbChance(lv.orbChance ?? 0)){p.fireCd=1/st.rate;cs.charge=0.000001;}
+          else fireDrone(index,null,mx,my);
+        }
+      } else if(ready.length && this.autoFire) {
+        // Choose a target actually reachable from the selected orbiting drone.
+        const index=ready[Math.floor(Math.random()*ready.length)];
+        const [x,y]=chairmanDronePosition(cs,index,p.x,p.y);
+        let target:Enemy|null=null, best=st.bulletRange*st.bulletRange;
+        for(const e of this.enemies) {
+          const core=e.parts[e.coreId];if(e.dead || !core?.alive)continue;
+          const [tx,ty]=this.partWorld(e,core), d=(tx-x)**2+(ty-y)**2;
+          if(d<=best){best=d;target=e;}
+        }
+        if(target) {
+          const [aimX,aimY]=this.partWorld(target,target.parts[target.coreId]);
+          const scan=createTargetScan(target.parts);scan.duration=Math.min(scan.duration,.8/st.rate);
+          cs.scan={...scan,enemyId:target.id,drone:index,aimX,aimY,manual:false};
+        }
+      }
+    }
+    this.fireWeapons(dt,p.a);
+  }
   private firePlayer(dt: number) {
     const p = this.player, st = this.stats;
-    if (p.dead) { this.mediatorBeamTime = 0; this.fencerCharge = 0; return; }
-    if (st.cannonId !== "fencer" || this.inSafe()) this.fencerCharge = 0;
-    if (!st.charge || this.inSafe()) {
+    if (st.cannonId === "chairman" && !p.dead) { this.chairman ??= createChairman(); tickChairman(this.chairman,dt); moveChairmanHalos(this.chairman,dt,p.x,p.y); updateChairmanSwarm(this.chairman,dt,p.x,p.y,st.hull); }
+    if (p.dead) { if (this.chairman) { this.chairman.scan = null; this.chairman.charge = 0; } this.revolutionaryScan = null; this.mediatorBeamTime = 0; this.fencerCharge = 0; return; }
+    if (p.pull?.e.act?.def.type === "grab" && p.pull.e.act.ph === 1) {
+      if (this.mediatorBeamTime > 0) p.fireCd = Math.max(p.fireCd, 0.7);
+      this.revolutionaryScan = null;
+      if (this.chairman) { this.chairman.scan = null; this.chairman.charge = 0; }
+      this.mediatorBeamTime = 0; this.fencerCharge = 0; p.charge = 0; p.charging = false;
+      p.gatSpin = Math.max(0, p.gatSpin - dt * 2);
+      return; // includes automatic weapon rack
+    }
+    if (st.cannonId !== "fencer") this.fencerCharge = 0;
+    if (!st.charge) {
       if (this.mediatorBeamTime > 0) p.fireCd = Math.max(p.fireCd, 0.7);
       this.mediatorBeamTime = 0; p.charging = false; p.charge = 0;
     }
     const want = this.input.lmb || this.input.keys.has("Space");
-    p.fireCd -= dt;
-    if (this.mediatorBeamTime > 0 && st.charge && !this.inSafe()) {
+    // Gatler takes 1.5 seconds to reach firing speed. Releasing the trigger
+    // spins it down over 0.75 seconds; swapping guns resets it immediately.
+    // Only the part of this frame after spin-up may contribute firing time.
+    let fireDt = dt;
+    if (st.cannonId === "gatler") {
+      const previous = p.gatSpin;
+      const revving = want && p.jam <= 0;
+      p.gatSpin = revving ? Math.min(1.5, previous + dt) : Math.max(0, previous - dt * 2);
+      p.gatAngle = (p.gatAngle + (previous + p.gatSpin) / 3 * 12 * dt) % TAU;
+      if (!revving || p.gatSpin < 1.5 - 1e-9) { p.fireCd = 0; return; }
+      fireDt = Math.max(0, dt - Math.max(0, 1.5 - previous));
+    } else { p.gatSpin = 0; }
+    // These two chassis fire faster than a render frame. Keep fractional
+    // cooldown carry while held, but never bank shots while idle.
+    const rapid = st.cannonId === "peashooter2" || st.cannonId === "gatler";
+    if (rapid && p.fireCd < 0) p.fireCd = 0;
+    p.fireCd -= fireDt;
+    if (st.cannonId === "chairman") { this.revolutionaryScan = null; this.fireChairman(dt,want); return; }
+    let revolutionReady = false;
+    let revolutionTarget: Enemy | null = null;
+    if (st.cannonId !== "revolutionary") this.revolutionaryScan = null;
+    if (this.revolutionaryScan) {
+      const scan = this.revolutionaryScan;
+      scan.elapsed += dt;
+      if (scan.elapsed >= scan.duration || scan.enemy.dead || !this.enemies.includes(scan.enemy) || !scan.enemy.parts[scan.enemy.coreId]?.alive) {
+        if (!scan.enemy.dead && this.enemies.includes(scan.enemy) && scan.enemy.parts[scan.enemy.coreId]?.alive) revolutionTarget = scan.enemy;
+        this.revolutionaryScan = null;
+        revolutionReady = true;
+      }
+    } else if (st.cannonId === "revolutionary" && want && p.fireCd <= 0 && p.jam <= 0) {
+      const [mx, my] = this.mouseWorld();
+      for (const e of this.enemies) {
+        if (e.dead || !e.parts[e.coreId]?.alive) continue;
+        const dx = mx - e.x, dy = my - e.y;
+        if (dx * dx + dy * dy > (e.radius + 30) ** 2) continue;
+        const ca = Math.cos(e.a), sa = Math.sin(e.a);
+        if (this.partAt(e, dx * ca + dy * sa, -dx * sa + dy * ca)) {
+          this.revolutionaryScan = { ...createTargetScan(e.parts), enemy: e }; break;
+        }
+      }
+    }
+    if (this.mediatorBeamTime > 0 && st.charge) {
       const step = Math.min(dt, this.mediatorBeamTime);
       this.mediatorBeamTime = Math.max(0, this.mediatorBeamTime - step);
-      if (this.mediatorBeamTime <= 1e-9) { this.mediatorBeamTime = 0; p.fireCd = 0.7; }
+      if (this.mediatorBeamTime <= 1e-9) { this.mediatorBeamTime = 0; p.fireCd = 0.7; ejectCasing(this, p.x, p.y, p.a, this.t, "core", p.vx, p.vy, st.cannonId); }
       const m = st.muzzles[0] ?? { x: 14, y: 0 };
       const x = p.x + Math.cos(p.a) * m.x - Math.sin(p.a) * m.y;
       const y = p.y + Math.sin(p.a) * m.x + Math.cos(p.a) * m.y;
@@ -3676,6 +4045,7 @@ export class Game {
         const x = p.x + Math.cos(base) * m.x - Math.sin(base) * m.y;
         const y = p.y + Math.sin(base) * m.x + Math.cos(base) * m.y;
         this.beam(x, y, base, st.bulletRange, this.fencerDamage, st.pierce + 2, false, "laser", "#c4a6ff", 1, 1, this.fencerCrit);
+        ejectCasing(this, p.x, p.y, base, this.t, "core", p.vx, p.vy, st.cannonId);
         this.burst(x, y, "#c4a6ff", 20, 8, 480); this.ringFx(x, y, 90, "#c4a6ff", 600);
         this.shake = Math.max(this.shake, 12); p.recoil = 1; p.muzzleFlash = 1;
         p.vx -= Math.cos(base) * 200; p.vy -= Math.sin(base) * 200;
@@ -3686,7 +4056,7 @@ export class Game {
     /* the Mediator charges its beam: hold the trigger to build charge, release
      * to fire a devastating beam whose damage scales with how long it was held */
     if (st.charge) {
-      if (want && p.fireCd <= 0 && !this.inSafe()) {
+      if (want && p.fireCd <= 0) {
         p.charging = true;
         p.charge = Math.min(1, p.charge + dt * st.chargeRate / st.chargeTime);
       } else if (p.charging) {
@@ -3713,8 +4083,10 @@ export class Game {
       } else {
         p.charge = Math.max(0, p.charge - dt * 0.5);
       }
-    } else if (want && p.fireCd <= 0 && p.jam <= 0 && !this.inSafe()) {
-      p.fireCd = 1 / (st.rate * (p.overT > 0 ? 1.8 : 1));
+    } else if ((want || revolutionReady) && !this.revolutionaryScan && p.fireCd <= 0 && p.jam <= 0) {
+      do {
+      const shotInterval = 1 / (st.rate * (p.overT > 0 ? 1.8 : 1));
+      p.fireCd = rapid ? p.fireCd + shotInterval : shotInterval;
       const over = p.overT > 0 ? 2.2 : 1;
       const crit = st.crit > 0 && Math.random() < st.crit;
       /* the gauge feeds the round: a Workhorse at full heat hits for five times
@@ -3726,14 +4098,22 @@ export class Game {
        * barrels. The second barrel buys cooling and reach, not a second round. */
       const mz = st.muzzles.length ? st.muzzles : [{ x: 14, y: 0 }];
       const first = p.muzzle % mz.length;
-      const n = 1;
+      const n = CANNON_BY_ID[st.cannonId]?.pellets ?? 1;
       const spreadMul = 1 + (st.heatSpread - 1) * clamp(p.heat, 0, 1);
       const ca = Math.cos(base), sa = Math.sin(base);
       const at = (i: number) => {
-        const m = mz[(first + i) % mz.length];
-        return { x: p.x + ca * m.x - sa * m.y, y: p.y + sa * m.x + ca * m.y };
+        const index = (first + i) % mz.length;
+        const m = mz[index];
+        const lateral = CANNON_BY_ID[st.cannonId]?.rotary ? Math.sin((st.cannonId === "gatler" ? p.gatAngle : this.t * 10) + index * TAU / mz.length) * 5.5 : m.y;
+        return { x: p.x + ca * m.x - sa * lateral, y: p.y + sa * m.x + ca * lateral };
       };
       const m0 = at(0);
+      let shotAngle = base;
+      if (revolutionTarget) {
+        const [tx, ty] = this.partWorld(revolutionTarget, revolutionTarget.parts[revolutionTarget.coreId]);
+        shotAngle = Math.atan2(ty - m0.y, tx - m0.x);
+      }
+      let casingKind: "small" | "shell" | "core" = (rapid || st.cannonId === "peashooter") ? "small" : "shell";
       if (st.hitscan) {
         /* the Skewer: a hard line, drawn from the muzzle to whatever it stops in.
          * The Fencer counts its jabs and every fifth unleashes a charged energy
@@ -3744,23 +4124,26 @@ export class Game {
         let chargeShot = false;
         if (fencer) { p.fenceShots++; chargeShot = p.fenceShots % 5 === 0; }
         if (chargeShot) { this.fencerCharge = 0.4; this.fencerDamage = dmg * 12.5; this.fencerCrit = crit; return; }
-        const energyShot = skewer2 && Math.random() < st.energyChance;
+        const revolutionary = st.cannonId === "revolutionary";
+        const energyShot = revolutionary || (skewer2 && Math.random() < st.energyChance);
+        casingKind = energyShot ? "core" : "shell";
         const dShot = chargeShot ? dmg * 12.5 : dmg;
-        const col = (energyShot || chargeShot) ? "#c4a6ff" : crit ? "#fff3b0" : "#e6fbff";
-        this.beam(m0.x, m0.y, base, st.bulletRange, dShot, chargeShot ? st.pierce + 2 : st.pierce, energyShot, energyShot ? "laser" : "kinetic", col, 1, skewer2 ? st.armorDmg : 1, crit);
+        const col = revolutionary ? "#ff263b" : (energyShot || chargeShot) ? "#c4a6ff" : crit ? "#fff3b0" : "#e6fbff";
+        this.beam(m0.x, m0.y, shotAngle, st.bulletRange, dShot, chargeShot ? st.pierce + 2 : st.pierce, energyShot && !revolutionary, energyShot ? "laser" : "kinetic", col, 1, (skewer2 || revolutionary) ? st.armorDmg : 1, crit, revolutionary);
         this.burst(m0.x, m0.y, col, chargeShot ? 20 : crit ? 12 : 7, chargeShot ? 8 : 5.5, chargeShot ? 480 : 340);
         this.ringFx(m0.x, m0.y, chargeShot ? 90 : crit ? 60 : 40, col, chargeShot ? 600 : 420);
-        this.shake = Math.max(this.shake, chargeShot ? 12 : crit ? 6 : 3.5);
+        this.shake = Math.max(this.shake, revolutionary ? 20 : chargeShot ? 12 : crit ? 6 : 3.5);
       } else {
         for (let i = 0; i < n; i++) {
           /* spread is per round, and a cooking barrel throws wider */
-          const spread = st.spread > 0 ? (Math.random() - 0.5) * st.spread * spreadMul * 2 : 0;
+          const spread = st.spread > 0 ? (n > 1 ? (2 * i / (n - 1) - 1) : (Math.random() - 0.5) * 2) * st.spread * spreadMul : 0;
           const ang = base + spread;
           const m = at(i);
-          this.bullets.push({ x: m.x, y: m.y, vx: Math.cos(ang) * st.bulletSpeed + p.vx * 0.3, vy: Math.sin(ang) * st.bulletSpeed + p.vy * 0.3, life: st.bulletRange / st.bulletSpeed, dmg, pierce: st.pierce, hit: [], kind: 0, target: null, crit, elem: "kinetic", boom: st.boom || undefined });
+          this.bullets.push({ x: m.x, y: m.y, vx: Math.cos(ang) * st.bulletSpeed + p.vx * 0.3, vy: Math.sin(ang) * st.bulletSpeed + p.vy * 0.3, life: st.bulletRange / st.bulletSpeed, dmg, pierce: st.pierce, hit: [], kind: 0, target: null, crit, elem: "kinetic", boom: st.boom || undefined, visual: st.cannonId === "scattermk1" ? "scatter-orb" : undefined });
           this.burst(m.x, m.y, crit ? "#fff3b0" : `hsl(${CANNON_BY_ID[st.cannonId]?.look.hue ?? 40} 100% 76%)`, 3, 3.4, 190);
         }
       }
+      ejectCasing(this, p.x, p.y, base, this.t, casingKind, p.vx, p.vy, st.cannonId);
       /* each barrel carries its own kick: a twin recoils one barrel at a time */
       p.barrelRec[first] = 1;
       p.muzzle = (first + n) % mz.length;
@@ -3777,7 +4160,8 @@ export class Game {
         this.toast("OVERHEATED — COOLING", "#ff8a5c");
         this.burst(p.x, p.y, "#ffb04d", 10, 5, 220);
       }
-      p.vx -= ca * st.kick; p.vy -= sa * st.kick;
+      p.vx -= Math.cos(shotAngle) * st.kick; p.vy -= Math.sin(shotAngle) * st.kick;
+      } while (rapid && p.fireCd <= 1e-9 && p.jam <= 0);
     }
     this.fireWeapons(dt, base);
   }
@@ -3820,7 +4204,7 @@ export class Game {
     for (let i = 0; i < n; i++) {
       const w = st.weapons[i];
       let want = W_SLOTS[i]?.rest ?? 0;
-      if (this.autoFire && !p.dead && !this.inSafe()) {
+      if (this.autoFire && !p.dead) {
         const range = Math.min(WEAPON_RANGE[w.rid] ?? 600, view);
         if (w.rid === "homing") {
           const L = this.lock;
@@ -3854,7 +4238,7 @@ export class Game {
     if (p.wCd.length < st.weapons.length) p.wCd = [...p.wCd, ...new Array(st.weapons.length - p.wCd.length).fill(0)];
     st.weapons.forEach((w, i) => {
       p.wCd[i] -= dt;
-      if (p.wCd[i] > 0 || this.inSafe()) return;
+      if (p.wCd[i] > 0) return;
       const eff = w.eff;
       const cd = (c: number) => c / (0.7 + 0.3 * eff);
       /* match the rotating hardpoint on the hull, with the muzzle nudged out
@@ -4037,6 +4421,14 @@ export class Game {
         }
         default: break;
       }
+      // Deployable drones emit from the drone itself, not the launch slot.
+      if (p.wCd[i] > 0 && w.rid !== "drones") {
+        if (["lance","bypass","cutter"].includes(w.rid)) ejectCasingLimited(this, JSON.stringify([this.pid, i, w.rid]), ox, oy, base + aimRel, this.t, p.vx, p.vy, w.rid);
+        else {
+          const kind = elem === "kinetic" || elem === "explosive" ? (w.rid === "hmg" ? "small" : "shell") : elem === "corrosive" ? "vial" : "orb";
+          ejectCasing(this, ox, oy, base + aimRel, this.t, kind, p.vx, p.vy, w.rid);
+        }
+      }
     });
   }
 
@@ -4097,7 +4489,7 @@ export class Game {
     for (const d of this.drones) {
       d.a += 1.3 * dt;
       d.cd -= dt;
-      if (d.cd > 0 || this.inSafe() || p.dead) continue;
+      if (d.cd > 0 || p.dead) continue;
       const x = p.x + Math.cos(d.a) * d.r, y = p.y + Math.sin(d.a) * d.r;
       const t = this.combatTarget(x, y, 720);
       if (!t) { d.cd = 0.3; continue; }
@@ -4105,6 +4497,7 @@ export class Game {
       const dp = this.aimPoint(t, x, y);
       const ang = Math.atan2(dp[1] - y, dp[0] - x);
       this.bullets.push({ x, y, vx: Math.cos(ang) * 1050, vy: Math.sin(ang) * 1050, life: 0.8, dmg: this.stats.dmg * 0.4 * eff * this.dmgMul(), pierce: 0, hit: [], kind: 0, target: null, crit: false, elem: "kinetic" });
+      ejectCasing(this, x, y, ang, this.t, "small", p.vx, p.vy, "drones");
     }
   }
   private updateLock(dt: number) {
@@ -4420,13 +4813,15 @@ export class Game {
   pilotPhaseContext(): PilotPhaseContext {
     return { player: this.player, stats: this.stats, save: this.save, pid: this.pid,
       input: this.input, cam: this.cam, harpoons: this.harpoons, autoFire: this.autoFire,
-      aCd: this.aCd, lock: this.lock, drones: this.drones, weaponState: this.weaponState };
+      aCd: this.aCd, lock: this.lock, drones: this.drones, weaponState: this.weaponState,
+      revolutionaryScan: this.revolutionaryScan, chairman: this.chairman };
   }
   private setPilotPhaseContext(p: PilotPhaseContext) {
     this.player = p.player; this.stats = p.stats; this.save = p.save; this.pid = p.pid;
     this.input = p.input; this.cam = p.cam; this.harpoons = p.harpoons;
     this.autoFire = p.autoFire; this.aCd = p.aCd; this.lock = p.lock; this.drones = p.drones;
     this.weaponState = p.weaponState;
+    this.revolutionaryScan = p.revolutionaryScan; this.chairman = p.chairman;
   }
   /** Experimental enemy phase: select one nearest living pilot and advance the
    * enemy once, then test contact per pilot. Enemy actions and full combat
@@ -4483,6 +4878,14 @@ export class Game {
     return true;
   }
 
+  /** Demo-only edge-trigger adapter for Chairman manual sun/dispersal. */
+  demoPrimaryPressed(p:PilotPhaseContext) {
+    if(p.stats.cannonId!=="chairman")return;
+    const previous=this.pilotPhaseContext();this.setPilotPhaseContext(p);
+    try {this.input.lmb=false;this.mouseDown(0);}
+    finally {Object.assign(p,this.pilotPhaseContext());this.setPilotPhaseContext(previous);}
+  }
+
   /** Advances one pilot without running a second world update. Context is
    * restored even if an engine operation throws. This alone is NOT multiplayer. */
   stepPilotPhase(p: PilotPhaseContext, dt: number) {
@@ -4507,11 +4910,11 @@ export class Game {
    * the world step so the shared server can eventually advance multiple pilots
    * without advancing enemies, base defences and projectiles multiple times.
    * Player-owned timers/effects still require isolation before that is safe. */
-  private updatePlayerPhase(dt: number) {
+  private updatePlayerPhase(dt: number, respawnDt = dt) {
     const p = this.player, st = this.stats, k = this.input.keys;
 
     if (p.dead) {
-      p.respawn -= dt;
+      p.respawn = Math.max(0, p.respawn - respawnDt);
       if (p.respawn <= 0) this.respawnPlayer();
     } else {
       // movement
@@ -4531,7 +4934,9 @@ export class Game {
       if (p.pull) {
         p.pull.t -= dt;
         const pe = p.pull.e;
-        if (pe.dead || p.pull.t <= 0 || this.inSafe()) p.pull = null;
+        const pinned = pe.act?.def.type === "grab" && pe.act.ph === 1;
+        if (pe.dead || this.inSafe() || (!pinned && p.pull.t <= 0)) p.pull = null;
+        else if (pinned) { p.vx = p.vy = 0; }
         else {
           const dx = pe.x - p.x, dy = pe.y - p.y, d = Math.hypot(dx, dy) || 1;
           if (d < pe.radius * 0.5) p.pull = null;
@@ -4559,7 +4964,7 @@ export class Game {
       const [mx, my] = this.mouseWorld();
       const want = Math.atan2(my - p.y, mx - p.x);
       // The sustained Mediator beam is deliberately difficult to steer.
-      const turnRate = st.charge && this.mediatorBeamTime > 0 && !this.inSafe() ? 1.4 : 14;
+      const turnRate = st.charge && this.mediatorBeamTime > 0 ? 1.4 : (CANNON_BY_ID[st.cannonId]?.turnRate ?? 14);
       p.a += clamp(angDiff(p.a, want), -turnRate * dt, turnRate * dt);
 
       // status
@@ -4568,7 +4973,7 @@ export class Game {
       if (p.thornCd > 0) p.thornCd -= dt;
       /* recoil spring, muzzle flash and barrel heat */
       if (p.recoil > 0) p.recoil = Math.max(0, p.recoil - dt * 5.5);
-      for (let i = 0; i < p.barrelRec.length; i++) if (p.barrelRec[i] > 0) p.barrelRec[i] = Math.max(0, p.barrelRec[i] - dt * 6.5);
+      for (let i = 0; i < p.barrelRec.length; i++) if (p.barrelRec[i] > 0) p.barrelRec[i] = Math.max(0, p.barrelRec[i] - dt * (st.cannonId === "revolutionary" ? st.rate / st.muzzles.length : 6.5));
       if (p.muzzleFlash > 0) p.muzzleFlash = Math.max(0, p.muzzleFlash - dt * 16);
       /* a jammed gun cools on the clock: the gauge is the jam timer, so it is
        * empty exactly when the trigger works again */
@@ -4582,6 +4987,7 @@ export class Game {
         p.heat = Math.max(0, p.heat - dt * 0.34);
       }
       if (p.poisonT > 0) { p.poisonT -= dt; this.hurtPlayer(p.poison * dt, { dot: true }); if (p.poisonT <= 0) p.poison = 0; }
+      this.tickScorpionStings(dt);
       if (this.inSafe()) { p.hp = Math.min(st.hull, p.hp + st.hull * 0.5 * dt); p.shield = Math.min(st.shieldMax, p.shield + st.shieldMax * 0.6 * dt); p.poison = 0; p.slowF = 1; }
       else {
         if (st.regen > 0 && p.hp > 0) p.hp = Math.min(st.hull, p.hp + st.hull * st.regen * dt);
@@ -4683,7 +5089,9 @@ export class Game {
     this.fpsAcc += dtRaw; this.fpsN++;
     if (this.fpsAcc > 0.5) { this.fps = Math.round(this.fpsN / this.fpsAcc); this.fpsAcc = 0; this.fpsN = 0; }
     const p = this.player, st = this.stats;
-    this.updatePlayerPhase(dt);
+    // Only the respawn countdown catches up after a background tab stalls.
+    // The rest of the simulation remains capped to avoid a huge physics step.
+    this.updatePlayerPhase(dt, Number.isFinite(dtRaw) ? Math.max(0, dtRaw) : 0);
 
     // base timers, repair and the siege cannon
     if (this.baseLostT > 0) this.baseLostT = Math.max(0, this.baseLostT - dt);
@@ -4816,7 +5224,7 @@ export class Game {
   hud(): Hud {
     const p = this.player, st = this.stats;
     return {
-      hp: p.hp, maxHp: st.hull, shield: p.shield, maxShield: st.shieldMax, boost: p.boost, hasBoost: st.hasBoost, credits: this.save.credits, creditTick: this.creditTick,
+      hp: p.hp, maxHp: st.hull, shield: p.shield, maxShield: st.shieldMax, chairmanShield: st.cannonId === "chairman" ? this.chairman?.shield ?? CHAIRMAN_SHIELD_MAX : 0, chairmanShieldMax: st.cannonId === "chairman" ? CHAIRMAN_SHIELD_MAX : 0, chairmanArmour: st.cannonId === "chairman" && this.chairman?.armourActive ? this.chairman.armour : 0, chairmanArmourMax: st.cannonId === "chairman" && this.chairman?.armourActive ? this.chairman.armourMax : 0, chairmanArmourReady: st.cannonId === "chairman" && !!this.chairman?.armourActive && this.chairman.armourBlend>=1 && !this.chairman.armourDispersing && this.chairman.reload<=0 && this.chairman.drones.every(x=>x<=0), boost: p.boost, hasBoost: st.hasBoost, credits: this.save.credits, creditTick: this.creditTick,
       creditPop: { v: this.creditPopValue, s: this.creditPopScale },
       harp: this.harpoons.map((h) => ({ state: h.state, load: h.comp ? h.comp.c.mass / (h.comp.hooks.length * st.hStr) : 0, hp: h.hp / h.maxHp })),
       toasts: [...this.toasts], ultraNotices: [...this.ultraNotices], nearBase: this.nearBase(),

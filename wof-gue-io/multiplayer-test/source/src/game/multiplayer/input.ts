@@ -10,6 +10,7 @@ export interface PlayerInput {
   fire: boolean;
   boost: boolean;
   aim: number;
+  aimDistance?: number;
 }
 export const NEUTRAL_INPUT: Readonly<PlayerInput> = Object.freeze({ seq: -1, forward: false, backward: false, left: false, right: false, fire: false, boost: false, aim: 0 });
 
@@ -20,8 +21,9 @@ export function parseInput(value: unknown, lastSequence: number): PlayerInput | 
   const v = value as Record<string, unknown>;
   if (typeof v.seq !== 'number' || !Number.isSafeInteger(v.seq) || v.seq < 0 || v.seq <= lastSequence) return null;
   if (typeof v.aim !== 'number' || !Number.isFinite(v.aim) || Math.abs(v.aim) > Math.PI * 2) return null;
+  if (v.aimDistance !== undefined && (typeof v.aimDistance!=='number' || !Number.isFinite(v.aimDistance) || v.aimDistance<0 || v.aimDistance>8192)) return null;
   for (const key of ['forward', 'backward', 'left', 'right', 'fire', 'boost'] as const) if (typeof v[key] !== 'boolean') return null;
-  return { seq: v.seq, aim: v.aim, forward: v.forward as boolean, backward: v.backward as boolean, left: v.left as boolean, right: v.right as boolean, fire: v.fire as boolean, boost: v.boost as boolean };
+  return { seq: v.seq, aim: v.aim, ...(v.aimDistance===undefined?{}:{aimDistance:v.aimDistance as number}), forward: v.forward as boolean, backward: v.backward as boolean, left: v.left as boolean, right: v.right as boolean, fire: v.fire as boolean, boost: v.boost as boolean };
 }
 
 /** Track each connection independently. Inputs expire to neutral on connection

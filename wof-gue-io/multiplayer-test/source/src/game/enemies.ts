@@ -245,6 +245,23 @@ const ell = (cx: number, cy: number, rx: number, ry: number, n = 8, rot = 0): nu
   return out;
 };
 const secPoly = (s: Sec) => ell(s.cx, s.cy, s.rx, s.ry, s.n);
+/** Largest centred regular hexagon of this rotation contained by the actual
+ * convex body polygon. Evaluate its six vertex rays against every edge; a
+ * small inset keeps the core clear of the outline at all resolutions. */
+function coreRadius(s: Sec, rotation: number): number {
+  const poly = secPoly(s); let radius = Infinity;
+  for (let i = 0; i < poly.length; i += 2) {
+    const j = (i + 2) % poly.length, ax = poly[i], ay = poly[i + 1];
+    const ex = poly[j] - ax, ey = poly[j + 1] - ay;
+    const inside = ex * (s.cy - ay) - ey * (s.cx - ax);
+    for (let k = 0; k < 6; k++) {
+      const a = rotation + k * TAU / 6, dx = Math.cos(a), dy = Math.sin(a);
+      const toward = ex * dy - ey * dx;
+      if (toward < -1e-12) radius = Math.min(radius, inside / -toward);
+    }
+  }
+  return radius * 0.97;
+}
 const secSector = (s: Sec, f0: number, f1: number, k0: number, k1: number) => {
   const out: number[] = [];
   for (let k = k0; k <= k1; k++) {
@@ -360,13 +377,12 @@ export class Builder {
     return this.add("segment", name, secPoly(s), { layer: o.layer ?? 1, hpM: o.hpM, style: o.style, seg: o.seg });
   }
   core(s: Sec, host: number, nbrs: number[], seg = -1) {
-    /* Compact weak point tucked under the body. Layer 0 means the segments and
-     * plates draw over it, so the core only shows through gaps instead of
-     * swallowing the insect's silhouette. */
-    const r = Math.max(0.24, Math.min(s.rx, s.ry) * 0.36);
+    /* Fill the host segment without crossing its actual polygon. The core is
+     * still underneath the body; guards are also capped to that same outline. */
+    const r = coreRadius(s, Math.PI / 6), guard = coreRadius(s, 0);
     const id = this.add("core", "Core", ell(s.cx, s.cy, r, r, 6, Math.PI / 6), { layer: 0, links: [host, ...nbrs], seg });
-    if (this.tier >= 2) this.add("armor", "Core Guard", ell(s.cx, s.cy, r * 1.55, r * 1.55, 6), { layer: 6, links: [host], hpM: 1.6, style: 1, seg });
-    if (this.tier >= 4) this.add("armor", "Core Guard", ell(s.cx, s.cy, r * 1.12, r * 1.12, 6, Math.PI / 6), { layer: 7, links: [host], hpM: 2.2, style: 2, seg });
+    if (this.tier >= 2) this.add("armor", "Core Guard", ell(s.cx, s.cy, guard, guard, 6), { layer: 6, links: [host], hpM: 1.6, style: 1, seg });
+    if (this.tier >= 4) this.add("armor", "Core Guard", ell(s.cx, s.cy, r, r, 6, Math.PI / 6), { layer: 7, links: [host], hpM: 2.2, style: 2, seg });
     this.coreId = id;
     return id;
   }
@@ -476,19 +492,22 @@ function randomGunKind(roll: number, tier: number): GunKind {
   return "gun";
 }
 
-function loadout(b: Builder, mounts: Mount[], sp: SpeciesDef) {
+/** Bestiary enumeration can force only optional loadout rolls; normal spawns
+ * omit this and continue using their seeded RNG. */
+export interface LoadoutOverride { optionalGun: boolean; optionalShield: boolean; gunKind: GunKind }
+function loadout(b: Builder, mounts: Mount[], sp: SpeciesDef, override?: LoadoutOverride) {
   const t = b.tier;
   const armed = sp.armed;
   /* Guns and shield generators used to be hard-coded per species. Now every body
    * that does not carry one by design still rolls for it once the mounts exist
    * (epic and up), so a Mantis can turn up with a rotary gun and a shield panel. */
-  const chanceGun = t >= 3 && !armed.gun && b.rng() < 0.12 + 0.06 * t;
-  const chanceShield = t >= 3 && !armed.shield && b.rng() < 0.1 + 0.05 * t;
+  const chanceGun = t >= 3 && !armed.gun && (override ? override.optionalGun : b.rng() < 0.12 + 0.06 * t);
+  const chanceShield = t >= 3 && !armed.shield && (override ? override.optionalShield : b.rng() < 0.1 + 0.05 * t);
   const nGun = (armed.gun || chanceGun) && t >= 3 ? t - 2 : 0;
   const nMis = armed.missile && t >= 4 ? t - 3 : 0;
   const nSh = (armed.shield || chanceShield) && t >= 3 ? t : 0;
   if (!nGun && !nMis && !nSh) return;
-  const kind: GunKind = sp.gunType ?? (chanceGun ? randomGunKind(b.rng(), t) : "gun");
+  const kind: GunKind = sp.gunType ?? (chanceGun ? (override?.gunKind ?? randomGunKind(b.rng(), t)) : "gun");
 
   type Cand = { x: number; y: number; host: number; r: number };
   const pairs: Cand[] = [];
@@ -510,7 +529,7 @@ function loadout(b: Builder, mounts: Mount[], sp: SpeciesDef) {
     const bw = missile ? r * 0.5 : r * (kind === "laser" ? 0.14 : kind === "heavy" ? 0.28 : 0.18);
     const gi = b.group(c.x, c.y * side, "turret", side, 0, 0);
     const poly = turretPoly(c.x, c.y, r, len, bw);
-    const id = b.add("weapon", missile ? "Missile Pod" : spec!.name, side > 0 ? poly : mirror(poly), { layer: 8, g: gi, links: [c.host] });
+    const id = b.add("weapon", missile ? "Missile Pod" : sp.id === "workerant" && kind === "laser" ? "Laser Pointer" : spec!.name, side > 0 ? poly : mirror(poly), { layer: 8, g: gi, links: [c.host] });
     const p = b.parts[id];
     p.wpn = missile ? "missile" : kind;
     p.muzzle = len * b.S;
@@ -561,7 +580,7 @@ const SPECIES: SpeciesDef[] = [
     armed: { gun: true, missile: false, shield: true }, pack: [1, 1, 1, 1, 1, 1],
     abilities: [
       { type: "charge", name: "Dash", minTier: 0, wind: 0.4, dmg: 1, speed: 620, dur: 0.4, minP: 150, maxS: 2, maxP: 900 },
-      { type: "shoot", name: "Spray", minTier: 0, wind: 0.5, dmg: 5, n: 4, ns: 1, spread: 0.6, speed: 220, life: 3, size: 11, kind: "orb", maxS: 2, maxP: 900 },
+      { type: "shoot", name: "Spray", minTier: 0, wind: 0.5, dmg: 5, n: 4, ns: 1, spread: 0.14, speed: 800, life: 2, size: 11, kind: "orb", maxS: 2, maxP: 900 },
       { type: "grab", name: "Chomp", minTier: 3, wind: 0.5, dmg: 7, chomps: 4, chompCd: 0.8, hold: 3, maxS: 4, maxP: 500, lunge: 950 },
       { type: "ring", name: "Shockwave", minTier: 4, wind: 0.7, dmg: 8, size: 6, speed: 520, maxS: 4, maxP: 300 },
     ],
@@ -1616,8 +1635,8 @@ function buildSnake(b: Builder, t: number, n: number): Mount[] {
 
 /* species id → spawn zone range (existing roster) */
 const ZONES: Record<string, [number, number]> = {
-  dragonfly: [0, 4], scorpion: [0, 3], spider: [0, 4], moth: [0, 4], mantis: [0, 4],
-  centipede: [0, 3], wasp: [0, 4], beetle: [0, 5], ant: [0, 4], firefly: [1, 5],
+  dragonfly: [0, 5], scorpion: [0, 3], spider: [0, 4], moth: [0, 4], mantis: [0, 4],
+  centipede: [0, 3], wasp: [0, 4], beetle: [0, 5], ant: [0, 5], workerant: [0, 5], firefly: [1, 5],
 };
 for (const sp of SPECIES) {
   const z = ZONES[sp.id];
@@ -1656,12 +1675,12 @@ function scaleArmour(parts: Part[], tier: number, baseHp: number) {
   for (const p of parts) if (p.kind === "armor") p.hp = p.maxHp = p.maxHp * ratio;
 }
 
-export function buildEnemy(speciesIdx: number, tier: number, seed: number): BuiltEnemy {
+export function buildEnemy(speciesIdx: number, tier: number, seed: number, loadoutOverride?: LoadoutOverride): BuiltEnemy {
   const sp = SPECIES[speciesIdx];
   const rng = mulberry32(seed);
   const b = new Builder(tier, sp.hue, rng, sp.hp);
   const mounts = sp.build(b, Math.min(tier, 5));
-  loadout(b, mounts, sp);
+  loadout(b, mounts, sp, loadoutOverride);
   scaleArmour(b.parts, tier, sp.hp);
   const order = b.parts.map((_, i) => i).sort((a, c) => b.parts[a].layer - b.parts[c].layer || a - c);
   let radius = 0;

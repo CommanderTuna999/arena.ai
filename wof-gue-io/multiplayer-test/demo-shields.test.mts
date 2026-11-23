@@ -8,7 +8,7 @@ world.puddles.push({x:a.player.x,y:a.player.y,r:40,life:1,max:1,arm:0,dps:200,sl
 const damaged=a.player.shield;assert(damaged<60 && damaged>0,'main-game damage hits shield first');assert.equal(a.player.hp,100);assert.equal(b.player.shield,60,'damage and cooldown remain pilot-specific');assert.equal(b.player.hp,100);
 for(let i=0;i<40;i++)h.step(.05,1050+i*50);assert.equal(a.player.shield,damaged,'shield waits for its post-hit delay');
 for(let i=0;i<65;i++)h.step(.05,3050+i*50);assert(a.player.shield>damaged,'shield recharges after the main-game delay');assert.equal(b.player.shield,60);
-assert(h.roster.equipDemoCannon('b','workhorse'));b.player.heat=.7;b.player.jam=1;b.player.recoil=.4;b.player.muzzleFlash=.8;b.player.barrelRec=[.9,.2];
+b.player.x=-59000;b.player.y=-68000;assert(h.roster.equipDemoCannon('b','workhorse'));b.player.x=-48000;b.player.y=-65000;b.player.heat=.7;b.player.jam=1;b.player.recoil=.4;b.player.muzzleFlash=.8;b.player.barrelRec=[.9,.2];
 const snap=h.snapshot(),p=snap.pilots.find(p=>p.id==='a')!,q=snap.pilots.find(p=>p.id==='b')!;assert.equal(p.shield,a.player.shield);assert.equal(p.shieldMax,60);assert.equal(q.cannonId,'workhorse');
 const replica=new ReplicaView();assert(replica.apply(snap,snap.pilots,snap.enemies,'a'));assert.equal(replica.game.stats.shieldMax,60);assert.equal(replica.game.player.shield,a.player.shield);
 const remote=replica.game.others[0];assert.equal(remote.cannonId,'workhorse');assert.equal(remote.shield,60);assert.equal(remote.heat,.7);assert.deepEqual(remote.barrelRec,[.9,.2]);remote.barrelRec![0]=5;assert.equal(q.barrelRec[0],.9,'replica does not mutate wire state');

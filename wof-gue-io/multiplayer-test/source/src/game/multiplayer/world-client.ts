@@ -1,4 +1,5 @@
 import { parseInput, type PlayerInput } from './input';
+import {CANNON_BY_ID} from '../data';
 import { SnapshotBuffer, type RenderBody } from './snapshot-buffer';
 import { unpackGeometry, type Geometry } from './demo-geometry';
 
@@ -82,8 +83,12 @@ export class ExperimentalWorldClient {
   }
   /** Demo-only selection; actual equipment always comes from server snapshots. */
   equipDemoCannon(cannon: string): boolean {
-    if (this.state !== 'online' || !this.socket || this.socket.readyState !== 1 || !['sting','peashooter','workhorse','skewer','fencer'].includes(cannon)) return false;
+    if (this.state !== 'online' || !this.socket || this.socket.readyState !== 1 || !Object.hasOwn(CANNON_BY_ID,cannon)) return false;
     try {this.socket.send(JSON.stringify({type:'demo-equip',cannon}));return true;} catch {this.disconnect();return false;}
+  }
+  upgradeDemoCannon(track:string,count:number,cannon:string):boolean {
+    if(this.state!=='online'||!this.socket||this.socket.readyState!==1||typeof track!=='string'||!Object.hasOwn(CANNON_BY_ID,cannon)||!Number.isSafeInteger(count)||count<1||count>30)return false;
+    try{this.socket.send(JSON.stringify({type:'demo-upgrade',track,count,cannon}));return true;}catch{this.disconnect();return false;}
   }
   sendViewport(width: number, height: number): boolean {
     if (this.state !== 'online' || !this.socket || this.socket.readyState !== 1 ||

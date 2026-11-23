@@ -1,3 +1,10 @@
+import { scanPartIndex, scanHighlight, scanFlashDuration, type TargetScan } from "./target-scan";
+import { CHAIRMAN_SHIELD_MAX, chairmanDronePosition, chairmanDroneVisualPosition, chairmanArmourDronePosition, chairmanHaloCenter } from "./chairman";
+import { plateHitIntensity } from "./plate-impact";
+import { drawCasings } from "./casing-fx";
+import { drawShieldImpacts } from "./shield-impact";
+import { drawKineticOrb } from "./projectile-render";
+import { drawChatBubble } from "./chat-bubble";
 import { salvageSpriteScale } from "./salvage-render";
 import { MAP_GRID, MAP_CELL, MAP_RADIUS } from "./world";
 import { TAU, clamp, fmtNum } from "./math";
@@ -213,20 +220,21 @@ export function render(g: Game, ctx: CanvasRenderingContext2D) {
     }
   }
 
+  // These components have already been awarded; their flight is cosmetic only.
+  for (const flight of g.magnetFlights) {
+    const c = flight.comp;
+    if (c.x + c.r < vx0 || c.x - c.r > vx1 || c.y + c.r < vy0 || c.y - c.r > vy1) continue;
+    drawComp(g, ctx, c, z, t);
+    ctx.strokeStyle = `rgba(255,225,77,${0.3 * flight.life / flight.max})`;
+    ctx.lineWidth = 1.2 / z; ctx.setLineDash([8 / z, 10 / z]); ctx.lineDashOffset = -t * 40 / z;
+    ctx.beginPath(); ctx.moveTo(c.x, c.y); ctx.lineTo(g.player.x, g.player.y); ctx.stroke();
+    ctx.setLineDash([]); ctx.lineDashOffset = 0;
+  }
+
   /* credit coins are HUD animation; see drawCreditFlights() */
 
   /* ---- magnet field ---- */
   if (g.stats.magnet > 0) {
-    const mpl = g.player;
-    for (const c of g.comps) {
-      if (c.hooks.length || c.c.mass > 7) continue;
-      const d = Math.hypot(c.x - mpl.x, c.y - mpl.y);
-      if (d > g.stats.magnetRange) continue;
-      ctx.strokeStyle = `rgba(255,225,77,${0.06 + 0.28 * (1 - d / g.stats.magnetRange)})`;
-      ctx.lineWidth = 1.2 / z; ctx.setLineDash([8 / z, 10 / z]); ctx.lineDashOffset = -t * 40 / z;
-      ctx.beginPath(); ctx.moveTo(c.x, c.y); ctx.lineTo(mpl.x, mpl.y); ctx.stroke();
-      ctx.setLineDash([]); ctx.lineDashOffset = 0;
-    }
     ctx.strokeStyle = "rgba(255,225,77,0.05)"; ctx.lineWidth = 1 / z;
     ctx.beginPath(); ctx.arc(g.player.x, g.player.y, g.stats.magnetRange, 0, TAU); ctx.stroke();
   }
@@ -353,6 +361,19 @@ export function render(g: Game, ctx: CanvasRenderingContext2D) {
     ctx.restore();
   }
 
+  // The grab sting connects to the living stinger itself, rather than
+  // appearing as an unrelated line from the middle of the scorpion.
+  for (const e of g.enemies) {
+    const a = e.act;
+    if (e.spd.id !== "scorpion" || e.tier < 3 || a?.def.type !== "grab" || a.ph !== 1 || a.t < 0.6 || a.t > 0.95 || g.player.pull?.e !== e) continue;
+    const stinger = e.parts.find(p => p.name === "Stinger" && p.alive);
+    if (!stinger) continue;
+    const [sx, sy] = pw(e, stinger);
+    ctx.save(); ctx.strokeStyle = "rgba(190,255,120,0.9)"; ctx.lineWidth = Math.max(3 / z, e.S * 0.08);
+    ctx.lineCap = "round"; ctx.shadowColor = "#baff78"; ctx.shadowBlur = 12;
+    ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(g.player.x, g.player.y); ctx.stroke(); ctx.restore();
+  }
+
   /* ---- debris ---- */
   for (const d of g.debris) {
     ctx.save();
@@ -373,7 +394,9 @@ export function render(g: Game, ctx: CanvasRenderingContext2D) {
     const pinned = pl.pull.e.act?.def.type === "grab" && pl.pull.e.act?.ph === 1;
     const tether = pl.pull.e.x - pl.x, tetherY = pl.pull.e.y - pl.y;
     const tx = Math.hypot(tether, tetherY) || 1;
-    if (pinned) {
+    if (pinned && (pl.pull.e.spd.id === "scorpion" || pl.pull.e.spd.id === "spider" || pl.pull.e.spd.id === "dragonfly")) {
+      // The actual animated pincers or fangs surround the ship; no fake tether.
+    } else if (pinned) {
       ctx.strokeStyle = `rgba(255,90,110,0.9)`; ctx.lineWidth = 7 / z;
       ctx.shadowColor = "rgba(255,90,110,0.9)"; ctx.shadowBlur = 16;
       ctx.beginPath(); ctx.moveTo(pl.x, pl.y); ctx.lineTo(pl.pull.e.x, pl.pull.e.y); ctx.stroke();
@@ -384,29 +407,7 @@ export function render(g: Game, ctx: CanvasRenderingContext2D) {
       const pulse = 0.5 + 0.5 * Math.sin(t * 16);
       ctx.strokeStyle = `rgba(255,120,140,${0.4 + 0.4 * pulse})`; ctx.lineWidth = 3 / z;
       ctx.beginPath(); ctx.arc(pl.x, pl.y, SHIP_R + 6, 0, TAU); ctx.stroke();
-      /* the scorpion's pincers clamp down on the ship: two curved claws
-       * closing from either side so the grab reads as pincers, not nothing */
-      if (pl.pull.e.spd.id === "scorpion") {
-        const pg = pl.pull.e;
-        const claw = SHIP_R + 14;
-        const clamp = 0.6 + 0.4 * pulse;
-        ctx.strokeStyle = `hsl(${pg.spd.hue} 70% 60%)`; ctx.lineWidth = 5 / z;
-        ctx.lineCap = "round";
-        for (const side of [1, -1]) {
-          ctx.save(); ctx.translate(pl.x, pl.y);
-          ctx.rotate(side > 0 ? 0.5 : -0.5);
-          ctx.beginPath();
-          ctx.moveTo(side * claw * 0.5, -claw * 0.7 * clamp);
-          ctx.quadraticCurveTo(side * claw * 1.1, 0, side * claw * 0.5, claw * 0.7 * clamp);
-          ctx.stroke();
-          ctx.beginPath();
-          ctx.moveTo(side * claw * 0.5, -claw * 0.7 * clamp);
-          ctx.lineTo(side * claw * 0.2, -claw * 0.5 * clamp);
-          ctx.stroke();
-          ctx.restore();
-        }
-        ctx.lineCap = "butt";
-      }
+
     } else {
       ctx.strokeStyle = "rgba(255,140,80,0.8)"; ctx.lineWidth = 3 / z; ctx.setLineDash([12 / z, 8 / z]);
       ctx.beginPath(); ctx.moveTo(pl.x, pl.y); ctx.lineTo(pl.pull.e.x, pl.pull.e.y); ctx.stroke(); ctx.setLineDash([]);
@@ -591,6 +592,8 @@ export function render(g: Game, ctx: CanvasRenderingContext2D) {
       ctx.lineWidth = 1.4;
       ctx.strokeStyle = "rgba(255,248,214,0.8)";
       ctx.beginPath(); ctx.arc(b.x, b.y, r, 0, TAU); ctx.stroke();
+    } else if (b.visual === "scatter-orb") {
+      drawKineticOrb(ctx, b);
     } else {
       ctx.lineWidth = (b.crit ? 4 : 3);
       ctx.beginPath(); ctx.moveTo(b.x, b.y); ctx.lineTo(b.x - b.vx * 0.022, b.y - b.vy * 0.022); ctx.stroke();
@@ -618,6 +621,29 @@ export function render(g: Game, ctx: CanvasRenderingContext2D) {
   }
   ctx.shadowBlur = 0;
 
+  // Targeting sweep is cosmetic; the committed shot uses the moving core's
+  // current world position. Sweep the living body's full bounds, then flash
+  // once over the core just before firing.
+  const scan = g.revolutionaryScan;
+  if (scan && !scan.enemy.dead) {
+    const e = scan.enemy, core = e.parts[e.coreId];
+    drawScanHighlights(ctx, e, scan, z);
+    const index = scanPartIndex(scan);
+    const part = index < 0 ? core : (e.parts[scan.parts[index]] ?? core);
+    const [x, y] = pw(e, part);
+    const p = g.player, mz = g.stats.muzzles[p.muzzle % g.stats.muzzles.length] ?? {x: 14, y: 0};
+    const c = Math.cos(p.a), si = Math.sin(p.a);
+    const mx = p.x + c * mz.x - si * mz.y, my = p.y + si * mz.x + c * mz.y;
+    const flash = scan.elapsed >= scan.duration - scanFlashDuration(scan);
+    ctx.save(); ctx.strokeStyle = flash ? "#ff9ba2" : "#ff3348";
+    ctx.globalAlpha = flash ? 0.95 : 0.65; ctx.lineWidth = (flash ? 2.5 : 1) / z;
+    ctx.beginPath(); ctx.moveTo(mx, my); ctx.lineTo(x, y); ctx.stroke();
+    ctx.fillStyle = flash ? "#fff0f0" : "#ff3348";
+    ctx.beginPath(); ctx.arc(x, y, (flash ? 6 : 2.5) / z, 0, TAU); ctx.fill();
+    if (flash) { ctx.strokeStyle = "#ff243a"; ctx.lineWidth = 2 / z; ctx.beginPath(); ctx.arc(x, y, (10 + 5 * (scan.elapsed - (scan.duration - scanFlashDuration(scan))) / scanFlashDuration(scan)) / z, 0, TAU); ctx.stroke(); }
+    ctx.restore();
+  }
+
   /* ---- rings ---- */
   for (const r of g.rings) {
     const a = clamp(1 - r.r / r.max, 0, 1);
@@ -631,14 +657,14 @@ export function render(g: Game, ctx: CanvasRenderingContext2D) {
 
   /* ---- other players ---- */
   for (const o of g.others) {
-    if (o.dead) continue;
-    ctx.save(); ctx.translate(o.x, o.y); ctx.rotate(o.a);
-    drawShipShape(ctx, "#ff7ad9", 0.85, z, t);
+    if(o.dead)continue;
+    ctx.save();ctx.translate(o.x,o.y);ctx.rotate(o.a);
+    drawShipShape(ctx,"#ff7ad9",0.85,z,t);
     const cannon=o.cannonId && CANNON_BY_ID[o.cannonId];
-    if (cannon) drawCannon(ctx,z,t,{recoil:o.recoil ?? 0,heat:o.heat ?? 0,jam:o.jam ?? 0,
-      muzzleFlash:o.muzzleFlash ?? 0,barrelRec:o.barrelRec ?? []},{cannonId:cannon.id,overheat:cannon.overheat ?? 0});
+    if(cannon && cannon.id!=="chairman") drawCannon(ctx,z,t,{recoil:o.recoil??0,heat:o.heat??0,jam:o.jam??0,gatAngle:o.gatAngle??0,muzzleFlash:o.muzzleFlash??0,barrelRec:o.barrelRec??[]},{cannonId:cannon.id,overheat:cannon.overheat??0,muzzles:cannon.muzzles});
     ctx.restore();
-    if ((o.shieldMax ?? 0)>0 && (o.shield ?? 0)>0) drawPilotShield(ctx,o.x,o.y,o.shield!,o.shieldMax!,"#7df9ff",z,t);
+    if(o.cannonId==="chairman" && o.chairman)drawChairman({chairman:o.chairman,player:{x:o.x,y:o.y},enemies:g.enemies} as Game,ctx,z,t);
+    if((o.shieldMax??0)>0 && (o.shield??0)>0){const f=clamp(o.shield!/o.shieldMax!,0,1);ctx.save();ctx.strokeStyle="#7df9ff";ctx.globalAlpha=.2+.5*f;ctx.lineWidth=2/z;ctx.shadowColor="#7df9ff";ctx.shadowBlur=10;hexPath(ctx,o.x,o.y,SHIP_R+20,t*.8);ctx.stroke();ctx.restore();}
     ctx.fillStyle = "rgba(255,170,230,0.9)";
     ctx.font = `${12 / z}px ui-monospace, monospace`; ctx.textAlign = "center";
     ctx.fillText(o.name, o.x, o.y - 30);
@@ -677,7 +703,7 @@ export function render(g: Game, ctx: CanvasRenderingContext2D) {
   }
 
   /* ---- player ---- */
-  if (!pl.dead) drawPlayer(g, ctx, z, t);
+  if (!pl.dead) { drawPlayer(g, ctx, z, t); if (g.stats.cannonId === "chairman") drawChairman(g, ctx, z, t); }
 
   /* ---- particles ----
    * Small sparks are point sprites: one fillRect each, no path construction.
@@ -715,11 +741,15 @@ export function render(g: Game, ctx: CanvasRenderingContext2D) {
   }
   ctx.globalAlpha = 1;
 
+  drawCasings(ctx, g, t);
+
   /* ---- enemy bars (drawn last, in world space) ---- */
   for (const e of g.enemies) {
     if (e.x + e.radius < vx0 || e.x - e.radius > vx1 || e.y + e.radius < vy0 || e.y - e.radius > vy1) continue;
     drawBars(g, ctx, e, z);
   }
+
+  if (!pl.dead) drawChatBubble(ctx, g, pl.x, pl.y, z, w);
 
   /* ---- screen space HUD in canvas ---- */
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -731,8 +761,94 @@ export function render(g: Game, ctx: CanvasRenderingContext2D) {
    * screen, climbing from a faint amber at the mid-ramp to a hard red-orange
    * ring at the top, and a slow pulse when it is jammed and cooling */
   drawHeatVignette(g, ctx);
+  // A brief screen-wide red flash accompanies each Revolutionary beam.
+  const redFlash = g.beams.reduce((v, b) => b.color === "#ff263b" ? Math.max(v, b.life) : v, 0);
+  if (redFlash > 0) { ctx.save(); ctx.globalAlpha = 0.32 * clamp(redFlash / 0.12, 0, 1); ctx.fillStyle = "#ff1024"; ctx.fillRect(0, 0, w, h); ctx.restore(); }
+
   if (hoveredComp) drawCompTooltip(g, ctx, hoveredComp);
+  const sunFlash = g.stats.cannonId === "chairman" ? g.chairman?.flash ?? 0 : 0;
+  if (sunFlash > 0) { ctx.save(); ctx.globalAlpha = clamp(sunFlash / .34, 0, 1); ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, w, h); ctx.restore(); }
   drawCutscene(g, ctx);
+}
+
+/** Paint actual animated part polygons on top of the body so scanning is
+ * visible even through overlapping armour and at low zoom. */
+function drawScanHighlights(ctx:CanvasRenderingContext2D,e:Enemy,scan:TargetScan,z:number) {
+  ctx.save();ctx.translate(e.x,e.y);ctx.rotate(e.a);ctx.lineJoin="round";
+  const active=scanPartIndex(scan);
+  const ids=active<0?[e.coreId]:scan.parts.slice(Math.max(0,active-3),active+1);
+  ids.forEach((id,j)=>{
+    const part=e.parts[id];if(!part?.alive)return;
+    const index=active<0?-1:Math.max(0,active-3)+j;
+    const alpha=active<0?1:scanHighlight(scan,index);
+    if(alpha<=0)return;
+    ctx.save();const group=part.g>=0?e.groups[part.g]:null;
+    if(group && group.ang!==0){ctx.translate(group.px,group.py);ctx.rotate(group.ang);ctx.translate(-group.px,-group.py);}
+    const bo=bend(e,part);if(bo)ctx.translate(0,bo);
+    polyPath(ctx,part.poly);ctx.fillStyle=`rgba(255,24,46,${.36*alpha})`;ctx.fill();
+    ctx.strokeStyle=`rgba(255,90,100,${.95*alpha})`;ctx.lineWidth=2.5/z;ctx.stroke();ctx.restore();
+  });
+  ctx.restore();
+}
+
+/** Chairman: orbiting drone turrets and a red
+ * sun. Effects are bounded to the drone cap; no per-frame particles needed. */
+function drawChairman(g:Game, ctx:CanvasRenderingContext2D, z:number, t:number) {
+  const s=g.chairman, p=g.player; if(!s)return;
+  const charge=clamp(s.charge,0,1), n=s.drones.length;
+  const points=s.drones.map((_,i)=>s.armourActive ? chairmanArmourDronePosition(s,i,p.x,p.y) : s.drones[i]>0 ? chairmanDroneVisualPosition(s,i,p.x,p.y) : chairmanDronePosition(s,i,p.x,p.y));
+  ctx.save();ctx.lineCap="round";
+  // A transparent red dome is independent of the player's existing shield.
+  if(s.shield>0) {
+    const f=clamp(s.shield/CHAIRMAN_SHIELD_MAX,0,1),rad=54;
+    ctx.fillStyle=`rgba(255,52,74,${.025+.035*f})`;ctx.beginPath();ctx.arc(p.x,p.y,rad,0,TAU);ctx.fill();
+    ctx.strokeStyle=`rgba(255,52,74,${.24+.38*f})`;ctx.lineWidth=2/z;ctx.beginPath();ctx.arc(p.x,p.y,rad,0,TAU);ctx.stroke();
+  }
+  if(charge>0) for(let i=0;i<n;i++) {
+    const [x,y]=points[i];ctx.strokeStyle=`rgba(255,${Math.round(45+charge*150)},${Math.round(55+charge*150)},${.2+charge*.7})`;
+    ctx.lineWidth=(1+charge*3)/z;ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(p.x,p.y);ctx.stroke();
+  }
+  for(let i=0;i<n;i++) {
+    const [x,y]=points[i], firing=(s.fireGlow[i] ?? 0)>0, lit=firing || s.drones[i]<=0, pulse=.8+.2*Math.sin(t*5+i);
+    if(firing){const glow=ctx.createRadialGradient(x,y,0,x,y,42);glow.addColorStop(0,"rgba(255,255,255,.98)");glow.addColorStop(.2,"rgba(255,115,125,.95)");glow.addColorStop(.5,"rgba(255,35,60,.55)");glow.addColorStop(1,"rgba(255,35,60,0)");ctx.fillStyle=glow;ctx.beginPath();ctx.arc(x,y,42,0,TAU);ctx.fill();}
+    const [hx,hy]=chairmanHaloCenter(s,i%3,p.x,p.y);
+    // The real turret silhouette becomes each overlapping armour segment;
+    // interpolate its facing and width as it moves into formation.
+    const blend=s.armourActive?s.armourBlend:0, smooth=blend*blend*(3-2*blend);
+    const baseAngle=Math.atan2(y-hy,x-hx), plateAngle=i*TAU/n;
+    const turn=Math.atan2(Math.sin(plateAngle-baseAngle),Math.cos(plateAngle-baseAngle));
+    const lost=s.armourActive && i<s.armourLostPieces;
+    ctx.save();ctx.translate(x,y);ctx.rotate(baseAngle+turn*smooth);
+    ctx.scale(1+(Math.max(.6,TAU*69/n/22*1.15)-1)*smooth,1+smooth*.35);
+    ctx.globalAlpha=lost ? .3 : lit ? 1 : .65;
+    ctx.fillStyle=lit?"#3f0715":"#190b11";ctx.strokeStyle=lit?"#ff364c":"#74303b";ctx.lineWidth=1.5/z;
+    if(lit){ctx.shadowColor="#ff1d42";ctx.shadowBlur=firing?45:10+charge*20;}
+    ctx.beginPath();ctx.moveTo(11,0);ctx.lineTo(3,-5);ctx.lineTo(-7,-5);ctx.lineTo(-11,0);ctx.lineTo(-7,5);ctx.lineTo(3,5);ctx.closePath();ctx.fill();ctx.stroke();
+    ctx.shadowBlur=0;ctx.fillStyle=firing?"#ffffff":lit?`rgba(255,${Math.round(80+charge*150)},${Math.round(90+charge*150)},${pulse})`:"#521520";
+    ctx.beginPath();ctx.arc(0,0,3.4,0,TAU);ctx.fill();ctx.restore();
+  }
+  // The sun shines at full intensity when ready, and dims during reload.
+  const sunReady=s.reload<=0 && !s.sunLocked;
+  const r=22+charge*12;
+  const sun=ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,r*2.5);
+  sun.addColorStop(0,sunReady?"#fff5ed":"#ef5764");sun.addColorStop(.14,sunReady?"#ff8a80":"#a4152a");sun.addColorStop(.35,"#8d1024");sun.addColorStop(1,"rgba(255,12,48,0)");
+  ctx.fillStyle=sun;ctx.beginPath();ctx.arc(p.x,p.y,r*2.5,0,TAU);ctx.fill();
+  ctx.fillStyle="#390815";ctx.strokeStyle=`rgba(255,70,85,${.6+charge*.4})`;ctx.lineWidth=2/z;
+  ctx.beginPath();ctx.arc(p.x,p.y,r,0,TAU);ctx.fill();ctx.stroke();
+  for(let i=0;i<10;i++) {const a=i*TAU/10+s.phase*.3;ctx.strokeStyle=`rgba(255,70,80,${.4+charge*.5})`;ctx.beginPath();ctx.moveTo(p.x+Math.cos(a)*r*.8,p.y+Math.sin(a)*r*.8);ctx.lineTo(p.x+Math.cos(a)*r*(1.2+charge*.3),p.y+Math.sin(a)*r*(1.2+charge*.3));ctx.stroke();}
+  const center=ctx.createRadialGradient(p.x-4,p.y-4,0,p.x,p.y,r*.75);center.addColorStop(0,sunReady?"#fff":"#ff727c");center.addColorStop(.45,sunReady?"#ff6760":"#a7162c");center.addColorStop(1,"#4a0917");ctx.fillStyle=center;ctx.beginPath();ctx.arc(p.x,p.y,r*.75,0,TAU);ctx.fill();
+  if(s.scan) {
+    const e=g.enemies.find(e=>e.id===s.scan!.enemyId&&!e.dead), drone=points[s.scan.drone];
+    if(e && drone) {
+      drawScanHighlights(ctx,e,s.scan,z);
+      const scanTime=s.scan.duration-scanFlashDuration(s.scan);
+      const flash=s.scan.elapsed>=scanTime;
+      const index=scanPartIndex(s.scan);
+      const q=index<0?e.parts[e.coreId]:e.parts[s.scan.parts[index]];
+      if(q){const [x,y]=pw(e,q);ctx.strokeStyle=flash?"#ffe4e4":"#ff3349";ctx.globalAlpha=flash?1:.8;ctx.lineWidth=(flash?2:1)/z;ctx.beginPath();ctx.moveTo(drone[0],drone[1]);ctx.lineTo(x,y);ctx.stroke();ctx.fillStyle=flash?"#fff":"#ff3349";ctx.beginPath();ctx.arc(x,y,(flash?6:3)/z,0,TAU);ctx.fill();}
+    }
+  }
+  ctx.restore();
 }
 
 /** Screen-space Ultra encounter bars and legible black announcements. */
@@ -1246,20 +1362,9 @@ function drawRope(g: Game, ctx: CanvasRenderingContext2D, h: { state: number; no
  * trigger, heat tints the shroud and puts a glow in the bore, and the barrel
  * that actually fired flashes. Silhouettes differ per gun: fat bolt thrower,
  * long lance, three stubby spigots, or a genuine twin. */
-/** Same visual for local and other guests; values come from the server. */
-function drawPilotShield(ctx:CanvasRenderingContext2D,x:number,y:number,current:number,max:number,color:string,z:number,t:number) {
-  const f=clamp(current/max,0,1);
-  ctx.save();ctx.strokeStyle=color;ctx.globalAlpha=0.2+0.5*f;ctx.lineWidth=2/z;
-  ctx.shadowColor=color;ctx.shadowBlur=10;hexPath(ctx,x,y,SHIP_R+20,t*0.8);
-  ctx.stroke();ctx.fillStyle=color;ctx.globalAlpha=0.04+0.06*f;ctx.fill();
-  ctx.globalAlpha=0.5+0.35*Math.sin(t*4);
-  for(const dir of [1,-1]) {ctx.beginPath();ctx.arc(x,y,SHIP_R+26,t*dir*1.1,t*dir*1.1+1.1);ctx.stroke();}
-  ctx.restore();
-}
-
-function drawCannon(ctx: CanvasRenderingContext2D, z: number, t: number,
-  p: Pick<Game["player"], "recoil" | "heat" | "jam" | "muzzleFlash" | "barrelRec">,
-  st: Pick<Game["stats"], "cannonId" | "overheat">) {
+function drawCannon(ctx: CanvasRenderingContext2D,z:number,t:number,
+ p:Pick<Game["player"],"recoil"|"heat"|"jam"|"gatAngle"|"muzzleFlash"|"barrelRec">,
+ st:Pick<Game["stats"],"cannonId"|"overheat"|"muzzles">) {
   const c = CANNON_BY_ID[st.cannonId] ?? CANNONS[0];
   const look = c.look;
   const rec = p.recoil * p.recoil;                     // fast out, settles in
@@ -1269,7 +1374,7 @@ function drawCannon(ctx: CanvasRenderingContext2D, z: number, t: number,
   const steel = "#0a1723";
   const edge = `hsl(${look.hue} 70% 46%)`;
   const bore = look.bore;
-  const mz = c.muzzles;
+  const mz = st.muzzles;
 
   /* breech block, bolted to the hull's nose */
   ctx.fillStyle = steel; ctx.strokeStyle = `hsla(${look.hue} 70% 60% / 0.5)`; ctx.lineWidth = 1;
@@ -1282,26 +1387,31 @@ function drawCannon(ctx: CanvasRenderingContext2D, z: number, t: number,
   const own = (i: number) => p.barrelRec[i] ?? 0;
   const barrel = (y: number, w: number, len: number, alpha: number, spring = 0) => {
     const b = back + spring * look.len * 0.24;
+    const charge = c.id === "revolutionary" ? 1 - clamp(spring, 0, 1) : 1;
     ctx.globalAlpha = alpha;
     ctx.fillStyle = steel;
-    ctx.strokeStyle = edge;
+    ctx.strokeStyle = c.id === "revolutionary" ? `hsl(0 75% ${10 + 36 * charge}%)` : edge;
     ctx.lineWidth = 1;
     ctx.beginPath();
     ctx.rect(9 - b, y - w, Math.max(1, len - 9), w * 2);
     ctx.fill(); ctx.stroke();
     /* energy seam down the barrel: this is what heats up */
     ctx.strokeStyle = heat > 0.05 ? `hsl(${Math.max(6, 40 - 34 * heat)} 100% ${62 + 8 * heat}%)` : trim;
-    ctx.globalAlpha = alpha * (0.55 + 0.45 * heat);
+    ctx.globalAlpha = alpha * (c.id === "revolutionary" ? 0.08 + 0.92 * charge : 0.55 + 0.45 * heat);
     ctx.lineWidth = 1.1;
     ctx.beginPath(); ctx.moveTo(11 - b, y); ctx.lineTo(len - b - 2, y); ctx.stroke();
     ctx.globalAlpha = alpha;
     /* muzzle ring */
-    ctx.strokeStyle = `hsla(${look.hue} 90% 78% / 0.9)`;
+    ctx.strokeStyle = c.id === "revolutionary" ? `hsla(0 90% ${15 + 63 * charge}% / 0.9)` : `hsla(${look.hue} 90% 78% / 0.9)`;
     ctx.lineWidth = 1.2;
     ctx.beginPath(); ctx.ellipse(len - b, y, 1.4, w + 0.6, 0, 0, TAU); ctx.stroke();
   };
 
-  if (look.style === "spray") {
+  if (c.rotary) {
+    // A rotating cluster: each bore and its own recoil spring follows the
+    // same rotation used for the actual firing muzzle.
+    mz.forEach((m, i) => barrel(Math.sin((st.cannonId === "gatler" ? p.gatAngle : t * 10) + i * TAU / mz.length) * 5.5, bore * 0.55, m.x, 1, own(i)));
+  } else if (look.style === "spray") {
     /* three stubby spigots: a hose, not a rifle */
     barrel(-3.4, bore * 0.62, look.len - 2, 0.95, own(0));
     barrel(0, bore * 0.7, look.len, 1, own(0));
@@ -1311,7 +1421,8 @@ function drawCannon(ctx: CanvasRenderingContext2D, z: number, t: number,
     ctx.fillStyle = "rgba(120,200,235,0.10)";
     ctx.strokeStyle = `hsla(${look.hue} 80% 70% / 0.45)`;
     ctx.beginPath(); ctx.rect(11 - back, -bore - 2.6, look.len - 16, (bore + 2.6) * 2); ctx.fill(); ctx.stroke();
-    barrel(0, bore, look.len, 1, own(0));
+    if (c.id === "revolutionary" && mz.length > 1) mz.forEach((m, i) => barrel(m.y, bore * 0.65, look.len, 1, own(i)));
+    else barrel(0, bore, look.len, 1, own(0));
     for (let k = 0; k < 2; k++) {
       const x = 18 + k * 7 - back;
       ctx.strokeStyle = trim; ctx.lineWidth = 1.4;
@@ -1794,10 +1905,8 @@ function drawPlayer(g: Game, ctx: CanvasRenderingContext2D, z: number, t: number
   }
   ctx.restore();
 
-  if (st.shieldMax > 0 && p.shield > 0) {
-    const sc = shield ? SHIELD_ART[shield.rid] ?? "#7df9ff" : "#7df9ff";
-    drawPilotShield(ctx,p.x,p.y,p.shield,st.shieldMax,sc,z,t);
-  }
+  // The shield is invisible until struck; impacts reveal local honeycomb cells.
+ drawShieldImpacts(ctx, p, p.x, p.y, t, 8, st.cannonId === "chairman" ? "#ff344a" : shield ? SHIELD_ART[shield.rid] ?? "#7df9ff" : "#7df9ff");
   if (p.barrier > 0 && p.barrierMax > 0) {
     const f = p.barrier / p.barrierMax;
     ctx.strokeStyle = `rgba(120,220,255,${0.35 + 0.5 * f})`; ctx.lineWidth = 4 / z; ctx.shadowColor = "#4dd2ff"; ctx.shadowBlur = 16;
@@ -1908,14 +2017,12 @@ function drawEnemy(g: Game, ctx: CanvasRenderingContext2D, e: Enemy, z: number, 
   if (showPlate) {
     const top = e.shells[shellN - 1];
     const f = clamp(top.hp / Math.max(1, top.max), 0, 1);
-    const hit = e.shellHit > 0 ? 1 : 0;
     /* Neutral steel, not a species-tinted stroke: the slabs have to read as a
      * separate physical object bolted onto the body. */
     const steel = (l: number, a = 1) => `hsla(${e.spd.hue},9%,${l}%,${a})`;
     const under = steel(5, 0.92);
     const fill = steel(19 + 11 * f, 0.97);
     const lip = steel(36 + 14 * f, 0.95);
-    const rim = steel(62, 0.75 + 0.2 * f + 0.25 * hit);
     const rimW = 2.6 / (3 * z);
     /* The old plating was a 4-19u rim; the slabs now stand ~10x thicker, and
      * their width tracks the size of the plate they are bolted to. */
@@ -1953,7 +2060,7 @@ function drawEnemy(g: Game, ctx: CanvasRenderingContext2D, e: Enemy, z: number, 
       platePath(p, grow * 0.84);
       ctx.strokeStyle = lip; ctx.lineWidth = Math.max(2 / 3, grow * 0.22) / z; ctx.stroke();
       /* bright outer rim */
-      ctx.strokeStyle = rim; ctx.lineWidth = rimW; ctx.stroke();
+      ctx.strokeStyle = steel(62, 0.75 + 0.2 * f + 0.25 * plateHitIntensity(p, t)); ctx.lineWidth = rimW; ctx.stroke();
       /* one ridge per extra layer, so four bolted layers read as four */
       if (layersHere > 1) {
         for (let i = 1; i < layersHere; i++) {
@@ -2045,43 +2152,8 @@ function drawEnemy(g: Game, ctx: CanvasRenderingContext2D, e: Enemy, z: number, 
     ctx.restore();
   }
 
-  // shields: each generator projects one panel, an arc of the hull ring or a bar on it
-  for (const s of e.shields) {
-    if (s.r * z < 7) continue;
-    const p = s.part;
-    const f = clamp(p.shieldHp / Math.max(1, p.shieldMax), 0, 1);
-    const hit = p.shieldHit > 2.8 ? 1 : 0;
-    const blurry = s.r * z > 12 && s.r * z < 60; // shadows on big shapes are expensive
-    const c = Math.cos(s.ang), sn = Math.sin(s.ang);
-    /* the generator itself, and the beam of energy it throws out to the panel */
-    const link = s.r * 0.55;
-    ctx.strokeStyle = `rgba(125,240,255,${0.1 + 0.12 * f})`;
-    ctx.lineWidth = 1.2 / z;
-    ctx.beginPath();
-    ctx.moveTo(e.x + c * link, e.y + sn * link);
-    ctx.lineTo(e.x + c * s.r, e.y + sn * s.r);
-    ctx.stroke();
-
-    ctx.beginPath();
-    if (s.bar) {
-      const px = -sn, py = c;
-      const bx = e.x + c * s.r, by = e.y + sn * s.r;
-      ctx.moveTo(bx - px * s.span, by - py * s.span);
-      ctx.lineTo(bx + px * s.span, by + py * s.span);
-    } else {
-      ctx.arc(e.x, e.y, s.r, s.ang - s.span, s.ang + s.span);
-    }
-    ctx.strokeStyle = `rgba(70,210,255,${0.1 + 0.14 * f + hit * 0.2})`;
-    ctx.lineWidth = (s.thick * 1.6 + hit * 4) / 1;
-    ctx.lineCap = "round";
-    ctx.stroke();
-    ctx.strokeStyle = `rgba(150,245,255,${0.4 + 0.5 * f})`;
-    ctx.lineWidth = (2 + hit * 3) / z;
-    if (blurry) { ctx.shadowColor = "#7df9ff"; ctx.shadowBlur = 12; }
-    ctx.stroke();
-    ctx.shadowBlur = 0;
-    ctx.lineCap = "butt";
-  }
+  // Collision geometry stays active even when its visual surface is invisible.
+ drawShieldImpacts(ctx, e, e.x, e.y, t, clamp(e.S * 0.15, 8, 20), "#7df9ff");
 }
 
 function drawBars(g: Game, ctx: CanvasRenderingContext2D, e: Enemy, z: number) {

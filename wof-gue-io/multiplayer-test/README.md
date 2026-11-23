@@ -21,21 +21,10 @@ The test uses the main game’s default no-optics zoom (1 / 1.3). It does not us
 
 ## Guest cannon test
 
-In this demo only, press **1** for Stinger, **2** for Peashooter MK1 or **3**
-for Workhorse MK1, **4** for Skewer MK1 or **5** for Fencer MK1. Each temporary guest gets free test access to these five
-existing game weapons; choosing one updates that guest on the server and the
-client displays the server-selected cannon. Other players' shots and damage are shared, and their selected cannon and
-shield are now rendered from server snapshots.
-All choices reset on disconnect. This is not crafting, purchasing, inventory,
-account progression, or a complete port of later weapons such as Chairman.
-
-Every temporary guest starts with the main game's level-one shield upgrade.
-Enemy damage drains it before hull and, after the normal delay, it recharges.
-The demo HUD shows text-free hull and shield bars; this is not an account
-upgrade, saved equipment, or the newer Chairman shield system.
-
-Skewer and Fencer use the engine's hitscan damage, and Fencer charges every
-fifth shot. Short-lived beam visuals are relayed to nearby guests separately
-from damage; missed snapshots or severe network stalls can still lose effects.
-This is the frozen guest-demo weapon implementation, not a claim that the
-entire current live-game weapon tree has been ported.
+Spawn at the base and press **E** to open the main game's cannon tree. All
+12 cannons and their upgrade tracks are available for free in this isolated
+test. The server validates loadout and upgrades at the base; they reset on
+disconnect. This is not purchasing, crafting, inventory or saved progression.
+The guest starts with the level-one shield. Weapon effects and special states
+are replicated, but visual fidelity and real-network performance still need
+browser and deployed testing. `/health` identifies `guest-cannon-tree-v1`.

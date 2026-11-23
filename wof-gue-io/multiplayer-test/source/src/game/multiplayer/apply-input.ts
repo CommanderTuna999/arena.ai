@@ -14,7 +14,7 @@ export function applyPlayerInput(game: Game, input: Readonly<PlayerInput>): void
   if (input.boost) keys.add('ShiftLeft');
   game.input.lmb = input.fire;
   // mouseWorld() uses camera space; choose an aim point relative to the pilot.
-  const distance = 1000;
+  const distance = input.aimDistance ?? 1000;
   game.input.mx = game.w / 2 + (game.player.x + Math.cos(input.aim) * distance - game.cam.x) * game.cam.z;
   game.input.my = game.h / 2 + (game.player.y + Math.sin(input.aim) * distance - game.cam.y) * game.cam.z;
 }

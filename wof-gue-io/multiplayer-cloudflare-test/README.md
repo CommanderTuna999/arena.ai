@@ -74,7 +74,8 @@ when the experiment is finished; leave the existing website and chat untouched.
 After changing the test Worker's production branch, start a new build from
 that branch; an older failed build still refers to its original commit.
 
-The demo's guest cannon test offers Stinger, Peashooter MK1, Workhorse MK1, Skewer MK1 and Fencer MK1
-on keys 1–5. The server chooses the actual guest loadout; it is not an account
-or inventory feature. Other guests' cannons and starter shields render from server snapshots.
-The `/health` build marker for this iteration is `cloudflare-beams-v1`.
+At the base, press **E** to open the real cannon tree. All 12 cannons and
+their upgrades are free temporary test access, not purchases or saved account
+progression. The server validates changes at the base. `/health` identifies
+this iteration as `cloudflare-cannon-tree-v1`. A local DOM integration test
+exercises the menu; real-browser visuals and deployed networking remain unverified.

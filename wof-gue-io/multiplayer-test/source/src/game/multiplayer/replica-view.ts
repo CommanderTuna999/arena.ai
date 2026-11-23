@@ -16,6 +16,7 @@ type EnemyView = WorldSnapshot['enemies'][number];
 export class ReplicaView {
   readonly game: Game;
   private previousWorld: WorldSnapshot | null = null;
+  private cannonKey="";
   constructor() {
     this.game = new Game(newSave(), 'visual-replica');
     this.game.persistent = false;
@@ -27,14 +28,16 @@ export class ReplicaView {
     const g=this.game;
     g.t=renderTime;
     // Authoritative cosmetic projection only: never touch a real player save.
-    if ((DEMO_CANNONS as readonly string[]).includes(me.cannonId) && (g.stats.cannonId!==me.cannonId || g.stats.shieldMax!==me.shieldMax)) {
-      g.save.upgrades.shield=me.shieldMax>0 ? 1 : 0;
-      g.save.cannon.id=me.cannonId;g.stats=computeStats(g.save);
+    const cannonKey=JSON.stringify([me.cannonId,me.levels,me.shieldMax]);
+    if (DEMO_CANNONS.includes(me.cannonId) && this.cannonKey!==cannonKey) {
+      this.cannonKey=cannonKey;g.save.upgrades.shield=me.shieldMax>0?1:0;g.save.cannon.id=me.cannonId;
+      g.save.cannon.lv=structuredClone(me.levels);g.stats=computeStats(g.save);
     }
-    g.player.heat=me.heat;g.player.jam=me.jam;g.player.recoil=me.recoil;g.player.muzzleFlash=me.muzzleFlash;g.player.barrelRec=[...me.barrelRec];
+    g.player.heat=me.heat;g.player.jam=me.jam;g.player.gatAngle=me.gatAngle;g.player.recoil=me.recoil;g.player.muzzleFlash=me.muzzleFlash;g.player.barrelRec=[...me.barrelRec];
+    g.chairman=me.chairman ? structuredClone(me.chairman) : null;
     Object.assign(g.player,{x:me.x,y:me.y,a:me.angle,hp:me.hp,shield:me.shield,dead:me.dead});
     g.cam.x=me.x;g.cam.y=me.y;
-    g.others=pilots.filter(p=>p.id!==pilotId).map(p=>({id:p.id,name:p.name,x:p.x,y:p.y,a:p.angle,tx:p.x,ty:p.y,ta:p.angle,seen:world.time,dead:p.dead,cannonId:p.cannonId,heat:p.heat,jam:p.jam,recoil:p.recoil,muzzleFlash:p.muzzleFlash,barrelRec:[...p.barrelRec],shield:p.shield,shieldMax:p.shieldMax} satisfies Other));
+    g.others=pilots.filter(p=>p.id!==pilotId).map(p=>({id:p.id,name:p.name,x:p.x,y:p.y,a:p.angle,tx:p.x,ty:p.y,ta:p.angle,seen:world.time,dead:p.dead,cannonId:p.cannonId,gatAngle:p.gatAngle,chairman:p.chairman?structuredClone(p.chairman):null,heat:p.heat,jam:p.jam,recoil:p.recoil,muzzleFlash:p.muzzleFlash,barrelRec:[...p.barrelRec],shield:p.shield,shieldMax:p.shieldMax} satisfies Other));
     if (this.previousWorld !== world) {
     this.previousWorld = world;
     g.enemies=[];
@@ -54,6 +57,8 @@ export class ReplicaView {
     g.puddles=world.puddles.map(p=>({...p,r:p.radius} as unknown as Puddle));
     g.rings=world.rings.map(r=>({...r,r:r.radius} as unknown as Ring));
     }
+    const scan=me.revolutionaryScan,scanEnemy=scan ? g.enemies.find(e=>e.id===scan.enemyId) : undefined;
+    g.revolutionaryScan=scan&&scanEnemy?{parts:[...scan.parts],elapsed:scan.elapsed,duration:scan.duration,enemy:scanEnemy}:null;
     // Recompute lifetime on every animation frame, not only when a new network
     // snapshot arrives. This is visual only and cannot apply combat damage.
     g.beams=(world.beams ?? []).filter(b=>renderTime>=b.createdAt && renderTime<b.expiresAt)

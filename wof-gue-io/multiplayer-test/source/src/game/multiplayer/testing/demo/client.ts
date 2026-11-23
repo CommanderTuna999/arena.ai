@@ -3,6 +3,8 @@ import { ReplicaView } from '../../replica-view';
 import { DemoPlayback } from '../../demo-playback';
 import { MAX_VIEW_DIMENSION } from '../../demo-view';
 import { render } from '../../../render';
+import {BASE} from '../../../data';
+import {createDemoBaseMenu} from './base-menu';
 const canvas=document.querySelector('canvas')!,ctx=canvas.getContext('2d')!,status=document.querySelector('#status')!;
 const hullFill=document.querySelector<HTMLElement>('#hull-fill'),shieldFill=document.querySelector<HTMLElement>('#shield-fill');
 function updateVital(el:HTMLElement|null,current:number,max:number){if(!el)return;const pct=max>0&&Number.isFinite(current)&&Number.isFinite(max)?Math.max(0,Math.min(100,current/max*100)):0;el.style.width=`${pct}%`;el.parentElement?.setAttribute('aria-valuenow',String(Math.round(pct)));}
@@ -13,12 +15,15 @@ let sequence=0,mouseX=innerWidth/2,mouseY=innerHeight/2,fire=false,viewportDirty
 let displayClient: ExperimentalWorldClient | null=null, playback=new DemoPlayback();
 let frames=0,fps=0,fpsStarted=performance.now(),lastViewTime=-1,lastArrival=0,updateGap=0;
 const keys=new Set<string>();
+let localPilot:any=null;
+const menu=createDemoBaseMenu(id=>{client.equipDemoCannon(id);},(track,n,cannon)=>{client.upgradeDemoCannon(track,n,cannon);},()=>{});
+function toggleBase(){if(menu.isOpen()){menu.setOpen(false);return;}if(client.state==='online' && localPilot && !localPilot.dead && Math.hypot(localPilot.x-BASE.x,localPilot.y-BASE.y)<BASE.r+40){keys.clear();fire=false;menu.update(localPilot);menu.setOpen(true);}}
 function resize(){viewportDirty=true;const d=Math.min(devicePixelRatio||1,1.5);canvas.width=Math.round(innerWidth*d);canvas.height=Math.round(innerHeight*d);ctx.setTransform(d,0,0,d,0,0);replica.resize(innerWidth,innerHeight,d);}
 window.addEventListener('resize',resize);resize();
-window.addEventListener('keydown',e=>{if(!e.repeat){const selected=({'Digit1':'sting','Digit2':'peashooter','Digit3':'workhorse','Digit4':'skewer','Digit5':'fencer'} as Record<string,string>)[e.code];if(selected)client.equipDemoCannon(selected);}if(['KeyW','KeyA','KeyS','KeyD','ShiftLeft','Space'].includes(e.code)){e.preventDefault();keys.add(e.code);}});
+window.addEventListener('keydown',e=>{if(e.code==='KeyE'&&!e.repeat){e.preventDefault();toggleBase();return;}if(e.code==='Escape'&&menu.isOpen()){e.preventDefault();menu.setOpen(false);return;}if(menu.isOpen())return;if(['KeyW','KeyA','KeyS','KeyD','ShiftLeft','Space'].includes(e.code)){e.preventDefault();keys.add(e.code);}});
 window.addEventListener('keyup',e=>keys.delete(e.code));window.addEventListener('blur',()=>{keys.clear();fire=false;});
-canvas.addEventListener('mousemove',e=>{mouseX=e.clientX;mouseY=e.clientY});canvas.addEventListener('mousedown',e=>{if(e.button===0)fire=true});window.addEventListener('mouseup',e=>{if(e.button===0)fire=false});
-const send=setInterval(()=>{if(client.state!=='online')return;if(viewportDirty && client.sendViewport(Math.min(MAX_VIEW_DIMENSION,Math.max(1,Math.ceil(innerWidth))),Math.min(MAX_VIEW_DIMENSION,Math.max(1,Math.ceil(innerHeight)))))viewportDirty=false;const aim=Math.atan2(mouseY-innerHeight/2,mouseX-innerWidth/2);client.sendInput({seq:sequence++,forward:keys.has('KeyW'),backward:keys.has('KeyS'),left:keys.has('KeyA'),right:keys.has('KeyD'),boost:keys.has('ShiftLeft'),fire:fire||keys.has('Space'),aim});},50);
+canvas.addEventListener('mousemove',e=>{mouseX=e.clientX;mouseY=e.clientY});canvas.addEventListener('mousedown',e=>{if(e.button===0&&!menu.isOpen())fire=true});window.addEventListener('mouseup',e=>{if(e.button===0)fire=false});
+const send=setInterval(()=>{if(client.state!=='online')return;if(viewportDirty && client.sendViewport(Math.min(MAX_VIEW_DIMENSION,Math.max(1,Math.ceil(innerWidth))),Math.min(MAX_VIEW_DIMENSION,Math.max(1,Math.ceil(innerHeight)))))viewportDirty=false;const aim=Math.atan2(mouseY-innerHeight/2,mouseX-innerWidth/2);client.sendInput({seq:sequence++,forward:keys.has('KeyW'),backward:keys.has('KeyS'),left:keys.has('KeyA'),right:keys.has('KeyD'),boost:keys.has('ShiftLeft'),fire:!menu.isOpen()&&(fire||keys.has('Space')),aim,aimDistance:Math.min(8192,Math.hypot(mouseY-innerHeight/2,mouseX-innerWidth/2)*1.3)});},50);
 function draw(){
  requestAnimationFrame(draw);
  const now=performance.now();frames++;
@@ -35,8 +40,9 @@ function draw(){
  const pilotPositions=new Map(sampled.pilots.map((p:any)=>[p.id,p]));
  const pilots=view.pilots.map((p:any)=>({...p,...pilotPositions.get(p.id) as any}));
  const me=pilots.find((p:any)=>p.id===shown.pilotId);if(!me)return;
+ localPilot=me;menu.update(me);if(menu.isOpen() && (me.dead || Math.hypot(me.x-BASE.x,me.y-BASE.y)>=BASE.r+40))menu.setOpen(false);
  updateVital(hullFill,me.hp,me.hpMax);updateVital(shieldFill,me.shield,me.shieldMax);
- if(client===shown && client.state==='online'){attempts=0;status.textContent=`${({sting:'Stinger',peashooter:'Peashooter MK1',workhorse:'Workhorse MK1',skewer:'Skewer MK1',fencer:'Fencer MK1'} as Record<string,string>)[me.cannonId] ?? 'Stinger'} · ${sampled.pilots.length} pilot${sampled.pilots.length===1?'':'s'} nearby · ${sampled.enemies.length} enemies · ${fps || "…"} FPS · updates ${updateGap || "…"} ms${innerWidth>MAX_VIEW_DIMENSION||innerHeight>MAX_VIEW_DIMENSION?" · viewport exceeds demo limit":""}`;}
+ if(client===shown && client.state==='online'){attempts=0;status.textContent=`${me.cannonId} · ${sampled.pilots.length} pilot${sampled.pilots.length===1?'':'s'} nearby · ${sampled.enemies.length} enemies · ${fps || "…"} FPS · updates ${updateGap || "…"} ms${innerWidth>MAX_VIEW_DIMENSION||innerHeight>MAX_VIEW_DIMENSION?" · viewport exceeds demo limit":""}`;}
  if(replica.apply(view,pilots,sampled.enemies,shown.pilotId,renderTime,sampled)) render(replica.game,ctx);
 }
 function scheduleReconnect(){
@@ -58,4 +64,4 @@ async function connect(){
  finally{connecting=false;if(client.state==='closed')scheduleReconnect();}
 }
 requestAnimationFrame(draw);void connect();
-window.addEventListener('pagehide',()=>{stopped=true;if(retryTimer)clearTimeout(retryTimer);clearInterval(send);client.disconnect();});
+window.addEventListener('pagehide',()=>{stopped=true;if(retryTimer)clearTimeout(retryTimer);clearInterval(send);menu.destroy();client.disconnect();});

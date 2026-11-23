@@ -15,5 +15,5 @@ const copy=structuredClone(snap),view=new ReplicaView(),beam=snap.beams[0];asser
 assert.equal(segmentDistance(5,1,{x1:0,y1:0,x2:10,y2:0}),1);assert.equal(segmentDistance(5,2,{x1:0,y1:0,x2:0,y2:0}),Math.hypot(5,2));
 const crossing={...snap,beams:[{id:999,x1:-1000,y1:0,x2:1000,y2:0,createdAt:0,expiresAt:.6}],pilots:[{...snap.pilots[0],x:0,y:0}]};assert.equal(interestSnapshot(crossing,'a',20)!.beams.length,1,'long beam crossing view is included even if endpoints are outside');
 for(let i=0;i<16;i++)h.step(.05,1600+i*50);assert.equal(h.snapshot().beams.length,0,'old beam history is bounded and expires');
-assert(h.roster.equipDemoCannon('b','sting'));assert.equal(b.weaponState.fencerCharge,0);assert.equal(b.player.fenceShots,0);
+b.player.x=-59000;b.player.y=-68000;assert(h.roster.equipDemoCannon('b','sting'));assert.equal(b.weaponState.fencerCharge,0);assert.equal(b.player.fenceShots,0);
 console.log('Skewer and Fencer simulate owned hitscan damage, independent charges, bounded beam relay and rendering');

@@ -18,11 +18,13 @@ function close(ws){return new Promise(resolve=>{if(ws.readyState===WebSocket.CLO
  const shared=await receive(a,v=>v.type==='world-snapshot'&&v.world.pilots.some(p=>p.id===welcomeA.pilotId&&p.cannonId==='peashooter')&&v.world.pilots.some(p=>p.id===welcomeB.pilotId&&p.cannonId==='workhorse'));
  assert(shared.world.pilots.find(p=>p.id===welcomeB.pilotId).cannonId==='workhorse','guest cannot change another pilot');
  for(const id of [welcomeA.pilotId,welcomeB.pilotId]){const p=shared.world.pilots.find(p=>p.id===id);assert.equal(p.shieldMax,60);assert.equal(p.shield,60);assert.equal(p.hpMax,100);assert(Array.isArray(p.barrelRec));}
+ a.send(JSON.stringify({type:'demo-equip',cannon:'skewer'}));
+ await receive(a,v=>v.type==='world-snapshot'&&v.world.pilots.some(p=>p.id===welcomeA.pilotId&&p.cannonId==='skewer'));
+ a.send(JSON.stringify({type:'demo-upgrade',track:'dmg',count:1,cannon:'skewer'}));
+ await receive(a,v=>v.type==='world-snapshot'&&v.world.pilots.some(p=>p.id===welcomeA.pilotId&&p.levels?.skewer?.dmg===1));
  const first=await receive(a,v=>v.type==='world-snapshot'&&v.world.pilots.some(p=>p.id===welcomeB.pilotId));assert(first.world.pilots.some(p=>p.id===welcomeA.pilotId));
  a.send(JSON.stringify({type:'viewport',width:1000,height:700}));a.send(JSON.stringify({type:'input',frame:{seq:1,forward:true,backward:false,left:false,right:false,fire:false,boost:false,aim:0}}));
  const start=first.world.pilots.find(p=>p.id===welcomeA.pilotId);const next=await receive(a,v=>v.type==='world-snapshot'&&v.sequence>first.sequence&&v.world.pilots.some(p=>p.id===welcomeA.pilotId && Math.hypot(p.x-start.x,p.y-start.y)>0.01));assert(next.world.time>first.world.time,'accepted input advances the guest in the shared world');
- a.send(JSON.stringify({type:'demo-equip',cannon:'skewer'}));
- await receive(a,v=>v.type==='world-snapshot'&&v.world.pilots.some(p=>p.id===welcomeA.pilotId&&p.cannonId==='skewer'));
  const otherSeesBeam=receive(b,v=>v.type==='world-snapshot'&&Array.isArray(v.world.beams)&&v.world.beams.some(beam=>{const p=v.world.pilots.find(p=>p.id===welcomeA.pilotId);return p && Math.hypot(beam.x1-p.x,beam.y1-p.y)<120;}));
  a.send(JSON.stringify({type:'input',frame:{seq:2,forward:false,backward:false,left:false,right:false,fire:true,boost:false,aim:0}}));
  const beamFrame=await otherSeesBeam;assert(beamFrame.world.beams.length>0,'another guest sees the server simulated hitscan');

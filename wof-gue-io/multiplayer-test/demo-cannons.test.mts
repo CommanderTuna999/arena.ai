@@ -10,7 +10,7 @@ const peer=()=>({bufferedAmount:0,messages:[] as any[],send(s:string){this.messa
 const a=peer(),b=peer(),c=peer();assert(transport.attach(a,'a','Alpha'));assert(transport.attach(b,'b','Beta'));assert(transport.attach(c,'c','Charlie'));
 const equip=(p:any,cannon:unknown,now:number,extra={})=>transport.receive(p,JSON.stringify({type:'demo-equip',cannon,...extra}),now);
 assert(equip(a,'peashooter',1000,{pilotId:'b'}));assert(equip(b,'workhorse',1000));assert.equal(room.roster.get('a')!.stats.cannonId,'peashooter');assert.equal(room.roster.get('b')!.stats.cannonId,'workhorse');assert.equal(room.roster.get('c')!.stats.cannonId,'sting');
-assert(!equip(a,'chairman',1001));assert(!equip(a,'sting',1002),'equip rate limit includes invalid choices');assert(equip(a,'sting',2000));assert(equip(a,'peashooter',2001));
+assert(!equip(a,'not-a-cannon',1001));for(let i=0;i<6;i++)assert(!equip(a,'not-a-cannon',1002+i));assert(!equip(a,'sting',1010),'equip rate limit includes invalid choices');assert(equip(a,'sting',2000));assert(equip(a,'peashooter',2001));
 const pilotA=room.roster.get('a')!,pilotB=room.roster.get('b')!;assert.equal(pilotA.stats.dmg,CANNON_BY_ID.peashooter.dmg);assert.equal(pilotB.stats.dmg,CANNON_BY_ID.workhorse.dmg);assert(pilotA.player.fireCd>=.5,'switch cannot reset a weapon cooldown');
 // Actual fire is simulated once per pilot in the shared world, with distinct
 // damage values and independent weapons; the third guest stays unchanged.

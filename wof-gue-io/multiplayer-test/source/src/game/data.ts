@@ -149,7 +149,7 @@ export const UPGRADE_BY_ID: Record<string, UpgradeDef> = Object.fromEntries(UPGR
  * Chassis prices are paid twice over — credits and a component bill. Tier 1 guns ask
  * for a handful of common parts of a named kind plus one uncommon core, so the hull
  * you scrap for a new gun is a shopping list, not a pile. */
-export type CannonTrackId = "dmg" | "rate" | "crit" | "critDmg" | "pen" | "acc" | "speed" | "barrels" | "armorDmg" | "energyChance" | "chargeRate" | "beamWidth";
+export type CannonTrackId = "dmg" | "rate" | "crit" | "critDmg" | "pen" | "acc" | "spread" | "speed" | "barrels" | "armorDmg" | "energyChance" | "chargeRate" | "beamWidth" | "drones" | "coreDmg" | "orbChance" | "orbRange";
 
 export interface CannonTrack {
   id: CannonTrackId;
@@ -162,15 +162,16 @@ export interface CannonTrack {
 }
 
 /** one line of a chassis bill: a kind of part, a rarity (tier index) and how many.
- *  `name` narrows a kind that covers several parts (a "Head" is a body segment, an
- *  "Antenna" is a spike), and `label` is what the tree prints. No species is ever
- *  named — every one of these reads "Common leg", not "Worker Ant leg". */
+ *  `name` narrows a kind that covers several parts; `species` can require a
+ *  particular source, and `label` is what the tree prints. */
 export interface PartBill {
   kind: PartKind;
   tier: number;
   count: number;
   /** substring the component's own name must contain ("Head", "Antenna") */
   name?: string;
+  /** Optional exact source species for species-specific chassis bills. */
+  species?: string;
   /** how the tree names this line: "2× Common leg" */
   label: string;
 }
@@ -211,9 +212,14 @@ export interface CannonDef {
   /** component bill, on top of the credits */
   parts: PartBill[];
   /** where rounds actually leave the gun, in ship space. Two entries means two
-   *  barrels: a single-round trigger alternates between them, and the barrel
-   *  upgrade fires both at once. */
+   *  barrels: single-round triggers alternate between them. */
   muzzles: { x: number; y: number }[];
+  /** Rotary chassis alternate around a rotating barrel cluster. */
+  rotary?: boolean;
+  /** Projectiles released together per trigger. */
+  pellets?: number;
+  /** Maximum aiming turn speed in radians per second, when present. */
+  turnRate?: number;
   /** hull shove (world units/s) applied along the shot */
   kick: number;
   /** heat added per trigger, 0..1 of the gauge (split between the barrels of a
@@ -298,6 +304,81 @@ export const CANNONS: CannonDef[] = [
     look: { len: 26, bore: 4.6, hue: 34, style: "twin" },
   },
   {
+    id: "revolutionary", name: "Revolutionary", tier: 2,
+    desc: "A revolution is not a dinner party, or writing an essay, or painting a picture, or doing embroidery... A revolution is an insurrection, an act of violence by which one class overthrows another.",
+    dmg: 18000, interval: 4, speed: 0, range: 3200, hitscan: true,
+    credits: 50000,
+    parts: [
+      { kind: "armor", tier: 3, count: 2, name: "Compound Eye", species: "Dragonfly", label: "Dragonfly compound eye" },
+      { kind: "armor", tier: 3, count: 3, name: "Eye Cluster", species: "Widow Spider", label: "Widow Spider eye cluster" },
+      { kind: "segment", tier: 2, count: 7, name: "Head", label: "head" },
+      { kind: "core", tier: 3, count: 4, label: "core" },
+    ],
+    tracks: ["dmg", "rate", "pen", "barrels", "crit", "critDmg", "armorDmg"], costMul: 3, requires: "workhorse",
+    muzzles: [{ x: 48, y: 0 }], kick: 300, heat: 0,
+    look: { len: 48, bore: 6, hue: 0, style: "lance" },
+  },
+  {
+    id: "chairman", name: "Chairman", tier: 3,
+    desc: "Political power grows out of the barrel of a gun",
+    dmg: 50000, interval: 2, speed: 0, range: 3200, hitscan: true,
+    credits: 15000000, requires: "revolutionary", costMul: 5,
+    parts: [
+      {kind:"armor",tier:4,count:50,name:"Compound Eye",species:"Dragonfly",label:"Dragonfly compound eye"},
+      {kind:"spike",tier:4,count:20,name:"Spine",species:"Worker Ant",label:"Worker Ant spine"},
+      {kind:"arm",tier:4,count:15,name:"Mandible",species:"Worker Ant",label:"Worker Ant mandible"},
+      {kind:"leg",tier:4,count:25,name:"Leg",species:"Worker Ant",label:"Worker Ant leg"},
+      {kind:"weapon",tier:5,count:5,name:"Laser Pointer",species:"Worker Ant",label:"Worker Ant laser pointer"},
+      {kind:"core",tier:5,count:8,species:"Soldier Ant",label:"Soldier Ant core"},
+      {kind:"core",tier:5,count:8,species:"Worker Ant",label:"Worker Ant core"},
+      {kind:"core",tier:5,count:4,species:"Dragonfly",label:"Dragonfly core"},
+    ],
+    tracks:["dmg","rate","pen","drones","crit","critDmg","coreDmg","orbChance","orbRange"],
+    muzzles:[{x:0,y:0}],kick:0,heat:0,look:{len:20,bore:8,hue:0,style:"bolt"},
+  },
+  {
+    id: "peashooter2", name: "Peashooter MK2", tier: 2,
+    desc: "Spray and pray, now with more barrels.",
+    dmg: 80, interval: 0.03, speed: 1150, range: 1050, spread: 0.36,
+    credits: 6000,
+    parts: [
+      { kind: "leg", tier: 2, count: 5, label: "leg" },
+      { kind: "core", tier: 2, count: 7, label: "core" },
+      { kind: "segment", tier: 2, count: 3, name: "Abdomen", label: "abdomen" },
+    ],
+    tracks: ["acc", "speed", "dmg", "crit", "critDmg", "barrels"], costMul: 2, requires: "peashooter",
+    rotary: true, muzzles: [{ x: 25, y: -5 }, { x: 25, y: 0 }, { x: 25, y: 5 }], kick: 1.5, heat: 0,
+    look: { len: 25, bore: 3.4, hue: 142, style: "twin" },
+  },
+  {
+    id: "gatler", name: "Gatler MK1", tier: 2,
+    desc: "So we’re just spamming now.",
+    dmg: 70, interval: 0.01, speed: 1400, range: 1100, spread: 0.26,
+    credits: 12000,
+    parts: [
+      { kind: "leg", tier: 2, count: 15, label: "leg" },
+      { kind: "core", tier: 3, count: 2, label: "core" },
+      { kind: "segment", tier: 3, count: 1, name: "Thorax", species: "Widow Spider", label: "Widow Spider thorax" },
+    ],
+    tracks: ["acc", "speed", "dmg", "crit", "critDmg"], costMul: 2.2, requires: "peashooter",
+    rotary: true, muzzles: Array.from({length: 6}, (_, i) => ({x: 30, y: (i - 2.5) * 2})), turnRate: 3, kick: 12, heat: 0,
+    look: { len: 30, bore: 3.3, hue: 50, style: "twin" },
+  },
+  {
+    id: "scattermk1", name: "Scatter MK1", tier: 2,
+    desc: "Balls to the face.",
+    dmg: 75, interval: 0.5, speed: 550, range: 650, spread: 0.4, pellets: 8,
+    credits: 8000,
+    parts: [
+      { kind: "armor", tier: 3, count: 1, name: "Carapace Plate", label: "carapace plate" },
+      { kind: "segment", tier: 2, count: 8, name: "Head", label: "head" },
+      { kind: "segment", tier: 2, count: 5, name: "Thorax", species: "Mantis", label: "Mantis thorax" },
+    ],
+    tracks: ["spread", "pen", "dmg", "crit", "critDmg", "rate"], costMul: 2.5, requires: "peashooter",
+    muzzles: [{x: 23, y: 0}], kick: 180, heat: 0,
+    look: { len: 24, bore: 7, hue: 26, style: "bolt" },
+  },
+  {
     id: "skewer2", name: "Skewer MK2", tier: 2,
     desc: "Pretty accurate, now with more piercing.",
     /* a longer, harder-hitting lance: it still draws a hard hitscan line, but it
@@ -334,7 +415,7 @@ export const CANNONS: CannonDef[] = [
     look: { len: 40, bore: 3.0, hue: 150, style: "lance" },
   },
   {
-    id: "mediator", name: "Mediator MK1", tier: 2,
+    id: "mediator", name: "Mediator", tier: 2,
     desc: "Very impartial.",
     /* hold the fire button to charge a devastating energy beam, then release it:
      * the longer the hold, the harder the shot, and the recoil shoves the ship
@@ -364,17 +445,22 @@ export const CANNON_TRACKS: CannonTrack[] = [
   { id: "critDmg", name: "Crit Damage", desc: "How hard a critical round lands.", max: 15, base: 90, growth: 1.5 },
   { id: "pen", name: "Penetration", desc: "Rounds punch through one more piece before stopping.", max: 8, base: 260, growth: 1.65 },
   { id: "acc", name: "Accuracy", desc: "Tightens the spray pattern.", max: 15, base: 40, growth: 1.45 },
+  { id: "spread", name: "Projectile Spread", desc: "Tightens the shotgun cone for greater accuracy.", max: 10, base: 50, growth: 1.45 },
   { id: "speed", name: "Projectile Speed", desc: "Faster rounds: less lead on a moving target.", max: 12, base: 55, growth: 1.45 },
   { id: "barrels", name: "Barrels", desc: "A second barrel. Rounds alternate between the two, so each barrel fires at half the rate and the gun runs cooler for longer.", max: 1, base: 6000, growth: 1 },
   { id: "armorDmg", name: "Armour Damage", desc: "Extra damage dealt to armour plating.", max: 10, base: 80, growth: 1.5 },
   { id: "energyChance", name: "Energy Shot Chance", desc: "Chance each shot throws an energy bolt that bypasses enemy shielding.", max: 10, base: 120, growth: 1.5 },
   { id: "chargeRate", name: "Charge Rate", desc: "Reduces full charge time from 70 seconds to 10 seconds at maximum level.", max: 10, base: 90, growth: 1.5 },
   { id: "beamWidth", name: "Beam Width", desc: "A wider energy beam, striking more of the target.", max: 8, base: 110, growth: 1.5 },
+  {id:"drones",name:"Drones",desc:"Adds one drone and increases orb damage by 10% per level.",max:15,base:10000,growth:1.45},
+  {id:"coreDmg",name:"Extra Core Damage",desc:"Increases damage against cores up to +750%.",max:10,base:12000,growth:1.5},
+  {id:"orbChance",name:"Orb Fire Chance",desc:"Raises orb fire chance from 5% to 15%.",max:10,base:12000,growth:1.5},
+  {id:"orbRange",name:"Orb Fire Range",desc:"Increases the orb blast radius by 10% per level.",max:10,base:10000,growth:1.5},
 ];
 export const CANNON_TRACK_BY_ID: Record<string, CannonTrack> = Object.fromEntries(CANNON_TRACKS.map((t) => [t.id, t]));
 /** the tracks a chassis actually carries, in display order */
 export const cannonTracks = (c: CannonDef): CannonTrack[] =>
-  c.tracks.map((id) => CANNON_TRACK_BY_ID[id]).filter((t): t is CannonTrack => !!t);
+  c.tracks.map((id) => id === "barrels" && c.id === "peashooter2" ? { ...CANNON_TRACK_BY_ID[id], desc: "Adds a fourth rotating barrel; shots alternate between the barrels." } : CANNON_TRACK_BY_ID[id]).filter((t): t is CannonTrack => !!t);
 
 export const cannonTrackCost = (c: CannonDef, t: CannonTrack, level: number) =>
   Math.round(t.base * Math.pow(t.growth, level) * c.costMul);
@@ -392,10 +478,10 @@ export const cannonCrit = (lv?: Record<string, number>) => 0.05 * lvl(lv, "crit"
 export const cannonCritMul = (lv?: Record<string, number>) => 2 + 0.25 * lvl(lv, "critDmg");
 /** extra pieces a round passes through */
 export const cannonPierce = (lv?: Record<string, number>) => lvl(lv, "pen");
-/** rounds thrown per trigger: two at most, per the sheet's "Barrels (2)" */
-export const cannonBarrels = (lv?: Record<string, number>) => 1 + Math.min(1, lvl(lv, "barrels"));
+/** Barrel count affects cooling and the rotating Peashooter cluster. */
+export const cannonBarrels = (lv?: Record<string, number>, c?: CannonDef) => (c?.id === "peashooter2" ? 3 : 1) + Math.min(1, Math.max(0, lvl(lv, "barrels")));
 /** extra damage vs armour plating: a multiplier above 1 (1 + 12% a level) */
-export const cannonArmorDmg = (lv?: Record<string, number>) => 1 + 0.12 * lvl(lv, "armorDmg");
+export const cannonArmorDmg = (lv?: Record<string, number>, c?: CannonDef) => 1 + (c?.id === "revolutionary" ? 0.25 : 0.12) * lvl(lv, "armorDmg");
 /** chance a shot throws an energy bolt that bypasses shielding (Skewer MK2) */
 export const cannonEnergyChance = (lv?: Record<string, number>) => clamp(0.25 + 0.05 * lvl(lv, "energyChance"), 0, 0.95);
 /** how fast the charge beam builds (Mediator): a multiplier on charge speed */
@@ -405,7 +491,7 @@ export const cannonBeamWidth = (lv?: Record<string, number>) => 1 + 0.18 * lvl(l
 /** round speed at the current projectile-speed level */
 export const cannonSpeed = (c: CannonDef, lv?: Record<string, number>) => c.speed * Math.pow(1.08, lvl(lv, "speed"));
 /** muzzle spread in radians; the accuracy track tightens it by 10% a level */
-export const cannonSpread = (c: CannonDef, lv?: Record<string, number>) => (c.spread ?? 0) * Math.pow(0.9, lvl(lv, "acc"));
+export const cannonSpread = (c: CannonDef, lv?: Record<string, number>) => (c.spread ?? 0) * Math.pow(0.9, lvl(lv, "acc")) * Math.pow(0.9, lvl(lv, "spread"));
 /** damage multiplier at a given gauge level: 1 for every gun that does not cook */
 export const cannonHeatDmg = (c: CannonDef, heat: number) =>
   1 + ((c.heatMax ?? 1) - 1) * clamp(heat, 0, 1);
@@ -426,14 +512,20 @@ export function cannonTrackValue(c: CannonDef, id: CannonTrackId, level: number)
     case "rate": return `${cannonRate(c, one).toFixed(2)}/s`;
     case "crit": return `${Math.round(cannonCrit(one) * 100)}% crit`;
     case "critDmg": return `x${cannonCritMul(one).toFixed(2)} crit`;
-    case "pen": return level ? `pierces ${level}` : "stops on impact";
-    case "acc": return `${((cannonSpread(c, one) * 180) / Math.PI).toFixed(1)}° spread`;
+    case "pen": { const n = level + (c.id === "revolutionary" ? 5 : 0); return n ? `pierces ${n}` : "stops on impact"; }
+    case "acc":
+    case "spread": return `${((cannonSpread(c, one) * 180) / Math.PI).toFixed(1)}° spread`;
     case "speed": return `${fmtNum(Math.round(cannonSpeed(c, one)))} u/s`;
-    case "barrels": return `${cannonBarrels(one)} barrels`;
-    case "armorDmg": return `+${Math.round((cannonArmorDmg(one) - 1) * 100)}% vs armour`;
+    case "barrels": return `${cannonBarrels(one, c)} barrels`;
+    case "armorDmg": return `+${Math.round((cannonArmorDmg(one, c) - 1) * 100)}% vs armour`;
     case "energyChance": return `${Math.round(cannonEnergyChance(one) * 100)}% energy shot`;
     case "chargeRate": return `${(70 / cannonChargeRate(one)).toFixed(0)}s to full`;
     case "beamWidth": return `${cannonBeamWidth(one).toFixed(2)}x wide`;
+    case "drones": return `${15 + level} drones · +${level * 10}% orb dmg`;
+    case "coreDmg": return `+${Math.round(level * 75)}% vs core`;
+    case "orbChance": return `${5 + level}% orb chance`;
+    case "orbRange": return `${Math.round(1600 * (1 + .1 * level))} range`;
+
   }
 }
 
@@ -443,15 +535,15 @@ export const partBillText = (b: PartBill) =>
   `${b.count}× ${RARITIES[clamp(b.tier, 0, RARITIES.length - 1)].name} ${b.label}`;
 /** does this component satisfy that bill line? */
 export const partBillMatch = (x: Comp, b: PartBill) =>
-  x.kind === b.kind && x.tier >= b.tier && (!b.name || x.name.toLowerCase().includes(b.name.toLowerCase()));
+  x.kind === b.kind && x.tier >= b.tier && (!b.name || x.name.toLowerCase().includes(b.name.toLowerCase())) && (!b.species || (typeof x.species === "string" && x.species.toLowerCase() === b.species.toLowerCase()));
 
 export const cannonOwned = (s: SaveData, id: string) => id === CANNONS[0].id || !!s.cannon?.owned?.includes(id);
 /** what is standing between the pilot and this chassis (null = buildable).
  *  `freeParts` is admin mode's infinite components: the bill is skipped, the
  *  credit price is not (that is what the infinite-credits flag is for). */
-export function cannonBillProblem(s: SaveData, c: CannonDef, freeParts = false, admin = false): string | null {
+export function cannonBillProblem(s: SaveData, c: CannonDef, freeParts = false, admin = false, freeCredits = false): string | null {
   if (cannonOwned(s, c.id)) return null;
-  if (c.requires && !cannonOwned(s, c.requires)) {
+  if (!admin && c.requires && !cannonOwned(s, c.requires)) {
     return `Requires the ${CANNON_BY_ID[c.requires]?.name ?? c.requires}`;
   }
   /* the sheet's rule: one gun per tier, so a tier 1 purchase is a choice, not a
@@ -460,7 +552,7 @@ export function cannonBillProblem(s: SaveData, c: CannonDef, freeParts = false, 
     const taken = CANNONS.find((o) => o.id !== c.id && o.tier === c.tier && cannonOwned(s, o.id));
     if (taken) return `One gun per tier — you already fly the ${taken.name}`;
   }
-  if (s.credits < c.credits) return `Needs ${fmtNum(c.credits)} credits`;
+  if (!freeCredits && s.credits < c.credits) return `Needs ${fmtNum(c.credits)} credits`;
   if (freeParts) return null;
   for (let i = 0; i < c.parts.length; i++) {
     const parts = c.parts.slice(0, i + 1);
@@ -603,7 +695,7 @@ export const RECIPES: Recipe[] = [
   /* ---------------- optics / utility ---------------- */
   { id: "lens", name: "Wide-Field Optics", slot: "optics", difficulty: 2, n: 4, need: { cats: ["wing", "core"], count: 1 }, desc: "Unlocks mouse-wheel zoom out. Better efficiency zooms further." },
   { id: "recall", name: "Recall Beacon", slot: "utility", difficulty: 4, n: 6, need: { cats: ["core"], count: 1 }, desc: "Press T to channel a teleport back to base." },
-  { id: "magnet", name: "Component Magnet", slot: "utility", difficulty: 3, n: 5, need: { cats: ["core", "body"], count: 1 }, species: { names: ["Worker Ant", "Honeybee"], count: 1 }, desc: "Passively drags light loose components (mass 7 or less) toward your craft from a wide radius." },
+  { id: "magnet", name: "Component Magnet", slot: "utility", difficulty: 3, n: 5, need: { cats: ["core", "body"], count: 1 }, species: { names: ["Worker Ant", "Honeybee"], count: 1 }, desc: "Instantly collects light loose components (mass 7 or less) within a wide radius." },
 
   /* ---------------- active abilities (Z / X / C / V / F) ---------------- */
   { id: "ab_emp", name: "EMP Burst", slot: "ability", difficulty: 3, n: 5, need: { cats: ["core", "shield"], count: 1 }, species: { names: ["Cicada", "Firefly"], count: 1 }, desc: "Discharges an electromagnetic ring that stuns every enemy around you." },
@@ -1044,17 +1136,17 @@ export function computeStats(s: SaveData): Stats {
     rate: cannonRate(cannon, cl),
     /* weapon-side tuning lives on the cannon itself: crit and barrels are tracks a
      * chassis may or may not carry, and the Stinger carries neither */
-    barrels: cannonBarrels(cl),
+    barrels: cannonBarrels(cl, cannon),
     crit: cannonCrit(cl),
     critMul: cannonCritMul(cl),
-    pierce: cannonPierce(cl),
+    pierce: cannonPierce(cl) + (cannon.id === "revolutionary" ? 5 : 0),
     spread: cannonSpread(cannon, cl),
     boom: cannon.boom ?? 0,
     hitscan: !!cannon.hitscan,
     bulletSpeed: cannonSpeed(cannon, cl),
     bulletRange: cannon.range,
     cannonId: cannon.id,
-    muzzles: cannon.muzzles,
+    muzzles: cannon.id === "revolutionary" && cannonBarrels(cl, cannon) > 1 ? [{x: 48, y: -6}, {x: 48, y: 6}] : cannon.id === "peashooter2" ? Array.from({ length: cannonBarrels(cl, cannon) }, (_, i) => ({ x: 25, y: i })) : cannon.muzzles,
     kick: cannon.kick,
     heatPerShot: cannon.heat,
     heatDmg: cannon.heatMax ?? 1,
@@ -1063,7 +1155,7 @@ export function computeStats(s: SaveData): Stats {
     charge: !!cannon.charge,
     chargeTime: cannon.chargeTime ?? 1,
     chargeDmg: cannon.chargeDmg ?? 1,
-    armorDmg: cannonArmorDmg(cl),
+    armorDmg: cannonArmorDmg(cl, cannon),
     energyChance: cannonEnergyChance(cl),
     chargeRate: cannonChargeRate(cl),
     beamWidth: cannonBeamWidth(cl),
