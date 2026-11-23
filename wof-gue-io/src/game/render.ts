@@ -355,6 +355,19 @@ export function render(g: Game, ctx: CanvasRenderingContext2D) {
     ctx.restore();
   }
 
+  // The grab sting connects to the living stinger itself, rather than
+  // appearing as an unrelated line from the middle of the scorpion.
+  for (const e of g.enemies) {
+    const a = e.act;
+    if (e.spd.id !== "scorpion" || e.tier < 3 || a?.def.type !== "grab" || a.ph !== 1 || a.t < 0.6 || a.t > 0.95 || g.player.pull?.e !== e) continue;
+    const stinger = e.parts.find(p => p.name === "Stinger" && p.alive);
+    if (!stinger) continue;
+    const [sx, sy] = pw(e, stinger);
+    ctx.save(); ctx.strokeStyle = "rgba(190,255,120,0.9)"; ctx.lineWidth = Math.max(3 / z, e.S * 0.08);
+    ctx.lineCap = "round"; ctx.shadowColor = "#baff78"; ctx.shadowBlur = 12;
+    ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(g.player.x, g.player.y); ctx.stroke(); ctx.restore();
+  }
+
   /* ---- debris ---- */
   for (const d of g.debris) {
     ctx.save();

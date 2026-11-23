@@ -298,6 +298,7 @@ export interface Player {
   x: number; y: number; vx: number; vy: number; a: number;
   hp: number; shield: number; boost: number; boosting: boolean;
   slowF: number; slowT: number; poison: number; poisonT: number;
+  stingDots: { dps: number; remaining: number }[];
   pull: { e: Enemy; x: number; y: number; t: number; max: number } | null; dead: boolean; respawn: number;
   fireCd: number; wCd: number[]; hitT: number; shieldT: number; flash: number; thornCd: number;
   /** fitted cannon: recoil spring, barrel heat, the barrel that fires next, its
@@ -487,7 +488,7 @@ export class Game {
     this.stats = computeStats(save);
     this.player = {
       x: BASE.x, y: BASE.y - 200, vx: 0, vy: 0, a: -Math.PI / 2, hp: this.stats.hull, shield: this.stats.shieldMax, boost: 100, boosting: false,
-      slowF: 1, slowT: 0, poison: 0, poisonT: 0, pull: null, dead: false, respawn: 0, fireCd: 0, wCd: [0, 0, 0], wAim: W_SLOTS.map((s) => s.rest), hitT: 99, shieldT: 0,
+      slowF: 1, slowT: 0, poison: 0, poisonT: 0, stingDots: [], pull: null, dead: false, respawn: 0, fireCd: 0, wCd: [0, 0, 0], wAim: W_SLOTS.map((s) => s.rest), hitT: 99, shieldT: 0,
       recoil: 0, heat: 0, muzzle: 0, muzzleFlash: 0, barrelRec: [], jam: 0, gatSpin: 0, gatAngle: 0, charge: 0, charging: false, fenceShots: 0,
       flash: 0, thornCd: 0, tpT: 0, tpCd: 0, tow: 1, thrust: 0,
       barrier: 0, barrierMax: 0, barrierT: 0, overT: 0, nullCd: 0,
@@ -563,7 +564,7 @@ export class Game {
       p.x = tx; p.y = ty; p.vx = p.vy = 0;
       p.dead = false; p.respawn = 0; p.hp = this.stats.hull; p.shield = this.stats.shieldMax;
       p.recoil = 0; p.heat = 0; p.muzzle = 0; p.muzzleFlash = 0; p.barrelRec.length = 0; p.jam = 0; p.gatSpin = 0; p.gatAngle = 0; p.charge = 0; p.charging = false; p.fenceShots = 0;
-      p.slowF = 1; p.slowT = 0; p.poison = 0; p.poisonT = 0; p.pull = null;
+      p.slowF = 1; p.slowT = 0; p.poison = 0; p.poisonT = 0; p.stingDots = []; p.pull = null;
       this.cam.x = tx; this.cam.y = ty;
       this.toast("TEST RANGE — NO SPAWNS", "#ff7ad9");
     } else {
@@ -2154,9 +2155,20 @@ export class Game {
     }
     if (p.hp <= 0) this.killPlayer();
   }
+  private tickScorpionStings(dt: number) {
+    const p = this.player;
+    if (p.dead || this.inSafe()) { p.stingDots = []; return; }
+    for (const sting of p.stingDots) {
+      const step = Math.min(dt, sting.remaining);
+      sting.remaining = Math.max(0, sting.remaining - step);
+      this.hurtPlayer(sting.dps * step, { dot: true });
+      if (p.dead) break;
+    }
+    p.stingDots = p.stingDots.filter(sting => sting.remaining > 1e-9);
+  }
   private killPlayer() {
     const p = this.player;
-    p.dead = true; p.hp = 0; p.respawn = 3; p.tpT = 0; p.pull = null; p.gatSpin = 0;
+    p.dead = true; p.hp = 0; p.respawn = 3; p.tpT = 0; p.pull = null; p.gatSpin = 0; p.stingDots = [];
     p.barrier = 0; p.barrierMax = 0; p.barrierT = 0; p.overT = 0;
     this.lock = null;
     this.wells = [];
@@ -2169,7 +2181,7 @@ export class Game {
   private respawnPlayer() {
     const p = this.player;
     p.dead = false; p.x = BASE.x; p.y = BASE.y - 180; p.vx = p.vy = 0; p.hp = this.stats.hull; p.shield = this.stats.shieldMax;
-    p.poison = 0; p.slowT = 0; p.pull = null;
+    p.poison = 0; p.slowT = 0; p.stingDots = []; p.pull = null;
     p.barrier = 0; p.barrierMax = 0; p.barrierT = 0; p.overT = 0;
     this.cam.x = p.x; this.cam.y = p.y;
   }
@@ -2548,7 +2560,7 @@ export class Game {
         // These anchors match the model's fangs and pincer tips, not its
         // radius (which also includes long legs, wings and tails).
         const anatomical = e.spd.id === "spider" || e.spd.id === "scorpion" || e.spd.id === "dragonfly";
-        const anchor = e.spd.id === "spider" ? 1.9 * S : e.spd.id === "scorpion" ? 3.35 * S : e.spd.id === "dragonfly" ? 2.35 * S + SHIP_R : e.radius + SHIP_R + 2;
+        const anchor = e.spd.id === "spider" ? (e.parts.some(q => q.name === "Fang" && q.alive) ? 1.9 * S : 1.45 * S + SHIP_R) : e.spd.id === "scorpion" ? 3.35 * S : e.spd.id === "dragonfly" ? 2.35 * S + SHIP_R : e.radius + SHIP_R + 2;
         const point = () => ({ x: e.x + Math.cos(e.a) * anchor, y: e.y + Math.sin(e.a) * anchor });
         const pincers = e.spd.id === "scorpion" ? e.parts.filter(q => q.name === "Pincer" && q.alive) : [];
         if (a.ph === 0) {
@@ -2580,6 +2592,16 @@ export class Game {
             this.hurtPlayer(e.eDmg * d.dmg, { kb: 240, kbx: Math.cos(e.a), kby: Math.sin(e.a) });
             this.burst(p.x, p.y, `hsl(${e.spd.hue},100%,60%)`, 8, 4, 200);
             this.shake = Math.max(this.shake, 6);
+          }
+          // Epic and stronger scorpions sting once after 0.7 seconds of
+          // holding. Each sting has its own five-second damage budget, even
+          // after the victim is released; a destroyed stinger cannot strike.
+          if (e.spd.id === "scorpion" && e.tier >= 3 && !a.fired && a.t + 1e-9 >= 0.7) {
+            a.fired = true;
+            if (!p.dead && e.parts.some(q => q.name === "Stinger" && q.alive)) {
+              p.stingDots.push({ dps: e.eDmg * 18 / 5, remaining: 5 });
+              this.burst(p.x, p.y, "#baff78", 10, 4, 180);
+            }
           }
           if (a.t >= (d.hold ?? 2)) { a.ph = 2; a.t = 0; if (p.pull?.e === e) p.pull = null; }
         } else {
@@ -2877,7 +2899,10 @@ export class Game {
         case "wing": g.ang = Math.sin(this.t * (e.spd.flying ? 24 : 7) + g.phase) * g.amp * g.sign * (e.spd.flying ? Math.max(0.3, e.mobility) : 0.2); break;
         case "sway": g.ang = Math.sin(this.t * 2 + g.phase) * g.amp; break;
         case "arm": case "mandible": case "tail":
-          if (e.spd.id === "scorpion" && g.role === "arm" && e.act?.def.type === "grab" && e.act.ph < 2) {
+          if (e.spd.id === "scorpion" && g.role === "tail" && e.tier >= 3 && e.act?.def.type === "grab" && e.act.ph === 1) {
+            const swing = Math.max(0, 1 - Math.abs(e.act.t - 0.7) / 0.35);
+            g.ang = -0.22 * swing;
+          } else if (e.spd.id === "scorpion" && g.role === "arm" && e.act?.def.type === "grab" && e.act.ph < 2) {
             // Rotate the actual claw groups inward as they close on the ship.
             const close = e.act.ph === 1 ? 1 : Math.min(1, e.act.t / Math.max(0.01, e.act.def.wind));
             g.ang = -g.sign * 0.22 * close;
@@ -3440,6 +3465,12 @@ export class Game {
   private firePlayer(dt: number) {
     const p = this.player, st = this.stats;
     if (p.dead) { this.mediatorBeamTime = 0; this.fencerCharge = 0; return; }
+    if (p.pull?.e.act?.def.type === "grab" && p.pull.e.act.ph === 1) {
+      if (this.mediatorBeamTime > 0) p.fireCd = Math.max(p.fireCd, 0.7);
+      this.mediatorBeamTime = 0; this.fencerCharge = 0; p.charge = 0; p.charging = false;
+      p.gatSpin = Math.max(0, p.gatSpin - dt * 2);
+      return; // includes automatic weapon rack
+    }
     if (st.cannonId !== "fencer" || this.inSafe()) this.fencerCharge = 0;
     if (!st.charge || this.inSafe()) {
       if (this.mediatorBeamTime > 0) p.fireCd = Math.max(p.fireCd, 0.7);
@@ -4330,6 +4361,7 @@ export class Game {
         p.heat = Math.max(0, p.heat - dt * 0.34);
       }
       if (p.poisonT > 0) { p.poisonT -= dt; this.hurtPlayer(p.poison * dt, { dot: true }); if (p.poisonT <= 0) p.poison = 0; }
+      this.tickScorpionStings(dt);
       if (this.inSafe()) { p.hp = Math.min(st.hull, p.hp + st.hull * 0.5 * dt); p.shield = Math.min(st.shieldMax, p.shield + st.shieldMax * 0.6 * dt); p.poison = 0; p.slowF = 1; }
       else {
         if (st.regen > 0 && p.hp > 0) p.hp = Math.min(st.hull, p.hp + st.hull * st.regen * dt);

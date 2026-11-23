@@ -1,3 +1,8 @@
+## 0.3. v2.30.9 — Spider and scorpion holds
+
+- Widow Spiders hold ships against their head when their fangs are destroyed.
+- Scorpion grabs prevent firing; Epic and stronger scorpions sting after 0.7 seconds, dealing 18 times base damage over five seconds.
+
 ## 0.3. v2.30.8 — Enemy grabs and cannon recipes
 
 - Widow Spider bites hold ships at its fangs; Scorpions close their real pincers and only lunge when out of reach.
