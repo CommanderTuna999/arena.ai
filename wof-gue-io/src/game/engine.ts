@@ -1,5 +1,5 @@
 import { createTargetScan, type TargetScan } from "./target-scan";
-import { CHAIRMAN_DRONE_COOLDOWN, CHAIRMAN_SHIELD_MAX, chairmanPosition, chairmanDroneCount, chairmanOrbChance, chairmanOrbRadius, chairmanOrbDamage, chairmanCoreMul, createChairman, syncChairman, tickChairman, type ChairmanState } from "./chairman";
+import { CHAIRMAN_DRONE_COOLDOWN, CHAIRMAN_SHIELD_MAX, chairmanDronePosition, moveChairmanHalos, chairmanDroneCount, chairmanOrbChance, chairmanOrbRadius, chairmanOrbDamage, chairmanCoreMul, createChairman, syncChairman, tickChairman, type ChairmanState } from "./chairman";
 import { rollComponentTiers } from "./drop-roll";
 import { recordPlateHit } from "./plate-impact";
 import { ejectCasing, ejectCasingLimited } from "./casing-fx";
@@ -3545,7 +3545,7 @@ export class Game {
     const lv=this.cannonViewLevels("chairman");
     syncChairman(cs,chairmanDroneCount(lv.drones ?? 0));
     const fireDrone=(index:number, target:Enemy|null, aimX:number, aimY:number) => {
-      const [x,y]=chairmanPosition(index,cs.drones.length,cs.phase,p.x,p.y);
+      const [x,y]=chairmanDronePosition(cs,index,p.x,p.y);
       let angle=Math.atan2(aimY-y,aimX-x);
       if(target && !target.dead && target.parts[target.coreId]?.alive && this.enemies.includes(target)) {
         const [tx,ty]=this.partWorld(target,target.parts[target.coreId]); angle=Math.atan2(ty-y,tx-x);
@@ -3612,7 +3612,7 @@ export class Game {
       } else if(ready.length && this.autoFire) {
         // Choose a target actually reachable from the selected orbiting drone.
         const index=ready[Math.floor(Math.random()*ready.length)];
-        const [x,y]=chairmanPosition(index,cs.drones.length,cs.phase,p.x,p.y);
+        const [x,y]=chairmanDronePosition(cs,index,p.x,p.y);
         let target:Enemy|null=null, best=st.bulletRange*st.bulletRange;
         for(const e of this.enemies) {
           const core=e.parts[e.coreId];if(e.dead || !core?.alive)continue;
@@ -3630,7 +3630,7 @@ export class Game {
   }
   private firePlayer(dt: number) {
     const p = this.player, st = this.stats;
-    if (st.cannonId === "chairman" && !p.dead) { this.chairman ??= createChairman(); tickChairman(this.chairman,dt); }
+    if (st.cannonId === "chairman" && !p.dead) { this.chairman ??= createChairman(); tickChairman(this.chairman,dt); moveChairmanHalos(this.chairman,dt,p.x,p.y); }
     if (p.dead) { if (this.chairman) { this.chairman.scan = null; this.chairman.charge = 0; } this.revolutionaryScan = null; this.mediatorBeamTime = 0; this.fencerCharge = 0; return; }
     if (p.pull?.e.act?.def.type === "grab" && p.pull.e.act.ph === 1) {
       if (this.mediatorBeamTime > 0) p.fireCd = Math.max(p.fireCd, 0.7);

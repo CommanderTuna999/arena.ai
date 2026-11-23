@@ -1,5 +1,5 @@
 import { scanPartIndex, scanHighlight, type TargetScan } from "./target-scan";
-import { CHAIRMAN_SHIELD_MAX, chairmanPosition } from "./chairman";
+import { CHAIRMAN_SHIELD_MAX, chairmanDronePosition, chairmanHaloCenter } from "./chairman";
 import { plateHitIntensity } from "./plate-impact";
 import { drawCasings } from "./casing-fx";
 import { drawShieldImpacts } from "./shield-impact";
@@ -791,7 +791,7 @@ function drawScanHighlights(ctx:CanvasRenderingContext2D,e:Enemy,scan:TargetScan
 function drawChairman(g:Game, ctx:CanvasRenderingContext2D, z:number, t:number) {
   const s=g.chairman, p=g.player; if(!s)return;
   const charge=clamp(s.charge,0,1), n=s.drones.length;
-  const points=s.drones.map((_,i)=>chairmanPosition(i,n,s.phase,p.x,p.y));
+  const points=s.drones.map((_,i)=>chairmanDronePosition(s,i,p.x,p.y));
   ctx.save();ctx.lineCap="round";
   // Slim separate meter exposes the dome's finite capacity.
   ctx.fillStyle="rgba(25,0,8,.8)";ctx.fillRect(p.x-35,p.y+62,70,4);
@@ -804,10 +804,11 @@ function drawChairman(g:Game, ctx:CanvasRenderingContext2D, z:number, t:number) 
   }
   for(let ring=0;ring<3;ring++) {
     const radius=94+ring*36+7*Math.sin(s.phase*2+ring*2);
+    const [hx,hy]=chairmanHaloCenter(s,ring,p.x,p.y);
     ctx.lineWidth=(ring===1?2.2:1.2)/z;ctx.strokeStyle=`rgba(255,${35+ring*12},70,${.28+charge*.3})`;
-    ctx.beginPath();ctx.ellipse(p.x,p.y,radius,radius*(.82+.05*Math.sin(s.phase+ring)),s.phase*(ring===1?-.13:.11),0,TAU);ctx.stroke();
+    ctx.beginPath();ctx.arc(hx,hy,radius,0,TAU);ctx.stroke();
     ctx.strokeStyle=`rgba(255,110,120,${.35+charge*.5})`;ctx.lineWidth=2/z;
-    for(let a=0;a<4;a++){const start=s.phase*(ring===1?-1:1)+a*TAU/4+ring;ctx.beginPath();ctx.arc(p.x,p.y,radius,start,start+.28+charge*.15);ctx.stroke();}
+    for(let a=0;a<4;a++){const start=s.phase*(ring===1?-1:1)+a*TAU/4+ring;ctx.beginPath();ctx.arc(hx,hy,radius,start,start+.28+charge*.15);ctx.stroke();}
   }
   if(charge>0) for(let i=0;i<n;i++) {
     const [x,y]=points[i];ctx.strokeStyle=`rgba(255,${Math.round(45+charge*150)},${Math.round(55+charge*150)},${.2+charge*.7})`;
@@ -816,7 +817,8 @@ function drawChairman(g:Game, ctx:CanvasRenderingContext2D, z:number, t:number) 
   for(let i=0;i<n;i++) {
     const [x,y]=points[i], firing=(s.fireGlow[i] ?? 0)>0, lit=firing || charge>0 || s.drones[i]<=0, pulse=.8+.2*Math.sin(t*5+i);
     if(firing){const glow=ctx.createRadialGradient(x,y,0,x,y,42);glow.addColorStop(0,"rgba(255,255,255,.98)");glow.addColorStop(.2,"rgba(255,115,125,.95)");glow.addColorStop(.5,"rgba(255,35,60,.55)");glow.addColorStop(1,"rgba(255,35,60,0)");ctx.fillStyle=glow;ctx.beginPath();ctx.arc(x,y,42,0,TAU);ctx.fill();}
-    ctx.save();ctx.translate(x,y);ctx.rotate(Math.atan2(y-p.y,x-p.x));
+    const [hx,hy]=chairmanHaloCenter(s,i%3,p.x,p.y);
+    ctx.save();ctx.translate(x,y);ctx.rotate(Math.atan2(y-hy,x-hx));
     ctx.globalAlpha=lit?1:.35;ctx.fillStyle=lit?"#3f0715":"#190b11";ctx.strokeStyle=lit?"#ff364c":"#74303b";ctx.lineWidth=1.5/z;
     if(lit){ctx.shadowColor="#ff1d42";ctx.shadowBlur=firing?45:10+charge*20;}
     ctx.beginPath();ctx.moveTo(11,0);ctx.lineTo(3,-5);ctx.lineTo(-7,-5);ctx.lineTo(-11,0);ctx.lineTo(-7,5);ctx.lineTo(3,5);ctx.closePath();ctx.fill();ctx.stroke();

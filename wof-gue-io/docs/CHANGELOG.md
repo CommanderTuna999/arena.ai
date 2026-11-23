@@ -1,3 +1,8 @@
+## 0.3. v2.31.4 — Trailing halos
+
+- Chairman’s three drone halos now trail smoothly behind the ship, then settle into place when it stops.
+- Drone shots and scans follow their moving halos, and teleporting brings the halos along immediately.
+
 ## 0.3. v2.31.3 — Chairman automatic targeting
 
 - In automatic mode, ready Chairman drones scan and fire at nearby enemies; only a manual trigger can activate the sun.
