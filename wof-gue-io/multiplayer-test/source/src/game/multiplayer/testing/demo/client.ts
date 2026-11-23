@@ -15,7 +15,7 @@ let frames=0,fps=0,fpsStarted=performance.now(),lastViewTime=-1,lastArrival=0,up
 const keys=new Set<string>();
 function resize(){viewportDirty=true;const d=Math.min(devicePixelRatio||1,1.5);canvas.width=Math.round(innerWidth*d);canvas.height=Math.round(innerHeight*d);ctx.setTransform(d,0,0,d,0,0);replica.resize(innerWidth,innerHeight,d);}
 window.addEventListener('resize',resize);resize();
-window.addEventListener('keydown',e=>{if(!e.repeat){const selected=({'Digit1':'sting','Digit2':'peashooter','Digit3':'workhorse'} as Record<string,string>)[e.code];if(selected)client.equipDemoCannon(selected);}if(['KeyW','KeyA','KeyS','KeyD','ShiftLeft','Space'].includes(e.code)){e.preventDefault();keys.add(e.code);}});
+window.addEventListener('keydown',e=>{if(!e.repeat){const selected=({'Digit1':'sting','Digit2':'peashooter','Digit3':'workhorse','Digit4':'skewer','Digit5':'fencer'} as Record<string,string>)[e.code];if(selected)client.equipDemoCannon(selected);}if(['KeyW','KeyA','KeyS','KeyD','ShiftLeft','Space'].includes(e.code)){e.preventDefault();keys.add(e.code);}});
 window.addEventListener('keyup',e=>keys.delete(e.code));window.addEventListener('blur',()=>{keys.clear();fire=false;});
 canvas.addEventListener('mousemove',e=>{mouseX=e.clientX;mouseY=e.clientY});canvas.addEventListener('mousedown',e=>{if(e.button===0)fire=true});window.addEventListener('mouseup',e=>{if(e.button===0)fire=false});
 const send=setInterval(()=>{if(client.state!=='online')return;if(viewportDirty && client.sendViewport(Math.min(MAX_VIEW_DIMENSION,Math.max(1,Math.ceil(innerWidth))),Math.min(MAX_VIEW_DIMENSION,Math.max(1,Math.ceil(innerHeight)))))viewportDirty=false;const aim=Math.atan2(mouseY-innerHeight/2,mouseX-innerWidth/2);client.sendInput({seq:sequence++,forward:keys.has('KeyW'),backward:keys.has('KeyS'),left:keys.has('KeyA'),right:keys.has('KeyD'),boost:keys.has('ShiftLeft'),fire:fire||keys.has('Space'),aim});},50);
@@ -36,7 +36,7 @@ function draw(){
  const pilots=view.pilots.map((p:any)=>({...p,...pilotPositions.get(p.id) as any}));
  const me=pilots.find((p:any)=>p.id===shown.pilotId);if(!me)return;
  updateVital(hullFill,me.hp,me.hpMax);updateVital(shieldFill,me.shield,me.shieldMax);
- if(client===shown && client.state==='online'){attempts=0;status.textContent=`${({sting:'Stinger',peashooter:'Peashooter MK1',workhorse:'Workhorse MK1'} as Record<string,string>)[me.cannonId] ?? 'Stinger'} · ${sampled.pilots.length} pilot${sampled.pilots.length===1?'':'s'} nearby · ${sampled.enemies.length} enemies · ${fps || "…"} FPS · updates ${updateGap || "…"} ms${innerWidth>MAX_VIEW_DIMENSION||innerHeight>MAX_VIEW_DIMENSION?" · viewport exceeds demo limit":""}`;}
+ if(client===shown && client.state==='online'){attempts=0;status.textContent=`${({sting:'Stinger',peashooter:'Peashooter MK1',workhorse:'Workhorse MK1',skewer:'Skewer MK1',fencer:'Fencer MK1'} as Record<string,string>)[me.cannonId] ?? 'Stinger'} · ${sampled.pilots.length} pilot${sampled.pilots.length===1?'':'s'} nearby · ${sampled.enemies.length} enemies · ${fps || "…"} FPS · updates ${updateGap || "…"} ms${innerWidth>MAX_VIEW_DIMENSION||innerHeight>MAX_VIEW_DIMENSION?" · viewport exceeds demo limit":""}`;}
  if(replica.apply(view,pilots,sampled.enemies,shown.pilotId,renderTime,sampled)) render(replica.game,ctx);
 }
 function scheduleReconnect(){

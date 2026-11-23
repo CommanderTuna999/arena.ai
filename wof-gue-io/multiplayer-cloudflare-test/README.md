@@ -74,7 +74,7 @@ when the experiment is finished; leave the existing website and chat untouched.
 After changing the test Worker's production branch, start a new build from
 that branch; an older failed build still refers to its original commit.
 
-The demo's guest cannon test offers Stinger, Peashooter MK1 and Workhorse MK1
-on keys 1–3. The server chooses the actual guest loadout; it is not an account
+The demo's guest cannon test offers Stinger, Peashooter MK1, Workhorse MK1, Skewer MK1 and Fencer MK1
+on keys 1–5. The server chooses the actual guest loadout; it is not an account
 or inventory feature. Other guests' cannons and starter shields render from server snapshots.
-The `/health` build marker for this iteration is `cloudflare-shield-v1`.
+The `/health` build marker for this iteration is `cloudflare-beams-v1`.

@@ -1,4 +1,5 @@
 import type { CombatHarness } from './combat-harness';
+import {segmentDistance} from './demo-beams';
 type Snapshot = ReturnType<CombatHarness['snapshot']>;
 
 /** Server-side interest filtering for prototype snapshots. It includes entire
@@ -15,6 +16,7 @@ export function interestSnapshot(snapshot: Snapshot, pilotId: string, radius: nu
     time:snapshot.time,
     pilots:snapshot.pilots.filter(p=>p.id===pilotId||near(p.x,p.y)),
     enemies:snapshot.enemies.filter(e=>near(e.x,e.y,e.radius)),
+    beams:(snapshot.beams ?? []).filter(b=>segmentDistance(observer.x,observer.y,b)<=radius),
     bullets:snapshot.bullets.filter(b=>near(b.x,b.y)),
     enemyProjectiles:snapshot.enemyProjectiles.filter(p=>near(p.x,p.y,p.radius)),
     puddles:snapshot.puddles.filter(p=>near(p.x,p.y,p.radius)),

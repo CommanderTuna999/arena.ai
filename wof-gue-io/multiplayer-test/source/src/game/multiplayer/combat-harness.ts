@@ -1,4 +1,5 @@
-import { Game } from '../engine';
+import { Game, type Beam } from '../engine';
+import { segmentDistance } from './demo-beams';
 import { PilotRoster } from './pilot-roster';
 import { PrivateLootVault } from './private-loot';
 import type { RewardWriteQueue } from '../../server/multiplayer-reward-queue';
@@ -12,6 +13,22 @@ import type { RewardWriteQueue } from '../../server/multiplayer-reward-queue';
  * multiplayer until those systems are implemented and security reviewed. */
 export class CombatHarness {
   readonly roster: PilotRoster;
+  // Cosmetic relay only; damage occurs once in the authoritative engine.
+  // Retain flashes long enough for 125ms snapshots and delayed playback.
+  private beamHistory: Array<Beam & {id:number;createdAt:number;expiresAt:number}> = [];
+  private nextBeamId=1;
+  private collectBeamEffects() {
+    const now=this.world.t;
+    this.beamHistory=this.beamHistory.filter(b=>b.expiresAt>now);
+    for (const b of this.world.beams) {
+      if (!Number.isSafeInteger(this.nextBeamId)) throw Error('Beam IDs exhausted');
+      this.beamHistory.push({...b,id:this.nextBeamId++,createdAt:now,expiresAt:now+.6});
+    }
+    // The harness has no engine frame-effects pass; drain after copying so the
+    // original array doesn't grow forever or resend a flash as a fresh shot.
+    this.world.beams.length=0;
+    if(this.beamHistory.length>512)this.beamHistory.splice(0,this.beamHistory.length-512);
+  }
   private readonly dropChances = new Map<string, number>();
   private readonly projectileIds = new WeakMap<object, number>();
   private nextProjectileId = 1;
@@ -42,6 +59,7 @@ export class CombatHarness {
     this.world.stepEnemyProjectilesAgainstPilots(pilots, dt);
     this.world.stepOwnedBullets(dt);
     this.world.stepHazardsAgainstPilots(pilots, dt);
+    this.collectBeamEffects();
     // Settle once after all damage this tick, then discard dead enemy bodies.
     // In-memory only: crash recovery and durable accounts remain unimplemented.
     for (const enemy of this.world.enemies) if (enemy.dead && !this.discardRewards) {
@@ -67,6 +85,8 @@ export class CombatHarness {
     return {
       time: this.world.t,
       pilots,
+      beams: this.beamHistory.filter(b=>interestRadius===undefined || pilots.some(p=>segmentDistance(p.x,p.y,b)<=interestRadius))
+        .map(({id,x1,y1,x2,y2,color,width,mediator,createdAt,expiresAt})=>({id,x1,y1,x2,y2,color,width,mediator,createdAt,expiresAt})),
       bullets: this.world.bullets.filter(b => near(b.x,b.y)).map(b => ({ id:this.projectileId(b), x:b.x, y:b.y, vx:b.vx, vy:b.vy, kind:b.kind, elem:b.elem, crit:b.crit })),
       enemyProjectiles: this.world.eprojs.filter(p => near(p.x,p.y,p.r)).map(p => ({ id:this.projectileId(p), x:p.x, y:p.y, vx:p.vx, vy:p.vy, type:p.type, radius:p.r, hue:p.hue, speed:p.speed, tether:p.tether, srcId:p.src?.id })),
       puddles: this.world.puddles.filter(p => near(p.x,p.y,p.r)).map(p => ({ x:p.x, y:p.y, radius:p.r, arm:p.arm, life:p.life, max:p.max, hue:p.hue, web:p.web })),

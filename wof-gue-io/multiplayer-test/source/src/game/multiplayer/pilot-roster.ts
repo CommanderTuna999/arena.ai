@@ -2,7 +2,7 @@ import { Game, type PilotPhaseContext } from '../engine';
 import { computeStats, newSave } from '../data';
 
 // Demo-only free loadouts; never grant or modify a real account's equipment.
-export const DEMO_CANNONS = ['sting', 'peashooter', 'workhorse'] as const;
+export const DEMO_CANNONS = ['sting', 'peashooter', 'workhorse', 'skewer', 'fencer'] as const;
 import { InputBuffer } from './input';
 import { applyPlayerInput } from './apply-input';
 
@@ -37,7 +37,8 @@ export class PilotRoster {
     pilot.save.cannon.id=cannon;
     pilot.stats=computeStats(pilot.save);
     Object.assign(pilot.player,{heat:0,jam:0,recoil:0,muzzle:0,muzzleFlash:0,fireCd:Math.max(pilot.player.fireCd,.5)});
-    pilot.player.barrelRec=[];
+    pilot.player.barrelRec=[];pilot.player.fenceShots=0;
+    Object.assign(pilot.weaponState,{fencerCharge:0,fencerDamage:0,fencerCrit:false});
     return true;
   }
   remove(id: string): boolean { this.inputs.remove(id); return this.pilots.delete(id); }

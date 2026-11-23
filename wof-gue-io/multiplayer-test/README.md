@@ -22,7 +22,7 @@ The test uses the main game’s default no-optics zoom (1 / 1.3). It does not us
 ## Guest cannon test
 
 In this demo only, press **1** for Stinger, **2** for Peashooter MK1 or **3**
-for Workhorse MK1. Each temporary guest gets free test access to these three
+for Workhorse MK1, **4** for Skewer MK1 or **5** for Fencer MK1. Each temporary guest gets free test access to these five
 existing game weapons; choosing one updates that guest on the server and the
 client displays the server-selected cannon. Other players' shots and damage are shared, and their selected cannon and
 shield are now rendered from server snapshots.
@@ -33,3 +33,9 @@ Every temporary guest starts with the main game's level-one shield upgrade.
 Enemy damage drains it before hull and, after the normal delay, it recharges.
 The demo HUD shows text-free hull and shield bars; this is not an account
 upgrade, saved equipment, or the newer Chairman shield system.
+
+Skewer and Fencer use the engine's hitscan damage, and Fencer charges every
+fifth shot. Short-lived beam visuals are relayed to nearby guests separately
+from damage; missed snapshots or severe network stalls can still lose effects.
+This is the frozen guest-demo weapon implementation, not a claim that the
+entire current live-game weapon tree has been ported.

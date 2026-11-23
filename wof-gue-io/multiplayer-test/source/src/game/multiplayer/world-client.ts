@@ -60,6 +60,8 @@ export class ExperimentalWorldClient {
       if (data.geometryCache === 1 && !unpacked) { this.disconnect(); return; }
       const world=(unpacked?.world ?? data.world) as View;
       if (!Array.isArray(world.pilots) || !Array.isArray(world.enemies) || !world.pilots.some(p=>p?.id===this.pilotId)) return;
+      // Only bounded, finite visual beam data can enter the canvas renderer.
+      if (world.beams !== undefined && (!Array.isArray(world.beams) || world.beams.length>512 || world.beams.some((b:any)=>!b || !Number.isSafeInteger(b.id) || b.id<1 || ![b.x1,b.y1,b.x2,b.y2,b.createdAt,b.expiresAt].every(Number.isFinite) || b.expiresAt<=b.createdAt || b.expiresAt-b.createdAt>1 || (b.color!==undefined && (typeof b.color!=='string' || b.color.length>80)) || (b.width!==undefined && (!Number.isFinite(b.width) || b.width<=0 || b.width>1000))))) return;
       // Validate both sets before mutating either history: a malformed snapshot
       // must not advance the stream or create inconsistent animation buffers.
       const compact = (b: Body): Body => ({id:b.id, x:b.x, y:b.y, angle:b.angle});
@@ -80,7 +82,7 @@ export class ExperimentalWorldClient {
   }
   /** Demo-only selection; actual equipment always comes from server snapshots. */
   equipDemoCannon(cannon: string): boolean {
-    if (this.state !== 'online' || !this.socket || this.socket.readyState !== 1 || !['sting','peashooter','workhorse'].includes(cannon)) return false;
+    if (this.state !== 'online' || !this.socket || this.socket.readyState !== 1 || !['sting','peashooter','workhorse','skewer','fencer'].includes(cannon)) return false;
     try {this.socket.send(JSON.stringify({type:'demo-equip',cannon}));return true;} catch {this.disconnect();return false;}
   }
   sendViewport(width: number, height: number): boolean {

@@ -54,6 +54,10 @@ export class ReplicaView {
     g.puddles=world.puddles.map(p=>({...p,r:p.radius} as unknown as Puddle));
     g.rings=world.rings.map(r=>({...r,r:r.radius} as unknown as Ring));
     }
+    // Recompute lifetime on every animation frame, not only when a new network
+    // snapshot arrives. This is visual only and cannot apply combat damage.
+    g.beams=(world.beams ?? []).filter(b=>renderTime>=b.createdAt && renderTime<b.expiresAt)
+      .map(b=>({x1:b.x1,y1:b.y1,x2:b.x2,y2:b.y2,color:b.color,width:b.width,mediator:b.mediator,life:Math.min(.12,b.expiresAt-renderTime)}));
     const positions = new Map(enemies.map(e=>[e.id,e]));
     for (const e of g.enemies) {
       const pos=positions.get(e.id); if (!pos) continue;
