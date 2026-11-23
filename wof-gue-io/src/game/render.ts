@@ -593,8 +593,11 @@ export function render(g: Game, ctx: CanvasRenderingContext2D) {
       ctx.lineWidth = 1.4;
       ctx.strokeStyle = "rgba(255,248,214,0.8)";
       ctx.beginPath(); ctx.arc(b.x, b.y, r, 0, TAU); ctx.stroke();
-    } else {
+    } else if (b.visual === "scatter-orb") {
       drawKineticOrb(ctx, b);
+    } else {
+      ctx.lineWidth = (b.crit ? 4 : 3);
+      ctx.beginPath(); ctx.moveTo(b.x, b.y); ctx.lineTo(b.x - b.vx * 0.022, b.y - b.vy * 0.022); ctx.stroke();
     }
   }
   ctx.shadowBlur = 0;

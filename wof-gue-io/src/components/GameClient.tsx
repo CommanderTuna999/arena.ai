@@ -497,7 +497,7 @@ function Help({ onClose }: { onClose: () => void }) {
     ["T", "Recall beacon (craftable)"],
     ["E", "Open the base at your base"],
     ["ESC", "Settings: how the ship handles, the look, aim aids"],
-    ["CANNON tab", "The tree reads bottom-up: the free Stinger sits at the bottom, then three tier 1 guns above it. A chassis costs credits plus a bill of named common parts and an uncommon core. Each gun keeps its own upgrades — only one is fitted"],
+    ["CANNON tab", "The tree reads bottom-up: the free Stinger sits at the bottom, then three tier 1 guns above it. A chassis costs credits plus a bill of named common parts and an uncommon core. Each gun keeps its own upgrades — only one is equipped"],
     ["Weapon aiming", "Crafted weapons fire while any piece of a body is in range. They go for the core first, then shield generators and guns, then whatever piece is closest"],
     ["Base cannon", "Dormant until the base is hit, then online for 120s; only tracks rare+ targets and one-shots legendaries"],
     ["Base retaliation", "Any insect that damages the base is instantly destroyed — no swarming the hull"],
@@ -667,7 +667,7 @@ function TrackIcon({ id, hue, className }: { id: CannonTrackId; hue: number; cla
  * trunk climbs to a bus, and every chassis of the next tier hangs off it as a
  * node. A node is small on purpose — its own silhouette, its name, its state —
  * and it only opens into the full card (the sheet's line, the numbers, the bill
- * and the build button) while you are on it. Take a gun in a tier and the rest
+ * and the purchase button) while you are on it. Take a gun in a tier and the rest
  * of that row greys out: one gun per tier is not a rule to be read, it is a row
  * that is no longer for sale. */
 export function CannonTree({ game }: { game: Game }) {
@@ -716,13 +716,13 @@ export function CannonTree({ game }: { game: Game }) {
             {c.name}
           </span>
           <span className="text-[7px] font-black tracking-[0.16em]">
-            {selected ? <span className="text-yellow-300">FITTED</span>
+            {selected ? <span className="text-yellow-300">EQUIPPED</span>
               : owned ? <span className="text-cyan-300/80">{cannonOwned(save, c.id) ? "OWNED" : "ADMIN TEST"}</span>
                 : <span className="text-white/30">T{c.tier}</span>}
           </span>
         </button>
 
-        {isOpen && !dim && !owned && (
+        {isOpen && (
           <div
             className={`absolute z-40 w-[248px] ${align === "left" ? "left-0" : align === "right" ? "right-0" : "left-1/2 -translate-x-1/2"} ${
               down ? "top-full pt-1" : "bottom-full pb-1"
@@ -745,13 +745,12 @@ export function CannonTree({ game }: { game: Game }) {
               </div>
               {owned ? (
                 <button
-                  onClick={() => { game.selectCannon(c.id); setMsg(null); setOpen(null); }}
-                  disabled={selected}
+                  onClick={() => { game.selectCannon(c.id); setMsg(null); setOpen(null); setBranch(true); }}
                   className={`mt-1.5 w-full rounded-sm border px-2 py-1 text-[10px] font-black tracking-[0.16em] ${
                     selected ? "border-yellow-300/50 text-yellow-200/80" : "border-cyan-300 bg-cyan-400/15 text-cyan-100 hover:bg-cyan-400/30"
                   }`}
                 >
-                  {selected ? "FITTED" : "FIT THIS GUN"}
+                  VIEW UPGRADES
                 </button>
               ) : (
                 <>
@@ -762,12 +761,12 @@ export function CannonTree({ game }: { game: Game }) {
                   <button
                     onClick={() => { const m = game.buyCannonChassis(c.id); setMsg(m); if (!m) { setOpen(null); setBranch(true); } }}
                     disabled={!!problem}
-                    title={problem ?? `Build the ${c.name}`}
+                    title={problem ?? `Purchase the ${c.name}`}
                     className={`mt-1.5 w-full rounded-sm border px-2 py-1 text-[10px] font-black tracking-[0.16em] ${
                       problem ? "border-white/10 text-white/25" : "border-yellow-300 bg-yellow-300/15 text-yellow-200 hover:bg-yellow-300/30"
                     }`}
                   >
-                    {problem ? "LOCKED" : "BUILD"}
+                    {problem ? "LOCKED" : "PURCHASE"}
                   </button>
                   {problem && <div className="mt-1 text-[9px] leading-tight text-red-300/70">{problem}</div>}
                 </>
@@ -829,9 +828,9 @@ export function CannonTree({ game }: { game: Game }) {
       {branch && <div className="min-h-full rounded-sm border border-white/10 bg-white/[0.02] p-3">
         <button onClick={() => { setBranch(false); setOpen(null); }} className="mb-3 rounded-sm border border-cyan-300/50 px-3 py-1 text-xs font-bold text-cyan-100 hover:bg-cyan-400/15">← BACK TO CANNON TREE</button>
         {game.admin.on && !cannonOwned(save, fitted.id) && <div className="mb-3 rounded-sm border border-fuchsia-300/40 bg-fuchsia-400/10 p-2 text-xs text-fuchsia-100">
-          <div>Admin test fit — this cannon and its test upgrades are temporary until purchased.</div>
+          <div>Admin test equipment — this cannon and its test upgrades are temporary until purchased.</div>
           <div className="mt-1">{fitted.parts.map((b) => partBillText(b)).join(" · ")} · {fmtNum(fitted.credits)} CR</div>
-          <button className="mt-2 rounded-sm border border-fuchsia-300 px-2 py-1 font-bold disabled:opacity-40" disabled={!!cannonBillProblem(save, fitted, freeParts, true, free)} onClick={() => setMsg(game.buyCannonChassis(fitted.id) ?? "Built")}>BUILD PERMANENTLY</button>
+          <button className="mt-2 rounded-sm border border-fuchsia-300 px-2 py-1 font-bold disabled:opacity-40" disabled={!!cannonBillProblem(save, fitted, freeParts, true, free)} onClick={() => setMsg(game.buyCannonChassis(fitted.id) ?? "Purchased")}>PURCHASE PERMANENTLY</button>
           {cannonBillProblem(save, fitted, freeParts, true, free) && <div className="mt-1 text-red-200">{cannonBillProblem(save, fitted, freeParts, true, free)}</div>}
           {msg && <div className="mt-1 text-red-200">{msg}</div>}
         </div>}

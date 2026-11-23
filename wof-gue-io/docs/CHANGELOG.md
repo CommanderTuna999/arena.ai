@@ -1,3 +1,8 @@
+## 0.3. v2.30.5 — Cannon details
+
+- Cannon details return on hover; clicking an owned cannon opens its upgrades. Cannon labels now say purchase and equipped.
+- Restored Peashooter and Gatler projectile visuals while keeping Scatter energy orbs.
+
 ## 0.3. v2.30.4 — Cannon tree and admin
 
 - The cannon tree fills the tab; selecting a cannon opens its full upgrade page with complete names.

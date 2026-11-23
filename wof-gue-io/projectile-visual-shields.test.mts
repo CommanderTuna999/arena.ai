@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
 import {Game} from './src/game/engine';
 import {newSave} from './src/game/data';
 import {SPECIES_LIST} from './src/game/enemies';
@@ -10,7 +11,6 @@ assert.equal(g.bullets.length,8);assert(g.bullets.every((b:any)=>b.visual==='sca
 const circles:number[]=[];let strokes=0;
 const ctx:any={beginPath(){},arc(_x:number,_y:number,r:number){circles.push(r)},fill(){},stroke(){strokes++}};
 drawKineticOrb(ctx,g.bullets[0]);assert.deepEqual(circles,[16,8.8]);assert.equal(strokes,0,'scatter renders as layered circular fills, never a line');
-circles.length=0;drawKineticOrb(ctx,{x:0,y:0,crit:false});assert.equal(circles[0],4.5,'default kinetic rounds are also round');
 circles.length=0;drawKineticOrb(ctx,{x:0,y:0,crit:true,visual:'scatter-orb'});assert.equal(circles[0],18);
 
 const idx=SPECIES_LIST.findIndex(s=>s.id==='dragonfly');
@@ -24,4 +24,6 @@ for (const type of ['charge','grab','sting','swing']) {
   g.updateEnemy(e,.03,g.player.x-e.x,g.player.y-e.y,500);
   assert(e.shields.length>0,`${type} keeps shields active`);
 }
-console.log('Scatter and kinetic rounds render as orbs; shields remain active during all contact attacks');
+const renderer=readFileSync(new URL('./src/game/render.ts',import.meta.url),'utf8');
+assert.match(renderer,/b\.visual === "scatter-orb"[\s\S]*?drawKineticOrb\(ctx, b\);[\s\S]*?else \{[\s\S]*?b\.x - b\.vx \* 0\.022/,'non-Scatter rounds retain their original tracer');
+console.log('Scatter renders as orbs; ordinary kinetic tracers and shields retained');
