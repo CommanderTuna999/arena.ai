@@ -1,3 +1,8 @@
+## 0.3. v2.30.7 — Cannon equipment and damage
+
+- Equip owned cannons from their hover cards; equipped cannons show a disabled Equipped button. Removed the admin test equipment block from upgrades.
+- Gatler MK1 now deals 70 base damage per shot and Scatter MK1 deals 75 per projectile.
+
 ## 0.3. v2.30.6 — Cannon purchases
 
 - Purchase cannons directly from their hover card; already-owned cannons show a disabled Owned button.

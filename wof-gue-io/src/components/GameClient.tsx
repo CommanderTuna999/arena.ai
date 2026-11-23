@@ -749,14 +749,17 @@ export function CannonTree({ game }: { game: Game }) {
                 <div className="text-yellow-200/80">· {fmtNum(c.credits)} CR</div>
               </div>}
               <button
-                onClick={() => { const m = game.buyCannonChassis(c.id); setMsg(m ?? `Purchased ${c.name}`); }}
-                disabled={purchased || !!problem}
-                title={purchased ? `${c.name} is owned` : problem ?? `Purchase the ${c.name}`}
+                onClick={() => {
+                  if (purchased) { game.selectCannon(c.id); setMsg(null); setOpen(null); }
+                  else { const m = game.buyCannonChassis(c.id); setMsg(m ?? `Purchased ${c.name}`); }
+                }}
+                disabled={selected || (!purchased && !!problem)}
+                title={selected ? `${c.name} is equipped` : purchased ? `Equip ${c.name}` : problem ?? `Purchase the ${c.name}`}
                 className={`mt-1.5 w-full rounded-sm border px-2 py-1 text-[10px] font-black tracking-[0.16em] ${
-                  purchased || problem ? "border-white/10 text-white/25" : "border-yellow-300 bg-yellow-300/15 text-yellow-200 hover:bg-yellow-300/30"
+                  (selected || (!purchased && !!problem)) ? "border-white/10 text-white/25" : "border-yellow-300 bg-yellow-300/15 text-yellow-200 hover:bg-yellow-300/30"
                 }`}
               >
-                {purchased ? "OWNED" : "PURCHASE"}
+                {selected ? "EQUIPPED" : purchased ? "EQUIP" : "PURCHASE"}
               </button>
               {!purchased && problem && <div className="mt-1 text-[9px] leading-tight text-red-300/70">{problem}</div>}
             </div>
@@ -815,13 +818,6 @@ export function CannonTree({ game }: { game: Game }) {
       {/* ---- the selected gun's upgrades take over the cannon tab ---- */}
       {branch && <div className="min-h-full rounded-sm border border-white/10 bg-white/[0.02] p-3">
         <button onClick={() => { setBranch(false); setOpen(null); }} className="mb-3 rounded-sm border border-cyan-300/50 px-3 py-1 text-xs font-bold text-cyan-100 hover:bg-cyan-400/15">← BACK TO CANNON TREE</button>
-        {game.admin.on && !cannonOwned(save, fitted.id) && <div className="mb-3 rounded-sm border border-fuchsia-300/40 bg-fuchsia-400/10 p-2 text-xs text-fuchsia-100">
-          <div>Admin test equipment — this cannon and its test upgrades are temporary until purchased.</div>
-          <div className="mt-1">{fitted.parts.map((b) => partBillText(b)).join(" · ")} · {fmtNum(fitted.credits)} CR</div>
-          <button className="mt-2 rounded-sm border border-fuchsia-300 px-2 py-1 font-bold disabled:opacity-40" disabled={!!cannonBillProblem(save, fitted, freeParts, true, free)} onClick={() => setMsg(game.buyCannonChassis(fitted.id) ?? "Purchased")}>PURCHASE PERMANENTLY</button>
-          {cannonBillProblem(save, fitted, freeParts, true, free) && <div className="mt-1 text-red-200">{cannonBillProblem(save, fitted, freeParts, true, free)}</div>}
-          {msg && <div className="mt-1 text-red-200">{msg}</div>}
-        </div>}
         <div className="flex items-baseline justify-between">
           <div className="text-[10px] font-bold tracking-[0.22em] text-cyan-200/60">BRANCH · {fitted.name.toUpperCase()}</div>
           <div className="text-[10px] text-white/40">tier {fitted.tier}</div>

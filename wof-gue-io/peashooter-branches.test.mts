@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import {CANNON_BY_ID,cannonTracks,cannonBarrels,cannonSpread,cannonBillPicks,cannonBillProblem,newSave,computeStats,type Comp} from './src/game/data';
 import {Game} from './src/game/engine';import {readFileSync} from 'node:fs';
 const pea=CANNON_BY_ID.peashooter2,gat=CANNON_BY_ID.gatler,scatter=CANNON_BY_ID.scattermk1;
-assert.deepEqual([pea.dmg,pea.interval,pea.credits,pea.requires],[80,.03,6000,'peashooter']);assert.deepEqual([gat.dmg,gat.interval,gat.credits,gat.requires],[50,.01,8000,'peashooter']);assert.deepEqual([scatter.dmg,scatter.interval,scatter.credits,scatter.requires],[35,.5,12000,'peashooter']);
+assert.deepEqual([pea.dmg,pea.interval,pea.credits,pea.requires],[80,.03,6000,'peashooter']);assert.deepEqual([gat.dmg,gat.interval,gat.credits,gat.requires],[70,.01,8000,'peashooter']);assert.deepEqual([scatter.dmg,scatter.interval,scatter.credits,scatter.requires],[75,.5,12000,'peashooter']);
 assert.equal(pea.desc,'Spray and pray, now with more barrels.');assert.equal(gat.desc,'So we’re just spamming now.');assert.equal(scatter.desc,'Balls to the face.');
 assert.equal(cannonTracks(pea).map(t=>t.id).join(','),'acc,speed,dmg,crit,critDmg,barrels');assert.equal(cannonTracks(gat).map(t=>t.id).join(','),'acc,speed,dmg,crit,critDmg');assert.equal(cannonTracks(scatter).map(t=>t.id).join(','),'spread,pen,dmg,crit,critDmg,rate');
 assert.equal(cannonBarrels({},pea),3);assert.equal(cannonBarrels({barrels:1},pea),4);assert(cannonSpread(scatter,{spread:2})<cannonSpread(scatter));assert(cannonSpread(pea,{acc:2})<cannonSpread(pea));
@@ -20,8 +20,8 @@ for(const [id,expected] of [['peashooter2',1/.03],['gatler',100]] as const){
  for(const dt of [1/30,1/60,1/144]) {const game=simulation(id,dt,3);const actual=game.bullets.length/3;assert(Math.abs(actual-expected)<1,`${id} ${dt} actual ${actual}`);assert(game.bullets.every((b:any)=>b.dmg===CANNON_BY_ID[id].dmg));}
 }
 const peaFire=simulation('peashooter2',.01,.18);assert.equal(new Set(peaFire.bullets.map((b:any)=>b.y.toFixed(2))).size>2,true,'rotary barrels feed real muzzle positions');
-const gatFire=simulation('gatler',.01,.1);assert(gatFire.player.vx < -100,'Gatler kicks the hull backwards');
-const scatterFire=simulation('scattermk1',.01,.01);assert.equal(scatterFire.bullets.length,8);assert(scatterFire.bullets.every((b:any)=>b.dmg===35));assert(scatterFire.player.vx <= -180);assert(scatterFire.bullets.some((b:any)=>b.vy>0)&&scatterFire.bullets.some((b:any)=>b.vy<0));
+const gatFire=simulation('gatler',.01,.1);assert(gatFire.bullets.every((b:any)=>b.dmg===70),'Gatler base damage per shot');assert(gatFire.player.vx < -100,'Gatler kicks the hull backwards');
+const scatterFire=simulation('scattermk1',.01,.01);assert.equal(scatterFire.bullets.length,8);assert(scatterFire.bullets.every((b:any)=>b.dmg===75));assert(scatterFire.player.vx <= -180);assert(scatterFire.bullets.some((b:any)=>b.vy>0)&&scatterFire.bullets.some((b:any)=>b.vy<0));
 const select=newSave();select.cannon.id='gatler';select.cannon.owned.push('gatler');const turning=new Game(select,'turn') as any;turning.player.x=5200;turning.player.y=0;turning.player.a=0;turning.input.mx=turning.w/2;turning.input.my=turning.h/2+200;turning.cam.x=turning.player.x;turning.cam.y=turning.player.y;turning.admin.sandbox=true;turning.update(.05);assert(Math.abs(turning.player.a)<=.150001,'Gatler has a heavy aiming turn limit');
 const ui=readFileSync(new URL('./src/components/GameClient.tsx',import.meta.url),'utf8');assert.match(ui,/title="Open base \(E\)"[\s\S]{0,350}>\s*<span className="text-xl font-black">E<\/span>/);
 console.log('Peashooter branches: crafting, species restrictions, upgrades, barrel rotation, frame-independent rapid fire, scatter, recoil, turn rate and E prompt verified');

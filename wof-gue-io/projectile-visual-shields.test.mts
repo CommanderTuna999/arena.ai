@@ -7,7 +7,7 @@ import {drawKineticOrb} from './src/game/projectile-render';
 
 const save=newSave();save.cannon.owned.push('scattermk1');save.cannon.id='scattermk1';
 const g=new Game(save,'test') as any;g.player.x=-50000;g.player.y=-65000;g.player.a=0;g.input.lmb=true;g.firePlayer(.01);
-assert.equal(g.bullets.length,8);assert(g.bullets.every((b:any)=>b.visual==='scatter-orb' && b.dmg===35));
+assert.equal(g.bullets.length,8);assert(g.bullets.every((b:any)=>b.visual==='scatter-orb' && b.dmg===75));
 const circles:number[]=[];let strokes=0;
 const ctx:any={beginPath(){},arc(_x:number,_y:number,r:number){circles.push(r)},fill(){},stroke(){strokes++}};
 drawKineticOrb(ctx,g.bullets[0]);assert.deepEqual(circles,[16,8.8]);assert.equal(strokes,0,'scatter renders as layered circular fills, never a line');

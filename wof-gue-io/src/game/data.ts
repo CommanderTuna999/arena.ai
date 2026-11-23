@@ -320,7 +320,7 @@ export const CANNONS: CannonDef[] = [
   {
     id: "gatler", name: "Gatler MK1", tier: 2,
     desc: "So we’re just spamming now.",
-    dmg: 50, interval: 0.01, speed: 1400, range: 1100, spread: 0.26,
+    dmg: 70, interval: 0.01, speed: 1400, range: 1100, spread: 0.26,
     credits: 8000,
     parts: [
       { kind: "armor", tier: 3, count: 1, name: "Carapace Plate", label: "carapace plate" },
@@ -334,7 +334,7 @@ export const CANNONS: CannonDef[] = [
   {
     id: "scattermk1", name: "Scatter MK1", tier: 2,
     desc: "Balls to the face.",
-    dmg: 35, interval: 0.5, speed: 550, range: 650, spread: 0.4, pellets: 8,
+    dmg: 75, interval: 0.5, speed: 550, range: 650, spread: 0.4, pellets: 8,
     credits: 12000,
     parts: [
       { kind: "leg", tier: 2, count: 15, label: "leg" },

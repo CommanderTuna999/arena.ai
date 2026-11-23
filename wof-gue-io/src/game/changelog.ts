@@ -8,7 +8,7 @@
  *   CHANGELOG and mirror the details in docs/CHANGELOG.md.
  */
 
-export const VERSION = "2.30.6";
+export const VERSION = "2.30.7";
 
 export interface ChangeEntry {
   version: string;
@@ -19,6 +19,7 @@ export interface ChangeEntry {
 }
 
 export const CHANGELOG: ChangeEntry[] = [
+  { version: "2.30.7", date: "23 Nov 2026", title: "Cannon equipment and damage", points: ["Equip owned cannons from their hover cards; equipped cannons show a disabled Equipped button. Removed the admin test equipment block from upgrades.", "Gatler MK1 now deals 70 base damage per shot and Scatter MK1 deals 75 per projectile."] },
   { version: "2.30.6", date: "23 Nov 2026", title: "Cannon purchases", points: ["Purchase cannons directly from their hover card; already-owned cannons show a disabled Owned button."] },
   { version: "2.30.5", date: "23 Nov 2026", title: "Cannon details", points: ["Cannon details return on hover; clicking an owned cannon opens its upgrades. Cannon labels now say purchase and equipped.", "Restored Peashooter and Gatler projectile visuals while keeping Scatter energy orbs."] },
   { version: "2.30.4", date: "23 Nov 2026", title: "Cannon tree and admin", points: ["The cannon tree fills the tab; selecting a cannon opens its full upgrade page with complete names.", "Scatter fires larger glowing orbs. Admin mode can temporarily test any cannon, and infinite credits applies to cannon purchases."] },
