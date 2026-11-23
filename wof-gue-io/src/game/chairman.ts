@@ -5,6 +5,7 @@ export const CHAIRMAN_SHIELD_MAX = 1000; // 1000% of the unupgraded 100 HP hull
 export const CHAIRMAN_DRONE_COOLDOWN = 5;
 export type ChairmanState = {
   drones:number[]; fireGlow:number[]; reload:number; phase:number;
+  armourActive:boolean; armour:number; armourMax:number;
   haloCenters: {x:number;y:number}[] | null; lastHaloPlayer: {x:number;y:number} | null; shield:number; shieldDelay:number; flash:number;
   scan:(TargetScan & {enemyId:number; drone:number; aimX:number; aimY:number; manual:boolean})|null;
   charge:number; // 0 idle; negative one denotes the beginning of a charge
@@ -14,7 +15,7 @@ export const chairmanOrbChance = (level:number) => Math.min(0.15, 0.05 + Math.ma
 export const chairmanCoreMul = (level:number) => 1 + 0.75 * Math.max(0, Math.min(10, level || 0));
 export const chairmanOrbRadius = (level:number) => 1600 * (1 + 0.1 * Math.max(0, Math.min(10, level || 0)));
 export const chairmanOrbDamage = (dmgLevel:number, dronesLevel:number) => 15000000 * Math.pow(1.2, Math.max(0, Math.min(30, dmgLevel || 0))) * (1 + .1 * Math.max(0, Math.min(15, dronesLevel || 0)));
-export function createChairman():ChairmanState {return {drones:Array(15).fill(0),fireGlow:Array(15).fill(0),reload:0,phase:0,haloCenters:null,lastHaloPlayer:null,shield:CHAIRMAN_SHIELD_MAX,shieldDelay:0,flash:0,scan:null,charge:0};}
+export function createChairman():ChairmanState {return {drones:Array(15).fill(0),fireGlow:Array(15).fill(0),reload:0,phase:0,armourActive:false,armour:0,armourMax:0,haloCenters:null,lastHaloPlayer:null,shield:CHAIRMAN_SHIELD_MAX,shieldDelay:0,flash:0,scan:null,charge:0};}
 export function chairmanPosition(index:number,count:number,phase:number,x:number,y:number):[number,number] {
   const ring=index%3, perRing=Math.ceil((count-ring)/3), pos=Math.floor(index/3);
   const angle=(ring===1?-phase:phase)*(0.75+ring*.18) + pos*2*Math.PI/Math.max(1,perRing)+ring*.7;
@@ -47,7 +48,20 @@ export function moveChairmanHalos(s:ChairmanState,dt:number,x:number,y:number) {
   }
   s.lastHaloPlayer={x,y};
 }
-export function syncChairman(s:ChairmanState,count:number) {while(s.drones.length<count){s.drones.push(s.reload>0?s.reload:0);s.fireGlow.push(0);}s.drones.length=count;s.fireGlow.length=count;}
+/** All drones become a protective layer, charging sequentially over five seconds. */
+export function gatherChairmanArmour(s:ChairmanState,hull:number) {
+  s.armourActive=true; s.armourMax=Math.max(0,hull)*10; s.armour=s.armourMax;
+  s.scan=null; s.reload=CHAIRMAN_DRONE_COOLDOWN;
+  s.drones=s.drones.map((_,i)=>CHAIRMAN_DRONE_COOLDOWN*(i+1)/s.drones.length);
+}
+export function disperseChairmanArmour(s:ChairmanState):boolean {
+  if(!s.armourActive || s.reload>0 || s.drones.some(x=>x>0))return false;
+  s.armourActive=false; s.armour=0; s.armourMax=0; return true;
+}
+export function syncChairman(s:ChairmanState,count:number) {
+  while(s.drones.length<count){s.drones.push(s.armourActive?s.reload:0);s.fireGlow.push(0);}
+  s.drones.length=count;s.fireGlow.length=count;
+}
 export function tickChairman(s:ChairmanState,dt:number) {
   // Accelerate continuously throughout the one-second sun charge.
   const start=Math.max(0,Math.min(1,s.charge));

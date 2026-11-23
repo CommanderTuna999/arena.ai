@@ -802,11 +802,27 @@ function drawChairman(g:Game, ctx:CanvasRenderingContext2D, z:number, t:number) 
     ctx.fillStyle=`rgba(255,52,74,${.025+.035*f})`;ctx.beginPath();ctx.arc(p.x,p.y,rad,0,TAU);ctx.fill();
     ctx.strokeStyle=`rgba(255,52,74,${.24+.38*f})`;ctx.lineWidth=2/z;ctx.beginPath();ctx.arc(p.x,p.y,rad,0,TAU);ctx.stroke();
   }
+  // The gathered drones form interlocking physical plates, illuminating one
+  // at a time as each drone finishes charging. The armour remains until Q.
+  if(s.armourActive) {
+    const integrity=s.armourMax===Infinity ? (s.armour===Infinity?1:0) : clamp(s.armour/Math.max(1,s.armourMax),0,1);
+    for(let i=0;i<n;i++) {
+      const a=i*TAU/n-Math.PI/2, half=TAU/n*.47, inner=62, outer=76;
+      const ready=s.drones[i]<=0;
+      ctx.beginPath();ctx.moveTo(p.x+Math.cos(a-half)*inner,p.y+Math.sin(a-half)*inner);
+      ctx.lineTo(p.x+Math.cos(a-half*.78)*outer,p.y+Math.sin(a-half*.78)*outer);
+      ctx.lineTo(p.x+Math.cos(a+half*.78)*outer,p.y+Math.sin(a+half*.78)*outer);
+      ctx.lineTo(p.x+Math.cos(a+half)*inner,p.y+Math.sin(a+half)*inner);ctx.closePath();
+      ctx.fillStyle=integrity>0 ? `rgba(45,10,20,${.3+integrity*.55})` : "rgba(16,12,16,.35)";
+      ctx.strokeStyle=ready?"#ff6676":"#71313c";ctx.lineWidth=(ready?2:1)/z;
+      if(ready){ctx.shadowColor="#ff344a";ctx.shadowBlur=12;}ctx.fill();ctx.stroke();ctx.shadowBlur=0;
+    }
+  }
   if(charge>0) for(let i=0;i<n;i++) {
     const [x,y]=points[i];ctx.strokeStyle=`rgba(255,${Math.round(45+charge*150)},${Math.round(55+charge*150)},${.2+charge*.7})`;
     ctx.lineWidth=(1+charge*3)/z;ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(p.x,p.y);ctx.stroke();
   }
-  for(let i=0;i<n;i++) {
+  if(!s.armourActive) for(let i=0;i<n;i++) {
     const [x,y]=points[i], firing=(s.fireGlow[i] ?? 0)>0, lit=firing || charge>0 || s.drones[i]<=0, pulse=.8+.2*Math.sin(t*5+i);
     if(firing){const glow=ctx.createRadialGradient(x,y,0,x,y,42);glow.addColorStop(0,"rgba(255,255,255,.98)");glow.addColorStop(.2,"rgba(255,115,125,.95)");glow.addColorStop(.5,"rgba(255,35,60,.55)");glow.addColorStop(1,"rgba(255,35,60,0)");ctx.fillStyle=glow;ctx.beginPath();ctx.arc(x,y,42,0,TAU);ctx.fill();}
     const [hx,hy]=chairmanHaloCenter(s,i%3,p.x,p.y);

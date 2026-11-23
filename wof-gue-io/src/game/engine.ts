@@ -1,5 +1,5 @@
 import { createTargetScan, type TargetScan } from "./target-scan";
-import { CHAIRMAN_DRONE_COOLDOWN, CHAIRMAN_SHIELD_MAX, chairmanDronePosition, moveChairmanHalos, chairmanDroneCount, chairmanOrbChance, chairmanOrbRadius, chairmanOrbDamage, chairmanCoreMul, createChairman, syncChairman, tickChairman, type ChairmanState } from "./chairman";
+import { CHAIRMAN_SHIELD_MAX, gatherChairmanArmour, disperseChairmanArmour, chairmanDronePosition, moveChairmanHalos, chairmanDroneCount, chairmanOrbChance, chairmanOrbRadius, chairmanOrbDamage, chairmanCoreMul, createChairman, syncChairman, tickChairman, type ChairmanState } from "./chairman";
 import { rollComponentTiers } from "./drop-roll";
 import { recordPlateHit } from "./plate-impact";
 import { ejectCasing, ejectCasingLimited } from "./casing-fx";
@@ -326,7 +326,7 @@ export interface Player {
 }
 
 export interface Hud {
-  hp: number; maxHp: number; shield: number; maxShield: number; chairmanShield: number; chairmanShieldMax: number; boost: number; hasBoost: boolean; credits: number;
+  hp: number; maxHp: number; shield: number; maxShield: number; chairmanShield: number; chairmanShieldMax: number; chairmanArmour: number; chairmanArmourMax: number; chairmanArmourReady: boolean; boost: number; hasBoost: boolean; credits: number;
   /** increments every time a credit flight lands, so the HUD can pulse the counter */
   creditTick: number;
   /** the running collection: value collected "at once" and the coin scale for it */
@@ -954,6 +954,7 @@ export class Game {
     if (code === "KeyM") this.mapMode = ((this.mapMode + 1) % 3) as 0 | 1 | 2;
     if (code === "KeyT") this.toggleRecall();
     if (code === "KeyB") this.toggleAutoFire();
+    if (code === "KeyQ") this.disperseChairman();
     const ai = (["KeyZ", "KeyX", "KeyC", "KeyV", "KeyF"] as const).indexOf(code as never);
     if (ai >= 0) this.useAbility(ai);
   }
@@ -965,6 +966,11 @@ export class Game {
     // hovering empty space (or no launcher) still fires the harpoon.
     if (this.hasHoming() && this.markTarget()) return;
     this.fireHarpoon();
+  }
+  disperseChairman() {
+    if (this.stats.cannonId === "chairman" && this.chairman && !this.player.dead)
+      return disperseChairmanArmour(this.chairman);
+    return false;
   }
   toggleAutoFire() { this.setAutoFire(!this.autoFire); }
   private hasHoming() { return this.stats.weapons.some((w) => w.rid === "homing"); }
@@ -2176,15 +2182,20 @@ export class Game {
     if (st.cannonId === "chairman" && d > 0) {
       const cs = this.chairman ??= createChairman();
       syncChairman(cs, chairmanDroneCount(this.cannonViewLevels("chairman").drones ?? 0));
-      const available = cs.drones.map((cool, i) => cool <= 0 ? i : -1).filter(i => i >= 0);
+      const available = cs.armourActive ? [] : cs.drones.map((cool, i) => cool <= 0 ? i : -1).filter(i => i >= 0);
       const ang = (o.kbx || o.kby) ? Math.atan2(-(o.kby ?? 0), -(o.kbx ?? 0)) : p.a + Math.PI;
       if (available.length) {
         const i = available[Math.floor(Math.random() * available.length)];
         cs.drones[i] = Infinity;
+        if (cs.drones.every(x=>x>0) && cs.charge<=0) gatherChairmanArmour(cs,st.hull);
         recordShieldImpact(p, Math.cos(ang) * (SHIP_R + 35), Math.sin(ang) * (SHIP_R + 35), this.t);
         return;
       }
-      if (cs.shield > 0) {
+      if (cs.armourActive && cs.armour > 0) {
+        const absorbed = Math.min(cs.armour, d); cs.armour -= absorbed; d -= absorbed;
+        recordShieldImpact(p, Math.cos(ang) * (SHIP_R + 42), Math.sin(ang) * (SHIP_R + 42), this.t);
+      }
+      if (cs.shield > 0 && d > 0) {
         cs.shieldDelay = 4;
         const absorbed = Math.min(cs.shield, d); cs.shield -= absorbed; d -= absorbed;
         recordShieldImpact(p, Math.cos(ang) * (SHIP_R + 35), Math.sin(ang) * (SHIP_R + 35), this.t);
@@ -3556,6 +3567,7 @@ export class Game {
       this.burst(x,y,"#ff4254",10,5,300);
       ejectCasing(this,x,y,angle,this.t,"core",p.vx,p.vy,"chairman");
       cs.drones[index]=Infinity; cs.fireGlow[index]=.4; p.fireCd=1/st.rate;
+      if(cs.drones.every(x=>x>0)) gatherChairmanArmour(cs,st.hull);
       this.shake=Math.max(this.shake,5);
     };
     if(this.inSafe()) {cs.scan=null;cs.charge=0;this.fireWeapons(dt,p.a);return;}
@@ -3563,7 +3575,7 @@ export class Game {
       cs.charge+=dt;
       if(cs.charge>=1) {
         cs.charge=0; cs.flash=.34;
-        cs.reload=CHAIRMAN_DRONE_COOLDOWN; cs.drones.fill(CHAIRMAN_DRONE_COOLDOWN);
+        gatherChairmanArmour(cs,st.hull);
         const crit=st.crit>0 && Math.random()<st.crit;
         const damage=chairmanOrbDamage(lv.dmg ?? 0,lv.drones ?? 0)*chairmanCoreMul(lv.coreDmg ?? 0)*(crit?st.critMul:1)*this.dmgMul();
         const radius=chairmanOrbRadius(lv.orbRange ?? 0);
@@ -3578,6 +3590,8 @@ export class Game {
       }
       this.fireWeapons(dt,p.a);return;
     }
+    // Gathered drones cannot intercept, fire, or initiate another sun until dispersed.
+    if(cs.armourActive) { this.fireWeapons(dt,p.a); return; }
     if(cs.scan) {
       cs.scan.elapsed+=dt;
       if(cs.scan.elapsed>=cs.scan.duration && p.fireCd<=0) {
@@ -4738,7 +4752,7 @@ export class Game {
   hud(): Hud {
     const p = this.player, st = this.stats;
     return {
-      hp: p.hp, maxHp: st.hull, shield: p.shield, maxShield: st.shieldMax, chairmanShield: st.cannonId === "chairman" ? this.chairman?.shield ?? CHAIRMAN_SHIELD_MAX : 0, chairmanShieldMax: st.cannonId === "chairman" ? CHAIRMAN_SHIELD_MAX : 0, boost: p.boost, hasBoost: st.hasBoost, credits: this.save.credits, creditTick: this.creditTick,
+      hp: p.hp, maxHp: st.hull, shield: p.shield, maxShield: st.shieldMax, chairmanShield: st.cannonId === "chairman" ? this.chairman?.shield ?? CHAIRMAN_SHIELD_MAX : 0, chairmanShieldMax: st.cannonId === "chairman" ? CHAIRMAN_SHIELD_MAX : 0, chairmanArmour: st.cannonId === "chairman" && this.chairman?.armourActive ? this.chairman.armour : 0, chairmanArmourMax: st.cannonId === "chairman" && this.chairman?.armourActive ? this.chairman.armourMax : 0, chairmanArmourReady: st.cannonId === "chairman" && !!this.chairman?.armourActive && this.chairman.reload<=0 && this.chairman.drones.every(x=>x<=0), boost: p.boost, hasBoost: st.hasBoost, credits: this.save.credits, creditTick: this.creditTick,
       creditPop: { v: this.creditPopValue, s: this.creditPopScale },
       harp: this.harpoons.map((h) => ({ state: h.state, load: h.comp ? h.comp.c.mass / (h.comp.hooks.length * st.hStr) : 0, hp: h.hp / h.maxHp })),
       toasts: [...this.toasts], ultraNotices: [...this.ultraNotices], nearBase: this.nearBase(),

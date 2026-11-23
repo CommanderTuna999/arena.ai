@@ -1,3 +1,8 @@
+## 0.3. v2.31.9 — Drone armour
+
+- Exhausted Chairman drones gather into an armour layer with ten times maximum hull health.
+- Drones recharge sequentially after exhaustion or a sun blast; press Q or the HUD button to disperse them once all are ready.
+
 ## 0.3. v2.31.8 — Neon gauges and drone cadence
 
 - Chairman drones scan during their firing interval, with scan speed adapting to the fire rate.
