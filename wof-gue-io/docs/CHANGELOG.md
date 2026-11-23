@@ -1,3 +1,8 @@
+## 0.3. v2.30.17 — Distinct spent ammunition
+
+- Every cannon and crafted weapon now has its own spent round, battery, vial or launch cap, including a long glowing Mediator power rod.
+- Mixed kinetic and energy weapons eject different designs for the actual shot fired; energy cells use layered luminous details without costly canvas blur.
+
 ## 0.3. v2.30.16 — Lighter ejecta and larger bestiary portraits
 
 - Spent casings scatter with varied trajectories, lower rendering cost and shot-appropriate shells, batteries or chemical canisters.

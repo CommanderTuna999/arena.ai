@@ -3962,7 +3962,8 @@ export class Game {
         }
         default: break;
       }
-      if (p.wCd[i] > 0 && ["pulse","scatter","hmg","flak","rail","venom","acid","lance","bypass","cutter"].includes(w.rid)) {
+      // Deployable drones emit from the drone itself, not the launch slot.
+      if (p.wCd[i] > 0 && w.rid !== "drones") {
         if (["lance","bypass","cutter"].includes(w.rid)) ejectCasingLimited(this, JSON.stringify([this.pid, i, w.rid]), ox, oy, base + aimRel, this.t, p.vx, p.vy, w.rid);
         else {
           const kind = elem === "kinetic" || elem === "explosive" ? (w.rid === "hmg" ? "small" : "shell") : elem === "corrosive" ? "vial" : "orb";
@@ -4037,6 +4038,7 @@ export class Game {
       const dp = this.aimPoint(t, x, y);
       const ang = Math.atan2(dp[1] - y, dp[0] - x);
       this.bullets.push({ x, y, vx: Math.cos(ang) * 1050, vy: Math.sin(ang) * 1050, life: 0.8, dmg: this.stats.dmg * 0.4 * eff * this.dmgMul(), pierce: 0, hit: [], kind: 0, target: null, crit: false, elem: "kinetic" });
+      ejectCasing(this, x, y, ang, this.t, "small", p.vx, p.vy, "drones");
     }
   }
   private updateLock(dt: number) {

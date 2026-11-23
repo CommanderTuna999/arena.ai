@@ -8,7 +8,7 @@
  *   CHANGELOG and mirror the details in docs/CHANGELOG.md.
  */
 
-export const VERSION = "2.30.16";
+export const VERSION = "2.30.17";
 
 export interface ChangeEntry {
   version: string;
@@ -19,6 +19,7 @@ export interface ChangeEntry {
 }
 
 export const CHANGELOG: ChangeEntry[] = [
+  { version: "2.30.17", date: "23 Nov 2026", title: "Distinct spent ammunition", points: ["Every cannon and crafted weapon now has its own spent round, battery, vial or launch cap, including a long glowing Mediator power rod.", "Mixed kinetic and energy weapons eject different designs for the actual shot fired; energy cells use layered luminous details without costly canvas blur."] },
   { version: "2.30.16", date: "23 Nov 2026", title: "Lighter ejecta and larger bestiary portraits", points: ["Spent casings scatter with varied trajectories, lower rendering cost and shot-appropriate shells, batteries or chemical canisters.", "Bestiary portraits are enlarged and clipped to their frames; hovering no longer places a giant image over the screen."] },
   { version: "2.30.15", date: "23 Nov 2026", title: "Shield impact and kinetic damage fixes", points: ["Shield impacts illuminate a shared hexagonal grid instead of stacking repeated patterns.", "Kinetic blasts respect shield panels and no longer damage distant armor merely because they overlap its broad bounding radius; breaking a plating layer no longer blasts its own whole body."] },
   { version: "2.30.14", date: "23 Nov 2026", title: "Spent casings and local admin", points: ["Guns eject themed spent casings or energy cores after firing.", "Admin spawns can reclaim distant enemy slots and now report when spawning fails.", "Self-admin can be verified and remembered in this browser using /op and /unop."] },
