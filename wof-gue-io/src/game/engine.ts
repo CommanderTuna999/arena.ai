@@ -2325,6 +2325,8 @@ export class Game {
     e.abilCd[i] = (def.cd ?? ABILITY_INTERVALS[clamp(e.tier, 0, 5) | 0]) * (0.85 + Math.random() * 0.3);
   }
   private alive(e: Enemy, name?: string) { return !name || (e.tags[name] ?? 0) > 0; }
+  // Inherently legless serpents do not lose a limb-based dash capability.
+  private legsDisabled(e: Enemy) { return e.spd.id !== "serpent" && e.legCount > 0 && e.turnFrac <= 0; }
   private chooseAct(e: Enemy, dist: number, toP: number) {
     const n = e.abil.length;
     if (!n) return;
@@ -2337,6 +2339,7 @@ export class Game {
       if (e.abilCd[i] > 0) continue;
       if (!this.alive(e, a.needs)) continue;
       if (a.type === "swing" && !(e.roleGroups[a.role!] ?? []).length) continue;
+      if (this.legsDisabled(e) && (a.type === "charge" || a.type === "sting")) continue;
       const minD = (a.minS ?? 0) * e.S + (a.minP ?? 0);
       let maxD = (a.maxS ?? 0) * e.S + (a.maxP ?? 0);
       if (!a.maxS && !a.maxP) maxD = Infinity;
@@ -2388,6 +2391,7 @@ export class Game {
         break;
       }
       case "charge": {
+        if (this.legsDisabled(e)) { e.vx = e.vy = 0; done(); break; }
         if (a.ph === 0) {
           turnTo(1.6); damp(5);
           if (a.t >= d.wind) { a.ph = 1; a.t = 0; a.dir = e.a; }
@@ -2576,6 +2580,7 @@ export class Game {
           const inReach = anatomical ? reach <= SHIP_R + S * 0.65 : this.touching(e, 10);
           // A scorpion already in claw range closes its arms, not its body.
           if ((e.spd.id === "scorpion" && dist <= 3.75 * S + SHIP_R) || (anatomical && inReach)) { e.vx = e.vy = 0; }
+          else if (this.legsDisabled(e)) { e.vx = e.vy = 0; }
           else { const ls = d.lunge ?? 900; e.vx = Math.cos(toP) * ls; e.vy = Math.sin(toP) * ls; }
           const canClamp = e.spd.id !== "scorpion" || pincers.some(q => e.groups[q.g]?.sign === 1) && pincers.some(q => e.groups[q.g]?.sign === -1);
           if (inReach && canClamp && (!anatomical || a.t >= d.wind) && circleWalkable(tip.x, tip.y, SHIP_R)) {
@@ -2617,6 +2622,7 @@ export class Game {
         break;
       }
       case "sting": {
+        if (this.legsDisabled(e)) { e.vx = e.vy = 0; done(); break; }
         /* the scorpion extends its tail and lunges in to sting the ship: a
          * quick high-damage venom hit on contact, then it recoils. The strike
          * is the payoff, not a hold. */

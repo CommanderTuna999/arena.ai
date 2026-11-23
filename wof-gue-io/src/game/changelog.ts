@@ -8,7 +8,7 @@
  *   CHANGELOG and mirror the details in docs/CHANGELOG.md.
  */
 
-export const VERSION = "2.30.11";
+export const VERSION = "2.30.12";
 
 export interface ChangeEntry {
   version: string;
@@ -19,6 +19,7 @@ export interface ChangeEntry {
 }
 
 export const CHANGELOG: ChangeEntry[] = [
+  { version: "2.30.12", date: "23 Nov 2026", title: "Legless enemy lunges", points: ["Enemies with all legs disabled can no longer dash, charge or lunge toward a grab or sting."] },
   { version: "2.30.11", date: "23 Nov 2026", title: "Enemy cores and attachments", points: ["Enemy cores now fill their host body section while remaining inside its outline.", "Healthy enemy parts withstand one broken joint before an unsupported chain falls off."] },
   { version: "2.30.10", date: "23 Nov 2026", title: "Overhead chat", points: ["Your chat messages appear in a fading text box above your ship."] },
   { version: "2.30.9", date: "23 Nov 2026", title: "Spider and scorpion holds", points: ["Widow Spiders hold ships against their head when their fangs are destroyed.", "Scorpion grabs prevent firing; Epic and stronger scorpions sting after 0.7 seconds, dealing 18 times base damage over five seconds."] },

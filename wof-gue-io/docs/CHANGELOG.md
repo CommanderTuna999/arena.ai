@@ -1,3 +1,7 @@
+## 0.3. v2.30.12 — Legless enemy lunges
+
+- Enemies with all legs disabled can no longer dash, charge or lunge toward a grab or sting.
+
 ## 0.3. v2.30.11 — Enemy cores and attachments
 
 - Enemy cores now fill their host body section while remaining inside its outline.
