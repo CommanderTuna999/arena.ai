@@ -14,7 +14,11 @@ console.log('Every live-game cannon can be equipped at base, upgraded and tested
 // A fresh left click is routed to only the Chairman pilot, not the other
 // guest. Ordinary automatic mode must not request a sun blast on its own.
 {
- const world:any=new Game(newSave(),'world'),h=new CombatHarness(world,2,false,undefined,undefined,true);h.roster.add('a','Alpha');h.roster.add('b','Beta');const a=h.roster.get('a')!,b=h.roster.get('b')!;assert(h.roster.equipDemoCannon('a','chairman'));a.player.fireCd=0;
+ const world:any=new Game(newSave(),'world'),h=new CombatHarness(world,2,false,undefined,undefined,true);h.roster.add('a','Alpha');h.roster.add('b','Beta');const a=h.roster.get('a')!,b=h.roster.get('b')!;assert(h.roster.upgradeDemoShip('a','hull',2));assert(h.roster.equipDemoCannon('a','chairman'));a.player.fireCd=0;
  a.chairman!.drones.fill(Infinity);const frame={seq:1,forward:false,backward:false,left:false,right:false,boost:false,fire:false,aim:0};h.roster.receive('a',frame,1000);h.step(.05,1000);assert.equal(a.chairman!.charge,0,'auto mode alone cannot request the sun');
  h.roster.receive('a',{...frame,seq:2,fire:true},1050);h.step(.05,1050);assert(a.chairman!.charge>0,'fresh player click requests sun with dark drones');assert.equal(b.chairman,null,'other pilot is isolated');
+ h.roster.receive('a',{...frame,seq:3,fire:false},1100);for(let i=0;i<200;i++)h.step(.05,1100+i*50);
+ const ready=a.chairman!;assert(ready.armourActive && ready.armourBlend===1 && ready.drones.every(n=>n===0) && ready.reload===0,'sun armour gathers and sequentially recharges');assert(Math.abs(ready.armourMax-a.stats.hull*10)<1e-9,'armour uses upgraded hull maximum');
+ const snap=h.snapshot().pilots.find(p=>p.id==='a')!;assert(snap.chairman?.armourActive && snap.chairman.armourMax===ready.armourMax,'armour state reaches guest snapshots');
+ h.roster.receive('a',{...frame,seq:4,fire:true},11100);h.step(.05,11100);assert(a.chairman!.armourDispersing,'fresh player click disperses recharged armour');assert.equal(b.chairman,null);
 }

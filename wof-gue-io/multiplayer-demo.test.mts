@@ -31,7 +31,7 @@ try{
  // spy (jsdom has no pixel renderer). This covers loading, WS URL construction,
  // frames and paint calls; it is not a screenshot or real-browser test.
  const {JSDOM}=await import('jsdom');const script=await fetch(`${base}/demo.js`).then(r=>r.text());
- const dom=new JSDOM('<canvas></canvas><span id="status"></span>',{url:base,runScripts:'outside-only',pretendToBeVisual:true});
+ const dom=new JSDOM('<canvas></canvas><span id="status"></span><div id="vitals"></div>',{url:base,runScripts:'outside-only',pretendToBeVisual:true});
  const win=dom.window;let polygons=0, clears=0;let browserError:unknown=null;win.addEventListener('error',e=>{browserError=e.error;e.preventDefault();});
  const paint=new Proxy({closePath(){polygons++},clearRect(){clears++},createRadialGradient(){return {addColorStop(){}}},createLinearGradient(){return {addColorStop(){}}}}, {get:(target,key)=>key in target?(target as any)[key]:()=>{},set:(target,key,value)=>{(target as any)[key]=value;return true;}});
  (win.HTMLCanvasElement.prototype as any).getContext=()=>paint;

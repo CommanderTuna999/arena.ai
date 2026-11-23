@@ -78,7 +78,7 @@ export class PilotRoster {
     return Array.from(this.pilots, ([id, pilot]) => ({
       id, name: pilot.save.name || 'Pilot', x: pilot.player.x, y: pilot.player.y,
       angle: pilot.player.a, hp: pilot.player.hp, hpMax:pilot.stats.hull, shield: pilot.player.shield, shieldMax:pilot.stats.shieldMax,
-      dead: pilot.player.dead, cannonId:pilot.stats.cannonId, upgrades:{...pilot.save.upgrades}, levels:structuredClone(pilot.save.cannon.lv), heat:pilot.player.heat,
+      dead: pilot.player.dead, boost:pilot.player.boost, hasBoost:pilot.stats.hasBoost, cannonId:pilot.stats.cannonId, upgrades:{...pilot.save.upgrades}, levels:structuredClone(pilot.save.cannon.lv), heat:pilot.player.heat,
       gatAngle:pilot.player.gatAngle, revolutionaryScan:pilot.revolutionaryScan?{parts:[...pilot.revolutionaryScan.parts],elapsed:pilot.revolutionaryScan.elapsed,duration:pilot.revolutionaryScan.duration,enemyId:pilot.revolutionaryScan.enemy.id}:null, chairman:pilot.chairman?{...structuredClone(pilot.chairman),drones:pilot.chairman.drones.map(n=>Number.isFinite(n)?n:1e9)}:null,
       recoil:pilot.player.recoil, jam:pilot.player.jam, muzzleFlash:pilot.player.muzzleFlash, barrelRec:[...pilot.player.barrelRec], inputSequence: this.inputs.sequence(id),
     }));

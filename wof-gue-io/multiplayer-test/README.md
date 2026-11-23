@@ -27,7 +27,7 @@ test. The server validates loadout and upgrades at the base; they reset on
 disconnect. This is not purchasing, crafting, inventory or saved progression.
 The guest starts with the level-one shield. Weapon effects and special states
 are replicated, but visual fidelity and real-network performance still need
-browser and deployed testing. `/health` identifies `guest-ship-upgrades-v1`.
+browser and deployed testing. `/health` identifies `guest-vitals-v1`.
 
 Shot casings are emitted by the authoritative simulation and relayed to nearby
 guests with their weapon and kinetic/energy profile. They are cosmetic, bounded
@@ -37,3 +37,7 @@ The base also has the original **UPGRADES** panel for hull, repair, armour,
 shield, thrusters, handling and afterburner. These supported tracks are free
 and guest-only, with server-side limits and base proximity checks. Harpoon and
 salvage tracks are deliberately omitted: their demo systems are not complete.
+
+The guest HUD uses the main game's angular health and shield gauges, including
+a red Chairman dome, drone armour and readiness, and an afterburner gauge.
+These display server state; the visual animations still need a real browser review.

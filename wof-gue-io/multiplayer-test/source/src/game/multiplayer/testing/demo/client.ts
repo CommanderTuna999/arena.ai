@@ -5,9 +5,9 @@ import { MAX_VIEW_DIMENSION } from '../../demo-view';
 import { render } from '../../../render';
 import {BASE} from '../../../data';
 import {createDemoBaseMenu} from './base-menu';
+import {createDemoHud} from './demo-hud';
 const canvas=document.querySelector('canvas')!,ctx=canvas.getContext('2d')!,status=document.querySelector('#status')!;
-const hullFill=document.querySelector<HTMLElement>('#hull-fill'),shieldFill=document.querySelector<HTMLElement>('#shield-fill');
-function updateVital(el:HTMLElement|null,current:number,max:number){if(!el)return;const pct=max>0&&Number.isFinite(current)&&Number.isFinite(max)?Math.max(0,Math.min(100,current/max*100)):0;el.style.width=`${pct}%`;el.parentElement?.setAttribute('aria-valuenow',String(Math.round(pct)));}
+const hud=createDemoHud(document.querySelector<HTMLElement>('#vitals')!);
 const replica=new ReplicaView();
 let client=new ExperimentalWorldClient(url=>new WebSocket(url),15000,window.location.origin,true);
 let stopped=false, connecting=false, retryTimer: ReturnType<typeof setTimeout> | null=null, attempts=0;
@@ -41,7 +41,7 @@ function draw(){
  const pilots=view.pilots.map((p:any)=>({...p,...pilotPositions.get(p.id) as any}));
  const me=pilots.find((p:any)=>p.id===shown.pilotId);if(!me)return;
  if(client===shown && client.state==='online'){localPilot=me;menu.update(me);}if(menu.isOpen() && (me.dead || Math.hypot(me.x-BASE.x,me.y-BASE.y)>=BASE.r+40))menu.setOpen(false);
- updateVital(hullFill,me.hp,me.hpMax);updateVital(shieldFill,me.shield,me.shieldMax);
+ hud.update(me);
  if(client===shown && client.state==='online'){attempts=0;status.textContent=`${me.cannonId} · ${sampled.pilots.length} pilot${sampled.pilots.length===1?'':'s'} nearby · ${sampled.enemies.length} enemies · ${fps || "…"} FPS · updates ${updateGap || "…"} ms${innerWidth>MAX_VIEW_DIMENSION||innerHeight>MAX_VIEW_DIMENSION?" · viewport exceeds demo limit":""}`;}
  if(replica.apply(view,pilots,sampled.enemies,shown.pilotId,renderTime,sampled)) render(replica.game,ctx);
 }
@@ -64,4 +64,4 @@ async function connect(){
  finally{connecting=false;if(client.state==='closed')scheduleReconnect();}
 }
 requestAnimationFrame(draw);void connect();
-window.addEventListener('pagehide',()=>{stopped=true;if(retryTimer)clearTimeout(retryTimer);clearInterval(send);menu.destroy();client.disconnect();});
+window.addEventListener('pagehide',()=>{stopped=true;if(retryTimer)clearTimeout(retryTimer);clearInterval(send);menu.destroy();hud.destroy();client.disconnect();});
