@@ -5,7 +5,7 @@ const pea=CANNON_BY_ID.peashooter2,gat=CANNON_BY_ID.gatler,scatter=CANNON_BY_ID.
 assert.deepEqual([pea.dmg,pea.interval,pea.credits,pea.requires],[80,.03,6000,'peashooter']);assert.deepEqual([gat.dmg,gat.interval,gat.credits,gat.requires],[50,.01,8000,'peashooter']);assert.deepEqual([scatter.dmg,scatter.interval,scatter.credits,scatter.requires],[35,.5,12000,'peashooter']);
 assert.equal(pea.desc,'Spray and pray, now with more barrels.');assert.equal(gat.desc,'So we’re just spamming now.');assert.equal(scatter.desc,'Balls to the face.');
 assert.equal(cannonTracks(pea).map(t=>t.id).join(','),'acc,speed,dmg,crit,critDmg,barrels');assert.equal(cannonTracks(gat).map(t=>t.id).join(','),'acc,speed,dmg,crit,critDmg');assert.equal(cannonTracks(scatter).map(t=>t.id).join(','),'spread,pen,dmg,crit,critDmg,rate');
-assert.equal(cannonBarrels({},pea),3);assert.equal(cannonBarrels({barrels:1},pea),4);assert(cannonSpread(scatter,{spread:2})>cannonSpread(scatter));assert(cannonSpread(pea,{acc:2})<cannonSpread(pea));
+assert.equal(cannonBarrels({},pea),3);assert.equal(cannonBarrels({barrels:1},pea),4);assert(cannonSpread(scatter,{spread:2})<cannonSpread(scatter));assert(cannonSpread(pea,{acc:2})<cannonSpread(pea));
 const part=(id:string,kind:Comp['kind'],tier:number,name:string,species='Mantis'):Comp=>({id,kind,tier,name,species,poly:[],area:1,mass:1,hue:1,value:1});
 const mk=(s:string,n:number,k:Comp['kind'],tier:number,name:string,species='Mantis')=>Array.from({length:n},(_,i)=>part(s+i,k,tier,name,species));
 let save=newSave();save.credits=99999;save.cannon.owned.push('peashooter');
@@ -15,7 +15,7 @@ function buildGat(){const s=newSave();s.credits=8000;s.cannon.owned.push('peasho
 save=buildGat();assert.equal(cannonBillProblem(save,gat),null);save.inventory[9].species='Widow Spider';assert.match(cannonBillProblem(save,gat)!,/Mantis thorax/);save=buildGat();save.inventory[0].name='Scorpion Thorax Plate';assert.match(cannonBillProblem(save,gat)!,/carapace plate/);
 save=newSave();save.credits=12000;save.cannon.owned.push('peashooter');save.inventory=[...mk('l',15,'leg',2,'Mantis Leg'),...mk('c',2,'core',3,'Mantis Core'),...mk('w',1,'segment',3,'Widow Spider Cephalothorax','Widow Spider')];assert.equal(cannonBillProblem(save,scatter),null);save.inventory.at(-1)!.species='Mantis';assert.match(cannonBillProblem(save,scatter)!,/Widow Spider thorax/);
 save.cannon.owned=[];assert.match(cannonBillProblem(save,scatter)!,/Requires/);
-function simulation(id:string,step:number,duration:number){const s=newSave();s.cannon.owned.push(id);s.cannon.id=id;const game=new Game(s,'fire') as any;game.player.x=5200;game.player.y=0;game.player.a=0;game.input.lmb=true;for(let t=0;t<duration-1e-9;t+=step){game.t+=step;game.firePlayer(step);}return game;}
+function simulation(id:string,step:number,duration:number){const s=newSave();s.cannon.owned.push(id);s.cannon.id=id;const game=new Game(s,'fire') as any;game.player.x=5200;game.player.y=0;game.player.a=0;game.input.lmb=true;if(id==='gatler')game.player.gatSpin=1.5;for(let t=0;t<duration-1e-9;t+=step){game.t+=step;game.firePlayer(step);}return game;}
 for(const [id,expected] of [['peashooter2',1/.03],['gatler',100]] as const){
  for(const dt of [1/30,1/60,1/144]) {const game=simulation(id,dt,3);const actual=game.bullets.length/3;assert(Math.abs(actual-expected)<1,`${id} ${dt} actual ${actual}`);assert(game.bullets.every((b:any)=>b.dmg===CANNON_BY_ID[id].dmg));}
 }

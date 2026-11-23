@@ -1,3 +1,8 @@
+## 0.3. v2.30.3 — Shields and cannon handling
+
+- Enemy energy shields stay active through all attacks until their generators are destroyed.
+- Scatter upgrades tighten the shotgun spread; Gatler now spins up before firing and slows down when released.
+
 ## 0.3. v2.30.2 — Projectile visuals and dash shields
 
 - Scatter MK1 fires glowing orbs, and ordinary kinetic rounds are now round instead of tracer lines.

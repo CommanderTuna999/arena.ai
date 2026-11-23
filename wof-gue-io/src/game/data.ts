@@ -412,7 +412,7 @@ export const CANNON_TRACKS: CannonTrack[] = [
   { id: "critDmg", name: "Crit Damage", desc: "How hard a critical round lands.", max: 15, base: 90, growth: 1.5 },
   { id: "pen", name: "Penetration", desc: "Rounds punch through one more piece before stopping.", max: 8, base: 260, growth: 1.65 },
   { id: "acc", name: "Accuracy", desc: "Tightens the spray pattern.", max: 15, base: 40, growth: 1.45 },
-  { id: "spread", name: "Projectile Spread", desc: "Widens the scatter cone to cover a larger area.", max: 10, base: 50, growth: 1.45 },
+  { id: "spread", name: "Projectile Spread", desc: "Tightens the shotgun cone for greater accuracy.", max: 10, base: 50, growth: 1.45 },
   { id: "speed", name: "Projectile Speed", desc: "Faster rounds: less lead on a moving target.", max: 12, base: 55, growth: 1.45 },
   { id: "barrels", name: "Barrels", desc: "A second barrel. Rounds alternate between the two, so each barrel fires at half the rate and the gun runs cooler for longer.", max: 1, base: 6000, growth: 1 },
   { id: "armorDmg", name: "Armour Damage", desc: "Extra damage dealt to armour plating.", max: 10, base: 80, growth: 1.5 },
@@ -454,7 +454,7 @@ export const cannonBeamWidth = (lv?: Record<string, number>) => 1 + 0.18 * lvl(l
 /** round speed at the current projectile-speed level */
 export const cannonSpeed = (c: CannonDef, lv?: Record<string, number>) => c.speed * Math.pow(1.08, lvl(lv, "speed"));
 /** muzzle spread in radians; the accuracy track tightens it by 10% a level */
-export const cannonSpread = (c: CannonDef, lv?: Record<string, number>) => (c.spread ?? 0) * Math.pow(0.9, lvl(lv, "acc")) * (1 + 0.12 * lvl(lv, "spread"));
+export const cannonSpread = (c: CannonDef, lv?: Record<string, number>) => (c.spread ?? 0) * Math.pow(0.9, lvl(lv, "acc")) * Math.pow(0.9, lvl(lv, "spread"));
 /** damage multiplier at a given gauge level: 1 for every gun that does not cook */
 export const cannonHeatDmg = (c: CannonDef, heat: number) =>
   1 + ((c.heatMax ?? 1) - 1) * clamp(heat, 0, 1);

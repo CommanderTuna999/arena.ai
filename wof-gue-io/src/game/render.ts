@@ -1288,7 +1288,7 @@ function drawCannon(g: Game, ctx: CanvasRenderingContext2D, z: number, t: number
   if (c.rotary) {
     // A rotating cluster: each bore and its own recoil spring follows the
     // same rotation used for the actual firing muzzle.
-    mz.forEach((m, i) => barrel(Math.sin(t * 10 + i * TAU / mz.length) * 5.5, bore * 0.55, m.x, 1, own(i)));
+    mz.forEach((m, i) => barrel(Math.sin((st.cannonId === "gatler" ? p.gatAngle : t * 10) + i * TAU / mz.length) * 5.5, bore * 0.55, m.x, 1, own(i)));
   } else if (look.style === "spray") {
     /* three stubby spigots: a hose, not a rifle */
     barrel(-3.4, bore * 0.62, look.len - 2, 0.95, own(0));

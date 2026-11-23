@@ -170,9 +170,6 @@ export interface Enemy {
   crippledLegs: boolean[];
   /** furthest shield panel from the body centre (0 when unshielded) */
   shieldReach: number;
-  /** body-level shield retract: >0 retracts every panel so a body-contact
-   *  attack (grab, sting, swing) is not blocked by its own shields */
-  shieldDownT: number;
   abil: AbilityDef[]; abilCd: number[]; gap: number; act: Act | null; stun: number;
   wander: { x: number; y: number; t: number }; roleGroups: Record<string, number[]>;
   walk: number; dead: boolean; eDmg: number; keep: number; strafe: number; strafeT: number;
@@ -308,6 +305,8 @@ export interface Player {
    *  cool-down a jammed gun is stuck in (seconds left, 0 = ready) */
   recoil: number; heat: number; muzzle: number; muzzleFlash: number; barrelRec: number[];
   jam: number;
+  /** Gatler spin-up progress (seconds) and current barrel rotation. */
+  gatSpin: number; gatAngle: number;
   /** the Mediator's charge beam: how charged the hold is (0..1) and whether the
    *  trigger is currently held to build it */
   charge: number; charging: boolean;
@@ -486,7 +485,7 @@ export class Game {
     this.player = {
       x: BASE.x, y: BASE.y - 200, vx: 0, vy: 0, a: -Math.PI / 2, hp: this.stats.hull, shield: this.stats.shieldMax, boost: 100, boosting: false,
       slowF: 1, slowT: 0, poison: 0, poisonT: 0, pull: null, dead: false, respawn: 0, fireCd: 0, wCd: [0, 0, 0], wAim: W_SLOTS.map((s) => s.rest), hitT: 99, shieldT: 0,
-      recoil: 0, heat: 0, muzzle: 0, muzzleFlash: 0, barrelRec: [], jam: 0, charge: 0, charging: false, fenceShots: 0,
+      recoil: 0, heat: 0, muzzle: 0, muzzleFlash: 0, barrelRec: [], jam: 0, gatSpin: 0, gatAngle: 0, charge: 0, charging: false, fenceShots: 0,
       flash: 0, thornCd: 0, tpT: 0, tpCd: 0, tow: 1, thrust: 0,
       barrier: 0, barrierMax: 0, barrierT: 0, overT: 0, nullCd: 0,
     };
@@ -560,7 +559,7 @@ export class Game {
       const [tx, ty] = clampWorld(Math.cos(a) * (WORLD_R - 900), Math.sin(a) * (WORLD_R - 900));
       p.x = tx; p.y = ty; p.vx = p.vy = 0;
       p.dead = false; p.respawn = 0; p.hp = this.stats.hull; p.shield = this.stats.shieldMax;
-      p.recoil = 0; p.heat = 0; p.muzzle = 0; p.muzzleFlash = 0; p.barrelRec.length = 0; p.jam = 0; p.charge = 0; p.charging = false; p.fenceShots = 0;
+      p.recoil = 0; p.heat = 0; p.muzzle = 0; p.muzzleFlash = 0; p.barrelRec.length = 0; p.jam = 0; p.gatSpin = 0; p.gatAngle = 0; p.charge = 0; p.charging = false; p.fenceShots = 0;
       p.slowF = 1; p.slowT = 0; p.poison = 0; p.poisonT = 0; p.pull = null;
       this.cam.x = tx; this.cam.y = ty;
       this.toast("TEST RANGE — NO SPAWNS", "#ff7ad9");
@@ -1534,7 +1533,7 @@ export class Game {
       speed: spd.speed * (1 + 0.04 * tier), turn: (spd.turn * TIER_TURN[clamp(tier, 0, 5)]) / (1 + b.radius / (b.size * 6)), mobility: 1, legCount: b.legCount, wingCount: b.wingCount, turnFrac: 1, legPlate: tier >= 4 ? tier - 3 : 0, crippledLegs: [], shieldReach: shieldParts.reduce((m, id) => Math.max(m, b.parts[id].shieldR), 0),
       abil, abilCd: abil.map(() => 1 + Math.random() * 3), gap: 1, act: null, stun: 0, wander: { x, y, t: 0 }, roleGroups,
       walk: Math.random() * 6, dead: false, eDmg: spd.dmg * DMG_MUL[tier], keep: spd.keep + b.radius * 0.9, strafe: Math.random() < 0.5 ? 1 : -1, strafeT: 2,
-      provoked: 0, mgHeat: 0, mgCool: 0, domainT: 0, domainMul: 1, baseEDmg: spd.dmg * DMG_MUL[tier], domainOrig: [], buffT: 0, buffHp: 0, buffMax: 0, domainFxT: 0, tags, shields: [], weaponParts, shieldParts, dist: 9999, bdist: 9999, contactCd: 0, swatCd: 0, hasChange: false, gen: 0, shieldDownT: 0,
+      provoked: 0, mgHeat: 0, mgCool: 0, domainT: 0, domainMul: 1, baseEDmg: spd.dmg * DMG_MUL[tier], domainOrig: [], buffT: 0, buffHp: 0, buffMax: 0, domainFxT: 0, tags, shields: [], weaponParts, shieldParts, dist: 9999, bdist: 9999, contactCd: 0, swatCd: 0, hasChange: false, gen: 0,
       dmgTaken: 0, baseDmg: 0,
       dot: 0, dotT: 0, melt: 0, slowT: 0, slowF: 1,
       shells: Array.from({ length: shellN }, () => ({ hp: shellMax, max: shellMax })), shellMaxTotal: shellN * shellMax,
@@ -2145,7 +2144,7 @@ export class Game {
   }
   private killPlayer() {
     const p = this.player;
-    p.dead = true; p.hp = 0; p.respawn = 3; p.tpT = 0; p.pull = null;
+    p.dead = true; p.hp = 0; p.respawn = 3; p.tpT = 0; p.pull = null; p.gatSpin = 0;
     p.barrier = 0; p.barrierMax = 0; p.barrierT = 0; p.overT = 0;
     this.lock = null;
     this.wells = [];
@@ -2325,13 +2324,6 @@ export class Game {
   private runAct(e: Enemy, dt: number, toP: number, dist: number) {
     const a = e.act!, d = a.def, p = this.player;
     a.t += dt;
-    /* body-contact attacks retract the shields for their whole run: a grab,
-     * sting or swing puts the body on the ship, and the shields would
-     * block that contact. Keep the retract timer topped up while any of these
-     * runs, so it holds for the lunge, the hold and the recoil. */
-    if (d.type === "grab" || d.type === "sting" || d.type === "swing") {
-      e.shieldDownT = Math.max(e.shieldDownT, 0.5);
-    }
     const S = e.S;
     const turnTo = (rate: number) => { const tr = e.turn * e.turnFrac * rate; e.a += clamp(angDiff(e.a, toP), -tr * dt, tr * dt); };
     const damp = (k: number) => { const f = Math.exp(-k * dt); e.vx *= f; e.vy *= f; };
@@ -2875,27 +2867,18 @@ export class Game {
     }
     // shields
     e.shields.length = 0;
-    /* a body-contact attack (grab / sting / swing) retracts the
-     * shields for its duration: a dragonfly cannot pincer-grab through its own
-     * frontal wall, and no shielded body should. The timer is topped up by
-     * runAct while the contact ability runs, and bleeds off once it ends. */
-    if (e.shieldDownT > 0) e.shieldDownT -= dt;
-    else for (const id of e.shieldParts) {
+    // Panels remain active during every attack while their generators survive.
+    for (const id of e.shieldParts) {
       const q = e.parts[id];
       if (!q.alive) continue;
-      if (q.shieldDown > 0) { q.shieldDown -= dt; if (q.shieldDown <= 0) q.shieldHp = q.shieldMax * 0.4; }
-      else {
-        if (q.shieldHit > 0) q.shieldHit -= dt;
-        else if (q.shieldHp < q.shieldMax) q.shieldHp = Math.min(q.shieldMax, q.shieldHp + q.shieldMax * 0.15 * dt);
-        /* One panel per generator: an arc of the hull ring or a straight bar on it.
-         * It faces outward along the generator's own angle and can sweep. */
-        const ang = e.a + q.shieldAng + q.shieldSpin * this.t;
-        e.shields.push({
-          part: q, cx: e.x, cy: e.y, ang,
-          r: q.shieldR, span: q.shieldSpan, bar: q.shieldKind === 1,
-          thick: Math.max(9, q.shieldR * 0.07),
-        });
-      }
+      if (q.shieldHit > 0) q.shieldHit -= dt;
+      else if (q.shieldHp < q.shieldMax) q.shieldHp = Math.min(q.shieldMax, q.shieldHp + q.shieldMax * 0.15 * dt);
+      const ang = e.a + q.shieldAng + q.shieldSpin * this.t;
+      e.shields.push({
+        part: q, cx: e.x, cy: e.y, ang,
+        r: q.shieldR, span: q.shieldSpan, bar: q.shieldKind === 1,
+        thick: Math.max(9, q.shieldR * 0.07),
+      });
     }
     // weapons
     for (const id of e.weaponParts) {
@@ -3442,11 +3425,23 @@ export class Game {
       this.mediatorBeamTime = 0; p.charging = false; p.charge = 0;
     }
     const want = this.input.lmb || this.input.keys.has("Space");
+    // Gatler takes 1.5 seconds to reach firing speed. Releasing the trigger
+    // spins it down over 0.75 seconds; swapping guns resets it immediately.
+    // Only the part of this frame after spin-up may contribute firing time.
+    let fireDt = dt;
+    if (st.cannonId === "gatler") {
+      const previous = p.gatSpin;
+      const revving = want && !this.inSafe() && p.jam <= 0;
+      p.gatSpin = revving ? Math.min(1.5, previous + dt) : Math.max(0, previous - dt * 2);
+      p.gatAngle = (p.gatAngle + (previous + p.gatSpin) / 3 * 12 * dt) % TAU;
+      if (!revving || p.gatSpin < 1.5 - 1e-9) { p.fireCd = 0; return; }
+      fireDt = Math.max(0, dt - Math.max(0, 1.5 - previous));
+    } else { p.gatSpin = 0; }
     // These two chassis fire faster than a render frame. Keep fractional
     // cooldown carry while held, but never bank shots while idle.
     const rapid = st.cannonId === "peashooter2" || st.cannonId === "gatler";
     if (rapid && p.fireCd < 0) p.fireCd = 0;
-    p.fireCd -= dt;
+    p.fireCd -= fireDt;
     if (this.mediatorBeamTime > 0 && st.charge && !this.inSafe()) {
       const step = Math.min(dt, this.mediatorBeamTime);
       this.mediatorBeamTime = Math.max(0, this.mediatorBeamTime - step);
@@ -3541,7 +3536,7 @@ export class Game {
       const at = (i: number) => {
         const index = (first + i) % mz.length;
         const m = mz[index];
-        const lateral = CANNON_BY_ID[st.cannonId]?.rotary ? Math.sin(this.t * 10 + index * TAU / mz.length) * 5.5 : m.y;
+        const lateral = CANNON_BY_ID[st.cannonId]?.rotary ? Math.sin((st.cannonId === "gatler" ? p.gatAngle : this.t * 10) + index * TAU / mz.length) * 5.5 : m.y;
         return { x: p.x + ca * m.x - sa * lateral, y: p.y + sa * m.x + ca * lateral };
       };
       const m0 = at(0);
