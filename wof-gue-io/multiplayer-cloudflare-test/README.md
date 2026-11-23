@@ -70,3 +70,6 @@ when the experiment is finished; leave the existing website and chat untouched.
   authorization, reward transaction or browser/network security audit.
 - No browser visual test, geographically distributed benchmark or direct
   Cloudflare deployment has been performed in this environment.
+
+After changing the test Worker's production branch, start a new build from
+that branch; an older failed build still refers to its original commit.
