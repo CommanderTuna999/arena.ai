@@ -1,3 +1,8 @@
+## 0.3. v2.30.18 — Exact bestiary drops
+
+- Bestiary entries list exact component names, including limbs and optional weapon and shield loadouts, from the enemy builder.
+- Drop probabilities are shown per component rarity, with separate Mythical and Ultra rates and accurate Common and boss rates.
+
 ## 0.3. v2.30.17 — Distinct spent ammunition
 
 - Every cannon and crafted weapon now has its own spent round, battery, vial or launch cap, including a long glowing Mediator power rod.

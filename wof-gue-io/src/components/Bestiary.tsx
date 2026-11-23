@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo, useState, type MouseEvent } from "react";
-import { RARITIES, CAT_NAME, KIND_CAT, KIND_DROP_PCT } from "@/game/data";
+import { useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
+import { RARITIES } from "@/game/data";
+import { bestiaryDrops } from "@/game/bestiary-drops";
 import { buildEnemy, SPECIES_LIST, type SpeciesDef } from "@/game/enemies";
 import { fmtNum } from "@/game/math";
 
@@ -148,10 +149,15 @@ export default function Bestiary({ bestiary, onClose }: { bestiary: Record<strin
   const entries = useMemo(() => SPECIES_LIST.reduce((a, s) => a + (bestiary[s.id] === undefined ? 0 : bestiary[s.id] + 1), 0), [bestiary]);
   const total = SPECIES_LIST.length * RARITIES.length;
   const [hover, setHover] = useState<Hover | null>(null);
+  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const cancelClose = () => { if (closeTimer.current) clearTimeout(closeTimer.current); closeTimer.current = null; };
+  const scheduleClose = () => { cancelClose(); closeTimer.current = setTimeout(() => setHover(null), 300); };
+  useEffect(() => () => { if (closeTimer.current) clearTimeout(closeTimer.current); }, []);
   const sp = hover ? SPECIES_LIST.find((s) => s.id === hover.id) ?? null : null;
   const seen = sp && hover ? (bestiary[sp.id] ?? -1) >= hover.tier : false;
 
   const show = (e: MouseEvent<HTMLButtonElement>, id: string, tier: number) => {
+    cancelClose();
     const r = e.currentTarget.getBoundingClientRect();
     const w = Math.min(360, window.innerWidth - 16);
     const h = 380;
@@ -207,7 +213,8 @@ export default function Bestiary({ bestiary, onClose }: { bestiary: Record<strin
                                 onMouseEnter={(e) => show(e, s.id, k)}
                                 onFocus={(e) => show(e as unknown as MouseEvent<HTMLButtonElement>, s.id, k)}
                                 onClick={(e) => show(e, s.id, k)}
-                                onMouseLeave={() => setHover(null)}
+                                onMouseLeave={scheduleClose}
+                                onBlur={scheduleClose}
                                 title={tierKnown ? `${s.name} · ${RARITIES[k].name}` : `${RARITIES[k].name} · not yet defeated`}
                                 className="relative grid h-[3.4rem] w-[2.55rem] place-items-center overflow-hidden rounded-sm border transition"
                                 style={{
@@ -235,7 +242,7 @@ export default function Bestiary({ bestiary, onClose }: { bestiary: Record<strin
       </div>
 
       {sp && hover && (
-        <div className="pointer-events-none fixed z-[60] max-h-[85dvh] overflow-hidden rounded-md border border-yellow-300/50 bg-[#070b1a] p-3 shadow-[0_10px_40px_rgba(0,0,0,0.7)]" style={{ left: hover.x, top: hover.y, width: hover.w }}>
+        <div role="region" aria-label={`${sp.name} bestiary details`} tabIndex={0} onMouseEnter={cancelClose} onMouseLeave={scheduleClose} onFocus={cancelClose} onBlur={scheduleClose} onKeyDown={(e) => { if (e.key === "Escape") setHover(null); }} className="fixed z-[60] max-h-[85dvh] overflow-y-auto overscroll-contain rounded-md border border-yellow-300/50 bg-[#070b1a] p-3 shadow-[0_10px_40px_rgba(0,0,0,0.7)]" style={{ left: hover.x, top: hover.y, width: hover.w, maxHeight: `min(85dvh, calc(100dvh - ${hover.y + 8}px))` }}>
           {!seen ? (
             <div className="grid place-items-center gap-2 py-6 text-center">
               <BugArt sp={sp} tier={hover.tier} seen={false} size={96} />
@@ -287,12 +294,14 @@ function EntryInfo({ sp, tier }: { sp: SpeciesDef; tier: number }) {
         <Stat k="Pack" v={sp.pack[Math.min(tier, 5)]} />
       </div>
       <div className="mt-1.5 text-[10px] leading-snug text-white/45">Abilities: {sp.abilities.filter((a) => a.minTier <= tier).map((a) => SHORT[a.name] ?? a.name).join(", ") || "none"}</div>
-      <div className="mt-2 text-[10px] font-bold tracking-[0.2em] text-white/40">DROPS</div>
-      <div className="mt-1 flex flex-wrap gap-1">
-        {dropList(sp, tier).map((d) => (
-          <span key={d.kind} className="rounded-sm border px-1.5 py-0.5 text-[10px] font-bold" style={{ borderColor: d.color + "88", color: d.color, background: d.color + "12" }}>
-            {tier === 6 ? `${d.name} · Mythical 100% + Ultra ${d.kind === "core" ? "10%" : "2%"}` : `${d.name} · ${d.rarity} · ${KIND_DROP_PCT(d.kind)}`}
-          </span>
+      <div className="mt-2 text-[10px] font-bold tracking-[0.2em] text-white/40">EXACT COMPONENT DROPS</div>
+      <p className="mt-1 text-[10px] leading-snug text-white/50">Scroll for the full list. Base chance per eligible piece. Break parts for salvage; base-majority kills yield none. Optional loadouts vary by enemy. Salvage upgrades affect ordinary rates, not boss or Ultra rates.</p>
+      <div className="mt-1 grid gap-1">
+        {bestiaryDrops(sp, tier).map((d) => (
+          <div key={`${d.kind}:${d.name}`} className="rounded-sm border border-white/10 bg-[#0a1020] px-2 py-1 text-[10px]">
+            <div className="font-bold text-cyan-100">{d.name} <span className="font-normal text-white/40">({d.minCount === d.maxCount ? `${d.maxCount} pieces` : d.minCount === 0 ? `optional, up to ${d.maxCount}` : `${d.minCount}–${d.maxCount} pieces`})</span></div>
+            {d.rates.map((r) => <div key={r.tier} className="flex justify-between gap-2 text-white/70"><span style={{color: r.tier === 6 ? "#e6e6e6" : RARITIES[r.tier].color}}>{RARITIES[r.tier].name}</span><span>{formatPercent(r.chance)}</span></div>)}
+          </div>
         ))}
       </div>
     </div>
@@ -303,13 +312,8 @@ function familyOf(id: string) {
   return FAMILIES.find((f) => f.ids.includes(id))?.name ?? "Unknown";
 }
 
-function dropList(sp: SpeciesDef, tier: number) {
-  const built = preview(sp, tier);
-  const kinds = [...new Set(built.parts.filter((p) => p.kind !== "leg" || sp.bodyWave).map((p) => p.kind))];
-  return kinds.map((kind) => {
-    const r = tier === 6 ? 5 : tier;
-    return { kind, name: CAT_NAME[KIND_CAT[kind]], rarity: RARITIES[r].name, color: RARITIES[r].color };
-  });
+function formatPercent(chance: number) {
+  return `${Number((chance * 100).toFixed(2))}%`;
 }
 
 function Stat({ k, v }: { k: string; v: string | number }) {

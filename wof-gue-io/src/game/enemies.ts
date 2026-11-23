@@ -492,19 +492,22 @@ function randomGunKind(roll: number, tier: number): GunKind {
   return "gun";
 }
 
-function loadout(b: Builder, mounts: Mount[], sp: SpeciesDef) {
+/** Bestiary enumeration can force only optional loadout rolls; normal spawns
+ * omit this and continue using their seeded RNG. */
+export interface LoadoutOverride { optionalGun: boolean; optionalShield: boolean; gunKind: GunKind }
+function loadout(b: Builder, mounts: Mount[], sp: SpeciesDef, override?: LoadoutOverride) {
   const t = b.tier;
   const armed = sp.armed;
   /* Guns and shield generators used to be hard-coded per species. Now every body
    * that does not carry one by design still rolls for it once the mounts exist
    * (epic and up), so a Mantis can turn up with a rotary gun and a shield panel. */
-  const chanceGun = t >= 3 && !armed.gun && b.rng() < 0.12 + 0.06 * t;
-  const chanceShield = t >= 3 && !armed.shield && b.rng() < 0.1 + 0.05 * t;
+  const chanceGun = t >= 3 && !armed.gun && (override ? override.optionalGun : b.rng() < 0.12 + 0.06 * t);
+  const chanceShield = t >= 3 && !armed.shield && (override ? override.optionalShield : b.rng() < 0.1 + 0.05 * t);
   const nGun = (armed.gun || chanceGun) && t >= 3 ? t - 2 : 0;
   const nMis = armed.missile && t >= 4 ? t - 3 : 0;
   const nSh = (armed.shield || chanceShield) && t >= 3 ? t : 0;
   if (!nGun && !nMis && !nSh) return;
-  const kind: GunKind = sp.gunType ?? (chanceGun ? randomGunKind(b.rng(), t) : "gun");
+  const kind: GunKind = sp.gunType ?? (chanceGun ? (override?.gunKind ?? randomGunKind(b.rng(), t)) : "gun");
 
   type Cand = { x: number; y: number; host: number; r: number };
   const pairs: Cand[] = [];
@@ -1672,12 +1675,12 @@ function scaleArmour(parts: Part[], tier: number, baseHp: number) {
   for (const p of parts) if (p.kind === "armor") p.hp = p.maxHp = p.maxHp * ratio;
 }
 
-export function buildEnemy(speciesIdx: number, tier: number, seed: number): BuiltEnemy {
+export function buildEnemy(speciesIdx: number, tier: number, seed: number, loadoutOverride?: LoadoutOverride): BuiltEnemy {
   const sp = SPECIES[speciesIdx];
   const rng = mulberry32(seed);
   const b = new Builder(tier, sp.hue, rng, sp.hp);
   const mounts = sp.build(b, Math.min(tier, 5));
-  loadout(b, mounts, sp);
+  loadout(b, mounts, sp, loadoutOverride);
   scaleArmour(b.parts, tier, sp.hp);
   const order = b.parts.map((_, i) => i).sort((a, c) => b.parts[a].layer - b.parts[c].layer || a - c);
   let radius = 0;

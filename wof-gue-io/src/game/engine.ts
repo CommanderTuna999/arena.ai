@@ -1,3 +1,4 @@
+import { rollComponentTiers } from "./drop-roll";
 import { recordPlateHit } from "./plate-impact";
 import { ejectCasing, ejectCasingLimited } from "./casing-fx";
 import { recordShieldImpact } from "./shield-impact";
@@ -6,7 +7,7 @@ import { MAP_CELL, MAP_GRID, MAP_RADIUS, isUltraZone, walkable, circleWalkable }
 import { TAU, angDiff, clamp, distToPoly, hash2, lerp, mulberry32, pointInPoly } from "./math";
 import {
   ABILITY_BY_ID, BASE, BASE_MAX_HP, BASE_TAKE, CANNONS, CANNON_BY_ID, CANNON_TRACKS, CANNON_TRACK_BY_ID,
-  DMG_MUL, KIND_CAT, KIND_DROP_RATE, RARITIES, RECIPE_BY_ID, SHIP_R, UPGRADES, WORLD_R, W_SLOTS, COMMON_CORE_RATE, COMMON_UNCOMMON_RATE, cannonBillPicks, cannonBillProblem,
+  DMG_MUL, KIND_CAT, RARITIES, RECIPE_BY_ID, SHIP_R, UPGRADES, WORLD_R, W_SLOTS, cannonBillPicks, cannonBillProblem,
   cannonDmg, cannonOwned, cannonRate, cannonTrackCost,
   compMass, compValue, computeStats, craftEfficiency,
   recipeProblem, upgradeCost, zoneAt, ultraSpawnTier, rollUltra, WEAPON_DMG, WEAPON_RANGE, type Comp, type DmgKind, type PartKind, type SaveData, type Slot, type Stats,
@@ -2013,29 +2014,7 @@ export class Game {
   private maybeDrop(e: Enemy, p: Part, x: number, y: number, mul = 1) {
     /* No salvage when the base did most of the damage. */
     if (this.baseMajority(e)) return;
-    const isCore = p.kind === "core";
-    const boss = !!e.spd.boss;
-    /* Strict drop rates: the bestiary lists KIND_DROP_RATE per kind, and the
-     * engine rolls exactly that (scaled only by the player's salvage upgrade
-     * and the per-call multiplier). No hidden size-based drift.
-     *
-     * Tier rule: a dropped component carries the enemy's own rarity. The core
-     * drops at 90% (55% on a common body). Every non-core kind drops at ~5% at
-     * the same rarity, and a common body additionally rolls an uncommon-tier
-     * component at 30% — so farming commons is the way to climb rarity. */
-    let tiers: number[] = [];
-    if (e.tier === 6) {
-      // Guaranteed mythical salvage plus an independent ultra roll per piece.
-      tiers = [5];
-      if (Math.random() < (isCore ? 0.10 : 0.02)) tiers.push(6);
-    } else {
-      let chance: number, tier: number;
-      if (boss) { chance = 1; tier = 5; }
-      else if (isCore) { chance = (e.tier === 0 ? COMMON_CORE_RATE : KIND_DROP_RATE.core) * this.stats.dropChance * mul; tier = e.tier; }
-      else if (e.tier === 0 && Math.random() < COMMON_UNCOMMON_RATE * this.stats.dropChance * mul) { chance = 1; tier = 1; }
-      else { chance = KIND_DROP_RATE[p.kind] * this.stats.dropChance * mul; tier = e.tier; }
-      if (Math.random() <= chance) tiers.push(tier);
-    }
+    const tiers = rollComponentTiers(e.tier, p.kind, !!e.spd.boss, this.stats.dropChance, mul, Math.random);
     for (const tier of tiers) {
       const poly = p.poly.map((v, i) => +(v - (i % 2 === 0 ? p.cx : p.cy)).toFixed(1));
       const comp: Comp = {
