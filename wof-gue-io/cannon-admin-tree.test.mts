@@ -9,5 +9,5 @@ g.setAdmin('credits',true);assert.equal(g.buyCannon('dmg',2),2);assert.equal(g.c
 g.setAdmin('on',false);assert.equal(g.stats.cannonId,'sting');assert.equal(JSON.stringify(s.cannon),initial);assert.equal(g.selectCannon('gatler'),false);
 const h=new Game(newSave(),'buyer');h.save.credits=0;h.save.cannon.owned.push('peashooter');h.setAdmin('on',true);h.setAdmin('credits',true);h.setAdmin('components',true);
 assert.equal(cannonBillProblem(h.save,CANNON_BY_ID.scattermk1,true,true,true),null);assert.equal(h.buyCannonChassis('scattermk1'),null);assert.equal(h.save.credits,0);assert(h.save.cannon.owned.includes('scattermk1'),'explicit chassis purchase persists');
-const k=new Game(newSave(),'credits');k.save.credits=0;k.save.cannon.owned.push('peashooter');k.setAdmin('on',true);k.setAdmin('credits',true);assert.match(k.buyCannonChassis('scattermk1')!,/Needs .*leg/,'infinite credits do not give infinite components');
+const k=new Game(newSave(),'credits');k.save.credits=0;k.save.cannon.owned.push('peashooter');k.setAdmin('on',true);k.setAdmin('credits',true);assert.match(k.buyCannonChassis('scattermk1')!,/Needs .*carapace plate/,'infinite credits do not give infinite components');
 console.log('Admin test fitting is temporary; infinite credits bypasses chassis and upgrade prices');

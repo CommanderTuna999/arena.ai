@@ -1,3 +1,8 @@
+## 0.3. v2.30.8 — Enemy grabs and cannon recipes
+
+- Widow Spider bites hold ships at its fangs; Scorpions close their real pincers and only lunge when out of reach.
+- Swapped Gatler MK1 and Scatter MK1 purchase costs and materials.
+
 ## 0.3. v2.30.7 — Cannon equipment and damage
 
 - Equip owned cannons from their hover cards; equipped cannons show a disabled Equipped button. Removed the admin test equipment block from upgrades.

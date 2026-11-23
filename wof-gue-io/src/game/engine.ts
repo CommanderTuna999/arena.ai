@@ -2545,30 +2545,35 @@ export class Game {
         break;
       }
       case "grab": {
-        /* the enemy lunges in and holds the player: the ship is pinned, cannot
-         * fire, and takes a chomp every chompCd seconds for hold seconds. A
-         * scorpion's tail sting or a dragonfly's four mouth-chomps both ride
-         * this: the hold is the setup, the chomps are the payoff. */
+        // These anchors match the model's fangs and pincer tips, not its
+        // radius (which also includes long legs, wings and tails).
+        const anatomical = e.spd.id === "spider" || e.spd.id === "scorpion" || e.spd.id === "dragonfly";
+        const anchor = e.spd.id === "spider" ? 1.9 * S : e.spd.id === "scorpion" ? 3.35 * S : e.spd.id === "dragonfly" ? 2.35 * S + SHIP_R : e.radius + SHIP_R + 2;
+        const point = () => ({ x: e.x + Math.cos(e.a) * anchor, y: e.y + Math.sin(e.a) * anchor });
+        const pincers = e.spd.id === "scorpion" ? e.parts.filter(q => q.name === "Pincer" && q.alive) : [];
         if (a.ph === 0) {
           turnTo(1.4);
-          /* lunge toward the ship so a ranged enemy closes the gap and can pin
-           * it: without this a kite hovers at keep distance and the grab never
-           * reaches. The lunge runs until contact or the wind-up timeout. */
-          const ls = d.lunge ?? 900;
-          e.vx = Math.cos(toP) * ls; e.vy = Math.sin(toP) * ls;
-          if (this.touching(e, 10)) {
+          const tip = point();
+          const reach = Math.hypot(p.x - tip.x, p.y - tip.y);
+          const inReach = anatomical ? reach <= SHIP_R + S * 0.65 : this.touching(e, 10);
+          // A scorpion already in claw range closes its arms, not its body.
+          if ((e.spd.id === "scorpion" && dist <= 3.75 * S + SHIP_R) || (anatomical && inReach)) { e.vx = e.vy = 0; }
+          else { const ls = d.lunge ?? 900; e.vx = Math.cos(toP) * ls; e.vy = Math.sin(toP) * ls; }
+          const canClamp = e.spd.id !== "scorpion" || pincers.some(q => e.groups[q.g]?.sign === 1) && pincers.some(q => e.groups[q.g]?.sign === -1);
+          if (inReach && canClamp && (!anatomical || a.t >= d.wind) && circleWalkable(tip.x, tip.y, SHIP_R)) {
             a.ph = 1; a.t = 0;
-            p.pull = { e, x: e.x, y: e.y, t: 0, max: d.hold ?? 2 };
+            p.pull = { e, x: e.x, y: e.y, t: d.hold ?? 2, max: d.hold ?? 2 };
             p.fireCd = Math.max(p.fireCd, 1);
-            e.vx *= 0.2; e.vy *= 0.2;
+            e.vx = e.vy = 0;
           } else if (a.t >= d.wind + 2) { a.ph = 2; a.t = 0; }
         } else if (a.ph === 1) {
-          /* the enemy stays clamped onto the ship */
-          const gx = e.x + Math.cos(e.a) * (e.radius + SHIP_R + 2);
-          const gy = e.y + Math.sin(e.a) * (e.radius + SHIP_R + 2);
-          if (circleWalkable(gx, p.y, SHIP_R)) p.x = gx;
-          if (circleWalkable(p.x, gy, SHIP_R)) p.y = gy;
-          p.vx *= Math.exp(-8 * dt); p.vy *= Math.exp(-8 * dt);
+          const tip = point();
+          const canClamp = e.spd.id !== "scorpion" || pincers.some(q => e.groups[q.g]?.sign === 1) && pincers.some(q => e.groups[q.g]?.sign === -1);
+          if (!canClamp || !circleWalkable(tip.x, tip.y, SHIP_R) || p.dead || this.inSafe()) {
+            if (p.pull?.e === e) p.pull = null;
+            a.ph = 2; a.t = 0; break;
+          }
+          p.x = tip.x; p.y = tip.y; p.vx = p.vy = 0; p.fireCd = Math.max(p.fireCd, 0.1);
           a.chompT = (a.chompT ?? 0) - dt;
           if (a.chompT <= 0) {
             a.chompT = d.chompCd ?? 0.8;
@@ -2576,9 +2581,9 @@ export class Game {
             this.burst(p.x, p.y, `hsl(${e.spd.hue},100%,60%)`, 8, 4, 200);
             this.shake = Math.max(this.shake, 6);
           }
-          if (a.t >= (d.hold ?? 2)) { a.ph = 2; a.t = 0; }
+          if (a.t >= (d.hold ?? 2)) { a.ph = 2; a.t = 0; if (p.pull?.e === e) p.pull = null; }
         } else {
-          p.pull = null;
+          if (p.pull?.e === e) p.pull = null;
           if (a.t >= 0.3) done();
         }
         break;
@@ -2872,7 +2877,11 @@ export class Game {
         case "wing": g.ang = Math.sin(this.t * (e.spd.flying ? 24 : 7) + g.phase) * g.amp * g.sign * (e.spd.flying ? Math.max(0.3, e.mobility) : 0.2); break;
         case "sway": g.ang = Math.sin(this.t * 2 + g.phase) * g.amp; break;
         case "arm": case "mandible": case "tail":
-          if (!(e.act && e.act.def.type === "swing" && e.act.def.role === g.role)) g.ang = Math.sin(this.t * 1.4 + g.phase + g.sign) * (g.role === "tail" ? 0.07 : 0.05) * g.sign;
+          if (e.spd.id === "scorpion" && g.role === "arm" && e.act?.def.type === "grab" && e.act.ph < 2) {
+            // Rotate the actual claw groups inward as they close on the ship.
+            const close = e.act.ph === 1 ? 1 : Math.min(1, e.act.t / Math.max(0.01, e.act.def.wind));
+            g.ang = -g.sign * 0.22 * close;
+          } else if (!(e.act && e.act.def.type === "swing" && e.act.def.role === g.role)) g.ang = Math.sin(this.t * 1.4 + g.phase + g.sign) * (g.role === "tail" ? 0.07 : 0.05) * g.sign;
           break;
         default: break;
       }
@@ -3033,7 +3042,7 @@ export class Game {
     if (circleWalkable(e.x, e.y + e.vy * dt, Math.min(e.radius * 0.2, MAP_CELL * 0.35))) e.y += e.vy * dt; else e.vy = 0;
 
     // contact with player
-    if (!p.dead && dist < e.radius + SHIP_R + 30 && !this.inSafe()) {
+    if (!(p.pull?.e === e && e.act?.def.type === "grab" && e.act.ph === 1) && !p.dead && dist < e.radius + SHIP_R + 30 && !this.inSafe()) {
       if (this.touching(e, 0, true)) {
         // Check before separation moves a shallow overlap outside the polygon.
         const damagingContact = e.contactCd <= 0 && this.touching(e, 0);
@@ -4268,7 +4277,9 @@ export class Game {
       if (p.pull) {
         p.pull.t -= dt;
         const pe = p.pull.e;
-        if (pe.dead || p.pull.t <= 0 || this.inSafe()) p.pull = null;
+        const pinned = pe.act?.def.type === "grab" && pe.act.ph === 1;
+        if (pe.dead || this.inSafe() || (!pinned && p.pull.t <= 0)) p.pull = null;
+        else if (pinned) { p.vx = p.vy = 0; }
         else {
           const dx = pe.x - p.x, dy = pe.y - p.y, d = Math.hypot(dx, dy) || 1;
           if (d < pe.radius * 0.5) p.pull = null;

@@ -375,7 +375,9 @@ export function render(g: Game, ctx: CanvasRenderingContext2D) {
     const pinned = pl.pull.e.act?.def.type === "grab" && pl.pull.e.act?.ph === 1;
     const tether = pl.pull.e.x - pl.x, tetherY = pl.pull.e.y - pl.y;
     const tx = Math.hypot(tether, tetherY) || 1;
-    if (pinned) {
+    if (pinned && (pl.pull.e.spd.id === "scorpion" || pl.pull.e.spd.id === "spider" || pl.pull.e.spd.id === "dragonfly")) {
+      // The actual animated pincers or fangs surround the ship; no fake tether.
+    } else if (pinned) {
       ctx.strokeStyle = `rgba(255,90,110,0.9)`; ctx.lineWidth = 7 / z;
       ctx.shadowColor = "rgba(255,90,110,0.9)"; ctx.shadowBlur = 16;
       ctx.beginPath(); ctx.moveTo(pl.x, pl.y); ctx.lineTo(pl.pull.e.x, pl.pull.e.y); ctx.stroke();
@@ -386,29 +388,7 @@ export function render(g: Game, ctx: CanvasRenderingContext2D) {
       const pulse = 0.5 + 0.5 * Math.sin(t * 16);
       ctx.strokeStyle = `rgba(255,120,140,${0.4 + 0.4 * pulse})`; ctx.lineWidth = 3 / z;
       ctx.beginPath(); ctx.arc(pl.x, pl.y, SHIP_R + 6, 0, TAU); ctx.stroke();
-      /* the scorpion's pincers clamp down on the ship: two curved claws
-       * closing from either side so the grab reads as pincers, not nothing */
-      if (pl.pull.e.spd.id === "scorpion") {
-        const pg = pl.pull.e;
-        const claw = SHIP_R + 14;
-        const clamp = 0.6 + 0.4 * pulse;
-        ctx.strokeStyle = `hsl(${pg.spd.hue} 70% 60%)`; ctx.lineWidth = 5 / z;
-        ctx.lineCap = "round";
-        for (const side of [1, -1]) {
-          ctx.save(); ctx.translate(pl.x, pl.y);
-          ctx.rotate(side > 0 ? 0.5 : -0.5);
-          ctx.beginPath();
-          ctx.moveTo(side * claw * 0.5, -claw * 0.7 * clamp);
-          ctx.quadraticCurveTo(side * claw * 1.1, 0, side * claw * 0.5, claw * 0.7 * clamp);
-          ctx.stroke();
-          ctx.beginPath();
-          ctx.moveTo(side * claw * 0.5, -claw * 0.7 * clamp);
-          ctx.lineTo(side * claw * 0.2, -claw * 0.5 * clamp);
-          ctx.stroke();
-          ctx.restore();
-        }
-        ctx.lineCap = "butt";
-      }
+
     } else {
       ctx.strokeStyle = "rgba(255,140,80,0.8)"; ctx.lineWidth = 3 / z; ctx.setLineDash([12 / z, 8 / z]);
       ctx.beginPath(); ctx.moveTo(pl.x, pl.y); ctx.lineTo(pl.pull.e.x, pl.pull.e.y); ctx.stroke(); ctx.setLineDash([]);
