@@ -5,7 +5,7 @@ export const CHAIRMAN_SHIELD_MAX = 1000; // 1000% of the unupgraded 100 HP hull
 export const CHAIRMAN_DRONE_COOLDOWN = 5;
 export type ChairmanState = {
   drones:number[]; fireGlow:number[]; reload:number; phase:number; shield:number; shieldDelay:number; flash:number;
-  scan:(TargetScan & {enemyId:number; drone:number; aimX:number; aimY:number})|null;
+  scan:(TargetScan & {enemyId:number; drone:number; aimX:number; aimY:number; manual:boolean})|null;
   charge:number; // 0 idle; negative one denotes the beginning of a charge
 };
 export const chairmanDroneCount = (level:number) => 15 + Math.max(0, Math.min(15, Math.floor(level || 0)));
@@ -22,7 +22,10 @@ export function chairmanPosition(index:number,count:number,phase:number,x:number
 }
 export function syncChairman(s:ChairmanState,count:number) {while(s.drones.length<count){s.drones.push(s.reload>0?s.reload:0);s.fireGlow.push(0);}s.drones.length=count;s.fireGlow.length=count;}
 export function tickChairman(s:ChairmanState,dt:number) {
-  if(!s.charge)s.phase+=dt;
+  // Accelerate continuously throughout the one-second sun charge.
+  const start=Math.max(0,Math.min(1,s.charge));
+  const end=s.charge>0?Math.min(1,s.charge+dt):0;
+  s.phase+=dt*(1+8*(start+end)/2);
   s.reload=Math.max(0,s.reload-dt);
   s.drones=s.drones.map(x=>Number.isFinite(x)?Math.max(0,x-dt):x);
   s.fireGlow=s.fireGlow.map(x=>Math.max(0,x-dt));

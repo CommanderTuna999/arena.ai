@@ -8,7 +8,7 @@
  *   CHANGELOG and mirror the details in docs/CHANGELOG.md.
  */
 
-export const VERSION = "2.31.2";
+export const VERSION = "2.31.3";
 
 export interface ChangeEntry {
   version: string;
@@ -19,6 +19,7 @@ export interface ChangeEntry {
 }
 
 export const CHANGELOG: ChangeEntry[] = [
+  { version: "2.31.3", date: "23 Nov 2026", title: "Chairman automatic targeting", points: ["In automatic mode, ready Chairman drones scan and fire at nearby enemies; only a manual trigger can activate the sun.", "The drones accelerate around the ship as the sun charges."] },
   { version: "2.31.2", date: "23 Nov 2026", title: "Chairman defenses", points: ["Each lit drone blocks one full damage instance and stays dark until the sun blast reloads the swarm.", "The sun cannot retrigger while reloading; firing drones and the ready sun glow brighter, and the Chairman dome and its HUD bar are red."] },
   { version: "2.31.1", date: "23 Nov 2026", title: "Targeting clarity", points: ["Revolutionary and Chairman highlight each scanned enemy component in red before targeting its core.", "Chairman drones aim at the cursor from their own positions for more accurate shots."] },
   { version: "2.31.0", date: "23 Nov 2026", title: "Chairman", points: ["Added the first tier-three cannon: Chairman, with orbiting drones, a red sun blast and an additional energy dome.", "Worker Ant laser pointers and the required high-rarity ant and dragonfly components can now be found."] },

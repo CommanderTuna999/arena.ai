@@ -3586,15 +3586,19 @@ export class Game {
         // A drone may have intercepted incoming damage during its scan.
         // Never fire a dark turret; choose another ready one or charge the sun.
         const index=cs.drones[scan.drone] <= 0 ? scan.drone : cs.drones.findIndex(cool=>cool<=0);
-        if(index < 0) { if(cs.reload<=0) cs.charge=0.000001; } else fireDrone(index,e,scan.aimX,scan.aimY);
+        if(index < 0) { if(scan.manual && cs.reload<=0) cs.charge=0.000001; }
+        else if(scan.manual || (this.autoFire && e?.parts[e.coreId]?.alive)) fireDrone(index,e,scan.aimX,scan.aimY);
       }
       this.fireWeapons(dt,p.a);return;
     }
-    if(want && p.fireCd<=0 && p.jam<=0 && cs.reload<=0) {
-      p.fireCd=1/st.rate;
+    if((want || this.autoFire) && p.fireCd<=0 && p.jam<=0 && cs.reload<=0) {
       const ready=cs.drones.map((cool,i)=>cool<=0?i:-1).filter(i=>i>=0);
-      if(!ready.length || Math.random()<chairmanOrbChance(lv.orbChance ?? 0)) cs.charge=0.000001;
-      else {
+      // Only an explicit trigger can charge the sun, including the guaranteed
+      // blast when all drones have been spent. Auto never rolls orb chance.
+      if(want && (!ready.length || Math.random()<chairmanOrbChance(lv.orbChance ?? 0))) {
+        p.fireCd=1/st.rate;cs.charge=0.000001;
+      } else if(ready.length && want) {
+        p.fireCd=1/st.rate;
         const index=ready[Math.floor(Math.random()*ready.length)];
         const [mx,my]=this.mouseWorld();let target:Enemy|null=null;
         for(const e of this.enemies) {
@@ -3603,8 +3607,23 @@ export class Game {
           const ca=Math.cos(e.a),sa=Math.sin(e.a);
           if(this.partAt(e,dx*ca+dy*sa,-dx*sa+dy*ca)){target=e;break;}
         }
-        if(target) cs.scan={...createTargetScan(target.parts),enemyId:target.id,drone:index,aimX:mx,aimY:my};
+        if(target) cs.scan={...createTargetScan(target.parts),enemyId:target.id,drone:index,aimX:mx,aimY:my,manual:true};
         else fireDrone(index,null,mx,my);
+      } else if(ready.length && this.autoFire) {
+        // Choose a target actually reachable from the selected orbiting drone.
+        const index=ready[Math.floor(Math.random()*ready.length)];
+        const [x,y]=chairmanPosition(index,cs.drones.length,cs.phase,p.x,p.y);
+        let target:Enemy|null=null, best=st.bulletRange*st.bulletRange;
+        for(const e of this.enemies) {
+          const core=e.parts[e.coreId];if(e.dead || !core?.alive)continue;
+          const [tx,ty]=this.partWorld(e,core), d=(tx-x)**2+(ty-y)**2;
+          if(d<=best){best=d;target=e;}
+        }
+        if(target) {
+          const [aimX,aimY]=this.partWorld(target,target.parts[target.coreId]);
+          p.fireCd=1/st.rate;
+          cs.scan={...createTargetScan(target.parts),enemyId:target.id,drone:index,aimX,aimY,manual:false};
+        }
       }
     }
     this.fireWeapons(dt,p.a);

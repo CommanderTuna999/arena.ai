@@ -1,3 +1,8 @@
+## 0.3. v2.31.3 — Chairman automatic targeting
+
+- In automatic mode, ready Chairman drones scan and fire at nearby enemies; only a manual trigger can activate the sun.
+- The drones accelerate around the ship as the sun charges.
+
 ## 0.3. v2.31.2 — Chairman defenses
 
 - Each lit drone blocks one full damage instance and stays dark until the sun blast reloads the swarm.
