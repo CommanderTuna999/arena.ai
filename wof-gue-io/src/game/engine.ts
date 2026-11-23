@@ -1,3 +1,4 @@
+import { recordShieldImpact } from "./shield-impact";
 import { interceptAngle } from "./projectile-aim";
 import { MAP_CELL, MAP_GRID, MAP_RADIUS, isUltraZone, walkable, circleWalkable } from "./world";
 import { TAU, angDiff, clamp, distToPoly, hash2, lerp, mulberry32, pointInPoly } from "./math";
@@ -458,6 +459,8 @@ export class Game {
   private miniLost = 0;
   private baseAlarmCd = 0;
   admin: AdminState = readAdminFlags();
+  private adminHealthMultiplier = 1;
+  private adminDamageMultiplier = 1;
   /** Admin-only test fit and upgrades are temporary, never added to a save. */
   private adminCannon: string | null = null;
   private adminCannonLevels: Record<string, Record<string, number>> = {};
@@ -529,7 +532,7 @@ export class Game {
   markDirty() { this.dirty = true; this.rev++; this.save.ts = Date.now(); }
   setAdmin(k: keyof AdminState, v: boolean) {
     (this.admin as unknown as Record<string, boolean>)[k] = v;
-    if (k === "on" && v) this.toast("ADMIN MODE ONLINE", "#ff7ad9");
+    if (k === "on" && v) { this.recompute(); this.toast("ADMIN MODE ONLINE", "#ff7ad9"); }
     if (k === "on" && !v) { this.adminCannon = null; this.adminCannonLevels = {}; this.recompute(); this.toast("Admin mode offline", "#9db4c9"); }
     writeAdminFlags(this.admin);
     this.rev++;
@@ -629,12 +632,20 @@ export class Game {
     this.rev++;
   }
 
-  private dmgMul() { return this.admin.on && this.admin.damage ? Infinity : 1; }
+  /** Local test multipliers only; they are not an authenticated multiplayer permission. */
+  adminMultiplier(kind: "health" | "damage", value: number) {
+    if (!this.admin.on || !(value > 0) || (value !== Infinity && (!Number.isFinite(value) || value > 1e12))) return false;
+    if (kind === "health") { this.adminHealthMultiplier = value === Infinity ? 1 : value; this.setAdmin("health", value === Infinity); this.recompute(); }
+    else { this.adminDamageMultiplier = value === Infinity ? 1 : value; this.setAdmin("damage", value === Infinity); }
+    return true;
+  }
+  private dmgMul() { return !this.admin.on ? 1 : this.admin.damage ? Infinity : this.adminDamageMultiplier; }
 
   recompute() {
     const old = this.stats;
     const temporary = this.admin.on && this.adminCannon;
     this.stats = computeStats(temporary ? { ...this.save, cannon: { ...this.save.cannon, id: temporary, lv: { ...this.save.cannon.lv, [temporary]: this.adminCannonLevels[temporary] ?? {} } } } : this.save);
+    if (this.admin.on) this.stats.hull *= this.adminHealthMultiplier;
     const p = this.player;
     if (this.stats.hull !== old.hull) p.hp = Math.min(this.stats.hull, p.hp + Math.max(0, this.stats.hull - old.hull));
     p.hp = Math.min(p.hp, this.stats.hull);
@@ -2089,6 +2100,7 @@ export class Game {
       const info = this.shieldInfoAt(e, p.x, p.y);
       if (!info) continue;
       const sp = info.part;
+      recordShieldImpact(e, dx, dy, this.t);
       const out = dd > 1 ? Math.atan2(dy, dx) : e.a;
       /* The panel is a wall, not a fence: the hull is lifted back onto the
        * outside face so a fast ship cannot tunnel through it. */
@@ -2145,6 +2157,10 @@ export class Game {
     if (p.barrier > 0) { const a = Math.min(p.barrier, d); p.barrier -= a; d -= a; }
     const shieldBefore = p.shield;
     if (p.shield > 0) { const a = Math.min(p.shield, d); p.shield -= a; d -= a; }
+    if (p.shield < shieldBefore) {
+      const ang = (o.kbx || o.kby) ? Math.atan2(-(o.kby ?? 0), -(o.kbx ?? 0)) : p.a + Math.PI;
+      recordShieldImpact(p, Math.cos(ang) * (SHIP_R + 20), Math.sin(ang) * (SHIP_R + 20), this.t);
+    }
     if (shieldBefore > 0 && p.shield <= 0 && st.novaOnHit > 0) {
       this.ringFx(p.x, p.y, 300, "#ffb04d", 800);
       this.areaDamage(p.x, p.y, 300, st.dmg * 4 * st.novaOnHit, null);
@@ -3210,6 +3226,7 @@ export class Game {
       /* the panels are thin, so sample the round's path like the plating does */
       const panel = this.shieldAt(e, b.x, b.y) ?? this.shieldAt(e, b.x - b.vx / 90, b.y - b.vy / 90);
       if (panel) {
+        recordShieldImpact(e, b.x - e.x, b.y - e.y, this.t);
         const energy = b.elem === "energy" || b.elem === "shock" || b.elem === "thermal";
         if (e.spd.reflectShell && energy) {
           this.eprojs.push({ x: b.x, y: b.y, vx: -b.vx * 0.9, vy: -b.vy * 0.9, life: 1.5, dmg: b.dmg * 0.6, r: 6, hue: e.spd.hue, type: "bolt", homing: 0, slow: 0, slowT: 0, poison: 0, pierce: false, hp: 1, speed: 620, src: e, puddle: null });
@@ -3386,6 +3403,7 @@ export class Game {
         if (!bypass) {
           const panel = this.shieldAt(e, bx, by);
           if (panel) {
+            recordShieldImpact(e, bx - e.x, by - e.y, this.t);
             const energy = src === "laser" || src === "shock";
             if (!energy) {
               /* anything else stops at the panel without draining it */

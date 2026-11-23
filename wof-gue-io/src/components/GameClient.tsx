@@ -242,7 +242,7 @@ export default function GameClient() {
       <div className="pointer-events-none fixed inset-0" style={{ background: "radial-gradient(ellipse at center, transparent 55%, rgba(0,0,10,0.65) 100%)" }} />
       {!hud && <div className="absolute inset-0 grid place-items-center text-xl tracking-[0.4em] text-cyan-300">LOADING SAVE…</div>}
       {hud && game && <Hud_ hud={hud} creditRef={creditRef} onOpen={() => { game.blur(); setAdminOpen(false); setMenu(true); }} onHelp={() => setHelp(true)} onAdmin={() => { game.blur(); setMenu(false); setAdminOpen(true); }} onToggleAuto={() => game.toggleAutoFire()} onSettings={() => { game.blur(); setSettingsOpen(true); }} onBestiary={() => { game.blur(); setBestiaryOpen(true); }} onHome={goHome} account={account} />}
-      {hud && game && <Chat game={game} notices={hud.ultraNotices} />}
+      {hud && game && <Chat game={game} notices={hud.ultraNotices} onAdmin={() => { game.blur(); setMenu(false); setAdminOpen(true); }} />}
       {game && <StorageWarning count={game.save.inventory.length} />}
       {hud && game && adminOpen && <AdminPanel game={game} hud={hud} onClose={() => setAdminOpen(false)} />}
       {hud && game && menu && <Hangar game={game} hud={hud} onClose={() => setMenu(false)} />}
@@ -1315,7 +1315,7 @@ function AdminPanel({ game, hud, onClose }: { game: Game; hud: Hud; onClose: () 
         <button onClick={onClose} className="rounded-sm border border-white/25 px-2 py-0.5 text-[10px] text-white/70 hover:bg-white/10">CLOSE [`]</button>
       </div>
       <label className="mt-2 flex cursor-pointer items-center justify-between rounded-sm border border-fuchsia-300/30 bg-fuchsia-500/10 px-2 py-1.5">
-        <span className="font-bold text-fuchsia-200">Enable admin mode</span>
+        <span className="font-bold text-fuchsia-200">Enable admin mode <span className="block text-[9px] text-white/45">Account /op is not available yet</span></span>
         <input type="checkbox" checked={a.on} onChange={(e) => game.setAdmin("on", e.target.checked)} />
       </label>
       <div className={`mt-2 space-y-1 ${a.on ? "" : "opacity-50"}`}>
@@ -1325,11 +1325,12 @@ function AdminPanel({ game, hud, onClose }: { game: Game; hud: Hud; onClose: () 
             <span>
               <span className="block font-bold text-white/85">{label}</span>
               <span className="block text-[10px] leading-tight text-white/45">{desc}</span>
+              <span className="block text-[10px] text-cyan-200/70">{key === "health" ? "/health inf" : key === "damage" ? "/damage inf" : "Panel only"}</span>
             </span>
           </label>
         ))}
       </div>
-      <AdminMap game={game} enabled={a.on} />
+      <AdminMap game={game} enabled={a.on} /><div className="text-[10px] text-cyan-200/70">/tp · /home</div>
       <div className={`mt-2 rounded-sm border border-fuchsia-300/30 bg-fuchsia-500/5 p-2 ${a.on ? "" : "opacity-50"}`}>
         <div className="flex items-center justify-between">
           <span className="text-[10px] font-black tracking-[0.2em] text-fuchsia-200">TEST RANGE</span>
@@ -1341,7 +1342,7 @@ function AdminPanel({ game, hud, onClose }: { game: Game; hud: Hud; onClose: () 
           className={`mt-1 w-full rounded-sm border px-2 py-1 text-[10px] font-black tracking-wide ${a.sandbox ? "border-emerald-300/60 bg-emerald-400/15 text-emerald-200 hover:bg-emerald-400/30" : "border-fuchsia-300/60 bg-fuchsia-400/15 text-fuchsia-100 hover:bg-fuchsia-400/30"} disabled:cursor-not-allowed disabled:opacity-40`}
         >
           {a.sandbox ? "LEAVE EMPTY MAP" : "TELEPORT TO EMPTY MAP"}
-        </button>
+        </button><div className="text-[10px] text-cyan-200/70">/testmap</div>
         <div className="mt-2 flex gap-1">
           <select
             value={spi}
@@ -1367,6 +1368,7 @@ function AdminPanel({ game, hud, onClose }: { game: Game; hud: Hud; onClose: () 
           <button disabled={!a.on} onClick={() => game.adminSpawn(spi, tier, 5)} className="flex-1 rounded-sm border border-fuchsia-300/50 bg-fuchsia-400/15 px-2 py-1 text-[10px] font-black text-fuchsia-100 hover:bg-fuchsia-400/30 disabled:opacity-40">SPAWN ×5</button>
           <button disabled={!a.on} onClick={() => game.adminClearEnemies()} className="rounded-sm border border-white/20 px-2 py-1 text-[10px] text-white/70 hover:bg-white/10 disabled:opacity-40">CLEAR</button>
         </div>
+        <div className="text-[10px] text-cyan-200/70">/spawn enemy rarity</div>
         <div className="mt-1 text-[9px] leading-tight text-white/35">Empty map disables all ambient seeding, top-up and the visibility floor. Spawns appear toward the cursor.</div>
       </div>
       <div className="mt-2 flex gap-2">
@@ -1374,6 +1376,7 @@ function AdminPanel({ game, hud, onClose }: { game: Game; hud: Hud; onClose: () 
         <button onClick={() => game.adminAll(false)} className="flex-1 rounded-sm border border-white/20 px-2 py-1 text-[10px] text-white/70 hover:bg-white/10">ALL OFF</button>
       </div>
       <button onClick={() => game.adminCredits(1_000_000)} className="mt-2 w-full rounded-sm border border-yellow-300 bg-yellow-300/15 px-2 py-1 text-[11px] font-black text-yellow-200 hover:bg-yellow-300/30">+1,000,000 CR</button>
+      <div className="text-[10px] text-cyan-200/70">/cr amount · /help</div>
       <div className="mt-2 text-[9px] leading-tight text-white/35">Admin stays on when you return home. Flags are kept in this tab, not in your pilot save.</div>
     </div>
   );

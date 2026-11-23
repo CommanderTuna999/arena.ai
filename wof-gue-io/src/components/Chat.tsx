@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { Game, Toast } from '@/game/engine';
 import { ChatOutbox, type QueuedChatMessage } from '@/game/chat-outbox';
 import { showChatBubble } from '@/game/chat-bubble';
+import { runAdminCommand, spawnSuggestions } from '@/game/admin-commands';
 
 type Message = { id: string; name: string; text: string; time: number; local?: boolean; clientId?: string };
 // This is a public endpoint, not a credential. The fallback also configures
@@ -21,7 +22,7 @@ const readOwnIds = (): string[] => {
 };
 
 /** Chat is independent of the unfinished multiplayer combat simulation. */
-export default function Chat({ game, notices }: { game: Game; notices: Toast[] }) {
+export default function Chat({ game, notices, onAdmin = () => {} }: { game: Game; notices: Toast[]; onAdmin?: () => void }) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [pending, setPending] = useState<QueuedChatMessage[]>([]);
   const [text, setText] = useState('');
@@ -69,6 +70,7 @@ export default function Chat({ game, notices }: { game: Game; notices: Toast[] }
           (target instanceof HTMLElement && (target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT', 'BUTTON'].includes(target.tagName)))) return;
       if (e.key !== '/' && e.key !== 'Enter') return;
       e.preventDefault(); e.stopPropagation(); game.blur();
+      if (e.key === '/') setText('/');
       open(true);
     };
     window.addEventListener('keydown', shortcut, true);
@@ -146,6 +148,11 @@ export default function Chat({ game, notices }: { game: Game; notices: Toast[] }
   }, []);
   const submit = (e: React.SyntheticEvent, close = false) => {
     e.preventDefault(); const clean = text.trim(); if (!clean) { if (close) input.current?.blur(); return; }
+    if (clean.startsWith('/')) {
+      const result = runAdminCommand(game, clean, onAdmin);
+      setMessages(prev => [...prev, { id: messageId(), name: 'Command', text: result, time: Date.now(), local: true }].slice(-60));
+      setText(''); setQueueError(''); wake(); return;
+    }
     const queue = outbox.current ?? (outbox.current = new ChatOutbox(storage()));
     const id = messageId();
     if (!queue.enqueue(id, game.save.name || 'Pilot', clean, Date.now())) { setQueueError('Queue full; wait for messages to send.'); return; }
@@ -168,6 +175,7 @@ export default function Chat({ game, notices }: { game: Game; notices: Toast[] }
         <div ref={end} />
       </div>
     </div>
+    {spawnSuggestions(text).length > 0 && <div className="pointer-events-auto max-h-36 overflow-y-auto border-x border-cyan-200/30 bg-[#050e16]/95 p-1" aria-label="Spawn suggestions">{spawnSuggestions(text).map(option => <button key={option} type="button" onMouseDown={e => e.preventDefault()} onClick={() => { setText(option); input.current?.focus(); wake(); }} className="block w-full px-2 py-1 text-left text-cyan-100 hover:bg-cyan-400/20">{option.trim()}</button>)}</div>}
     <form onSubmit={e => submit(e)} onMouseMove={wake} onFocus={wake} className="pointer-events-auto flex gap-1 rounded-b border border-cyan-200/30 bg-[#050e16]/95 p-2">
       <input ref={input} value={text} onChange={e => { setText(e.target.value); setQueueError(''); wake(); }} onFocus={() => { game.blur(); wake(); }} maxLength={180} placeholder="Press enter or / to open chat" onKeyDown={e => { if (e.key === 'Enter' && !e.nativeEvent.isComposing) submit(e, true); }} aria-label="Chat message" className="min-w-0 flex-1 rounded border border-white/20 bg-black px-2 py-1 text-white" />
       <button type="submit" disabled={!text.trim()} className="rounded border border-cyan-300/50 px-2 py-1 text-cyan-200 disabled:opacity-40">SEND</button>

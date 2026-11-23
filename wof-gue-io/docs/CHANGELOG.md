@@ -1,3 +1,8 @@
+## 0.3. v2.30.13 — Shield impacts and test commands
+
+- Shields reveal glowing hexagonal cells only where they are hit.
+- Added local admin chat commands for multipliers, spawning, credits and teleportation; the existing admin panel remains available.
+
 ## 0.3. v2.30.12 — Legless enemy lunges
 
 - Enemies with all legs disabled can no longer dash, charge or lunge toward a grab or sting.

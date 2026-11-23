@@ -16,7 +16,8 @@ const React=await import('react');const {render,fireEvent,screen,act}=await impo
 const Chat=(await import('./src/components/Chat')).default;
 const {chatBubbleAt}=await import('./src/game/chat-bubble');
 const game={save:{name:'Pilot'},blur:()=>{}} as any;
-const mounted=render(React.createElement(Chat,{game,notices:[]}));
+let adminOpened=0;
+const mounted=render(React.createElement(Chat,{game,notices:[],onAdmin:()=>adminOpened++}));
 try {
  assert(Socket.instances[0].url==='wss://wofgue-io.onrender.com/chat','fallback configures chat when env is absent');
  fireEvent.click(screen.getByRole('button',{name:'Open chat'}));
@@ -42,6 +43,7 @@ try {
  assert(screen.getByText('SERVER UPDATE NEEDED'));
  await act(async()=>ws.message({type:'history',messages:[],protocol:2}));
  assert.equal(ws.sent.length,1);const sent=JSON.parse(ws.sent[0]);assert.equal(sent.text,'Offline hello');
+ fireEvent.change(input,{target:{value:'/help'}});fireEvent.click(screen.getByRole('button',{name:'SEND'}));assert.equal(adminOpened,1);assert.equal(ws.sent.length,1,'commands are never sent to public chat');
  await act(async()=>ws.message({type:'message',message:{id:'server-1',clientId:sent.clientId,name:'Pilot',text:'Offline hello',time:1}}));
  assert(!screen.queryByText('(queued)'));assert.equal(screen.getByText('Offline hello').getAttribute('data-chat-owner'),'self');
  assert(!mounted.container.querySelector('[aria-hidden="true"]'),'new message reveals expanded chat');

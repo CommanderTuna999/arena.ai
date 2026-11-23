@@ -1,0 +1,13 @@
+import assert from 'node:assert/strict';
+import {adminNumber,runAdminCommand,spawnSuggestions} from './src/game/admin-commands';
+import {Game} from './src/game/engine';import {newSave, BASE} from './src/game/data';
+assert.equal(adminNumber('inf'),Infinity);assert.equal(adminNumber('1.5M',true),1500000);assert.equal(adminNumber('-.5k',true),-500);assert.equal(adminNumber('NaN'),null);assert.equal(adminNumber('1e3'),null);
+const g:any=new Game(newSave(),'commands');let opened=0;const exec=(s:string)=>runAdminCommand(g,s,()=>opened++);
+assert.match(exec('/help'),/opened/);assert.equal(opened,1);assert.match(exec('/op other'),/not available/);assert.equal(g.admin.on,false);
+assert.match(exec('/damage 2'),/Enable/);g.setAdmin('on',true);const base=g.stats.hull;
+assert.match(exec('/health 1.5'),/1.5/);assert.equal(g.stats.hull,base*1.5);exec('/health inf');assert.equal(g.admin.health,true);exec('/health 1');assert.equal(g.admin.health,false);assert.equal(g.stats.hull,base);
+exec('/damage .5');assert.equal(g.dmgMul(),.5);exec('/damage inf');assert.equal(g.dmgMul(),Infinity);exec('/damage 1');assert.equal(g.dmgMul(),1);
+g.save.credits=0;exec('/cr 1.5K');assert.equal(g.save.credits,1500);exec('/cr -0.5');assert.equal(g.save.credits,1499.5);assert.match(exec('/cr inf'),/Infinite credit/);assert.equal(g.admin.credits,true);assert.equal(g.save.credits,1499.5);assert.match(exec('/cr 4 other'),/other-player/);
+assert(spawnSuggestions('/spawn wid').some(s=>s.toLowerCase().includes('spider')));const n=g.enemies.length;exec('/spawn widow spider common');assert.equal(g.enemies.length,n+1);
+exec('/testmap');assert(g.admin.sandbox);exec('/home');assert(!g.admin.sandbox);assert(Math.hypot(g.player.x-BASE.x,g.player.y-BASE.y)<500);exec('/tp');assert.equal(opened,2);
+console.log('Local admin commands validate decimals, multipliers, credits, spawn and teleport');

@@ -1,3 +1,4 @@
+import { drawShieldImpacts } from "./shield-impact";
 import { drawKineticOrb } from "./projectile-render";
 import { drawChatBubble } from "./chat-bubble";
 import { salvageSpriteScale } from "./salvage-render";
@@ -1781,19 +1782,8 @@ function drawPlayer(g: Game, ctx: CanvasRenderingContext2D, z: number, t: number
   }
   ctx.restore();
 
-  if (st.shieldMax > 0 && p.shield > 0) {
-    const f = p.shield / st.shieldMax;
-    const sc = shield ? SHIELD_ART[shield.rid] ?? "#7df9ff" : "#7df9ff";
-    ctx.strokeStyle = sc; ctx.globalAlpha = 0.2 + 0.5 * f; ctx.lineWidth = 2 / z;
-    ctx.shadowColor = sc; ctx.shadowBlur = 10;
-    hexPath(ctx, p.x, p.y, SHIP_R + 20, t * 0.8);
-    ctx.stroke(); ctx.fillStyle = sc; ctx.globalAlpha = 0.04 + 0.06 * f; ctx.fill();
-    ctx.globalAlpha = 0.5 + 0.35 * Math.sin(t * 4);
-    for (const dir of [1, -1]) {
-      ctx.beginPath(); ctx.arc(p.x, p.y, SHIP_R + 26, t * dir * 1.1, t * dir * 1.1 + 1.1); ctx.stroke();
-    }
-    ctx.globalAlpha = 1; ctx.shadowBlur = 0;
-  }
+  // The shield is invisible until struck; impacts reveal local honeycomb cells.
+ drawShieldImpacts(ctx, p, p.x, p.y, t, 8, shield ? SHIELD_ART[shield.rid] ?? "#7df9ff" : "#7df9ff");
   if (p.barrier > 0 && p.barrierMax > 0) {
     const f = p.barrier / p.barrierMax;
     ctx.strokeStyle = `rgba(120,220,255,${0.35 + 0.5 * f})`; ctx.lineWidth = 4 / z; ctx.shadowColor = "#4dd2ff"; ctx.shadowBlur = 16;
@@ -2041,43 +2031,8 @@ function drawEnemy(g: Game, ctx: CanvasRenderingContext2D, e: Enemy, z: number, 
     ctx.restore();
   }
 
-  // shields: each generator projects one panel, an arc of the hull ring or a bar on it
-  for (const s of e.shields) {
-    if (s.r * z < 7) continue;
-    const p = s.part;
-    const f = clamp(p.shieldHp / Math.max(1, p.shieldMax), 0, 1);
-    const hit = p.shieldHit > 2.8 ? 1 : 0;
-    const blurry = s.r * z > 12 && s.r * z < 60; // shadows on big shapes are expensive
-    const c = Math.cos(s.ang), sn = Math.sin(s.ang);
-    /* the generator itself, and the beam of energy it throws out to the panel */
-    const link = s.r * 0.55;
-    ctx.strokeStyle = `rgba(125,240,255,${0.1 + 0.12 * f})`;
-    ctx.lineWidth = 1.2 / z;
-    ctx.beginPath();
-    ctx.moveTo(e.x + c * link, e.y + sn * link);
-    ctx.lineTo(e.x + c * s.r, e.y + sn * s.r);
-    ctx.stroke();
-
-    ctx.beginPath();
-    if (s.bar) {
-      const px = -sn, py = c;
-      const bx = e.x + c * s.r, by = e.y + sn * s.r;
-      ctx.moveTo(bx - px * s.span, by - py * s.span);
-      ctx.lineTo(bx + px * s.span, by + py * s.span);
-    } else {
-      ctx.arc(e.x, e.y, s.r, s.ang - s.span, s.ang + s.span);
-    }
-    ctx.strokeStyle = `rgba(70,210,255,${0.1 + 0.14 * f + hit * 0.2})`;
-    ctx.lineWidth = (s.thick * 1.6 + hit * 4) / 1;
-    ctx.lineCap = "round";
-    ctx.stroke();
-    ctx.strokeStyle = `rgba(150,245,255,${0.4 + 0.5 * f})`;
-    ctx.lineWidth = (2 + hit * 3) / z;
-    if (blurry) { ctx.shadowColor = "#7df9ff"; ctx.shadowBlur = 12; }
-    ctx.stroke();
-    ctx.shadowBlur = 0;
-    ctx.lineCap = "butt";
-  }
+  // Collision geometry stays active even when its visual surface is invisible.
+ drawShieldImpacts(ctx, e, e.x, e.y, t, clamp(e.S * 0.15, 8, 20), "#7df9ff");
 }
 
 function drawBars(g: Game, ctx: CanvasRenderingContext2D, e: Enemy, z: number) {
