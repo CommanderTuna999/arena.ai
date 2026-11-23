@@ -8,7 +8,7 @@
  *   CHANGELOG and mirror the details in docs/CHANGELOG.md.
  */
 
-export const VERSION = "2.30.18";
+export const VERSION = "2.30.19";
 
 export interface ChangeEntry {
   version: string;
@@ -19,6 +19,7 @@ export interface ChangeEntry {
 }
 
 export const CHANGELOG: ChangeEntry[] = [
+  { version: "2.30.19", date: "23 Nov 2026", title: "Bestiary drop gallery", points: ["A View Drops button opens a scrollable gallery instead of crowding the bestiary hover card.", "Each named component has a representative illustration generated from its actual enemy part, with rarity rates preserved."] },
   { version: "2.30.18", date: "23 Nov 2026", title: "Exact bestiary drops", points: ["Bestiary entries list exact component names, including limbs and optional weapon and shield loadouts, from the enemy builder.", "Drop probabilities are shown per component rarity, with separate Mythical and Ultra rates and accurate Common and boss rates."] },
   { version: "2.30.17", date: "23 Nov 2026", title: "Distinct spent ammunition", points: ["Every cannon and crafted weapon now has its own spent round, battery, vial or launch cap, including a long glowing Mediator power rod.", "Mixed kinetic and energy weapons eject different designs for the actual shot fired; energy cells use layered luminous details without costly canvas blur."] },
   { version: "2.30.16", date: "23 Nov 2026", title: "Lighter ejecta and larger bestiary portraits", points: ["Spent casings scatter with varied trajectories, lower rendering cost and shot-appropriate shells, batteries or chemical canisters.", "Bestiary portraits are enlarged and clipped to their frames; hovering no longer places a giant image over the screen."] },

@@ -1,3 +1,8 @@
+## 0.3. v2.30.19 — Bestiary drop gallery
+
+- A View Drops button opens a scrollable gallery instead of crowding the bestiary hover card.
+- Each named component has a representative illustration generated from its actual enemy part, with rarity rates preserved.
+
 ## 0.3. v2.30.18 — Exact bestiary drops
 
 - Bestiary entries list exact component names, including limbs and optional weapon and shield loadouts, from the enemy builder.

@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
+import { useEffect, useId, useMemo, useRef, useState, type MouseEvent } from "react";
 import { RARITIES } from "@/game/data";
-import { bestiaryDrops } from "@/game/bestiary-drops";
+import { bestiaryDrops, type BestiaryDrop } from "@/game/bestiary-drops";
 import { buildEnemy, SPECIES_LIST, type SpeciesDef } from "@/game/enemies";
 import { fmtNum } from "@/game/math";
 
@@ -149,15 +149,19 @@ export default function Bestiary({ bestiary, onClose }: { bestiary: Record<strin
   const entries = useMemo(() => SPECIES_LIST.reduce((a, s) => a + (bestiary[s.id] === undefined ? 0 : bestiary[s.id] + 1), 0), [bestiary]);
   const total = SPECIES_LIST.length * RARITIES.length;
   const [hover, setHover] = useState<Hover | null>(null);
+  const [dropView, setDropView] = useState<{ id:string; tier:number } | null>(null);
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastTrigger = useRef<HTMLButtonElement | null>(null);
   const cancelClose = () => { if (closeTimer.current) clearTimeout(closeTimer.current); closeTimer.current = null; };
   const scheduleClose = () => { cancelClose(); closeTimer.current = setTimeout(() => setHover(null), 300); };
   useEffect(() => () => { if (closeTimer.current) clearTimeout(closeTimer.current); }, []);
   const sp = hover ? SPECIES_LIST.find((s) => s.id === hover.id) ?? null : null;
   const seen = sp && hover ? (bestiary[sp.id] ?? -1) >= hover.tier : false;
+  const dropSpecies = dropView ? SPECIES_LIST.find((s) => s.id === dropView.id) : undefined;
 
   const show = (e: MouseEvent<HTMLButtonElement>, id: string, tier: number) => {
     cancelClose();
+    lastTrigger.current = e.currentTarget;
     const r = e.currentTarget.getBoundingClientRect();
     const w = Math.min(360, window.innerWidth - 16);
     const h = 380;
@@ -254,15 +258,16 @@ export default function Bestiary({ bestiary, onClose }: { bestiary: Record<strin
               </div>
             </div>
           ) : (
-            <EntryInfo sp={sp} tier={hover.tier} />
+            <EntryInfo sp={sp} tier={hover.tier} onViewDrops={() => { cancelClose(); setDropView({id:sp.id,tier:hover.tier}); setHover(null); }} />
           )}
         </div>
       )}
+      {dropSpecies && dropView && <DropsDialog sp={dropSpecies} tier={dropView.tier} onClose={() => { setDropView(null); lastTrigger.current?.focus(); }} />}
     </div>
   );
 }
 
-function EntryInfo({ sp, tier }: { sp: SpeciesDef; tier: number }) {
+function EntryInfo({ sp, tier, onViewDrops }: { sp: SpeciesDef; tier: number; onViewDrops: () => void }) {
   const built = preview(sp, tier);
   const hull = Math.round(built.parts.reduce((a, p) => a + p.maxHp, 0));
   const shells = tier >= 2 && !sp.bodyWave ? tier - 1 : 0;
@@ -294,18 +299,47 @@ function EntryInfo({ sp, tier }: { sp: SpeciesDef; tier: number }) {
         <Stat k="Pack" v={sp.pack[Math.min(tier, 5)]} />
       </div>
       <div className="mt-1.5 text-[10px] leading-snug text-white/45">Abilities: {sp.abilities.filter((a) => a.minTier <= tier).map((a) => SHORT[a.name] ?? a.name).join(", ") || "none"}</div>
-      <div className="mt-2 text-[10px] font-bold tracking-[0.2em] text-white/40">EXACT COMPONENT DROPS</div>
-      <p className="mt-1 text-[10px] leading-snug text-white/50">Scroll for the full list. Base chance per eligible piece. Break parts for salvage; base-majority kills yield none. Optional loadouts vary by enemy. Salvage upgrades affect ordinary rates, not boss or Ultra rates.</p>
-      <div className="mt-1 grid gap-1">
-        {bestiaryDrops(sp, tier).map((d) => (
-          <div key={`${d.kind}:${d.name}`} className="rounded-sm border border-white/10 bg-[#0a1020] px-2 py-1 text-[10px]">
-            <div className="font-bold text-cyan-100">{d.name} <span className="font-normal text-white/40">({d.minCount === d.maxCount ? `${d.maxCount} pieces` : d.minCount === 0 ? `optional, up to ${d.maxCount}` : `${d.minCount}–${d.maxCount} pieces`})</span></div>
-            {d.rates.map((r) => <div key={r.tier} className="flex justify-between gap-2 text-white/70"><span style={{color: r.tier === 6 ? "#e6e6e6" : RARITIES[r.tier].color}}>{RARITIES[r.tier].name}</span><span>{formatPercent(r.chance)}</span></div>)}
-          </div>
-        ))}
-      </div>
+      <button type="button" onClick={onViewDrops} className="mt-3 w-full rounded-sm border border-cyan-300/50 bg-cyan-300/10 px-3 py-2 text-xs font-bold tracking-wider text-cyan-100 hover:bg-cyan-300/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-cyan-200">VIEW DROPS</button>
     </div>
   );
+}
+
+/** Representative of a real piece produced by the enemy builder. As in
+ * inventory, the illustration is fitted to its frame rather than to scale. */
+function DropIcon({ drop, tier }: { drop: BestiaryDrop; tier: number }) {
+  const gradientId = useId();
+  const poly = drop.poly;
+  let minX=Infinity, minY=Infinity, maxX=-Infinity, maxY=-Infinity;
+  for (let i=0;i<poly.length;i+=2) { minX=Math.min(minX,poly[i]); maxX=Math.max(maxX,poly[i]); minY=Math.min(minY,poly[i+1]); maxY=Math.max(maxY,poly[i+1]); }
+  const w=maxX-minX,h=maxY-minY,scale=40/Math.max(w,h,1);
+  const points=Array.from({length:poly.length/2},(_,i)=>`${4+(48-8-w*scale)/2+(poly[2*i]-minX)*scale},${4+(48-8-h*scale)/2+(poly[2*i+1]-minY)*scale}`).join(" ");
+  const col=tier===6?"#dedede":RARITIES[tier].color;
+  return <svg viewBox="0 0 48 48" width="48" height="48" aria-hidden="true" className="shrink-0 rounded border border-white/10 bg-[#070c19]">
+    <defs><linearGradient id={gradientId}><stop stopColor="#ffffff"/><stop offset="0.5" stopColor="#777"/><stop offset="1" stopColor="#fafafa"/></linearGradient></defs>
+    <polygon points={points} fill={tier===6?`url(#${gradientId})`:col+"30"} stroke={col} strokeWidth="1.8" strokeLinejoin="round" />
+  </svg>;
+}
+
+export function DropsDialog({ sp, tier, onClose }: { sp:SpeciesDef; tier:number; onClose:()=>void }) {
+  const drops=bestiaryDrops(sp,tier);
+  const closeButton=useRef<HTMLButtonElement>(null);
+  const scrollArea=useRef<HTMLDivElement>(null);
+  return <div className="fixed inset-0 z-[70] grid place-items-center bg-black/80 p-3" onMouseDown={(e)=>{if(e.target===e.currentTarget)onClose();}} onKeyDown={(e)=>{if(e.key==='Escape'){e.stopPropagation();onClose();} else if(e.key==='Tab'){e.preventDefault();if(e.target===closeButton.current)scrollArea.current?.focus();else closeButton.current?.focus();}}}>
+    <section role="dialog" aria-modal="true" aria-labelledby="bestiary-drops-title" className="flex max-h-[90dvh] w-full max-w-2xl flex-col overflow-hidden rounded-md border border-cyan-300/40 bg-[#070b1a] shadow-[0_10px_40px_rgba(0,0,0,0.8)]">
+      <header className="flex items-start justify-between gap-3 border-b border-white/10 p-4">
+        <div><h2 id="bestiary-drops-title" className="text-sm font-black tracking-[0.12em] text-cyan-100">{sp.name.toUpperCase()} · {RARITIES[tier].name.toUpperCase()} DROPS</h2><p className="mt-1 text-[11px] leading-snug text-white/50">Base chance per eligible piece. Break parts for salvage; base-majority kills yield none. Optional loadouts vary. Salvage upgrades affect ordinary rates, not boss or Ultra rates. Images show representative piece shapes.</p></div>
+        <button ref={closeButton} type="button" autoFocus onClick={onClose} className="shrink-0 rounded-sm border border-white/25 px-3 py-1.5 text-xs font-bold text-white/80 hover:bg-white/10">CLOSE</button>
+      </header>
+      <div ref={scrollArea} tabIndex={0} aria-label="Component drops list" className="min-h-0 overflow-y-auto overscroll-contain p-3">
+        <div className="grid gap-2 sm:grid-cols-2">
+          {drops.map((d)=><div key={`${d.kind}:${d.name}`} className="flex gap-2 rounded-sm border border-white/10 bg-[#0a1020] p-2 text-[11px]">
+            <DropIcon drop={d} tier={tier}/><div className="min-w-0 flex-1"><div className="font-bold text-cyan-100">{d.name}</div><div className="text-white/40">{d.minCount===d.maxCount?`${d.maxCount} pieces`:d.minCount===0?`Optional, up to ${d.maxCount}`:`${d.minCount}–${d.maxCount} pieces`}</div>
+              {d.rates.map((r)=><div key={r.tier} className="flex justify-between gap-2 text-white/70"><span style={{color:r.tier===6?"#e6e6e6":RARITIES[r.tier].color}}>{RARITIES[r.tier].name}</span><span>{formatPercent(r.chance)}</span></div>)}
+            </div></div>)}
+        </div>
+      </div>
+    </section>
+  </div>;
 }
 
 function familyOf(id: string) {
