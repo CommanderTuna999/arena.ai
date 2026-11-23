@@ -246,7 +246,7 @@ export default function GameClient() {
       <canvas ref={canvasRef} className="block cursor-crosshair" />
       <div className="pointer-events-none fixed inset-0" style={{ background: "radial-gradient(ellipse at center, transparent 55%, rgba(0,0,10,0.65) 100%)" }} />
       {!hud && <div className="absolute inset-0 grid place-items-center text-xl tracking-[0.4em] text-cyan-300">LOADING SAVE…</div>}
-      {hud && game && <Hud_ hud={hud} creditRef={creditRef} onOpen={() => { game.blur(); setAdminOpen(false); setMenu(true); }} onHelp={() => setHelp(true)} onAdmin={() => { game.blur(); setMenu(false); setAdminOpen(true); }} onToggleAuto={() => game.toggleAutoFire()} onDisperse={() => game.disperseChairman()} onSettings={() => { game.blur(); setSettingsOpen(true); }} onBestiary={() => { game.blur(); setBestiaryOpen(true); }} onHome={goHome} account={account} />}
+      {hud && game && <Hud_ hud={hud} creditRef={creditRef} onOpen={() => { game.blur(); setAdminOpen(false); setMenu(true); }} onHelp={() => setHelp(true)} onAdmin={() => { game.blur(); setMenu(false); setAdminOpen(true); }} onToggleAuto={() => game.toggleAutoFire()} onSettings={() => { game.blur(); setSettingsOpen(true); }} onBestiary={() => { game.blur(); setBestiaryOpen(true); }} onHome={goHome} account={account} />}
       {hud && game && <Chat game={game} notices={hud.ultraNotices} onAdmin={() => { game.blur(); setMenu(false); setAdminOpen(true); }} />}
       {game && <StorageWarning count={game.save.inventory.length} />}
       {hud && game && adminOpen && <AdminPanel game={game} hud={hud} onClose={() => setAdminOpen(false)} />}
@@ -323,7 +323,7 @@ function HarpoonGlyph({ state, load, hp }: { state: number; load: number; hp: nu
   );
 }
 
-function Hud_({ hud, creditRef, onOpen, onHelp, onAdmin, onSettings, onBestiary, onHome, onToggleAuto, onDisperse, account }: { hud: Hud; creditRef: React.RefObject<HTMLDivElement | null>; onOpen: () => void; onHelp: () => void; onAdmin: () => void; onSettings: () => void; onBestiary: () => void; onHome: () => void; onToggleAuto: () => void; onDisperse: () => void; account: string | null }) {
+function Hud_({ hud, creditRef, onOpen, onHelp, onAdmin, onSettings, onBestiary, onHome, onToggleAuto, account }: { hud: Hud; creditRef: React.RefObject<HTMLDivElement | null>; onOpen: () => void; onHelp: () => void; onAdmin: () => void; onSettings: () => void; onBestiary: () => void; onHome: () => void; onToggleAuto: () => void; account: string | null }) {
   const [selAb, setSelAb] = useState<number | null>(null);
   return (
     <>
@@ -342,7 +342,7 @@ function Hud_({ hud, creditRef, onOpen, onHelp, onAdmin, onSettings, onBestiary,
         {hud.maxShield > 0 && <VitalBar kind="shield" label="Shield" value={hud.shield} max={hud.maxShield} color="#4dd2ff" />}
         {hud.chairmanShieldMax > 0 && <VitalBar kind="shield" label="Dome" value={hud.chairmanShield} max={hud.chairmanShieldMax} color="#ff344a" />}
         {hud.chairmanArmourMax > 0 && <VitalBar kind="health" label="Drone armour" value={hud.chairmanArmour} max={hud.chairmanArmourMax} color="#ff8290" />}
-        {hud.chairmanArmourMax > 0 && <button onClick={onDisperse} disabled={!hud.chairmanArmourReady} aria-label="Disperse drone armour (Q)" title={hud.chairmanArmourReady ? "Disperse drone armour (Q)" : "Drones recharging"} className="pointer-events-auto w-fit rounded border border-red-400/60 bg-black/80 px-2 py-1 text-xs text-red-200 disabled:opacity-40">◈ Q</button>}
+        {hud.chairmanArmourReady && <span role="status" aria-label="Drones ready. Left click to disperse." title="Left click to disperse drones" className="w-fit text-red-300 drop-shadow-[0_0_6px_#ff344a]">◈</span>}
         {hud.hasBoost && <Bar v={hud.boost} max={100} color="#ff9d4d" h={6} />}
         {/* the gauge only means something on a gun that cooks: damage climbs with
             it, and a full gauge is three seconds of dead trigger */}
@@ -499,7 +499,7 @@ function Help({ onClose }: { onClose: () => void }) {
     ["Left click / SPACE", "Fire the base cannon (kinetic; energy shields stop it)"],
     ["Right click", "Mark a target (missile launcher) or fire the tether"],
     ["B", "Toggle automatic crafted weapons"],
-    ["Q", "Disperse Chairman drone armour once all drones recharge"],
+    ["Left click", "Disperse Chairman drone armour once all drones recharge"],
     ["Hold R over hooked part", "Release harpoon"],
     ["SHIFT", "Afterburner (upgrade)"],
     ["T", "Recall beacon (craftable)"],

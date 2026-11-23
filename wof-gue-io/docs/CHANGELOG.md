@@ -1,3 +1,8 @@
+## 0.3. v2.31.10 — Drone armour motion
+
+- Chairman drones visibly gather into armour and fan back out when dispersed with a left click.
+- Each lost armour segment uncharges its drone, which must recharge again before dispersal.
+
 ## 0.3. v2.31.9 — Drone armour
 
 - Exhausted Chairman drones gather into an armour layer with ten times maximum hull health.

@@ -1,5 +1,5 @@
 import { createTargetScan, type TargetScan } from "./target-scan";
-import { CHAIRMAN_SHIELD_MAX, gatherChairmanArmour, disperseChairmanArmour, chairmanDronePosition, moveChairmanHalos, chairmanDroneCount, chairmanOrbChance, chairmanOrbRadius, chairmanOrbDamage, chairmanCoreMul, createChairman, syncChairman, tickChairman, type ChairmanState } from "./chairman";
+import { CHAIRMAN_SHIELD_MAX, gatherChairmanArmour, disperseChairmanArmour, damageChairmanArmour, chairmanDronePosition, moveChairmanHalos, chairmanDroneCount, chairmanOrbChance, chairmanOrbRadius, chairmanOrbDamage, chairmanCoreMul, createChairman, syncChairman, tickChairman, type ChairmanState } from "./chairman";
 import { rollComponentTiers } from "./drop-roll";
 import { recordPlateHit } from "./plate-impact";
 import { ejectCasing, ejectCasingLimited } from "./casing-fx";
@@ -954,13 +954,15 @@ export class Game {
     if (code === "KeyM") this.mapMode = ((this.mapMode + 1) % 3) as 0 | 1 | 2;
     if (code === "KeyT") this.toggleRecall();
     if (code === "KeyB") this.toggleAutoFire();
-    if (code === "KeyQ") this.disperseChairman();
     const ai = (["KeyZ", "KeyX", "KeyC", "KeyV", "KeyF"] as const).indexOf(code as never);
     if (ai >= 0) this.useAbility(ai);
   }
   keyUp(code: string) { this.input.keys.delete(code); }
   mouseDown(btn: number) {
-    if (btn === 0) this.input.lmb = true;
+    if (btn === 0) {
+      if (!this.input.lmb) this.disperseChairman();
+      this.input.lmb = true;
+    }
     if (btn !== 2) return;
     // with a missile launcher fitted, right-click marks a precise target.
     // hovering empty space (or no launcher) still fires the harpoon.
@@ -2178,7 +2180,7 @@ export class Game {
     if (st.kinetic > 0 && p.shield > 0 && !o.energy) d *= 1 - st.kinetic;
     p.hitT = 0; p.shieldT = st.shieldDelay;
     // Each lit drone absorbs one entire damage instance, independently of
-    // damage size or dome capacity. Spent drones return only after an orb.
+    // damage size or dome capacity. Exhaustion gathers the swarm into armour.
     if (st.cannonId === "chairman" && d > 0) {
       const cs = this.chairman ??= createChairman();
       syncChairman(cs, chairmanDroneCount(this.cannonViewLevels("chairman").drones ?? 0));
@@ -2192,7 +2194,7 @@ export class Game {
         return;
       }
       if (cs.armourActive && cs.armour > 0) {
-        const absorbed = Math.min(cs.armour, d); cs.armour -= absorbed; d -= absorbed;
+        const absorbed = damageChairmanArmour(cs,d); d -= absorbed;
         recordShieldImpact(p, Math.cos(ang) * (SHIP_R + 42), Math.sin(ang) * (SHIP_R + 42), this.t);
       }
       if (cs.shield > 0 && d > 0) {
@@ -4752,7 +4754,7 @@ export class Game {
   hud(): Hud {
     const p = this.player, st = this.stats;
     return {
-      hp: p.hp, maxHp: st.hull, shield: p.shield, maxShield: st.shieldMax, chairmanShield: st.cannonId === "chairman" ? this.chairman?.shield ?? CHAIRMAN_SHIELD_MAX : 0, chairmanShieldMax: st.cannonId === "chairman" ? CHAIRMAN_SHIELD_MAX : 0, chairmanArmour: st.cannonId === "chairman" && this.chairman?.armourActive ? this.chairman.armour : 0, chairmanArmourMax: st.cannonId === "chairman" && this.chairman?.armourActive ? this.chairman.armourMax : 0, chairmanArmourReady: st.cannonId === "chairman" && !!this.chairman?.armourActive && this.chairman.reload<=0 && this.chairman.drones.every(x=>x<=0), boost: p.boost, hasBoost: st.hasBoost, credits: this.save.credits, creditTick: this.creditTick,
+      hp: p.hp, maxHp: st.hull, shield: p.shield, maxShield: st.shieldMax, chairmanShield: st.cannonId === "chairman" ? this.chairman?.shield ?? CHAIRMAN_SHIELD_MAX : 0, chairmanShieldMax: st.cannonId === "chairman" ? CHAIRMAN_SHIELD_MAX : 0, chairmanArmour: st.cannonId === "chairman" && this.chairman?.armourActive ? this.chairman.armour : 0, chairmanArmourMax: st.cannonId === "chairman" && this.chairman?.armourActive ? this.chairman.armourMax : 0, chairmanArmourReady: st.cannonId === "chairman" && !!this.chairman?.armourActive && this.chairman.armourBlend>=1 && !this.chairman.armourDispersing && this.chairman.reload<=0 && this.chairman.drones.every(x=>x<=0), boost: p.boost, hasBoost: st.hasBoost, credits: this.save.credits, creditTick: this.creditTick,
       creditPop: { v: this.creditPopValue, s: this.creditPopScale },
       harp: this.harpoons.map((h) => ({ state: h.state, load: h.comp ? h.comp.c.mass / (h.comp.hooks.length * st.hStr) : 0, hp: h.hp / h.maxHp })),
       toasts: [...this.toasts], ultraNotices: [...this.ultraNotices], nearBase: this.nearBase(),
