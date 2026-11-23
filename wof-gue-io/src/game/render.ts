@@ -1,5 +1,5 @@
 import { scanPartIndex, scanHighlight, scanFlashDuration, type TargetScan } from "./target-scan";
-import { CHAIRMAN_SHIELD_MAX, chairmanDronePosition, chairmanArmourDronePosition, chairmanHaloCenter } from "./chairman";
+import { CHAIRMAN_SHIELD_MAX, chairmanDronePosition, chairmanDroneVisualPosition, chairmanArmourDronePosition, chairmanHaloCenter } from "./chairman";
 import { plateHitIntensity } from "./plate-impact";
 import { drawCasings } from "./casing-fx";
 import { drawShieldImpacts } from "./shield-impact";
@@ -791,7 +791,7 @@ function drawScanHighlights(ctx:CanvasRenderingContext2D,e:Enemy,scan:TargetScan
 function drawChairman(g:Game, ctx:CanvasRenderingContext2D, z:number, t:number) {
   const s=g.chairman, p=g.player; if(!s)return;
   const charge=clamp(s.charge,0,1), n=s.drones.length;
-  const points=s.drones.map((_,i)=>s.armourActive ? chairmanArmourDronePosition(s,i,p.x,p.y) : chairmanDronePosition(s,i,p.x,p.y));
+  const points=s.drones.map((_,i)=>s.armourActive ? chairmanArmourDronePosition(s,i,p.x,p.y) : s.drones[i]>0 ? chairmanDroneVisualPosition(s,i,p.x,p.y) : chairmanDronePosition(s,i,p.x,p.y));
   ctx.save();ctx.lineCap="round";
   // Slim separate meter exposes the dome's finite capacity.
   ctx.fillStyle="rgba(25,0,8,.8)";ctx.fillRect(p.x-35,p.y+62,70,4);
@@ -802,24 +802,6 @@ function drawChairman(g:Game, ctx:CanvasRenderingContext2D, z:number, t:number) 
     ctx.fillStyle=`rgba(255,52,74,${.025+.035*f})`;ctx.beginPath();ctx.arc(p.x,p.y,rad,0,TAU);ctx.fill();
     ctx.strokeStyle=`rgba(255,52,74,${.24+.38*f})`;ctx.lineWidth=2/z;ctx.beginPath();ctx.arc(p.x,p.y,rad,0,TAU);ctx.stroke();
   }
-  // The gathered drones form interlocking physical plates, illuminating one
-  // at a time as each drone finishes charging. Lost sections go dark.
-  if(s.armourActive && s.armourBlend>0) {
-    ctx.save();ctx.globalAlpha=s.armourBlend*s.armourBlend;
-    const integrity=s.armourMax===Infinity ? (s.armour===Infinity?1:0) : clamp(s.armour/Math.max(1,s.armourMax),0,1);
-    for(let i=0;i<n;i++) {
-      const a=i*TAU/n-Math.PI/2, half=TAU/n*.47, inner=62, outer=76;
-      const ready=s.drones[i]<=0, lost=i<s.armourLostPieces;
-      ctx.beginPath();ctx.moveTo(p.x+Math.cos(a-half)*inner,p.y+Math.sin(a-half)*inner);
-      ctx.lineTo(p.x+Math.cos(a-half*.78)*outer,p.y+Math.sin(a-half*.78)*outer);
-      ctx.lineTo(p.x+Math.cos(a+half*.78)*outer,p.y+Math.sin(a+half*.78)*outer);
-      ctx.lineTo(p.x+Math.cos(a+half)*inner,p.y+Math.sin(a+half)*inner);ctx.closePath();
-      ctx.fillStyle=!lost && integrity>0 ? `rgba(45,10,20,${.3+integrity*.55})` : "rgba(16,12,16,.16)";
-      ctx.strokeStyle=lost ? (ready?"#853442":"#3e252b") : ready?"#ff6676":"#71313c";ctx.lineWidth=(ready?2:1)/z;
-      if(ready && !lost){ctx.shadowColor="#ff344a";ctx.shadowBlur=12;}ctx.fill();ctx.stroke();ctx.shadowBlur=0;
-    }
-    ctx.restore();
-  }
   if(charge>0) for(let i=0;i<n;i++) {
     const [x,y]=points[i];ctx.strokeStyle=`rgba(255,${Math.round(45+charge*150)},${Math.round(55+charge*150)},${.2+charge*.7})`;
     ctx.lineWidth=(1+charge*3)/z;ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(p.x,p.y);ctx.stroke();
@@ -828,15 +810,23 @@ function drawChairman(g:Game, ctx:CanvasRenderingContext2D, z:number, t:number) 
     const [x,y]=points[i], firing=(s.fireGlow[i] ?? 0)>0, lit=firing || charge>0 || s.drones[i]<=0, pulse=.8+.2*Math.sin(t*5+i);
     if(firing){const glow=ctx.createRadialGradient(x,y,0,x,y,42);glow.addColorStop(0,"rgba(255,255,255,.98)");glow.addColorStop(.2,"rgba(255,115,125,.95)");glow.addColorStop(.5,"rgba(255,35,60,.55)");glow.addColorStop(1,"rgba(255,35,60,0)");ctx.fillStyle=glow;ctx.beginPath();ctx.arc(x,y,42,0,TAU);ctx.fill();}
     const [hx,hy]=chairmanHaloCenter(s,i%3,p.x,p.y);
-    ctx.save();ctx.translate(x,y);ctx.rotate(Math.atan2(y-hy,x-hx));
-    ctx.globalAlpha=(lit?1:.35)*(s.armourActive ? 1-.75*s.armourBlend : 1);ctx.fillStyle=lit?"#3f0715":"#190b11";ctx.strokeStyle=lit?"#ff364c":"#74303b";ctx.lineWidth=1.5/z;
+    // The real turret silhouette becomes each overlapping armour segment;
+    // interpolate its facing and width as it moves into formation.
+    const blend=s.armourActive?s.armourBlend:0, smooth=blend*blend*(3-2*blend);
+    const baseAngle=Math.atan2(y-hy,x-hx), plateAngle=i*TAU/n;
+    const turn=Math.atan2(Math.sin(plateAngle-baseAngle),Math.cos(plateAngle-baseAngle));
+    const lost=s.armourActive && i<s.armourLostPieces;
+    ctx.save();ctx.translate(x,y);ctx.rotate(baseAngle+turn*smooth);
+    ctx.scale(1+(Math.max(.6,TAU*69/n/22*1.15)-1)*smooth,1+smooth*.35);
+    ctx.globalAlpha=lost ? .3 : lit ? 1 : .65;
+    ctx.fillStyle=lit?"#3f0715":"#190b11";ctx.strokeStyle=lit?"#ff364c":"#74303b";ctx.lineWidth=1.5/z;
     if(lit){ctx.shadowColor="#ff1d42";ctx.shadowBlur=firing?45:10+charge*20;}
     ctx.beginPath();ctx.moveTo(11,0);ctx.lineTo(3,-5);ctx.lineTo(-7,-5);ctx.lineTo(-11,0);ctx.lineTo(-7,5);ctx.lineTo(3,5);ctx.closePath();ctx.fill();ctx.stroke();
     ctx.shadowBlur=0;ctx.fillStyle=firing?"#ffffff":lit?`rgba(255,${Math.round(80+charge*150)},${Math.round(90+charge*150)},${pulse})`:"#521520";
     ctx.beginPath();ctx.arc(0,0,3.4,0,TAU);ctx.fill();ctx.restore();
   }
   // The sun shines at full intensity when ready, and dims during reload.
-  const sunReady=s.reload<=0;
+  const sunReady=s.reload<=0 && !s.sunLocked;
   const r=22+charge*12;
   const sun=ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,r*2.5);
   sun.addColorStop(0,sunReady?"#fff5ed":"#ef5764");sun.addColorStop(.14,sunReady?"#ff8a80":"#a4152a");sun.addColorStop(.35,"#8d1024");sun.addColorStop(1,"rgba(255,12,48,0)");

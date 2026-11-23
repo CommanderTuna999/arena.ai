@@ -1,5 +1,5 @@
 import { createTargetScan, type TargetScan } from "./target-scan";
-import { CHAIRMAN_SHIELD_MAX, gatherChairmanArmour, disperseChairmanArmour, damageChairmanArmour, chairmanDronePosition, moveChairmanHalos, chairmanDroneCount, chairmanOrbChance, chairmanOrbRadius, chairmanOrbDamage, chairmanCoreMul, createChairman, syncChairman, tickChairman, type ChairmanState } from "./chairman";
+import { CHAIRMAN_SHIELD_MAX, spendChairmanDrone, updateChairmanSwarm, disperseChairmanArmour, damageChairmanArmour, chairmanDronePosition, moveChairmanHalos, chairmanDroneCount, chairmanOrbChance, chairmanOrbRadius, chairmanOrbDamage, chairmanCoreMul, createChairman, syncChairman, tickChairman, type ChairmanState } from "./chairman";
 import { rollComponentTiers } from "./drop-roll";
 import { recordPlateHit } from "./plate-impact";
 import { ejectCasing, ejectCasingLimited } from "./casing-fx";
@@ -954,13 +954,14 @@ export class Game {
     if (code === "KeyM") this.mapMode = ((this.mapMode + 1) % 3) as 0 | 1 | 2;
     if (code === "KeyT") this.toggleRecall();
     if (code === "KeyB") this.toggleAutoFire();
+    if (code === "Space") this.requestChairmanSun();
     const ai = (["KeyZ", "KeyX", "KeyC", "KeyV", "KeyF"] as const).indexOf(code as never);
     if (ai >= 0) this.useAbility(ai);
   }
   keyUp(code: string) { this.input.keys.delete(code); }
   mouseDown(btn: number) {
     if (btn === 0) {
-      if (!this.input.lmb) this.disperseChairman();
+      if (!this.input.lmb && !this.disperseChairman()) this.requestChairmanSun();
       this.input.lmb = true;
     }
     if (btn !== 2) return;
@@ -968,6 +969,11 @@ export class Game {
     // hovering empty space (or no launcher) still fires the harpoon.
     if (this.hasHoming() && this.markTarget()) return;
     this.fireHarpoon();
+  }
+  private requestChairmanSun() {
+    const cs=this.chairman;
+    if(this.stats.cannonId!=="chairman" || !cs || this.player.dead || this.inSafe() || cs.sunLocked || cs.charge>0 || cs.armourDispersing)return;
+    if(cs.armourActive || cs.drones.every(x=>x>0)) cs.sunRequested=true;
   }
   disperseChairman() {
     if (this.stats.cannonId === "chairman" && this.chairman && !this.player.dead)
@@ -2188,8 +2194,7 @@ export class Game {
       const ang = (o.kbx || o.kby) ? Math.atan2(-(o.kby ?? 0), -(o.kbx ?? 0)) : p.a + Math.PI;
       if (available.length) {
         const i = available[Math.floor(Math.random() * available.length)];
-        cs.drones[i] = Infinity;
-        if (cs.drones.every(x=>x>0) && cs.charge<=0) gatherChairmanArmour(cs,st.hull);
+        spendChairmanDrone(cs,i,p.x,p.y);
         recordShieldImpact(p, Math.cos(ang) * (SHIP_R + 35), Math.sin(ang) * (SHIP_R + 35), this.t);
         return;
       }
@@ -3568,16 +3573,20 @@ export class Game {
       this.beam(x,y,angle,st.bulletRange,damage,st.pierce,false,"laser","#ff344a",1,1,crit,false,true,chairmanCoreMul(lv.coreDmg ?? 0));
       this.burst(x,y,"#ff4254",10,5,300);
       ejectCasing(this,x,y,angle,this.t,"core",p.vx,p.vy,"chairman");
-      cs.drones[index]=Infinity; cs.fireGlow[index]=.4; p.fireCd=1/st.rate;
-      if(cs.drones.every(x=>x>0)) gatherChairmanArmour(cs,st.hull);
+      spendChairmanDrone(cs,index,p.x,p.y); cs.fireGlow[index]=.4; p.fireCd=1/st.rate;
       this.shake=Math.max(this.shake,5);
     };
-    if(this.inSafe()) {cs.scan=null;cs.charge=0;this.fireWeapons(dt,p.a);return;}
+    if(this.inSafe()) {cs.scan=null;cs.charge=0;cs.sunRequested=false;this.fireWeapons(dt,p.a);return;}
     if(cs.charge>0) {
       cs.charge+=dt;
       if(cs.charge>=1) {
         cs.charge=0; cs.flash=.34;
-        gatherChairmanArmour(cs,st.hull);
+        // After a blast, all drones fly to the outer orbit before regrouping.
+        // Snapshot positions first, including any partially assembled armour.
+        for(let i=0;i<cs.drones.length;i++) spendChairmanDrone(cs,i,p.x,p.y);
+        cs.armourActive=false;cs.armourDispersing=false;cs.armourReturnPath=false;
+        cs.armour=0;cs.armourMax=0;cs.armourBlend=0;cs.armourLostPieces=0;
+        cs.reload=0;cs.scan=null;cs.sunLocked=true;cs.sunRequested=false;
         const crit=st.crit>0 && Math.random()<st.crit;
         const damage=chairmanOrbDamage(lv.dmg ?? 0,lv.drones ?? 0)*chairmanCoreMul(lv.coreDmg ?? 0)*(crit?st.critMul:1)*this.dmgMul();
         const radius=chairmanOrbRadius(lv.orbRange ?? 0);
@@ -3592,7 +3601,12 @@ export class Game {
       }
       this.fireWeapons(dt,p.a);return;
     }
-    // Gathered drones cannot intercept, fire, or initiate another sun until dispersed.
+    // A deliberate fresh trigger may fire the sun while exhausted drones
+    // orbit or assemble. A post-blast lock prevents automatic retriggers.
+    if(cs.sunRequested && !cs.sunLocked && p.fireCd<=0 && p.jam<=0) {
+      cs.sunRequested=false;cs.scan=null;p.fireCd=1/st.rate;cs.charge=.000001;
+      this.fireWeapons(dt,p.a);return;
+    }
     if(cs.armourActive) { this.fireWeapons(dt,p.a); return; }
     if(cs.scan) {
       cs.scan.elapsed+=dt;
@@ -3612,9 +3626,7 @@ export class Game {
       const ready=cs.drones.map((cool,i)=>cool<=0?i:-1).filter(i=>i>=0);
       // Only an explicit trigger can charge the sun, including the guaranteed
       // blast when all drones have been spent. Auto never rolls orb chance.
-      if(want && !ready.length && p.fireCd<=0) {
-        p.fireCd=1/st.rate;cs.charge=0.000001;
-      } else if(ready.length && want) {
+      if(ready.length && want) {
         const index=ready[Math.floor(Math.random()*ready.length)];
         const [mx,my]=this.mouseWorld();let target:Enemy|null=null;
         for(const e of this.enemies) {
@@ -3649,7 +3661,7 @@ export class Game {
   }
   private firePlayer(dt: number) {
     const p = this.player, st = this.stats;
-    if (st.cannonId === "chairman" && !p.dead) { this.chairman ??= createChairman(); tickChairman(this.chairman,dt); moveChairmanHalos(this.chairman,dt,p.x,p.y); }
+    if (st.cannonId === "chairman" && !p.dead) { this.chairman ??= createChairman(); tickChairman(this.chairman,dt); moveChairmanHalos(this.chairman,dt,p.x,p.y); updateChairmanSwarm(this.chairman,dt,p.x,p.y,st.hull); }
     if (p.dead) { if (this.chairman) { this.chairman.scan = null; this.chairman.charge = 0; } this.revolutionaryScan = null; this.mediatorBeamTime = 0; this.fencerCharge = 0; return; }
     if (p.pull?.e.act?.def.type === "grab" && p.pull.e.act.ph === 1) {
       if (this.mediatorBeamTime > 0) p.fireCd = Math.max(p.fireCd, 0.7);

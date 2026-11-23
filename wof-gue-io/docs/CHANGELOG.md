@@ -1,3 +1,8 @@
+## 0.3. v2.31.11 — The gathering swarm
+
+- Spent Chairman drones drift into a wide, slow orbit, then assemble into armour from their own shapes over two seconds.
+- A fresh left click can fire the sun while the exhausted swarm gathers; after a sun blast, recharging still prevents a repeat blast.
+
 ## 0.3. v2.31.10 — Drone armour motion
 
 - Chairman drones visibly gather into armour and fan back out when dispersed with a left click.
