@@ -1,3 +1,8 @@
+## 0.3. v2.31.5 — Armour and shield gauges
+
+- Health now appears as interlocking insect armour plates, while shield gauges use glowing hexagonal cells.
+- Chairman’s dome has its own red hexagonal gauge; all three gauges show their current and maximum values.
+
 ## 0.3. v2.31.4 — Trailing halos
 
 - Chairman’s three drone halos now trail smoothly behind the ship, then settle into place when it stops.

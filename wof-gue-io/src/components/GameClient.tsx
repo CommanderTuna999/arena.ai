@@ -14,6 +14,7 @@ import { clamp, fmtNum } from "@/game/math";
 import { SPECIES_LIST } from "@/game/enemies";
 import { MAP_GRID, MAP_RADIUS, isUltraZone } from "@/game/world";
 import SettingsPanel from "@/components/SettingsPanel";
+import { VitalBar, vitalFraction } from "@/components/VitalBar";
 import Chat from "@/components/Chat";
 import { StorageWarning } from "@/components/StorageWarning";
 import RecipeIcon from "@/components/RecipeIcon";
@@ -323,7 +324,8 @@ function HarpoonGlyph({ state, load, hp }: { state: number; load: number; hp: nu
 }
 
 function Hud_({ hud, creditRef, onOpen, onHelp, onAdmin, onSettings, onBestiary, onHome, onToggleAuto, account }: { hud: Hud; creditRef: React.RefObject<HTMLDivElement | null>; onOpen: () => void; onHelp: () => void; onAdmin: () => void; onSettings: () => void; onBestiary: () => void; onHome: () => void; onToggleAuto: () => void; account: string | null }) {
-  const hpCol = hud.hp / hud.maxHp > 0.5 ? "#2dffa0" : hud.hp / hud.maxHp > 0.25 ? "#ffd24d" : "#ff4d6d";
+  const hpFraction = vitalFraction(hud.hp, hud.maxHp);
+  const hpCol = hpFraction > 0.5 ? "#2dffa0" : hpFraction > 0.25 ? "#ffd24d" : "#ff4d6d";
   const [selAb, setSelAb] = useState<number | null>(null);
   return (
     <>
@@ -338,9 +340,9 @@ function Hud_({ hud, creditRef, onOpen, onHelp, onAdmin, onSettings, onBestiary,
       </div>
 
       <div className="pointer-events-none absolute left-3 top-16 flex flex-col gap-1.5">
-        <Bar v={hud.hp} max={hud.maxHp} color={hpCol} h={12} />
-        {hud.maxShield > 0 && <Bar v={hud.shield} max={hud.maxShield} color="#4dd2ff" h={8} />}
-        {hud.chairmanShieldMax > 0 && <Bar v={hud.chairmanShield} max={hud.chairmanShieldMax} color="#ff344a" h={8} />}
+        <VitalBar kind="health" label="Health" value={hud.hp} max={hud.maxHp} color={hpCol} />
+        {hud.maxShield > 0 && <VitalBar kind="shield" label="Shield" value={hud.shield} max={hud.maxShield} color="#4dd2ff" />}
+        {hud.chairmanShieldMax > 0 && <VitalBar kind="shield" label="Dome" value={hud.chairmanShield} max={hud.chairmanShieldMax} color="#ff344a" />}
         {hud.hasBoost && <Bar v={hud.boost} max={100} color="#ff9d4d" h={6} />}
         {/* the gauge only means something on a gun that cooks: damage climbs with
             it, and a full gauge is three seconds of dead trigger */}
