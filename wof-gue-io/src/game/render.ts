@@ -731,6 +731,10 @@ export function render(g: Game, ctx: CanvasRenderingContext2D) {
    * screen, climbing from a faint amber at the mid-ramp to a hard red-orange
    * ring at the top, and a slow pulse when it is jammed and cooling */
   drawHeatVignette(g, ctx);
+  // A brief screen-wide red flash accompanies each Revolutionary beam.
+  const redFlash = g.beams.reduce((v, b) => b.color === "#ff263b" ? Math.max(v, b.life) : v, 0);
+  if (redFlash > 0) { ctx.save(); ctx.globalAlpha = 0.32 * clamp(redFlash / 0.12, 0, 1); ctx.fillStyle = "#ff1024"; ctx.fillRect(0, 0, w, h); ctx.restore(); }
+
   if (hoveredComp) drawCompTooltip(g, ctx, hoveredComp);
   drawCutscene(g, ctx);
 }
@@ -1303,7 +1307,8 @@ function drawCannon(g: Game, ctx: CanvasRenderingContext2D, z: number, t: number
     ctx.fillStyle = "rgba(120,200,235,0.10)";
     ctx.strokeStyle = `hsla(${look.hue} 80% 70% / 0.45)`;
     ctx.beginPath(); ctx.rect(11 - back, -bore - 2.6, look.len - 16, (bore + 2.6) * 2); ctx.fill(); ctx.stroke();
-    barrel(0, bore, look.len, 1, own(0));
+    if (c.id === "revolutionary" && mz.length > 1) mz.forEach((m, i) => barrel(m.y, bore * 0.65, look.len, 1, own(i)));
+    else barrel(0, bore, look.len, 1, own(0));
     for (let k = 0; k < 2; k++) {
       const x = 18 + k * 7 - back;
       ctx.strokeStyle = trim; ctx.lineWidth = 1.4;

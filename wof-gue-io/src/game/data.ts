@@ -304,6 +304,21 @@ export const CANNONS: CannonDef[] = [
     look: { len: 26, bore: 4.6, hue: 34, style: "twin" },
   },
   {
+    id: "revolutionary", name: "Revolutionary", tier: 2,
+    desc: "A revolution is not a dinner party, or writing an essay, or painting a picture, or doing embroidery... A revolution is an insurrection, an act of violence by which one class overthrows another.",
+    dmg: 18000, interval: 4, speed: 0, range: 3200, hitscan: true,
+    credits: 50000,
+    parts: [
+      { kind: "armor", tier: 3, count: 2, name: "Compound Eye", species: "Dragonfly", label: "Dragonfly compound eye" },
+      { kind: "armor", tier: 3, count: 3, name: "Eye Cluster", species: "Widow Spider", label: "Widow Spider eye cluster" },
+      { kind: "segment", tier: 2, count: 7, name: "Head", label: "head" },
+      { kind: "core", tier: 3, count: 4, label: "core" },
+    ],
+    tracks: ["dmg", "rate", "pen", "barrels", "crit", "critDmg", "armorDmg"], costMul: 3, requires: "workhorse",
+    muzzles: [{ x: 48, y: 0 }], kick: 300, heat: 0,
+    look: { len: 48, bore: 6, hue: 0, style: "lance" },
+  },
+  {
     id: "peashooter2", name: "Peashooter MK2", tier: 2,
     desc: "Spray and pray, now with more barrels.",
     dmg: 80, interval: 0.03, speed: 1150, range: 1050, spread: 0.36,
@@ -382,7 +397,7 @@ export const CANNONS: CannonDef[] = [
     look: { len: 40, bore: 3.0, hue: 150, style: "lance" },
   },
   {
-    id: "mediator", name: "Mediator MK1", tier: 2,
+    id: "mediator", name: "Mediator", tier: 2,
     desc: "Very impartial.",
     /* hold the fire button to charge a devastating energy beam, then release it:
      * the longer the hold, the harder the shot, and the recoil shoves the ship
@@ -444,7 +459,7 @@ export const cannonPierce = (lv?: Record<string, number>) => lvl(lv, "pen");
 /** Barrel count affects cooling and the rotating Peashooter cluster. */
 export const cannonBarrels = (lv?: Record<string, number>, c?: CannonDef) => (c?.id === "peashooter2" ? 3 : 1) + Math.min(1, Math.max(0, lvl(lv, "barrels")));
 /** extra damage vs armour plating: a multiplier above 1 (1 + 12% a level) */
-export const cannonArmorDmg = (lv?: Record<string, number>) => 1 + 0.12 * lvl(lv, "armorDmg");
+export const cannonArmorDmg = (lv?: Record<string, number>, c?: CannonDef) => 1 + (c?.id === "revolutionary" ? 0.25 : 0.12) * lvl(lv, "armorDmg");
 /** chance a shot throws an energy bolt that bypasses shielding (Skewer MK2) */
 export const cannonEnergyChance = (lv?: Record<string, number>) => clamp(0.25 + 0.05 * lvl(lv, "energyChance"), 0, 0.95);
 /** how fast the charge beam builds (Mediator): a multiplier on charge speed */
@@ -475,12 +490,12 @@ export function cannonTrackValue(c: CannonDef, id: CannonTrackId, level: number)
     case "rate": return `${cannonRate(c, one).toFixed(2)}/s`;
     case "crit": return `${Math.round(cannonCrit(one) * 100)}% crit`;
     case "critDmg": return `x${cannonCritMul(one).toFixed(2)} crit`;
-    case "pen": return level ? `pierces ${level}` : "stops on impact";
+    case "pen": { const n = level + (c.id === "revolutionary" ? 5 : 0); return n ? `pierces ${n}` : "stops on impact"; }
     case "acc":
     case "spread": return `${((cannonSpread(c, one) * 180) / Math.PI).toFixed(1)}° spread`;
     case "speed": return `${fmtNum(Math.round(cannonSpeed(c, one)))} u/s`;
     case "barrels": return `${cannonBarrels(one, c)} barrels`;
-    case "armorDmg": return `+${Math.round((cannonArmorDmg(one) - 1) * 100)}% vs armour`;
+    case "armorDmg": return `+${Math.round((cannonArmorDmg(one, c) - 1) * 100)}% vs armour`;
     case "energyChance": return `${Math.round(cannonEnergyChance(one) * 100)}% energy shot`;
     case "chargeRate": return `${(70 / cannonChargeRate(one)).toFixed(0)}s to full`;
     case "beamWidth": return `${cannonBeamWidth(one).toFixed(2)}x wide`;
@@ -1097,14 +1112,14 @@ export function computeStats(s: SaveData): Stats {
     barrels: cannonBarrels(cl, cannon),
     crit: cannonCrit(cl),
     critMul: cannonCritMul(cl),
-    pierce: cannonPierce(cl),
+    pierce: cannonPierce(cl) + (cannon.id === "revolutionary" ? 5 : 0),
     spread: cannonSpread(cannon, cl),
     boom: cannon.boom ?? 0,
     hitscan: !!cannon.hitscan,
     bulletSpeed: cannonSpeed(cannon, cl),
     bulletRange: cannon.range,
     cannonId: cannon.id,
-    muzzles: cannon.id === "peashooter2" ? Array.from({ length: cannonBarrels(cl, cannon) }, (_, i) => ({ x: 25, y: i })) : cannon.muzzles,
+    muzzles: cannon.id === "revolutionary" && cannonBarrels(cl, cannon) > 1 ? [{x: 48, y: -6}, {x: 48, y: 6}] : cannon.id === "peashooter2" ? Array.from({ length: cannonBarrels(cl, cannon) }, (_, i) => ({ x: 25, y: i })) : cannon.muzzles,
     kick: cannon.kick,
     heatPerShot: cannon.heat,
     heatDmg: cannon.heatMax ?? 1,
@@ -1113,7 +1128,7 @@ export function computeStats(s: SaveData): Stats {
     charge: !!cannon.charge,
     chargeTime: cannon.chargeTime ?? 1,
     chargeDmg: cannon.chargeDmg ?? 1,
-    armorDmg: cannonArmorDmg(cl),
+    armorDmg: cannonArmorDmg(cl, cannon),
     energyChance: cannonEnergyChance(cl),
     chargeRate: cannonChargeRate(cl),
     beamWidth: cannonBeamWidth(cl),

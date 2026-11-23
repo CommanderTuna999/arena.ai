@@ -3393,12 +3393,13 @@ export class Game {
     }
     return best;
   }
-  private beam(x: number, y: number, ang: number, len: number, dmg: number, pierce: number, bypass = false, src: DmgSrc = "laser", color = "#baffff", width = 1, armorMul = 1, crit = false) {
+  private beam(x: number, y: number, ang: number, len: number, dmg: number, pierce: number, bypass = false, src: DmgSrc = "laser", color = "#baffff", width = 1, armorMul = 1, crit = false, revolutionary = false) {
     const st = this.stats;
     const hits = new Set<number>();
     const cos = Math.cos(ang), sin = Math.sin(ang);
     let endLen = len;
     let pierced = 0;
+    let splash: {x: number; y: number; skip: Part | null} | null = null;
     const cands = this.enemies.filter((e) => !e.dead && Math.hypot(e.x - x, e.y - y) < len + Math.max(e.radius, e.shieldReach));
     outer: for (let d = 10; d <= len; d += 8) {
       const bx = x + cos * d, by = y + sin * d;
@@ -3420,6 +3421,7 @@ export class Game {
           }
         }
         if (e.shells.length && (bx - e.x) * (bx - e.x) + (by - e.y) * (by - e.y) < e.shellR * e.shellR && this.plateAt(e, bx, by)) {
+          if (revolutionary && !splash) splash = {x: bx, y: by, skip: null};
           this.shellHit(e, dmg * armorMul, src, false, bx, by, crit);
           endLen = d;
           break outer;
@@ -3437,11 +3439,17 @@ export class Game {
         const key = e.id * 100000 + p.id;
         if (hits.has(key)) continue;
         hits.add(key);
+        if (revolutionary && !splash) splash = {x: bx, y: by, skip: p};
         let dm = dmg * (1 + e.melt);
         this.damagePart(e, p, dm * (p.kind === "armor" ? armorMul : 1), bx, by, src, false, crit);
         pierced++;
         if (pierced > pierce) { endLen = d; break outer; }
       }
+    }
+    if (splash) {
+      this.areaDamage(splash.x, splash.y, 90, dmg * 0.2, splash.skip, "laser");
+      this.burst(splash.x, splash.y, "#ff263b", 16, 6, 360);
+      this.ringFx(splash.x, splash.y, 90, "#ff263b", 440);
     }
     const mediator = src === "laser" && color === "#e9d5ff";
     if (mediator) this.beams = this.beams.filter((b) => !b.mediator);
@@ -3645,14 +3653,15 @@ export class Game {
         let chargeShot = false;
         if (fencer) { p.fenceShots++; chargeShot = p.fenceShots % 5 === 0; }
         if (chargeShot) { this.fencerCharge = 0.4; this.fencerDamage = dmg * 12.5; this.fencerCrit = crit; return; }
-        const energyShot = skewer2 && Math.random() < st.energyChance;
+        const revolutionary = st.cannonId === "revolutionary";
+        const energyShot = revolutionary || (skewer2 && Math.random() < st.energyChance);
         casingKind = energyShot ? "core" : "shell";
         const dShot = chargeShot ? dmg * 12.5 : dmg;
-        const col = (energyShot || chargeShot) ? "#c4a6ff" : crit ? "#fff3b0" : "#e6fbff";
-        this.beam(m0.x, m0.y, base, st.bulletRange, dShot, chargeShot ? st.pierce + 2 : st.pierce, energyShot, energyShot ? "laser" : "kinetic", col, 1, skewer2 ? st.armorDmg : 1, crit);
+        const col = revolutionary ? "#ff263b" : (energyShot || chargeShot) ? "#c4a6ff" : crit ? "#fff3b0" : "#e6fbff";
+        this.beam(m0.x, m0.y, base, st.bulletRange, dShot, chargeShot ? st.pierce + 2 : st.pierce, energyShot && !revolutionary, energyShot ? "laser" : "kinetic", col, 1, (skewer2 || revolutionary) ? st.armorDmg : 1, crit, revolutionary);
         this.burst(m0.x, m0.y, col, chargeShot ? 20 : crit ? 12 : 7, chargeShot ? 8 : 5.5, chargeShot ? 480 : 340);
         this.ringFx(m0.x, m0.y, chargeShot ? 90 : crit ? 60 : 40, col, chargeShot ? 600 : 420);
-        this.shake = Math.max(this.shake, chargeShot ? 12 : crit ? 6 : 3.5);
+        this.shake = Math.max(this.shake, revolutionary ? 20 : chargeShot ? 12 : crit ? 6 : 3.5);
       } else {
         for (let i = 0; i < n; i++) {
           /* spread is per round, and a cooking barrel throws wider */

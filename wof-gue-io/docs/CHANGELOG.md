@@ -1,3 +1,8 @@
+## 0.3. v2.30.21 — Revolutionary
+
+- Added Revolutionary to the Workhorse MK1 branch: a powerful red energy hitscan cannon.
+- Mediator MK1 is now named Mediator.
+
 ## 0.3. v2.30.20 — Organized bestiary drops
 
 - Drop gallery groups components by type in collapsed expandable sections.
