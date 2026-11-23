@@ -1,0 +1,14 @@
+import assert from 'node:assert/strict';
+import {JSDOM} from 'jsdom';
+const dom=new JSDOM('',{url:'https://wofgue.io'});Object.assign(globalThis,{localStorage:dom.window.localStorage});
+const {verifyLocalAdmin,localAdminState,setLocalAdmin}=await import('./src/game/local-admin');
+const {runAdminCommand}=await import('./src/game/admin-commands');
+const {Game}=await import('./src/game/engine');const {newSave}=await import('./src/game/data');
+const g:any=new Game(newSave(),'account-one');let prompts=0;const exec=(text:string)=>runAdminCommand(g,text,()=>{},()=>prompts++);
+assert.match(exec('/op'),/tester ID/);assert.equal(prompts,1);assert.equal(g.admin.on,false);
+assert.equal(verifyLocalAdmin(g.pid,'wrong'),false);assert.equal(localAdminState(g.pid),null);
+assert.equal(verifyLocalAdmin(g.pid,'1123581321345589'),true);g.setAdmin('on',true);assert.deepEqual(localAdminState(g.pid),{verified:true,enabled:true});
+assert.match(exec('/unop'),/disabled/);assert.equal(g.admin.on,false);assert.deepEqual(localAdminState(g.pid),{verified:true,enabled:false});
+assert.match(exec('/op'),/enabled/);assert.equal(prompts,1);assert.equal(g.admin.on,true);
+assert.equal(localAdminState('account-two'),null);assert.equal(setLocalAdmin('account-two',true),false);assert.match(exec('/op another'),/Only your own/);
+dom.window.close();console.log('Local admin verification and revocation persist per browser identity; no cross-user grants');

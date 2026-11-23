@@ -3,7 +3,7 @@ import {adminNumber,runAdminCommand,spawnSuggestions} from './src/game/admin-com
 import {Game} from './src/game/engine';import {newSave, BASE} from './src/game/data';
 assert.equal(adminNumber('inf'),Infinity);assert.equal(adminNumber('1.5M',true),1500000);assert.equal(adminNumber('-.5k',true),-500);assert.equal(adminNumber('NaN'),null);assert.equal(adminNumber('1e3'),null);
 const g:any=new Game(newSave(),'commands');let opened=0;const exec=(s:string)=>runAdminCommand(g,s,()=>opened++);
-assert.match(exec('/help'),/opened/);assert.equal(opened,1);assert.match(exec('/op other'),/not available/);assert.equal(g.admin.on,false);
+assert.match(exec('/help'),/opened/);assert.equal(opened,1);assert.match(exec('/op other'),/Only your own/);assert.equal(g.admin.on,false);
 assert.match(exec('/damage 2'),/Enable/);g.setAdmin('on',true);const base=g.stats.hull;
 assert.match(exec('/health 1.5'),/1.5/);assert.equal(g.stats.hull,base*1.5);exec('/health inf');assert.equal(g.admin.health,true);exec('/health 1');assert.equal(g.admin.health,false);assert.equal(g.stats.hull,base);
 exec('/damage .5');assert.equal(g.dmgMul(),.5);exec('/damage inf');assert.equal(g.dmgMul(),Infinity);exec('/damage 1');assert.equal(g.dmgMul(),1);

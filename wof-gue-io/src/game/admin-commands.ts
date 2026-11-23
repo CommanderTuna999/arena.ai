@@ -1,6 +1,7 @@
 import { BASE, RARITIES } from './data';
 import { SPECIES_LIST } from './enemies';
 import type { Game } from './engine';
+import { localAdminState, setLocalAdmin } from './local-admin';
 
 /** Local test commands. This is not authentication or a multiplayer authority. */
 export function adminNumber(text:string, allowSuffix=false):number | null {
@@ -15,10 +16,15 @@ export function spawnSuggestions(text:string):string[] {
   const q=(m[1]??'').trim().toLowerCase();
   return SPECIES_LIST.filter(s=>s.name.toLowerCase().includes(q)||s.id.toLowerCase().includes(q)).slice(0,8).map(s=>`/spawn ${s.name} `);
 }
-export function runAdminCommand(game:Game,text:string,openPanel:()=>void):string {
+export function runAdminCommand(game:Game,text:string,openPanel:()=>void,requestVerification:()=>void=()=>{}):string {
   const parts=text.trim().split(/\s+/), cmd=parts[0].toLowerCase();
   if(cmd==='/help' && parts.length===1){openPanel();return 'Admin panel opened.';}
-  if(cmd==='/op'||cmd==='/unop')return 'Account admin verification and granting other players are not available yet. Use the local admin panel for testing.';
+  if(cmd==='/op'||cmd==='/unop'){
+    if(parts.length!==1)return 'Only your own browser-local admin can be changed.';
+    if(cmd==='/op'&&!localAdminState(game.pid)?.verified){requestVerification();return 'Enter the tester ID to enable local admin.';}
+    if(!setLocalAdmin(game.pid,cmd==='/op'))return 'Browser storage is unavailable; local admin could not be saved.';
+    game.setAdmin('on',cmd==='/op');return cmd==='/op'?'Browser-local admin enabled.':'Browser-local admin disabled.';
+  }
   if(!game.admin.on)return 'Enable local admin mode in the panel first.';
   if(cmd==='/tp' && parts.length===1){openPanel();return 'Choose a destination on the admin map.';}
   if(cmd==='/home' && parts.length===1){game.adminTeleport(BASE.x,BASE.y-180);return 'Teleported to base.';}
@@ -39,7 +45,7 @@ export function runAdminCommand(game:Game,text:string,openPanel:()=>void):string
     const tier=RARITIES.findIndex(r=>r.id.toLowerCase()===rarity||r.name.toLowerCase()===rarity);
     const species=SPECIES_LIST.findIndex(s=>s.id.toLowerCase()===name||s.name.toLowerCase()===name);
     if(species<0||tier<0)return 'Usage: /spawn enemy rarity. Select an enemy suggestion and enter a rarity.';
-    game.adminSpawn(species,tier,1);return `Spawned ${RARITIES[tier].name} ${SPECIES_LIST[species].name}.`;
+    const made=game.adminSpawn(species,tier,1);return made ? `Spawned ${RARITIES[tier].name} ${SPECIES_LIST[species].name}.` : 'Spawn limit reached. Try /testmap or clear enemies in the panel.';
   }
   return 'Unknown command or invalid arguments. Use /help for the admin panel.';
 }

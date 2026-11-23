@@ -1,3 +1,4 @@
+import { drawCasings } from "./casing-fx";
 import { drawShieldImpacts } from "./shield-impact";
 import { drawKineticOrb } from "./projectile-render";
 import { drawChatBubble } from "./chat-bubble";
@@ -708,6 +709,8 @@ export function render(g: Game, ctx: CanvasRenderingContext2D) {
     else ctx.stroke();
   }
   ctx.globalAlpha = 1;
+
+  drawCasings(ctx, g, t);
 
   /* ---- enemy bars (drawn last, in world space) ---- */
   for (const e of g.enemies) {

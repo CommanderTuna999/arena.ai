@@ -1,3 +1,9 @@
+## 0.3. v2.30.14 — Spent casings and local admin
+
+- Guns eject themed spent casings or energy cores after firing.
+- Admin spawns can reclaim distant enemy slots and now report when spawning fails.
+- Self-admin can be verified and remembered in this browser using /op and /unop.
+
 ## 0.3. v2.30.13 — Shield impacts and test commands
 
 - Shields reveal glowing hexagonal cells only where they are hit.

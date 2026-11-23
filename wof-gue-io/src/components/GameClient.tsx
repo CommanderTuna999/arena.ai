@@ -18,6 +18,7 @@ import Chat from "@/components/Chat";
 import { StorageWarning } from "@/components/StorageWarning";
 import RecipeIcon from "@/components/RecipeIcon";
 import Bestiary, { BeeIcon } from "@/components/Bestiary";
+import { localAdminState } from "@/game/local-admin";
 import { guestName, readGuestSave, resolveSession, saveKeyFor, writeGuestSave } from "@/game/accounts";
 
 const PID_KEY = "neon-hive-pid";
@@ -119,6 +120,8 @@ export default function GameClient() {
       const canvas = canvasRef.current!;
       const ctx = canvas.getContext("2d")!;
       const game = new Game(save, pid);
+      const localAdmin = localAdminState(pid);
+      if (localAdmin) game.setAdmin("on", localAdmin.enabled && localAdmin.verified);
       game.localSaveKey = saveKey;
       /* Guests get a run that lives only in this page: no disk, no server. */
       game.persistent = Boolean(sess);
@@ -1315,7 +1318,7 @@ function AdminPanel({ game, hud, onClose }: { game: Game; hud: Hud; onClose: () 
         <button onClick={onClose} className="rounded-sm border border-white/25 px-2 py-0.5 text-[10px] text-white/70 hover:bg-white/10">CLOSE [`]</button>
       </div>
       <label className="mt-2 flex cursor-pointer items-center justify-between rounded-sm border border-fuchsia-300/30 bg-fuchsia-500/10 px-2 py-1.5">
-        <span className="font-bold text-fuchsia-200">Enable admin mode <span className="block text-[9px] text-white/45">Account /op is not available yet</span></span>
+        <span className="font-bold text-fuchsia-200">Enable admin mode <span className="block text-[9px] text-white/45">/op · /unop (browser-local)</span></span>
         <input type="checkbox" checked={a.on} onChange={(e) => game.setAdmin("on", e.target.checked)} />
       </label>
       <div className={`mt-2 space-y-1 ${a.on ? "" : "opacity-50"}`}>

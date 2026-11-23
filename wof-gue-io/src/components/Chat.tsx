@@ -5,6 +5,7 @@ import type { Game, Toast } from '@/game/engine';
 import { ChatOutbox, type QueuedChatMessage } from '@/game/chat-outbox';
 import { showChatBubble } from '@/game/chat-bubble';
 import { runAdminCommand, spawnSuggestions } from '@/game/admin-commands';
+import { verifyLocalAdmin } from '@/game/local-admin';
 
 type Message = { id: string; name: string; text: string; time: number; local?: boolean; clientId?: string };
 // This is a public endpoint, not a credential. The fallback also configures
@@ -30,6 +31,9 @@ export default function Chat({ game, notices, onAdmin = () => {} }: { game: Game
   const [faded, setFaded] = useState(false);
   const [unread, setUnread] = useState(0);
   const [queueError, setQueueError] = useState('');
+  const [verifyOpen, setVerifyOpen] = useState(false);
+  const [testerId, setTesterId] = useState('');
+  const [verifyError, setVerifyError] = useState('');
   const expandedRef = useRef(false), manuallyCollapsed = useRef(false);
   const fadeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const outbox = useRef<ChatOutbox | null>(null);
@@ -149,7 +153,7 @@ export default function Chat({ game, notices, onAdmin = () => {} }: { game: Game
   const submit = (e: React.SyntheticEvent, close = false) => {
     e.preventDefault(); const clean = text.trim(); if (!clean) { if (close) input.current?.blur(); return; }
     if (clean.startsWith('/')) {
-      const result = runAdminCommand(game, clean, onAdmin);
+      const result = runAdminCommand(game, clean, onAdmin, () => { setVerifyError(''); setTesterId(''); setVerifyOpen(true); });
       setMessages(prev => [...prev, { id: messageId(), name: 'Command', text: result, time: Date.now(), local: true }].slice(-60));
       setText(''); setQueueError(''); wake(); return;
     }
@@ -180,6 +184,15 @@ export default function Chat({ game, notices, onAdmin = () => {} }: { game: Game
       <input ref={input} value={text} onChange={e => { setText(e.target.value); setQueueError(''); wake(); }} onFocus={() => { game.blur(); wake(); }} maxLength={180} placeholder="Press enter or / to open chat" onKeyDown={e => { if (e.key === 'Enter' && !e.nativeEvent.isComposing) submit(e, true); }} aria-label="Chat message" className="min-w-0 flex-1 rounded border border-white/20 bg-black px-2 py-1 text-white" />
       <button type="submit" disabled={!text.trim()} className="rounded border border-cyan-300/50 px-2 py-1 text-cyan-200 disabled:opacity-40">SEND</button>
     </form>
+    {verifyOpen && <div className="pointer-events-auto fixed inset-0 z-[100] flex items-center justify-center bg-black/75" role="dialog" aria-modal="true" aria-labelledby="tester-title">
+      <form className="w-80 max-w-[90vw] rounded border border-fuchsia-300/60 bg-[#0b0714] p-4 shadow-[0_0_30px_rgba(255,122,217,0.25)]" onSubmit={e => { e.preventDefault(); if (!verifyLocalAdmin(game.pid, testerId.trim())) { setVerifyError('Invalid tester ID or browser storage unavailable.'); return; } game.setAdmin('on', true); setVerifyOpen(false); setTesterId(''); }}>
+        <h2 id="tester-title" className="text-base font-bold text-fuchsia-200">Enter tester ID</h2>
+        <p className="mt-1 text-white/60">Local testing only; this is not a multiplayer permission.</p>
+        <input autoFocus aria-label="Tester ID" type="password" value={testerId} onChange={e => setTesterId(e.target.value)} className="mt-3 w-full rounded border border-white/30 bg-black px-2 py-2 text-white" />
+        {verifyError && <p role="alert" className="mt-1 text-red-300">{verifyError}</p>}
+        <div className="mt-3 flex gap-2"><button type="submit" className="rounded border border-fuchsia-300/60 px-3 py-1 text-fuchsia-100">VERIFY</button><button type="button" onClick={() => {setVerifyOpen(false);setTesterId('');}} className="rounded border border-white/30 px-3 py-1 text-white">CANCEL</button></div>
+      </form>
+    </div>}
     {queueError && <p role="alert" className="pointer-events-auto rounded bg-[#050e16] px-2 text-yellow-200">{queueError}</p>}
   </section>;
 }

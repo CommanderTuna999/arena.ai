@@ -1,3 +1,4 @@
+import { ejectCasing, ejectCasingLimited } from "./casing-fx";
 import { recordShieldImpact } from "./shield-impact";
 import { interceptAngle } from "./projectile-aim";
 import { MAP_CELL, MAP_GRID, MAP_RADIUS, isUltraZone, walkable, circleWalkable } from "./world";
@@ -605,8 +606,8 @@ export class Game {
   }
 
   /** Spawn n copies of one species at one rarity, in front of the cursor. */
-  adminSpawn(spi: number, tier: number, n = 1) {
-    if (!this.admin.on) return;
+  adminSpawn(spi: number, tier: number, n = 1): number {
+    if (!this.admin.on) return 0;
     const p = this.player;
     const sp = clamp(Math.round(spi), 0, SPECIES_LIST.length - 1);
     const t = clamp(Math.round(tier), 0, 6);
@@ -614,22 +615,24 @@ export class Game {
     let dx = mx - p.x, dy = my - p.y;
     let d = Math.hypot(dx, dy);
     if (d < 120) { dx = 0; dy = -1; d = 1; }
-    const dist = clamp(d, 520, 1100);
+    const dist = clamp(d, 260, Math.max(260, Math.min(650, this.viewRadius() * 0.65)));
     const ux = dx / d, uy = dy / d;
     let made = 0;
     const count = clamp(Math.round(n), 1, 20);
     for (let i = 0; i < count; i++) {
-      if (this.enemies.length >= HARD_MAX) break;
+      if (this.enemies.length >= HARD_MAX && !this.reserveLocalSpawn()) break;
       const off = (i - (count - 1) / 2) * 110;
       const [x, y] = clampWorld(p.x + ux * dist - uy * off, p.y + uy * dist + ux * off);
       const e = this.makeEnemy(sp, t, x, y, "sandbox", (Math.random() * 1e9) | 0);
       e.aggro = true;
+      e.dist = Math.hypot(e.x - p.x, e.y - p.y);
       this.enemies.push(e);
       made++;
     }
     if (made) this.toast(`SPAWNED ${made} × ${SPECIES_LIST[sp].name.toUpperCase()} · ${RARITIES[t].name}`, "#ff7ad9");
-    else this.toast("SPAWN LIMIT REACHED", "#ff7ad9");
+    else this.toast("SPAWN LIMIT REACHED — TRY TEST RANGE", "#ff7ad9");
     this.rev++;
+    return made;
   }
 
   /** Local test multipliers only; they are not an authenticated multiplayer permission. */
@@ -3527,7 +3530,7 @@ export class Game {
     if (this.mediatorBeamTime > 0 && st.charge && !this.inSafe()) {
       const step = Math.min(dt, this.mediatorBeamTime);
       this.mediatorBeamTime = Math.max(0, this.mediatorBeamTime - step);
-      if (this.mediatorBeamTime <= 1e-9) { this.mediatorBeamTime = 0; p.fireCd = 0.7; }
+      if (this.mediatorBeamTime <= 1e-9) { this.mediatorBeamTime = 0; p.fireCd = 0.7; ejectCasing(this, p.x, p.y, p.a, this.t, "core", p.vx, p.vy); }
       const m = st.muzzles[0] ?? { x: 14, y: 0 };
       const x = p.x + Math.cos(p.a) * m.x - Math.sin(p.a) * m.y;
       const y = p.y + Math.sin(p.a) * m.x + Math.cos(p.a) * m.y;
@@ -3560,6 +3563,7 @@ export class Game {
         const x = p.x + Math.cos(base) * m.x - Math.sin(base) * m.y;
         const y = p.y + Math.sin(base) * m.x + Math.cos(base) * m.y;
         this.beam(x, y, base, st.bulletRange, this.fencerDamage, st.pierce + 2, false, "laser", "#c4a6ff", 1, 1, this.fencerCrit);
+        ejectCasing(this, p.x, p.y, base, this.t, "core", p.vx, p.vy);
         this.burst(x, y, "#c4a6ff", 20, 8, 480); this.ringFx(x, y, 90, "#c4a6ff", 600);
         this.shake = Math.max(this.shake, 12); p.recoil = 1; p.muzzleFlash = 1;
         p.vx -= Math.cos(base) * 200; p.vy -= Math.sin(base) * 200;
@@ -3649,6 +3653,7 @@ export class Game {
           this.burst(m.x, m.y, crit ? "#fff3b0" : `hsl(${CANNON_BY_ID[st.cannonId]?.look.hue ?? 40} 100% 76%)`, 3, 3.4, 190);
         }
       }
+      ejectCasing(this, p.x, p.y, base, this.t, st.hitscan ? "core" : st.cannonId === "scattermk1" ? "orb" : (rapid || st.cannonId === "peashooter") ? "small" : "shell", p.vx, p.vy);
       /* each barrel carries its own kick: a twin recoils one barrel at a time */
       p.barrelRec[first] = 1;
       p.muzzle = (first + n) % mz.length;
@@ -3925,6 +3930,13 @@ export class Game {
           break;
         }
         default: break;
+      }
+      if (p.wCd[i] > 0 && ["pulse","scatter","hmg","flak","rail","venom","acid","lance","bypass","cutter"].includes(w.rid)) {
+        if (["lance","bypass","cutter"].includes(w.rid)) ejectCasingLimited(this, `${i}:${w.rid}`, ox, oy, base + aimRel, this.t, p.vx, p.vy);
+        else {
+          const kind = w.rid === "rail" ? "core" : ["hmg","pulse","venom","acid"].includes(w.rid) ? "small" : "shell";
+          ejectCasing(this, ox, oy, base + aimRel, this.t, kind, p.vx, p.vy);
+        }
       }
     });
   }
