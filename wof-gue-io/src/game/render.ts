@@ -1,3 +1,5 @@
+import {liberationFormationSeconds} from './peoples-liberation';
+import {drawPeoplesLiberation,drawLiberationChains,drawLiberationRupture} from './peoples-liberation-render';
 import { scanPartIndex, scanHighlight, scanFlashDuration, type TargetScan } from "./target-scan";
 import { CHAIRMAN_SHIELD_MAX, chairmanDronePosition, chairmanDroneVisualPosition, chairmanArmourDronePosition, chairmanHaloCenter } from "./chairman";
 import { plateHitIntensity } from "./plate-impact";
@@ -260,7 +262,10 @@ export function render(g: Game, ctx: CanvasRenderingContext2D) {
   for (const e of g.enemies) {
     if (e.x + e.radius < vx0 || e.x - e.radius > vx1 || e.y + e.radius < vy0 || e.y - e.radius > vy1) continue;
     drawEnemy(g, ctx, e, z, t);
+    const freeze=g.liberationFreezeVisual(e);if(freeze>0)drawLiberationChains(ctx,e.x,e.y,e.radius,freeze,t,z);
   }
+
+  for(const rupture of g.liberationRuptures)drawLiberationRupture(ctx,rupture,t,z);
 
   /* ---- open domains: the moth's dark moon arena (a JJK-style void) ---- */
   for (const e of g.enemies) {
@@ -698,7 +703,16 @@ export function render(g: Game, ctx: CanvasRenderingContext2D) {
   }
 
   /* ---- player ---- */
-  if (!pl.dead) { drawPlayer(g, ctx, z, t); if (g.stats.cannonId === "chairman") drawChairman(g, ctx, z, t); }
+  if (!pl.dead) {
+    drawPlayer(g, ctx, z, t);
+    if (g.stats.cannonId === "chairman") drawChairman(g, ctx, z, t);
+    if(g.stats.cannonId==='peoples-liberation' && g.liberation){
+      const state=g.liberation,target=g.enemies.find(e=>e.id===state.lockEnemy&&!e.dead);
+      drawPeoplesLiberation(ctx,state,pl.x,pl.y,t,z,Math.max(g.w,g.h)/z,target?{x:target.x,y:target.y,radius:target.radius}:null,liberationFormationSeconds(g.cannonViewLevels('peoples-liberation')));
+      const scan=g.enemies.find(e=>e.id===state.scanEnemy&&!e.dead);
+      if(scan && state.scanParts.length){const i=Math.min(state.scanParts.length-1,Math.floor(state.scanElapsed/Math.max(.001,state.scanDuration)*state.scanParts.length));const part=scan.parts.find(q=>q.id===state.scanParts[i]);if(part){const [sx,sy]=pw(scan,part);ctx.save();ctx.strokeStyle='#ff5265';ctx.fillStyle='#ffb9b0';ctx.lineWidth=2/z;ctx.beginPath();ctx.moveTo(pl.x,pl.y);ctx.lineTo(sx,sy);ctx.stroke();ctx.beginPath();ctx.arc(sx,sy,6/z,0,TAU);ctx.fill();ctx.restore();}}
+    }
+  }
 
   /* ---- particles ----
    * Small sparks are point sprites: one fillRect each, no path construction.
@@ -1843,7 +1857,7 @@ function drawPlayer(g: Game, ctx: CanvasRenderingContext2D, z: number, t: number
     ctx.restore(); ctx.shadowBlur = 0;
   }
   drawShipShape(ctx, p.flash > 0 ? "#ff6b81" : "#7df9ff", 1, z, t);
-  drawCannon(g, ctx, z, t);
+  if(st.cannonId!=="peoples-liberation")drawCannon(g, ctx, z, t);
   if (st.cannonId === "mediator" && p.charging && p.charge > 0) {
     // Converging segmented rings and orbiting sparks build into a sharp core.
     const q = clamp(p.charge, 0, 1), mx = st.muzzles[0]?.x ?? 44;
@@ -1900,7 +1914,7 @@ function drawPlayer(g: Game, ctx: CanvasRenderingContext2D, z: number, t: number
   ctx.restore();
 
   // The shield is invisible until struck; impacts reveal local honeycomb cells.
- drawShieldImpacts(ctx, p, p.x, p.y, t, 8, st.cannonId === "chairman" ? "#ff344a" : shield ? SHIELD_ART[shield.rid] ?? "#7df9ff" : "#7df9ff");
+ drawShieldImpacts(ctx, p, p.x, p.y, t, 8, (st.cannonId === "chairman" || st.cannonId === "peoples-liberation") ? "#ff344a" : shield ? SHIELD_ART[shield.rid] ?? "#7df9ff" : "#7df9ff");
   if (p.barrier > 0 && p.barrierMax > 0) {
     const f = p.barrier / p.barrierMax;
     ctx.strokeStyle = `rgba(120,220,255,${0.35 + 0.5 * f})`; ctx.lineWidth = 4 / z; ctx.shadowColor = "#4dd2ff"; ctx.shadowBlur = 16;

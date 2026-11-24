@@ -1,3 +1,8 @@
+## 0.3. v2.32.0 — People’s Liberation
+
+- Added the Tier 4 Chairman branch with 150 drones, shielded spear elites and four character effects.
+- The new chassis temporarily has no crafting cost; its Chairman prerequisite remains.
+
 ## 0.3. v2.31.13 — Base firing
 
 - Weapons can fire inside the base while its existing protection remains active.

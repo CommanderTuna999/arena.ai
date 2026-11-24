@@ -597,7 +597,7 @@ function Hangar({ game, hud, onClose }: { game: Game; hud: Hud; onClose: () => v
 /** The chassis as a side profile, drawn from the same `look` data the hull uses:
  *  fat bolt thrower, long lance, three spigots or a genuine twin. */
 function CannonIcon({ c, className }: { c: CannonDef; className?: string }) {
-  if (c.id === "chairman") return <svg viewBox="0 0 48 26" className={className} aria-hidden>
+  if (c.id === "chairman" || c.id === "peoples-liberation") return <svg viewBox="0 0 48 26" className={className} aria-hidden>
     <ellipse cx="24" cy="13" rx="22" ry="10" fill="none" stroke="#e82743" strokeWidth=".8"/>
     <ellipse cx="24" cy="13" rx="16" ry="7" fill="none" stroke="#ff6375" strokeWidth=".7"/>
     {Array.from({length: 10}, (_, i) => { const a=i*Math.PI*2/10; return <circle key={i} cx={24+21*Math.cos(a)} cy={13+9*Math.sin(a)} r="1.3" fill="#ff344a"/>; })}
@@ -677,6 +677,9 @@ function TrackIcon({ id, hue, className }: { id: CannonTrackId; hue: number; cla
     case "drones": return g(<><circle cx="10" cy="10" r="6" stroke={dim}/><circle cx="10" cy="4" r="2" fill={c}/><circle cx="5" cy="13" r="2" fill={c}/><circle cx="15" cy="13" r="2" fill={c}/></>);
     case "coreDmg": return g(<><circle cx="10" cy="10" r="5"/><path d="M10 2v16M2 10h16"/></>);
     case "orbChance": return g(<><circle cx="10" cy="10" r="5" fill={c} fillOpacity={0.4}/><path d="M10 1v3M10 16v3M1 10h3M16 10h3"/></>);
+    case "blastRarity": return g(<><path d="M10 1v18M1 10h18M4 4l12 12M16 4L4 16"/><circle cx="10" cy="10" r="4"/></>);
+    case "freezeDuration": return g(<><path d="M10 2v16M3 6l14 8M3 14l14-8"/><circle cx="10" cy="10" r="2"/></>);
+    case "activationSpeed": return g(<><path d="M3 4l5 6-5 6M10 4l5 6-5 6"/><path d="M17 3v14"/></>);
     case "orbRange": return g(<><circle cx="10" cy="10" r="3"/><circle cx="10" cy="10" r="7" stroke={dim}/></>);
   }
 }

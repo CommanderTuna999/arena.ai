@@ -1,0 +1,9 @@
+import assert from 'node:assert/strict';import {executeLiberationEffect,type LiberationEnemy} from './src/game/peoples-liberation-world';
+const enemies:LiberationEnemy[]=[{id:1,x:0,y:0,radius:20,tier:0,dead:false},{id:2,x:1590,y:0,radius:20,tier:3,dead:false},{id:3,x:0,y:100,radius:20,tier:4,dead:false},{id:4,x:0,y:200,radius:20,tier:5,dead:false},{id:5,x:0,y:300,radius:20,tier:6,dead:false},{id:6,x:1800,y:0,radius:20,tier:0,dead:false},{id:7,x:0,y:0,radius:1,tier:0,dead:true}];
+const actions:Array<[string,number,number?]>=[];const world={enemies:[...enemies,enemies[0]],freeze:(e:LiberationEnemy,n:number)=>actions.push(['freeze',e.id,n]),damageCore:(e:LiberationEnemy,n:number)=>actions.push(['damage',e.id,n]),destroyCore:(e:LiberationEnemy)=>actions.push(['destroy',e.id]),ripApart:(e:LiberationEnemy)=>actions.push(['rip',e.id])};
+assert.deepEqual(executeLiberationEffect(world,'定',0,0),[1,2,3,4,5]);assert.equal(actions.length,5);assert(actions.every(a=>a[0]==='freeze'&&a[2]===10));actions.length=0;
+executeLiberationEffect(world,'死',0,0,{coreDmg:10});assert.equal(actions.length,5);assert(actions.every(a=>a[0]==='damage'&&a[2]===777_000_000*8.5));actions.length=0;
+assert.deepEqual(executeLiberationEffect(world,'爆',0,0),[1,2]);assert.deepEqual(actions,[['destroy',1],['destroy',2]]);actions.length=0;
+assert.deepEqual(executeLiberationEffect(world,'爆',0,0,{blastRarity:2,orbRange:2}),[1,2,3,4,6]);actions.length=0;
+assert.deepEqual(executeLiberationEffect(world,'天',0,0),[1,2,3,4,5]);assert.equal(actions.length,10);for(let i=0;i<actions.length;i+=2){assert.equal(actions[i][0],'rip');assert.equal(actions[i+1][0],'destroy');assert.equal(actions[i][1],actions[i+1][1]);}actions.length=0;
+assert.throws(()=>executeLiberationEffect(world,'天',NaN,0));console.log('Four Liberation effects respect radius, rarity, core damage and one action per enemy');

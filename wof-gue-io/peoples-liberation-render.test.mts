@@ -1,0 +1,9 @@
+import assert from 'node:assert/strict';
+import {createLiberation,beginLiberationSun,tickLiberation} from './src/game/peoples-liberation';
+import {drawPeoplesLiberation,liberationCharacterPoints,drawLiberationChains} from './src/game/peoples-liberation-render';
+for(const glyph of ['定','死','爆','天'] as const){const points=liberationCharacterPoints(glyph,150);assert.equal(points.length,150);assert(points.every(([x,y])=>Number.isFinite(x)&&Number.isFinite(y)&&Math.abs(x)<=1&&Math.abs(y)<=1));assert(new Set(points.map(p=>p.join(','))).size>140);}
+assert.throws(()=>liberationCharacterPoints('定',1001));
+const operations=new Map<string,number>(),gradient={addColorStop(){}};const ctx:any=new Proxy({createRadialGradient:()=>gradient},{get:(t,k)=>k in t?(t as any)[k]:(..._args:any[])=>operations.set(String(k),(operations.get(String(k))??0)+1),set:(t,k,v)=>{(t as any)[k]=v;return true}});
+const s=createLiberation();drawPeoplesLiberation(ctx,s,0,0,1,1,1200);assert((operations.get('arc')??0)>160);assert((operations.get('lineTo')??0)>500,'individual turrets and elites are drawn');
+for(const value of [.05,.35,.65,.95]){const state=createLiberation();state.drones.fill(false);assert(beginLiberationSun(state,{},()=>value));for(let i=0;i<19;i++){tickLiberation(state,.2,100);drawPeoplesLiberation(ctx,state,20,30,i*.2,1,1200);}}
+drawLiberationChains(ctx,0,0,120,.5,2,1);const locked=createLiberation();locked.lockEnemy=1;drawPeoplesLiberation(ctx,locked,0,0,1,1,1200,{x:200,y:200,radius:40});assert.throws(()=>liberationCharacterPoints('定',-1));console.log('People’s Liberation vector formation, turret paths and all four glyph render states execute');

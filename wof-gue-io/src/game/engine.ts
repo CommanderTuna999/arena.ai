@@ -1,3 +1,6 @@
+import type {LiberationRupture} from './peoples-liberation-render';
+import { createLiberation, tickLiberation, moveLiberationHalos, beginLiberationSun, beginLiberationScan, finishLiberationScan, chooseLiberationLinks, spendLiberationLinks, absorbLiberationHit, disperseLiberationArmour, liberationDronePosition, liberationElitePosition, type LiberationState, type LiberationLevels, LIBERATION_DOME_MAX } from './peoples-liberation';
+import {executeLiberationEffect} from './peoples-liberation-world';
 import { createTargetScan, type TargetScan } from "./target-scan";
 import { CHAIRMAN_SHIELD_MAX, spendChairmanDrone, launchChairmanDrone, updateChairmanSwarm, disperseChairmanArmour, damageChairmanArmour, chairmanDronePosition, moveChairmanHalos, chairmanDroneCount, chairmanOrbChance, chairmanOrbRadius, chairmanOrbDamage, chairmanCoreMul, createChairman, syncChairman, tickChairman, type ChairmanState } from "./chairman";
 import { rollComponentTiers } from "./drop-roll";
@@ -400,6 +403,11 @@ export class Game {
   mapMode: 0 | 1 | 2 = 2; // full minimap, expanded map, local minimap
   mapAnimation = { size: 0, x: 0, y: 0, scale: 1, focusX: 0, focusY: 0, last: 0 };
   t = 0;
+  liberation:LiberationState|null=null;
+  liberationRuptures:LiberationRupture[]=[];
+  private liberationFreezes=new WeakMap<Enemy,{start:number;until:number}>();
+  liberationFreezeVisual(e:Enemy){const f=this.liberationFreezes.get(e);return f && this.t<f.until?Math.max(0,1-(this.t-f.start)/1.7):0;}
+
   rev = 0;
   fps = 60;
   input = { keys: new Set<string>(), mx: 0, my: 0, lmb: false, rHold: 0 };
@@ -505,6 +513,7 @@ export class Game {
       barrier: 0, barrierMax: 0, barrierT: 0, overT: 0, nullCd: 0,
     };
     if (this.stats.cannonId === "chairman") this.chairman = createChairman();
+    if (this.stats.cannonId === "peoples-liberation") this.liberation = createLiberation(this.cannonViewLevels("peoples-liberation"));
     this.autoFire = save.autoFire !== false;
     this.syncHarpoons();
     this.cam.x = this.player.x;
@@ -658,6 +667,12 @@ export class Game {
     this.stats = computeStats(temporary ? { ...this.save, cannon: { ...this.save.cannon, id: temporary, lv: { ...this.save.cannon.lv, [temporary]: this.adminCannonLevels[temporary] ?? {} } } } : this.save);
     if (this.admin.on) this.stats.hull *= this.adminHealthMultiplier;
     const p = this.player;
+    if(this.stats.cannonId==='peoples-liberation'){
+      this.liberation ??= createLiberation(this.cannonViewLevels('peoples-liberation'));
+      const count=150+Math.max(0,Math.min(15,this.cannonViewLevels('peoples-liberation').drones??0));
+      while(this.liberation.drones.length<count)this.liberation.drones.push(this.liberation.stage==='idle');
+      this.liberation.drones.length=count;
+    } else this.liberation=null;
     if (this.stats.cannonId === "chairman") { this.chairman ??= createChairman(); syncChairman(this.chairman, chairmanDroneCount(this.cannonViewLevels("chairman").drones ?? 0)); }
     else if (this.chairman) { this.chairman.scan = null; this.chairman.charge = 0; }
     if (this.stats.hull !== old.hull) p.hp = Math.min(this.stats.hull, p.hp + Math.max(0, this.stats.hull - old.hull));
@@ -961,7 +976,8 @@ export class Game {
   keyUp(code: string) { this.input.keys.delete(code); }
   mouseDown(btn: number) {
     if (btn === 0) {
-      if (!this.input.lmb && !this.disperseChairman()) this.requestChairmanSun();
+      if (!this.input.lmb && this.liberation && this.stats.cannonId==='peoples-liberation') disperseLiberationArmour(this.liberation);
+      else if (!this.input.lmb && !this.disperseChairman()) this.requestChairmanSun();
       this.input.lmb = true;
     }
     if (btn !== 2) return;
@@ -2185,6 +2201,12 @@ export class Game {
     let d = dmg * (1 - st.armor) * (1 - st.reactive);
     if (st.kinetic > 0 && p.shield > 0 && !o.energy) d *= 1 - st.kinetic;
     p.hitT = 0; p.shieldT = st.shieldDelay;
+    if(st.cannonId==='peoples-liberation' && d>0){
+      this.liberation ??= createLiberation(this.cannonViewLevels('peoples-liberation'));
+      const remaining=absorbLiberationHit(this.liberation,d);const ang=(o.kbx||o.kby)?Math.atan2(-(o.kby??0),-(o.kbx??0)):p.a+Math.PI;
+      if(remaining<d)recordShieldImpact(p,Math.cos(ang)*(SHIP_R+42),Math.sin(ang)*(SHIP_R+42),this.t);
+      d=remaining;if(d<=0)return;
+    }
     // Each lit drone absorbs one entire damage instance, independently of
     // damage size or dome capacity. Only a sun blast starts recharge.
     if (st.cannonId === "chairman" && d > 0) {
@@ -2257,6 +2279,7 @@ export class Game {
   }
   private respawnPlayer() {
     const p = this.player;
+    if(this.stats.cannonId==='peoples-liberation')this.liberation=createLiberation(this.cannonViewLevels('peoples-liberation'));
     if (this.stats.cannonId === "chairman") { this.chairman = createChairman(); syncChairman(this.chairman, chairmanDroneCount(this.cannonViewLevels("chairman").drones ?? 0)); }
     p.dead = false; p.x = BASE.x; p.y = BASE.y - 180; p.vx = p.vy = 0; p.hp = this.stats.hull; p.shield = this.stats.shieldMax;
     p.poison = 0; p.slowT = 0; p.stingDots = []; p.pull = null;
@@ -2922,6 +2945,7 @@ export class Game {
   }
 
   private updateEnemy(e: Enemy, dt: number, dx: number, dy: number, dist: number) {
+    const frozen=this.liberationFreezes.get(e);if(frozen && this.t<frozen.until){e.vx=0;e.vy=0;return;}
     const p = this.player;
     for (const q of e.parts) { if (q.hurt > 0) q.hurt -= dt; if (q.barT > 0) q.barT -= dt; }
     if (e.barT > 0) e.barT -= dt;
@@ -3658,8 +3682,52 @@ export class Game {
     }
     this.fireWeapons(dt,p.a);
   }
+  /** Main-game People’s Liberation state: all damage is applied by this Game,
+   * not by the visual layer or by client-submitted effect descriptions. */
+  private fireLiberation(dt:number,want:boolean){
+    const p=this.player,st=this.stats,lv=this.cannonViewLevels('peoples-liberation') as LiberationLevels;
+    const cs=this.liberation ??= createLiberation(lv);
+    if(cs.scanEnemy!==null && cs.scanElapsed>=cs.scanDuration){const enemy=this.enemies.find(e=>e.id===cs.scanEnemy&&!e.dead&&e.parts[e.coreId]?.alive);finishLiberationScan(cs,!!enemy);}
+    const locked=this.enemies.find(e=>e.id===cs.lockEnemy&&!e.dead&&e.parts[e.coreId]?.alive);
+    if(cs.lockEnemy!==null && !locked)cs.lockEnemy=null;
+    if(cs.stage==='idle' && locked){
+      cs.elitesClock-=dt;
+      if(cs.elitesClock<=0){cs.elitesClock=.7;
+        for(let i=0;i<15&&!locked.dead;i++){
+          if(!cs.drones[i])continue;
+          const core=locked.parts[locked.coreId];if(!core?.alive)break;
+          const [ex,ey]=liberationElitePosition(i,cs.phase*.7,locked.x,locked.y,Math.max(48,locked.radius+34));
+          const [cx,cy]=this.partWorld(locked,core);this.beams.push({x1:ex,y1:ey,x2:cx,y2:cy,color:'#ff344a',width:2,life:.12});
+          const critical=st.crit>0&&Math.random()<st.crit;this.damagePart(locked,core,st.dmg*(1+.75*(lv.coreDmg??0))*(critical?st.critMul:1)*this.dmgMul(),cx,cy,'laser',false,critical);
+        }
+      }
+    }
+    if(cs.stage!=='idle'||p.fireCd>0||p.jam>0)return;
+    const [mx,my]=this.mouseWorld();let target:Enemy|null=null;
+    if(want)for(const e of this.enemies){if(e.dead || !e.parts[e.coreId]?.alive)continue;const dx=mx-e.x,dy=my-e.y;if(dx*dx+dy*dy>(e.radius+30)**2)continue;const ca=Math.cos(e.a),sa=Math.sin(e.a);if(this.partAt(e,dx*ca+dy*sa,-dx*sa+dy*ca)){target=e;break;}}
+    if(!want && this.autoFire){let best=st.bulletRange*st.bulletRange;for(const e of this.enemies){if(e.dead||!e.parts[e.coreId]?.alive)continue;const d=(e.x-p.x)**2+(e.y-p.y)**2;if(d<=best){best=d;target=e;}}}
+    if(!want && !target)return;
+    if(!cs.drones.some(Boolean)){beginLiberationSun(cs,lv,Math.random,true);p.fireCd=1/st.rate;return;}
+    const links=chooseLiberationLinks(cs);if(!spendLiberationLinks(cs,links))return;
+    if(target && want)beginLiberationScan(cs,target.id,target.parts,Math.min(1,Math.max(.2,1/st.rate*.8)));
+    let tx=mx,ty=my;if(!want && target)[tx,ty]=this.partWorld(target,target.parts[target.coreId]);
+    const angle=Math.atan2(ty-p.y,tx-p.x),crit=st.crit>0&&Math.random()<st.crit;
+    const damage=st.dmg*links.length*(crit?st.critMul:1)*this.dmgMul();
+    this.beam(p.x,p.y,angle,st.bulletRange,damage,st.pierce,false,'laser','#ff344a',3,1,crit,false,true,1+.75*(lv.coreDmg??0));
+    ejectCasing(this,p.x,p.y,angle,this.t,'core',p.vx,p.vy,'peoples-liberation');
+    p.fireCd=1/st.rate;this.shake=Math.max(this.shake,9);
+    beginLiberationSun(cs,lv,Math.random,!cs.drones.some(Boolean));
+  }
+  private tickLiberationWorld(dt:number){
+    const cs=this.liberation;if(!cs)return;const p=this.player,lv=this.cannonViewLevels('peoples-liberation') as LiberationLevels;
+    moveLiberationHalos(cs,dt,p.x,p.y);const previousStage=cs.stage;const result=tickLiberation(cs,dt,this.stats.hull,lv);if(previousStage!=='slamming' && cs.stage==='slamming'){this.shake=Math.max(this.shake,40);this.burst(p.x,p.y,'#ff4755',30,10,700);}if(!result)return;
+    const coreHit=(e:Enemy,amount:number)=>{const core=e.parts[e.coreId];if(!core?.alive)return;const [x,y]=this.partWorld(e,core);this.damagePart(e,core,amount,x,y,'laser');};
+    executeLiberationEffect({enemies:this.enemies,freeze:(e:Enemy,seconds:number)=>{const old=this.liberationFreezes.get(e);this.liberationFreezes.set(e,{start:this.t,until:Math.max(old?.until??0,this.t+seconds)});e.vx=0;e.vy=0;},damageCore:coreHit,destroyCore:(e:Enemy)=>coreHit(e,Infinity),ripApart:(e:Enemy)=>{this.liberationRuptures=this.liberationRuptures.filter(r=>this.t-r.started<1.3);this.liberationRuptures.push({x:e.x,y:e.y,angle:e.a,started:this.t,parts:e.parts.filter(part=>part.alive).slice(0,120).map(part=>({poly:[...part.poly],cx:part.cx,cy:part.cy}))});if(this.liberationRuptures.length>32)this.liberationRuptures.shift();this.burst(e.x,e.y,'#ffdb64',24,10,420);this.ringFx(e.x,e.y,e.radius*1.5,'#ffda65',1000);}},result,p.x,p.y,lv,(this.stats.crit>0&&Math.random()<this.stats.crit?this.stats.critMul:1)*this.dmgMul());
+    this.shake=Math.max(this.shake,35);this.ringFx(p.x,p.y,1600,result==='天'?'#ffdf72':'#ff283e',1800);
+  }
   private firePlayer(dt: number) {
     const p = this.player, st = this.stats;
+    if(st.cannonId==='peoples-liberation'&&!p.dead){this.liberation ??= createLiberation(this.cannonViewLevels('peoples-liberation'));this.tickLiberationWorld(dt);}
     if (st.cannonId === "chairman" && !p.dead) { this.chairman ??= createChairman(); tickChairman(this.chairman,dt); moveChairmanHalos(this.chairman,dt,p.x,p.y); updateChairmanSwarm(this.chairman,dt,p.x,p.y,st.hull); }
     if (p.dead) { if (this.chairman) { this.chairman.scan = null; this.chairman.charge = 0; } this.revolutionaryScan = null; this.mediatorBeamTime = 0; this.fencerCharge = 0; return; }
     if (p.pull?.e.act?.def.type === "grab" && p.pull.e.act.ph === 1) {
@@ -3693,6 +3761,7 @@ export class Game {
     const rapid = st.cannonId === "peashooter2" || st.cannonId === "gatler";
     if (rapid && p.fireCd < 0) p.fireCd = 0;
     p.fireCd -= fireDt;
+    if(st.cannonId==='peoples-liberation'){this.revolutionaryScan=null;this.fireLiberation(dt,want);this.fireWeapons(dt,p.a);return;}
     if (st.cannonId === "chairman") { this.revolutionaryScan = null; this.fireChairman(dt,want); return; }
     let revolutionReady = false;
     let revolutionTarget: Enemy | null = null;
@@ -4765,7 +4834,7 @@ export class Game {
   hud(): Hud {
     const p = this.player, st = this.stats;
     return {
-      hp: p.hp, maxHp: st.hull, shield: p.shield, maxShield: st.shieldMax, chairmanShield: st.cannonId === "chairman" ? this.chairman?.shield ?? CHAIRMAN_SHIELD_MAX : 0, chairmanShieldMax: st.cannonId === "chairman" ? CHAIRMAN_SHIELD_MAX : 0, chairmanArmour: st.cannonId === "chairman" && this.chairman?.armourActive ? this.chairman.armour : 0, chairmanArmourMax: st.cannonId === "chairman" && this.chairman?.armourActive ? this.chairman.armourMax : 0, chairmanArmourReady: st.cannonId === "chairman" && !!this.chairman?.armourActive && this.chairman.armourBlend>=1 && !this.chairman.armourDispersing && this.chairman.reload<=0 && this.chairman.drones.every(x=>x<=0), boost: p.boost, hasBoost: st.hasBoost, credits: this.save.credits, creditTick: this.creditTick,
+      hp: p.hp, maxHp: st.hull, shield: p.shield, maxShield: st.shieldMax, chairmanShield: st.cannonId === "peoples-liberation" ? this.liberation?.dome ?? LIBERATION_DOME_MAX : st.cannonId === "chairman" ? this.chairman?.shield ?? CHAIRMAN_SHIELD_MAX : 0, chairmanShieldMax: st.cannonId === "peoples-liberation" ? LIBERATION_DOME_MAX : st.cannonId === "chairman" ? CHAIRMAN_SHIELD_MAX : 0, chairmanArmour: st.cannonId === "peoples-liberation" ? this.liberation?.armour ?? 0 : st.cannonId === "chairman" && this.chairman?.armourActive ? this.chairman.armour : 0, chairmanArmourMax: st.cannonId === "peoples-liberation" ? this.liberation?.armourMax ?? 0 : st.cannonId === "chairman" && this.chairman?.armourActive ? this.chairman.armourMax : 0, chairmanArmourReady: st.cannonId === 'peoples-liberation' ? !!this.liberation && this.liberation.stage==='armour' && this.liberation.drones.every(Boolean) : st.cannonId === "chairman" && !!this.chairman?.armourActive && this.chairman.armourBlend>=1 && !this.chairman.armourDispersing && this.chairman.reload<=0 && this.chairman.drones.every(x=>x<=0), boost: p.boost, hasBoost: st.hasBoost, credits: this.save.credits, creditTick: this.creditTick,
       creditPop: { v: this.creditPopValue, s: this.creditPopScale },
       harp: this.harpoons.map((h) => ({ state: h.state, load: h.comp ? h.comp.c.mass / (h.comp.hooks.length * st.hStr) : 0, hp: h.hp / h.maxHp })),
       toasts: [...this.toasts], ultraNotices: [...this.ultraNotices], nearBase: this.nearBase(),

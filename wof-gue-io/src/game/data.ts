@@ -149,7 +149,7 @@ export const UPGRADE_BY_ID: Record<string, UpgradeDef> = Object.fromEntries(UPGR
  * Chassis prices are paid twice over — credits and a component bill. Tier 1 guns ask
  * for a handful of common parts of a named kind plus one uncommon core, so the hull
  * you scrap for a new gun is a shopping list, not a pile. */
-export type CannonTrackId = "dmg" | "rate" | "crit" | "critDmg" | "pen" | "acc" | "spread" | "speed" | "barrels" | "armorDmg" | "energyChance" | "chargeRate" | "beamWidth" | "drones" | "coreDmg" | "orbChance" | "orbRange";
+export type CannonTrackId = "dmg" | "rate" | "crit" | "critDmg" | "pen" | "acc" | "spread" | "speed" | "barrels" | "armorDmg" | "energyChance" | "chargeRate" | "beamWidth" | "drones" | "coreDmg" | "orbChance" | "orbRange" | "blastRarity" | "freezeDuration" | "activationSpeed";
 
 export interface CannonTrack {
   id: CannonTrackId;
@@ -337,6 +337,14 @@ export const CANNONS: CannonDef[] = [
     muzzles:[{x:0,y:0}],kick:0,heat:0,look:{len:20,bore:8,hue:0,style:"bolt"},
   },
   {
+    id:"peoples-liberation",name:"People’s Liberation",tier:4,
+    desc:"The people, and the people alone, are the motive force in the making of world history.",
+    dmg:7000000,interval:2,speed:0,range:3200,hitscan:true,
+    credits:0,parts:[],requires:"chairman",costMul:5,
+    tracks:["dmg","rate","pen","drones","crit","critDmg","coreDmg","orbChance","orbRange","blastRarity","freezeDuration","activationSpeed"],
+    muzzles:[{x:0,y:0}],kick:0,heat:0,look:{len:20,bore:8,hue:0,style:"bolt"},
+  },
+  {
     id: "peashooter2", name: "Peashooter MK2", tier: 2,
     desc: "Spray and pray, now with more barrels.",
     dmg: 80, interval: 0.03, speed: 1150, range: 1050, spread: 0.36,
@@ -456,11 +464,14 @@ export const CANNON_TRACKS: CannonTrack[] = [
   {id:"coreDmg",name:"Extra Core Damage",desc:"Increases damage against cores up to +750%.",max:10,base:12000,growth:1.5},
   {id:"orbChance",name:"Orb Fire Chance",desc:"Raises orb fire chance from 5% to 15%.",max:10,base:12000,growth:1.5},
   {id:"orbRange",name:"Orb Fire Range",desc:"Increases the orb blast radius by 10% per level.",max:10,base:10000,growth:1.5},
+  {id:"blastRarity",name:"爆 Max Rarity",desc:"Extends core explosions from Epic to Legendary and Mythical.",max:2,base:30000,growth:2},
+  {id:"freezeDuration",name:"定 Duration",desc:"Extends the freeze by one second per level.",max:10,base:12000,growth:1.5},
+  {id:"activationSpeed",name:"Character Activation Speed",desc:"Speeds up character formation.",max:10,base:12000,growth:1.5},
 ];
 export const CANNON_TRACK_BY_ID: Record<string, CannonTrack> = Object.fromEntries(CANNON_TRACKS.map((t) => [t.id, t]));
 /** the tracks a chassis actually carries, in display order */
 export const cannonTracks = (c: CannonDef): CannonTrack[] =>
-  c.tracks.map((id) => id === "barrels" && c.id === "peashooter2" ? { ...CANNON_TRACK_BY_ID[id], desc: "Adds a fourth rotating barrel; shots alternate between the barrels." } : CANNON_TRACK_BY_ID[id]).filter((t): t is CannonTrack => !!t);
+  c.tracks.map((id) => c.id === "peoples-liberation" && id === "drones" ? {...CANNON_TRACK_BY_ID[id],desc:"Adds one drone and raises 天 chance by 2 percentage points per level."} : c.id === "peoples-liberation" && id === "orbChance" ? {...CANNON_TRACK_BY_ID[id],desc:"Raises activation chance from 30% to 75%."} : id === "barrels" && c.id === "peashooter2" ? { ...CANNON_TRACK_BY_ID[id], desc: "Adds a fourth rotating barrel; shots alternate between the barrels." } : CANNON_TRACK_BY_ID[id]).filter((t): t is CannonTrack => !!t);
 
 export const cannonTrackCost = (c: CannonDef, t: CannonTrack, level: number) =>
   Math.round(t.base * Math.pow(t.growth, level) * c.costMul);
@@ -521,10 +532,13 @@ export function cannonTrackValue(c: CannonDef, id: CannonTrackId, level: number)
     case "energyChance": return `${Math.round(cannonEnergyChance(one) * 100)}% energy shot`;
     case "chargeRate": return `${(70 / cannonChargeRate(one)).toFixed(0)}s to full`;
     case "beamWidth": return `${cannonBeamWidth(one).toFixed(2)}x wide`;
-    case "drones": return `${15 + level} drones · +${level * 10}% orb dmg`;
+    case "drones": return c.id === "peoples-liberation" ? `${150+level} drones · ${10+level*2}% 天` : `${15 + level} drones · +${level * 10}% orb dmg`;
     case "coreDmg": return `+${Math.round(level * 75)}% vs core`;
-    case "orbChance": return `${5 + level}% orb chance`;
+    case "orbChance": return c.id === "peoples-liberation" ? `${30 + level*4.5}% activation` : `${5 + level}% orb chance`;
     case "orbRange": return `${Math.round(1600 * (1 + .1 * level))} range`;
+    case "blastRarity": return ["Epic", "Legendary", "Mythical"][Math.min(2,level)];
+    case "freezeDuration": return `${10+level}s freeze`;
+    case "activationSpeed": return `${(2/(1+.05*level)).toFixed(2)}s formation`;
 
   }
 }
