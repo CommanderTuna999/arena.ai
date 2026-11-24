@@ -1,7 +1,7 @@
 /** State, balance and geometry for the Tier 4 People's Liberation cannon.
  * World damage and rendering are delegated to their respective adapters. */
 export type LiberationCharacter = '定'|'死'|'爆'|'天';
-export type LiberationStage = 'idle'|'forming'|'brightening'|'slamming'|'expanding'|'armour'|'dispersing';
+export type LiberationStage = 'idle'|'forming'|'brightening'|'slamming'|'expanding'|'recharging';
 export const LIBERATION_BASE_DRONES=150;
 export const LIBERATION_ELITES=15;
 export const LIBERATION_DRONE_DAMAGE=7_000_000;
@@ -10,13 +10,13 @@ export const LIBERATION_ORB_DAMAGE=777_000_000;
 export const LIBERATION_DOME_MAX=15_000;
 export const LIBERATION_INTERVAL=2;
 export const LIBERATION_BASE_RANGE=1600;
-export const LIBERATION_ARMOUR_RECHARGE=5;
+export const LIBERATION_RECHARGE_SECONDS=5;
 
 export type LiberationLevels={drones?:number;orbChance?:number;orbRange?:number;blastRarity?:number;freezeDuration?:number;activationSpeed?:number;dmg?:number;coreDmg?:number};
 export type LiberationState={
   drones:boolean[]; // true = ready; false = exhausted
   phase:number; haloCenters:{x:number;y:number}[]|null; lastHaloPlayer:{x:number;y:number}|null; stage:LiberationStage; elapsed:number; selected:LiberationCharacter|null;
-  dome:number; domeDelay:number; armour:number; armourMax:number; armourLostPieces:number; recharge:number;
+  dome:number; domeDelay:number; recharge:number; eliteApproach:number;
   lockEnemy:number|null; scanEnemy:number|null; scanElapsed:number; scanDuration:number; scanParts:number[];
   links:number[]; linkFlash:number; elitesClock:number; activationSerial:number;
 };
@@ -44,7 +44,7 @@ export const liberationCoreMultiplier=(lv:LiberationLevels={})=>1+.75*level(lv.c
 export const liberationFormationSeconds=(lv:LiberationLevels={})=>2/(1+.05*level(lv.activationSpeed,10));
 export function createLiberation(lv:LiberationLevels={}):LiberationState{return {
  drones:Array(liberationDroneCount(lv)).fill(true),phase:0,haloCenters:null,lastHaloPlayer:null,stage:'idle',elapsed:0,selected:null,
- dome:LIBERATION_DOME_MAX,domeDelay:0,armour:0,armourMax:0,armourLostPieces:0,recharge:0,
+ dome:LIBERATION_DOME_MAX,domeDelay:0,recharge:0,eliteApproach:0,
  lockEnemy:null,scanEnemy:null,scanElapsed:0,scanDuration:0,scanParts:[],links:[],linkFlash:0,elitesClock:0,activationSerial:0,
 };}
 /** Read-only ordered links chosen from ready drones, without duplicates.
@@ -63,27 +63,18 @@ export function spendLiberationLinks(state:LiberationState,links:readonly number
 /** A single incoming instance consumes one ready drone, regardless of size. */
 export function absorbLiberationHit(state:LiberationState,damage:number,rng:()=>number=Math.random):number{
  if(!Number.isFinite(damage)||damage<=0)return 0;
- if(state.stage!=='armour'&&state.stage!=='dispersing'){
-  const available=state.drones.flatMap((ready,i)=>ready?[i]:[]);
-  if(available.length){state.drones[available[Math.floor(sample(rng)*available.length)]]=false;return 0;}
- }
+ const available=state.drones.flatMap((ready,i)=>ready?[i]:[]);
+ if(available.length){state.drones[available[Math.floor(sample(rng)*available.length)]]=false;return 0;}
  let remaining=damage;
- if((state.stage==='armour'||state.stage==='dispersing')&&state.armour>0){
-  const n=Math.min(state.armour,remaining);state.armour-=n;remaining-=n;
-  const lost=state.armourMax>0?Math.min(state.drones.length,Math.floor((state.armourMax-state.armour)/state.armourMax*state.drones.length+1e-9)):0;
-  for(let i=state.armourLostPieces;i<lost;i++)state.drones[i]=false;
-  if(lost>state.armourLostPieces){state.recharge=0;if(state.stage==='dispersing'){state.stage='armour';state.elapsed=2;}}
-  state.armourLostPieces=lost;
- }
  if(state.dome>0&&remaining>0){const n=Math.min(state.dome,remaining);state.dome-=n;remaining-=n;state.domeDelay=4;}
  return remaining;
 }
 /** Activation may be rolled per shot or forced by a fully dark swarm. Once
- * started it cannot retrigger until the post-sun armour is dispersed. */
+ * started it cannot retrigger until the post-sun recharge has completed. */
 export function beginLiberationSun(state:LiberationState,lv:LiberationLevels={},rng:()=>number=Math.random,force=false):boolean{
  if(state.stage!=='idle')return false;
  if(!force&&state.drones.some(Boolean)&&sample(rng)>=liberationOrbChance(lv))return false;
- state.selected=chooseLiberationCharacter(lv,rng);state.stage='forming';state.elapsed=0;state.scanEnemy=null;state.lockEnemy=null;state.links=[];return true;
+ state.selected=chooseLiberationCharacter(lv,rng);state.stage='forming';state.elapsed=0;state.links=[];return true;
 }
 /** Advance one bounded frame. Returns the selected world effect exactly once;
  * the caller owns damage, freeze, targeting, visibility and authoritative RNG. */
@@ -91,25 +82,22 @@ export function tickLiberation(state:LiberationState,dt:number,hullMax:number,lv
  if(!Number.isFinite(dt)||dt<0||dt>.25||!Number.isFinite(hullMax)||hullMax<0)throw Error('Invalid Liberation frame');
  state.phase+=dt*(state.stage==='forming'||state.stage==='brightening'?3:1.5);state.linkFlash=Math.max(0,state.linkFlash-dt);
  state.domeDelay=Math.max(0,state.domeDelay-dt);if(!state.domeDelay)state.dome=Math.min(LIBERATION_DOME_MAX,state.dome+50*dt);
- if(state.stage==='idle'){if(state.scanEnemy!==null)state.scanElapsed+=dt;return null;}
+ if(state.scanEnemy!==null)state.scanElapsed+=dt;
+ if(state.stage==='idle')return null;
  state.elapsed+=dt;
  if(state.stage==='forming'&&state.elapsed>=liberationFormationSeconds(lv)){state.stage='brightening';state.elapsed=0;}
  else if(state.stage==='brightening'&&state.elapsed>=1){state.stage='slamming';state.elapsed=0;}
  else if(state.stage==='slamming'&&state.elapsed>=.3){state.stage='expanding';state.elapsed=0;}
  else if(state.stage==='expanding'&&state.elapsed>=.45){
-  const effect=state.selected;state.stage='armour';state.elapsed=0;state.armourMax=hullMax*10;state.armour=state.armourMax;state.armourLostPieces=0;state.recharge=0;state.drones.fill(false);state.activationSerial++;return effect;
- } else if(state.stage==='armour'){
-  const previous=Math.floor(state.drones.length*state.recharge/LIBERATION_ARMOUR_RECHARGE+1e-9);
-  state.recharge=Math.min(LIBERATION_ARMOUR_RECHARGE,state.recharge+dt);
-  const current=Math.floor(state.drones.length*state.recharge/LIBERATION_ARMOUR_RECHARGE+1e-9);
+  const effect=state.selected;state.stage='recharging';state.elapsed=0;state.recharge=0;state.drones.fill(false);state.activationSerial++;return effect;
+ } else if(state.stage==='recharging'){
+  const previous=Math.floor(state.drones.length*state.recharge/LIBERATION_RECHARGE_SECONDS+1e-9);
+  state.recharge=Math.min(LIBERATION_RECHARGE_SECONDS,state.recharge+dt);
+  const current=Math.floor(state.drones.length*state.recharge/LIBERATION_RECHARGE_SECONDS+1e-9);
   for(let i=previous;i<current;i++){const next=state.drones.indexOf(false);if(next<0)break;state.drones[next]=true;}
-  if(state.drones.every(Boolean))state.recharge=LIBERATION_ARMOUR_RECHARGE;
- } else if(state.stage==='dispersing'&&state.elapsed>=.8){state.stage='idle';state.elapsed=0;state.armour=0;state.armourMax=0;state.selected=null;}
+  if(state.recharge>=LIBERATION_RECHARGE_SECONDS){state.drones.fill(true);state.stage='idle';state.elapsed=0;state.selected=null;}
+ }
  return null;
-}
-export function disperseLiberationArmour(state:LiberationState):boolean{
- if(state.stage!=='armour'||state.recharge<LIBERATION_ARMOUR_RECHARGE||state.drones.some(ready=>!ready))return false;
- state.stage='dispersing';state.elapsed=0;return true;
 }
 /** Seven rotating halos with staggered tilt and trailing-center offsets; all
  * turrets and effects use the same world-space positions. */
@@ -131,7 +119,7 @@ export function beginLiberationScan(state:LiberationState,enemyId:number,parts:r
 }
 export function finishLiberationScan(state:LiberationState,targetAlive:boolean):boolean{
  if(state.scanEnemy===null||state.scanElapsed<state.scanDuration)return false;
- state.lockEnemy=targetAlive?state.scanEnemy:null;state.scanEnemy=null;state.scanParts=[];return targetAlive;
+ state.lockEnemy=targetAlive?state.scanEnemy:null;state.eliteApproach=0;state.elitesClock=0;state.scanEnemy=null;state.scanParts=[];return targetAlive;
 }
 export function liberationElitePosition(index:number,phase:number,x:number,y:number,radius:number):[number,number]{
  if(!Number.isSafeInteger(index)||index<0||index>=LIBERATION_ELITES)throw Error('Invalid elite index');

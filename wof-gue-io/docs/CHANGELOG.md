@@ -1,3 +1,8 @@
+## 0.3. v2.32.2 — Liberation elites
+
+- Removed post-sun drone armour; the swarm now recharges in orbit automatically.
+- Elite spear drones guard the player when unlocked, then travel to and repeatedly attack a scanned target’s core.
+
 ## 0.3. v2.32.1 — Liberation detail
 
 - Removed Liberation halo rings and redesigned drones with layered mechanical details.

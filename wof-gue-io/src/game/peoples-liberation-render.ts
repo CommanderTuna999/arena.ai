@@ -67,6 +67,12 @@ export function drawPeoplesLiberation(ctx:CanvasRenderingContext2D,s:LiberationS
  const expansion=expanding?1+smooth(s.elapsed/.45)*(Math.max(1,screenSpan/470)-1):1;
  const flare=bright?clamp(s.elapsed):slam||expanding?1:forming?.35*formation:0;
  const locked=!!target&&s.lockEnemy!==null;
+ const dronePosition=(i:number):Point=>{
+  const center=s.haloCenters?.[i%7]??{x,y};let [dx,dy]=liberationDronePosition(i,n,s.phase,center.x,center.y);
+  if(i<LIBERATION_ELITES&&!active){const a=i/LIBERATION_ELITES*Math.PI*2+s.phase*.12;dx=x+Math.cos(a)*72;dy=y+Math.sin(a)*72;
+   if(locked){const [ex,ey]=liberationElitePosition(i,s.phase*.7,target!.x,target!.y,Math.max(48,target!.radius+34)-Math.max(0,Math.sin(t*5+i*.5))*22);const q=smooth(s.eliteApproach);dx=mix(dx,ex,q);dy=mix(dy,ey,q);}}
+  return [dx,dy];
+ };
  ctx.save();ctx.lineCap='round';ctx.lineJoin='round';
  // Dome and inner energy core. Use a single translucent dome, never stacked
  // shield images, so impact detail can be composed by the caller.
@@ -81,7 +87,7 @@ export function drawPeoplesLiberation(ctx:CanvasRenderingContext2D,s:LiberationS
  // the shot. One chain, followed by the weapon beam in the world renderer.
  if(s.linkFlash>0&&s.links.length){
   const nodes:Point[]=[[x,y]];
-  for(const i of s.links){if(i<0||i>=n)continue;const center=s.haloCenters?.[i%7]??{x,y};nodes.push(liberationDronePosition(i,n,s.phase,center.x,center.y));}
+  for(const i of s.links){if(i<0||i>=n)continue;nodes.push(dronePosition(i));}
   const alpha=clamp(s.linkFlash/.32);
   for(let k=1;k<nodes.length;k++){
    const [ax,ay]=nodes[k-1],[bx,by]=nodes[k],dx=bx-ax,dy=by-ay,len=Math.hypot(dx,dy);if(len<1)continue;
@@ -99,15 +105,9 @@ export function drawPeoplesLiberation(ctx:CanvasRenderingContext2D,s:LiberationS
  // Draw densely packed individual turret silhouettes; elites are visibly
  // distinct shielded spearheads. Armour form follows the same turret geometry.
  for(let i=0;i<n;i++){
-  const center=s.haloCenters?.[i%7]??{x,y};let [dx,dy]=liberationDronePosition(i,n,s.phase,center.x,center.y);const elite=i<LIBERATION_ELITES;
-  if(elite && locked && !active && stage==='idle') [dx,dy]=liberationElitePosition(i,s.phase*.7,target!.x,target!.y,Math.max(48,target!.radius+34)-Math.max(0,Math.sin(t*5+i*.5))*22);
-  if(stage==='armour'||stage==='dispersing'){
-   const a=i*Math.PI*2/n+s.phase*.12,r=71;
-   const q=stage==='dispersing'?1-smooth(s.elapsed/.8):smooth(s.elapsed/2);
-   dx=mix(dx,x+Math.cos(a)*r,q);dy=mix(dy,y+Math.sin(a)*r,q);
-  }
+  let [dx,dy]=dronePosition(i);const elite=i<LIBERATION_ELITES;
   if(points){dx=mix(dx,x+points[i][0]*230*expansion,formation);dy=mix(dy,y+points[i][1]*230*expansion,formation);}
-  const a=elite&&locked&&!active&&stage==='idle'?Math.atan2(target!.y-dy,target!.x-dx):Math.atan2(dy-y,dx-x),lit=s.drones[i]||active,scale=elite?1.55:1;
+  const a=elite&&locked&&!active?Math.atan2(target!.y-dy,target!.x-dx):Math.atan2(dy-y,dx-x),lit=s.drones[i]||active,scale=elite?1.55:1;
   ctx.save();ctx.translate(dx,dy);ctx.rotate(a);ctx.scale(scale,scale);ctx.globalAlpha=lit?.92:.4;
   // A layered, angular siege-turret silhouette, with outboard fins,
   // mechanical rails and an exposed luminous reactor. No Chairman geometry.
@@ -121,7 +121,7 @@ export function drawPeoplesLiberation(ctx:CanvasRenderingContext2D,s:LiberationS
  }
  // Brief animated drone-chain bindings after the freeze flash. The visual
  // target is supplied by the world; this overlay never changes enemy state.
- if(selected==='定' && stage==='armour' && s.elapsed<1.7 && target){
+ if(selected==='定' && stage==='recharging' && s.elapsed<1.7 && target){
   const opacity=1-smooth(s.elapsed/1.7);ctx.save();ctx.strokeStyle=color(.8*opacity);ctx.lineWidth=2/z;
   for(let strand=0;strand<3;strand++){ctx.beginPath();for(let j=0;j<=20;j++){
    const angle=j/20*Math.PI*2+strand*2*Math.PI/3+t*.8,r=target.radius+10+5*Math.sin(j*1.7+t*9+strand),px=target.x+Math.cos(angle)*r,py=target.y+Math.sin(angle)*r*.55+Math.sin(angle*2+strand)*12;

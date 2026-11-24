@@ -1,5 +1,5 @@
 import type {LiberationRupture} from './peoples-liberation-render';
-import { createLiberation, tickLiberation, moveLiberationHalos, beginLiberationSun, beginLiberationScan, finishLiberationScan, chooseLiberationLinks, spendLiberationLinks, absorbLiberationHit, disperseLiberationArmour, liberationDronePosition, liberationElitePosition, type LiberationState, type LiberationLevels, LIBERATION_DOME_MAX } from './peoples-liberation';
+import { createLiberation, tickLiberation, moveLiberationHalos, beginLiberationSun, beginLiberationScan, finishLiberationScan, chooseLiberationLinks, spendLiberationLinks, absorbLiberationHit, liberationDronePosition, liberationElitePosition, type LiberationState, type LiberationLevels, LIBERATION_DOME_MAX } from './peoples-liberation';
 import {executeLiberationEffect} from './peoples-liberation-world';
 import { createTargetScan, type TargetScan } from "./target-scan";
 import { CHAIRMAN_SHIELD_MAX, spendChairmanDrone, launchChairmanDrone, updateChairmanSwarm, disperseChairmanArmour, damageChairmanArmour, chairmanDronePosition, moveChairmanHalos, chairmanDroneCount, chairmanOrbChance, chairmanOrbRadius, chairmanOrbDamage, chairmanCoreMul, createChairman, syncChairman, tickChairman, type ChairmanState } from "./chairman";
@@ -976,8 +976,7 @@ export class Game {
   keyUp(code: string) { this.input.keys.delete(code); }
   mouseDown(btn: number) {
     if (btn === 0) {
-      if (!this.input.lmb && this.liberation && this.stats.cannonId==='peoples-liberation') disperseLiberationArmour(this.liberation);
-      else if (!this.input.lmb && !this.disperseChairman()) this.requestChairmanSun();
+      if (!this.input.lmb && !this.disperseChairman()) this.requestChairmanSun();
       this.input.lmb = true;
     }
     if (btn !== 2) return;
@@ -3689,12 +3688,12 @@ export class Game {
     const cs=this.liberation ??= createLiberation(lv);
     if(cs.scanEnemy!==null && cs.scanElapsed>=cs.scanDuration){const enemy=this.enemies.find(e=>e.id===cs.scanEnemy&&!e.dead&&e.parts[e.coreId]?.alive);finishLiberationScan(cs,!!enemy);}
     const locked=this.enemies.find(e=>e.id===cs.lockEnemy&&!e.dead&&e.parts[e.coreId]?.alive);
-    if(cs.lockEnemy!==null && !locked)cs.lockEnemy=null;
-    if(cs.stage==='idle' && locked){
+    if(cs.lockEnemy!==null && !locked){cs.lockEnemy=null;cs.eliteApproach=0;}
+    if((cs.stage==='idle'||cs.stage==='recharging') && locked){
+      cs.eliteApproach=Math.min(1,cs.eliteApproach+dt/0.8);
       cs.elitesClock-=dt;
-      if(cs.elitesClock<=0){cs.elitesClock=.7;
+      if(cs.eliteApproach>=1 && cs.elitesClock<=0){cs.elitesClock=.7;
         for(let i=0;i<15&&!locked.dead;i++){
-          if(!cs.drones[i])continue;
           const core=locked.parts[locked.coreId];if(!core?.alive)break;
           const [ex,ey]=liberationElitePosition(i,cs.phase*.7,locked.x,locked.y,Math.max(48,locked.radius+34));
           const [cx,cy]=this.partWorld(locked,core);this.beams.push({x1:ex,y1:ey,x2:cx,y2:cy,color:'#ff344a',width:2,life:.12});
@@ -4834,7 +4833,7 @@ export class Game {
   hud(): Hud {
     const p = this.player, st = this.stats;
     return {
-      hp: p.hp, maxHp: st.hull, shield: p.shield, maxShield: st.shieldMax, chairmanShield: st.cannonId === "peoples-liberation" ? this.liberation?.dome ?? LIBERATION_DOME_MAX : st.cannonId === "chairman" ? this.chairman?.shield ?? CHAIRMAN_SHIELD_MAX : 0, chairmanShieldMax: st.cannonId === "peoples-liberation" ? LIBERATION_DOME_MAX : st.cannonId === "chairman" ? CHAIRMAN_SHIELD_MAX : 0, chairmanArmour: st.cannonId === "peoples-liberation" ? this.liberation?.armour ?? 0 : st.cannonId === "chairman" && this.chairman?.armourActive ? this.chairman.armour : 0, chairmanArmourMax: st.cannonId === "peoples-liberation" ? this.liberation?.armourMax ?? 0 : st.cannonId === "chairman" && this.chairman?.armourActive ? this.chairman.armourMax : 0, chairmanArmourReady: st.cannonId === 'peoples-liberation' ? !!this.liberation && this.liberation.stage==='armour' && this.liberation.drones.every(Boolean) : st.cannonId === "chairman" && !!this.chairman?.armourActive && this.chairman.armourBlend>=1 && !this.chairman.armourDispersing && this.chairman.reload<=0 && this.chairman.drones.every(x=>x<=0), boost: p.boost, hasBoost: st.hasBoost, credits: this.save.credits, creditTick: this.creditTick,
+      hp: p.hp, maxHp: st.hull, shield: p.shield, maxShield: st.shieldMax, chairmanShield: st.cannonId === "peoples-liberation" ? this.liberation?.dome ?? LIBERATION_DOME_MAX : st.cannonId === "chairman" ? this.chairman?.shield ?? CHAIRMAN_SHIELD_MAX : 0, chairmanShieldMax: st.cannonId === "peoples-liberation" ? LIBERATION_DOME_MAX : st.cannonId === "chairman" ? CHAIRMAN_SHIELD_MAX : 0, chairmanArmour: st.cannonId === "chairman" && this.chairman?.armourActive ? this.chairman.armour : 0, chairmanArmourMax: st.cannonId === "chairman" && this.chairman?.armourActive ? this.chairman.armourMax : 0, chairmanArmourReady: st.cannonId === "chairman" && !!this.chairman?.armourActive && this.chairman.armourBlend>=1 && !this.chairman.armourDispersing && this.chairman.reload<=0 && this.chairman.drones.every(x=>x<=0), boost: p.boost, hasBoost: st.hasBoost, credits: this.save.credits, creditTick: this.creditTick,
       creditPop: { v: this.creditPopValue, s: this.creditPopScale },
       harp: this.harpoons.map((h) => ({ state: h.state, load: h.comp ? h.comp.c.mass / (h.comp.hooks.length * st.hStr) : 0, hp: h.hp / h.maxHp })),
       toasts: [...this.toasts], ultraNotices: [...this.ultraNotices], nearBase: this.nearBase(),
