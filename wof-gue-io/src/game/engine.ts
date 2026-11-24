@@ -152,7 +152,7 @@ const BOSS_SP = SNAKE_ENABLED ? SPECIES_LIST.findIndex((s) => s.boss) : -1;
 /** last base position this browser session, so consecutive runs never overlap */
 
 /* ---------------- entity types ---------------- */
-export interface Act { i: number; def: AbilityDef; t: number; ph: number; hit: boolean; dir: number; fired: boolean; chompT?: number; spin?: number; beamAng?: number[] }
+export interface Act { i: number; def: AbilityDef; t: number; ph: number; hit: boolean; dir: number; fired: boolean; chompT?: number; spin?: number; beamAng?: number[]; targetX?: number; targetY?: number }
 export interface ShieldInfo {
   part: Part;
   /** body centre the panel is projected from */
@@ -1503,8 +1503,15 @@ export class Game {
     return this.shieldInfoAt(e, x, y)?.part ?? null;
   }
 
+  private mantisGuarding(e:Enemy){return e.spd.id==='mantis' && e.act?.def.type==='mantisGuard' && e.act.ph===1 && (e.tags['Raptor Blade']??0)>0;}
+  private reflectMantisDamage(e:Enemy,dmg:number,x=e.x,y=e.y){
+    this.ringFx(x,y,Math.max(35,e.S),'#d8ff83',450);
+    // Reflected non-projectile damage returns to the attacker as a beam.
+    const p=this.player;if(!p.dead){this.beams.push({x1:x,y1:y,x2:p.x,y2:p.y,life:.12,color:'#d9ff8b',width:3});this.hurtPlayer(dmg,{energy:true});}
+  }
   /** plating takes the hit instead of the body. Returns true if it absorbed it. */
   private shellHit(e: Enemy, dmg: number, src: DmgSrc, fromBase = false, hx?: number, hy?: number, crit = false) {
+    if(this.mantisGuarding(e)){if(!fromBase)this.reflectMantisDamage(e,dmg,hx,hy);return true;}
     const layer = e.shells[e.shells.length - 1];
     if (!layer) return false;
     /* Sparks at the point of contact: without them a hit on thick plating looks
@@ -1835,6 +1842,7 @@ export class Game {
     return e.baseDmg > 0 && e.baseDmg * 2 > e.dmgTaken;
   }
   damagePart(e: Enemy, p: Part, dmg: number, wx: number, wy: number, src: DmgSrc = "kinetic", fromBase = false, crit = false) {
+    if(this.mantisGuarding(e)){if(!fromBase)this.reflectMantisDamage(e,dmg,wx||e.x,wy||e.y);return;}
     // Resolve an infinite hit to finite current health, preserving attribution and avoiding NaN.
     if (dmg === Infinity) dmg = Math.max(0, p.hp) + (e.buffT > 0 ? Math.max(0, e.buffHp) : 0);
     /* the moth's heal-shield bubble absorbs incoming damage while it is up, so
@@ -2116,6 +2124,7 @@ export class Game {
       if (e.dead || e === exclude) continue;
       const dx = e.x - x, dy = e.y - y;
       if (dx * dx + dy * dy > (R + e.radius) * (R + e.radius)) continue;
+      if(this.mantisGuarding(e)){this.reflectMantisDamage(e,dmg,x,y);continue;}
       // Only a blast that actually reaches a plated part can damage the shared
       // armor layer; its enclosing shellR is not itself a solid hitbox.
       let armorHit = false;
@@ -2470,6 +2479,28 @@ export class Game {
     };
     const count = () => Math.min(24, (d.n ?? 1) + Math.floor((d.ns ?? 0) * e.tier));
     switch (d.type) {
+      case "mantisGuard": {
+        damp(6);turnTo(.6);
+        const arms=e.roleGroups.arm??[];
+        const q=a.ph===0?Math.min(1,a.t/Math.max(.01,d.wind)):1;
+        for(const gi of arms)e.groups[gi].ang=-e.groups[gi].sign*.9*q;
+        if(a.ph===0&&a.t>=d.wind){a.ph=1;a.t=0;}
+        else if(a.ph===1&&a.t>=(d.dur??2.5)){for(const gi of arms)e.groups[gi].ang=0;done();}
+        break;
+      }
+      case "mantisFlight": {
+        if(a.ph===0){turnTo(1);damp(5);if(a.t>=d.wind){a.ph=1;a.t=0;a.targetX=p.x;a.targetY=p.y;}}
+        else if(a.ph===1){
+          const tx=a.targetX??e.x,ty=a.targetY??e.y,dx=tx-e.x,dy=ty-e.y,dist=Math.hypot(dx,dy),speed=Math.min(d.speed??300,dist/Math.max(dt,.001));
+          e.vx=dist>2?dx/dist*speed:0;e.vy=dist>2?dy/dist*speed:0;
+          if(a.t>=(d.dur??2.5)){
+            e.vx=e.vy=0;{const target=this.player,dd=Math.hypot(target.x-e.x,target.y-e.y);if(dd<=e.radius+SHIP_R+55){const k=dd||1;this.hurtPlayer(e.eDmg*12,{kb:800,kbx:(target.x-e.x)/k,kby:(target.y-e.y)/k});}}
+            const volley={...d,dmg:3,kind:'wave' as const,speed:460,size:5};for(let i=0;i<16;i++){const ang=i*TAU/16;this.spawnProj(e,e.x+Math.cos(ang)*e.S,e.y+Math.sin(ang)*e.S,ang,volley,{life:1.6});}
+            this.ringFx(e.x,e.y,e.radius+90,'#e2ff9c',600);this.shake=Math.max(this.shake,22);a.ph=2;a.t=0;
+          }
+        } else if(a.t>=.4)done();
+        break;
+      }
       case "swing": {
         const groups = e.roleGroups[d.role!] ?? [];
         const W = d.wind, ST = 0.2, R = 0.5;
@@ -2500,7 +2531,9 @@ export class Game {
         } else if (a.ph === 1) {
           const sp = (d.speed ?? 600) * (0.5 + 0.5 * e.mobility);
           e.vx = Math.cos(a.dir) * sp; e.vy = Math.sin(a.dir) * sp;
-          if (!a.hit && this.touching(e, 6)) {
+          if(e.spd.id==='mantis'){for(const gi of e.roleGroups.arm??[]){const g=e.groups[gi];g.ang=g.sign*(.9-1.9*Math.min(1,a.t/(d.dur??.45)));}}
+          const slash=e.spd.id==='mantis'&&Math.hypot(this.player.x-e.x,this.player.y-e.y)<=4.5*e.S+SHIP_R&&Math.abs(angDiff(a.dir,Math.atan2(this.player.y-e.y,this.player.x-e.x)))<.9;
+          if (!a.hit && (this.touching(e, 6)||slash)) {
             a.hit = true;
             this.hurtPlayer(e.eDmg * d.dmg, { poison: d.poison ? e.eDmg * d.poison : 0, kb: 600, kbx: Math.cos(a.dir), kby: Math.sin(a.dir) });
             this.shake = Math.max(this.shake, 10);
@@ -3021,7 +3054,7 @@ export class Game {
             // Rotate the actual claw groups inward as they close on the ship.
             const close = e.act.ph === 1 ? 1 : Math.min(1, e.act.t / Math.max(0.01, e.act.def.wind));
             g.ang = -g.sign * 0.22 * close;
-          } else if (!(e.act && e.act.def.type === "swing" && e.act.def.role === g.role)) g.ang = Math.sin(this.t * 1.4 + g.phase + g.sign) * (g.role === "tail" ? 0.07 : 0.05) * g.sign;
+          } else if (!(e.act && ((e.act.def.type === "swing" && e.act.def.role === g.role) || (e.spd.id === "mantis" && g.role === "arm" && (e.act.def.type === "mantisGuard" || e.act.def.type === "charge"))))) g.ang = Math.sin(this.t * 1.4 + g.phase + g.sign) * (g.role === "tail" ? 0.07 : 0.05) * g.sign;
           break;
         default: break;
       }
@@ -3300,6 +3333,13 @@ export class Game {
       const dx = b.x - e.x, dy = b.y - e.y;
       const rr = Math.max(e.radius, e.shellR, e.shieldReach) + 12;
       if (dx * dx + dy * dy > rr * rr) continue;
+      if(this.mantisGuarding(e)){
+        const ca=Math.cos(e.a),sa=Math.sin(e.a),localX=dx*ca+dy*sa,localY=-dx*sa+dy*ca;
+        if(this.partAt(e,localX,localY)||this.plateAt(e,b.x,b.y)){
+          this.eprojs.push({x:b.x,y:b.y,vx:-b.vx,vy:-b.vy,life:1.5,dmg:b.dmg,r:8,hue:e.spd.hue,type:'bolt',homing:0,slow:0,slowT:0,poison:0,pierce:false,hp:1,speed:Math.hypot(b.vx,b.vy),src:e,puddle:null});
+          this.ringFx(b.x,b.y,42,'#dcff91',400);return true;
+        }
+      }
       /* the panels are thin, so sample the round's path like the plating does */
       const panel = this.shieldAt(e, b.x, b.y) ?? this.shieldAt(e, b.x - b.vx / 90, b.y - b.vy / 90);
       if (panel) {
@@ -3483,6 +3523,10 @@ export class Game {
         const dx = bx - e.x, dy = by - e.y;
         const reach = Math.max(e.radius, e.shieldReach);
         if (dx * dx + dy * dy > (reach + 18 * width) * (reach + 18 * width)) continue;
+        if(this.mantisGuarding(e)){
+          const ca=Math.cos(e.a),sa=Math.sin(e.a);
+          if(this.partAt(e,dx*ca+dy*sa,-dx*sa+dy*ca)||this.plateAt(e,bx,by)){this.reflectMantisDamage(e,dmg,bx,by);endLen=d;break outer;}
+        }
         if (!bypass) {
           const panel = this.shieldAt(e, bx, by);
           if (panel) {

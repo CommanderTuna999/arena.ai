@@ -1,3 +1,8 @@
+## 0.3. v2.32.6 — Mantis abilities
+
+- Mantis gains a reflecting scythe guard, lunging slash, and winged slam with a radial volley.
+- Movement attacks show their intended paths before striking.
+
 ## 0.3. v2.32.5 — Liberation crash fix
 
 - Fixed a character blast crash when infinite admin damage is enabled.

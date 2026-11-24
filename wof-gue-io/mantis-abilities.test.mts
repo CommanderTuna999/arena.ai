@@ -1,0 +1,11 @@
+import assert from 'node:assert/strict';
+import { Game } from './src/game/engine';
+import { newSave } from './src/game/data';
+const g:any=new Game(newSave(),'test');const e=g.makeEnemy(4,3,5200,0,'test',5);g.enemies=[e];g.player.x=5300;g.player.y=0;
+assert.equal(e.spd.id,'mantis');assert.deepEqual(e.abil.map((x:any)=>x.type),['mantisGuard','charge','mantisFlight']);
+let hits:number[]=[];g.hurtPlayer=(damage:number)=>{hits.push(damage)};
+g.startAct(e,0);g.runAct(e,.6,0,100);assert.equal(e.act.ph,1);const part=e.parts[e.coreId],hp=part.hp;g.damagePart(e,part,50,e.x,e.y,'laser');assert.equal(part.hp,hp);assert.equal(hits.pop(),50);
+g.areaDamage(e.x,e.y,100,70,null);assert.equal(hits.pop(),70);assert.equal(part.hp,hp);
+g.startAct(e,1);g.runAct(e,.8,0,100);g.runAct(e,.01,0,100);assert.equal(hits.pop(),e.eDmg*8);g.runAct(e,.01,0,100);assert.equal(hits.length,0);
+g.startAct(e,2);g.runAct(e,1,0,100);g.runAct(e,2.6,0,100);assert.equal(hits.pop(),e.eDmg*12);assert.equal(g.eprojs.length,16);assert(g.eprojs.every((p:any)=>p.dmg===e.eDmg*3));
+console.log('Mantis guard, lunge, slam and radial volley passed');

@@ -1952,6 +1952,10 @@ function drawEnemy(g: Game, ctx: CanvasRenderingContext2D, e: Enemy, z: number, 
       ctx.strokeStyle = `rgba(255,90,100,${0.4 + 0.4 * f})`; ctx.lineWidth = 2 / z; ctx.setLineDash([14 / z, 10 / z]);
       ctx.strokeRect(0, -e.radius * 0.35, len, e.radius * 0.7); ctx.setLineDash([]);
       ctx.restore();
+    } else if (d.type === "mantisFlight") {
+      const dx=g.player.x-e.x,dy=g.player.y-e.y,dist=Math.hypot(dx,dy)||1,travel=Math.min(dist,(d.speed??300)*(d.dur??2.5)),tx=e.x+dx/dist*travel,ty=e.y+dy/dist*travel;
+      ctx.strokeStyle=`rgba(255,120,90,${.4+.4*f})`;ctx.lineWidth=3/z;ctx.setLineDash([14/z,9/z]);ctx.beginPath();ctx.moveTo(e.x,e.y);ctx.lineTo(tx,ty);ctx.stroke();ctx.setLineDash([]);
+      ctx.beginPath();ctx.arc(tx,ty,e.radius+SHIP_R+55,0,TAU);ctx.stroke();
     } else if (d.type === "ring" || d.type === "nova") {
       ctx.strokeStyle = `rgba(255,120,90,${0.25 + 0.5 * f})`; ctx.lineWidth = 4 / z;
       ctx.beginPath(); ctx.arc(e.x, e.y, e.radius * (0.4 + 0.7 * f), 0, TAU); ctx.stroke();
@@ -2011,6 +2015,18 @@ function drawEnemy(g: Game, ctx: CanvasRenderingContext2D, e: Enemy, z: number, 
   }
   ctx.save();
   ctx.translate(e.x, e.y); ctx.rotate(e.a);
+  if(e.spd.id==='mantis' && e.act?.def.type==='mantisFlight' && e.act.ph===1){
+    const age=e.act.t,duration=e.act.def.dur??2.5,rise=Math.min(1,age/.55,(duration-age)/.45),scale=1+.65*Math.max(0,rise);
+    ctx.scale(scale,scale);
+    // Translucent overlapping membranous wings, jointed at the thorax.
+    const flap=.65+.35*Math.sin(t*24),S=e.S;
+    for(const side of [-1,1]){ctx.save();ctx.scale(1,side);ctx.fillStyle='rgba(175,220,123,.22)';ctx.strokeStyle='rgba(219,255,170,.65)';ctx.lineWidth=1.2/z;
+      ctx.beginPath();ctx.moveTo(-.35*S,0);ctx.bezierCurveTo(-1.2*S,.5*S,-1.6*S,(1.5+flap)*S,-.7*S,(2.25+flap)*S);ctx.bezierCurveTo(.2*S,(2.5+flap)*S,.5*S,1.0*S,.1*S,.15*S);ctx.closePath();ctx.fill();ctx.stroke();
+      for(let i=0;i<4;i++){ctx.beginPath();ctx.moveTo(-.25*S,.12*S);ctx.quadraticCurveTo(-.9*S,(.8+i*.23)*S,(-.8+i*.25)*S,(1.65+flap)*S);ctx.stroke();}ctx.restore();}
+  }
+  if(e.spd.id==='mantis' && e.act?.def.type==='charge' && e.act.ph===1){
+    const f=Math.min(1,e.act.t/(e.act.def.dur??.45));ctx.strokeStyle='rgba(220,255,150,.78)';ctx.lineWidth=8/z;ctx.beginPath();ctx.arc(1.15*e.S,0,3.8*e.S,-1.2+f*.5,1.2-f*.5);ctx.stroke();ctx.strokeStyle='rgba(255,255,230,.95)';ctx.lineWidth=2/z;ctx.stroke();
+  }
   ctx.lineJoin = "round";
   const lw = 1.7 / z;
   const big = !simple && sr > 60;

@@ -132,7 +132,7 @@ export const LASER_RAMP = 3;
 /** the beam's damage multiplier when it first touches down, and at full ramp */
 export const LASER_RAMP_MIN = 0.35;
 
-export type AbilityType = "swing" | "charge" | "shoot" | "nova" | "ring" | "pull" | "spit" | "cloud" | "summon" | "blink" | "drain" | "grab" | "beam" | "domain" | "sting" | "heal";
+export type AbilityType = "swing" | "charge" | "shoot" | "nova" | "ring" | "pull" | "spit" | "cloud" | "summon" | "blink" | "drain" | "grab" | "beam" | "domain" | "sting" | "heal" | "mantisGuard" | "mantisFlight";
 export type ProjType = "bolt" | "missile" | "web" | "orb" | "wave" | "hook" | "glob" | "pellet" | "slug" | "laser";
 export interface AbilityDef {
   type: AbilityType;
@@ -780,10 +780,9 @@ const SPECIES: SpeciesDef[] = [
     id: "mantis", hp: 31, dmg: 29, name: "Mantis", hue: 92, flying: false, speed: 120, turn: 3.0, ranged: false, keep: 0, muzzle: 2.0,
     armed: { gun: false, missile: false, shield: true }, pack: [1, 1, 1, 1, 1, 1],
     abilities: [
-      { type: "swing", name: "Scythe Strike", minTier: 0, cd: 2.2, wind: 0.5, dmg: 2.4, maxS: 3.2, role: "arm", needs: "Raptor Blade" },
-      { type: "charge", name: "Lunge", minTier: 1, cd: 6, wind: 0.5, dmg: 2, speed: 820, dur: 0.35, minP: 150, maxP: 600 },
-      { type: "shoot", name: "Blade Wave", minTier: 2, cd: 5, wind: 0.5, dmg: 1.5, n: 1, ns: 0.4, spread: 0.3, speed: 520, life: 1.5, size: 14, pierce: true, kind: "wave", minP: 150, maxP: 800 },
-      { type: "nova", name: "Whirling Blades", minTier: 4, cd: 10, wind: 0.8, dmg: 1, n: 10, ns: 1, speed: 380, life: 1.6, size: 9, kind: "wave", maxP: 600 },
+      { type: "mantisGuard", name: "Crossed Scythes", minTier: 1, cd: 8, wind: 0.55, dmg: 0, dur: 2.5, maxP: 1000, needs: "Raptor Blade" },
+      { type: "charge", name: "Scythe Lunge", minTier: 2, cd: 7, wind: 0.7, dmg: 8, speed: 1000, dur: 0.45, maxP: 800, needs: "Raptor Blade" },
+      { type: "mantisFlight", name: "Winged Slam", minTier: 3, cd: 12, wind: 0.9, dmg: 12, dur: 2.5, speed: 300, maxP: 1200 },
     ],
     build(b, t) {
       const pl = 1 + (t >= 3 ? 1 : 0) + (t >= 5 ? 1 : 0), lg = 1 + (t >= 3 ? 1 : 0), ed = t >= 3 ? 1 : 2;
