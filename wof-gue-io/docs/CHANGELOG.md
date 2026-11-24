@@ -1,3 +1,8 @@
+## 0.3. v2.32.3 — Liberation refinements
+
+- Heaven slowly separates enemy components for two seconds before destroying their cores.
+- Refined character shapes and cannon-tree icon, and made Liberation upgrades persist when bought from an admin preview.
+
 ## 0.3. v2.32.2 — Liberation elites
 
 - Removed post-sun drone armour; the swarm now recharges in orbit automatically.

@@ -597,7 +597,13 @@ function Hangar({ game, hud, onClose }: { game: Game; hud: Hud; onClose: () => v
 /** The chassis as a side profile, drawn from the same `look` data the hull uses:
  *  fat bolt thrower, long lance, three spigots or a genuine twin. */
 function CannonIcon({ c, className }: { c: CannonDef; className?: string }) {
-  if (c.id === "chairman" || c.id === "peoples-liberation") return <svg viewBox="0 0 48 26" className={className} aria-hidden>
+  if (c.id === "peoples-liberation") return <svg viewBox="0 0 48 26" className={className} aria-hidden>
+    <path d="M24 1 L28 8 L37 4 L34 10 L46 13 L34 16 L37 22 L28 18 L24 25 L20 18 L11 22 L14 16 L2 13 L14 10 L11 4 L20 8 Z" fill="#310718" stroke="#ff5363" strokeWidth=".7"/>
+    <path d="M24 5 L30 9 L33 13 L30 17 L24 21 L18 17 L15 13 L18 9 Z" fill="#710e23" stroke="#ff9b94" strokeWidth=".7"/>
+    <path d="M24 7 L26 11 L30 13 L26 15 L24 19 L22 15 L18 13 L22 11 Z" fill="#ff5365"/><circle cx="24" cy="13" r="2.1" fill="#fff1d7"/>
+    {Array.from({length: 12},(_,i)=>{const a=i*Math.PI*2/12,x=24+19*Math.cos(a),y=13+9*Math.sin(a);return <path key={i} d={`M${x-2} ${y}l2 -1.1 2 1.1 -2 1.1z`} fill="#ffa198" stroke="#ff304a" strokeWidth=".5"/>;})}
+  </svg>;
+  if (c.id === "chairman") return <svg viewBox="0 0 48 26" className={className} aria-hidden>
     <ellipse cx="24" cy="13" rx="22" ry="10" fill="none" stroke="#e82743" strokeWidth=".8"/>
     <ellipse cx="24" cy="13" rx="16" ry="7" fill="none" stroke="#ff6375" strokeWidth=".7"/>
     {Array.from({length: 10}, (_, i) => { const a=i*Math.PI*2/10; return <circle key={i} cx={24+21*Math.cos(a)} cy={13+9*Math.sin(a)} r="1.3" fill="#ff344a"/>; })}

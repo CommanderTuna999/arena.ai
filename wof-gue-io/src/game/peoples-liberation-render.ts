@@ -9,28 +9,28 @@ type Stroke=readonly Point[];
 // particular Chinese font being installed in a player's browser.
 const STROKES:Record<LiberationCharacter,readonly Stroke[]>={
  '定':[
-  [[-.58,-.54],[-.48,-.77],[.48,-.77],[.58,-.54]],[[0,-1],[0,-.77]],
-  [[-.48,-.4],[.48,-.4]],[[-.37,-.12],[.39,-.12]],[[0,-.4],[0,.72]],
-  [[-.29,.02],[-.35,.3],[-.55,.73]],[[0,.28],[.18,.52],[.55,.64]],
+  [[-.08,-.93],[.02,-.78]], [[-.72,-.68],[-.72,-.46]],[[-.72,-.68],[.72,-.68],[.72,-.46]],
+  [[-.52,-.34],[.52,-.34]], [[.02,-.34],[.02,.63]], [[.02,.02],[.48,.02]],
+  [[-.38,-.08],[-.42,.24],[-.57,.52],[-.73,.7]], [[-.41,.23],[-.22,.46],[.02,.59],[.35,.65],[.73,.65]],
  ],
  '死':[
-  [[-.68,-.8],[.62,-.8]],[[-.28,-.79],[-.35,-.42],[-.62,-.08]],
-  [[-.4,-.43],[-.06,-.43],[-.1,.05],[-.32,.45],[-.63,.7]],
-  [[.15,-.83],[.15,.42],[.23,.62],[.55,.62],[.63,.48]],
-  [[.58,-.46],[.19,-.14]],
+  [[-.83,-.76],[-.08,-.76]], [[-.48,-.76],[-.58,-.4],[-.78,-.13]],
+  [[-.58,-.4],[-.2,-.4],[-.27,.03],[-.44,.39],[-.78,.7]], [[-.59,-.17],[-.37,-.02]],
+  [[.12,-.78],[.12,.48],[.2,.63],[.62,.63],[.72,.42]], [[.64,-.48],[.4,-.24],[.12,-.07]],
  ],
  '爆':[
-  [[-.7,-.7],[-.7,.58]],[[-.94,-.33],[-.48,-.33]],[[-.9,.18],[-.46,.05]],
-  [[-.37,-.84],[.48,-.84],[.48,-.49],[-.37,-.49],[-.37,-.84]],
-  [[-.43,-.33],[.55,-.33]],[[-.48,-.05],[.58,-.05]],
-  [[-.16,-.44],[-.16,.02]],[ [.25,-.44],[.25,.02] ],
-  [[.05,-.02],[.05,.72]],[[-.36,.23],[-.15,.36]],[[-.4,.63],[-.08,.4]],
-  [[.21,.34],[.48,.19]],[[.22,.39],[.56,.65]],
+  [[-.72,-.78],[-.72,-.05],[-.76,.29],[-.92,.68]], [[-.93,-.45],[-.86,-.15]],
+  [[-.49,-.51],[-.59,-.19]], [[-.72,-.03],[-.5,.25]],
+  [[-.32,-.84],[.42,-.84],[.42,-.52],[-.32,-.52],[-.32,-.84]], [[-.32,-.68],[.42,-.68]],
+  [[-.42,-.36],[.55,-.36]], [[-.45,-.08],[.58,-.08]], [[-.18,-.48],[-.18,-.08]], [[.28,-.48],[.28,-.08]],
+  [[-.2,-.08],[-.46,.15]], [[.32,-.08],[.58,.15]],
+  [[.06,.02],[.06,.65],[-.02,.73],[-.18,.7]], [[-.32,.18],[-.16,.31]], [[-.4,.58],[-.12,.38]],
+  [[.22,.32],[.47,.16]], [[.23,.36],[.56,.63]],
  ],
  '天':[
-  [[-.62,-.76],[.62,-.76]],[[-.72,-.25],[.72,-.25]],
-  [[0,-.76],[0,-.22],[-.12,.14],[-.36,.48],[-.7,.76]],
-  [[0,-.22],[.18,.17],[.42,.49],[.72,.76]],
+  [[-.59,-.76],[.59,-.76]], [[-.73,-.25],[.73,-.25]],
+  [[0,-.76],[0,-.25],[-.1,.12],[-.33,.46],[-.72,.76]],
+  [[.02,-.22],[.21,.16],[.44,.49],[.72,.76]],
  ],
 };
 const distance=(a:Point,b:Point)=>Math.hypot(b[0]-a[0],b[1]-a[1]);
@@ -167,14 +167,14 @@ export function drawLiberationChains(ctx:CanvasRenderingContext2D,x:number,y:num
  ctx.restore();
 }
 
-export type LiberationRupture={x:number;y:number;angle:number;started:number;parts:Array<{poly:number[];cx:number;cy:number}>};
+export type LiberationRupture={enemyId:number;x:number;y:number;angle:number;started:number;parts:Array<{poly:number[];cx:number;cy:number}>};
 /** Golden force pulls the actual component polygons outwards, then crushes
  * them back towards the centre. The authoritative kill already happened; this
  * time-bounded copy is purely visual and cannot create duplicate rewards. */
 export function drawLiberationRupture(ctx:CanvasRenderingContext2D,rupture:LiberationRupture,now:number,z:number){
- const age=now-rupture.started;if(age<0||age>1.3||z<=0)return;
- const out=age<.6?smooth(age/.6):1-smooth((age-.6)/.7);
- const fade=age<1?1:1-smooth((age-1)/.3);
+ const age=now-rupture.started;if(age<0||age>2||z<=0)return;
+ const out=smooth(age/2);
+ const fade=1;
  ctx.save();ctx.translate(rupture.x,rupture.y);ctx.rotate(rupture.angle);ctx.globalAlpha=fade;
  for(let i=0;i<rupture.parts.length;i++){
   const part=rupture.parts[i];if(part.poly.length<6)continue;

@@ -261,6 +261,7 @@ export function render(g: Game, ctx: CanvasRenderingContext2D) {
   /* ---- enemies ---- */
   for (const e of g.enemies) {
     if (e.x + e.radius < vx0 || e.x - e.radius > vx1 || e.y + e.radius < vy0 || e.y - e.radius > vy1) continue;
+    if(g.liberationIsRupturing(e))continue;
     drawEnemy(g, ctx, e, z, t);
     const freeze=g.liberationFreezeVisual(e);if(freeze>0)drawLiberationChains(ctx,e.x,e.y,e.radius,freeze,t,z);
   }

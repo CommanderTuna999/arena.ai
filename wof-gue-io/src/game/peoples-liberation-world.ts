@@ -14,7 +14,7 @@ export interface LiberationWorld<E extends LiberationEnemy>{
   damageCore(enemy:E,damage:number):void;
   /** Destroy the core using the normal defeat/drop and attribution path. */
   destroyCore(enemy:E):void;
-  /** Start the golden disassembly visual without bypassing kill attribution. */
+  /** Start disassembly; the world resolves the normal core kill after the animation. */
   ripApart(enemy:E):void;
 }
 /** Effects operate once per enemy whose body intersects the blast radius, not
@@ -33,7 +33,7 @@ export function executeLiberationEffect<E extends LiberationEnemy>(world:Liberat
    case '定': world.freeze(enemy,effect.freezeSeconds);break;
    case '死': world.damageCore(enemy,effect.damage*effect.coreMultiplier*damageMultiplier);break;
    case '爆': world.destroyCore(enemy);break;
-   case '天': world.ripApart(enemy);world.destroyCore(enemy);break;
+   case '天': world.ripApart(enemy);break;
   }
  }
  return affected;

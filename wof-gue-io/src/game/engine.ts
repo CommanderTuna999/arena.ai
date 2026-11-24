@@ -405,6 +405,8 @@ export class Game {
   t = 0;
   liberation:LiberationState|null=null;
   liberationRuptures:LiberationRupture[]=[];
+  private liberationPendingRuptures=new Map<Enemy,number>();
+  liberationIsRupturing(e:Enemy){return this.liberationPendingRuptures.has(e)&&!e.dead;}
   private liberationFreezes=new WeakMap<Enemy,{start:number;until:number}>();
   liberationFreezeVisual(e:Enemy){const f=this.liberationFreezes.get(e);return f && this.t<f.until?Math.max(0,1-(this.t-f.start)/1.7):0;}
 
@@ -711,6 +713,11 @@ export class Game {
     }
     if (!bought) return 0;
     lv[track] = l;
+    // An admin preview becomes a real owned chassis when its upgrades are
+    // purchased, so those paid levels survive reload like any other cannon.
+    if(c.id==='peoples-liberation' && this.adminCannon===c.id){
+      const cs=this.cannonSave();cs.lv[c.id]={...lv};if(!cs.owned.includes(c.id))cs.owned.push(c.id);cs.id=c.id;this.adminCannon=null;
+    }
     this.recompute();
     this.markDirty();
     return bought;
@@ -3721,7 +3728,7 @@ export class Game {
     const cs=this.liberation;if(!cs)return;const p=this.player,lv=this.cannonViewLevels('peoples-liberation') as LiberationLevels;
     moveLiberationHalos(cs,dt,p.x,p.y);const previousStage=cs.stage;const result=tickLiberation(cs,dt,this.stats.hull,lv);if(previousStage!=='slamming' && cs.stage==='slamming'){this.shake=Math.max(this.shake,40);this.burst(p.x,p.y,'#ff4755',30,10,700);}if(!result)return;
     const coreHit=(e:Enemy,amount:number)=>{const core=e.parts[e.coreId];if(!core?.alive)return;const [x,y]=this.partWorld(e,core);this.damagePart(e,core,amount,x,y,'laser');};
-    executeLiberationEffect({enemies:this.enemies,freeze:(e:Enemy,seconds:number)=>{const old=this.liberationFreezes.get(e);this.liberationFreezes.set(e,{start:this.t,until:Math.max(old?.until??0,this.t+seconds)});e.vx=0;e.vy=0;},damageCore:coreHit,destroyCore:(e:Enemy)=>coreHit(e,Infinity),ripApart:(e:Enemy)=>{this.liberationRuptures=this.liberationRuptures.filter(r=>this.t-r.started<1.3);this.liberationRuptures.push({x:e.x,y:e.y,angle:e.a,started:this.t,parts:e.parts.filter(part=>part.alive).slice(0,120).map(part=>({poly:[...part.poly],cx:part.cx,cy:part.cy}))});if(this.liberationRuptures.length>32)this.liberationRuptures.shift();this.burst(e.x,e.y,'#ffdb64',24,10,420);this.ringFx(e.x,e.y,e.radius*1.5,'#ffda65',1000);}},result,p.x,p.y,lv,(this.stats.crit>0&&Math.random()<this.stats.crit?this.stats.critMul:1)*this.dmgMul());
+    executeLiberationEffect({enemies:this.enemies,freeze:(e:Enemy,seconds:number)=>{const old=this.liberationFreezes.get(e);this.liberationFreezes.set(e,{start:this.t,until:Math.max(old?.until??0,this.t+seconds)});e.vx=0;e.vy=0;},damageCore:coreHit,destroyCore:(e:Enemy)=>coreHit(e,Infinity),ripApart:(e:Enemy)=>{if(this.liberationPendingRuptures.has(e))return;this.liberationPendingRuptures.set(e,this.t+2);this.liberationFreezes.set(e,{start:this.t,until:this.t+2});e.vx=0;e.vy=0;this.liberationRuptures.push({enemyId:e.id,x:e.x,y:e.y,angle:e.a,started:this.t,parts:e.parts.filter(part=>part.alive).map(part=>({poly:[...part.poly],cx:part.cx,cy:part.cy}))});this.ringFx(e.x,e.y,e.radius*1.5,'#ffda65',1000);}},result,p.x,p.y,lv,(this.stats.crit>0&&Math.random()<this.stats.crit?this.stats.critMul:1)*this.dmgMul());
     this.shake=Math.max(this.shake,35);this.ringFx(p.x,p.y,1600,result==='天'?'#ffdf72':'#ff283e',1800);
   }
   private firePlayer(dt: number) {
@@ -4589,6 +4596,11 @@ export class Game {
     if (this.paused) { this.blur(); return; }
     const dt = Math.min(dtRaw, 0.05);
     this.t += dt;
+    for(const [enemy,due] of this.liberationPendingRuptures){
+      if(enemy.dead || !this.enemies.includes(enemy)){this.liberationPendingRuptures.delete(enemy);continue;}
+      if(this.t>=due){this.liberationPendingRuptures.delete(enemy);const core=enemy.parts[enemy.coreId];if(core?.alive){const [x,y]=this.partWorld(enemy,core);this.damagePart(enemy,core,Infinity,x,y,'laser');this.burst(enemy.x,enemy.y,'#ffdb64',24,10,420);}}
+    }
+    this.liberationRuptures=this.liberationRuptures.filter(r=>this.t-r.started<2 && this.enemies.some(e=>e.id===r.enemyId&&!e.dead));
     if (this.discovery) { this.discovery.t -= dt; if (this.discovery.t <= 0) this.discovery = null; }
     if (this.cutscene) { this.cutscene.t -= dt; if (this.cutscene.t <= 0) this.cutscene = null; }
     this.fpsAcc += dtRaw; this.fpsN++;

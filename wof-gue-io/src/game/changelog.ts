@@ -8,7 +8,7 @@
  *   CHANGELOG and mirror the details in docs/CHANGELOG.md.
  */
 
-export const VERSION = "2.32.2";
+export const VERSION = "2.32.3";
 
 export interface ChangeEntry {
   version: string;
@@ -19,6 +19,7 @@ export interface ChangeEntry {
 }
 
 export const CHANGELOG: ChangeEntry[] = [
+  { version: "2.32.3", date: "23 Nov 2026", title: "Liberation refinements", points: ["Heaven slowly separates enemy components for two seconds before destroying their cores.", "Refined the character shapes and cannon-tree icon, and made Liberation upgrades persist when bought from an admin preview."] },
   { version: "2.32.2", date: "23 Nov 2026", title: "Liberation elites", points: ["Removed post-sun drone armour; the swarm now recharges in orbit automatically.", "Elite spear drones guard the player when unlocked, then travel to and repeatedly attack a scanned target’s core."] },
   { version: "2.32.1", date: "23 Nov 2026", title: "Liberation detail", points: ["Removed the Liberation halo rings and redesigned its drones with layered mechanical details.", "Firing links and character strokes now have intricate glowing conductors and inlaid details."] },
   { version: "2.32.0", date: "23 Nov 2026", title: "People’s Liberation", points: ["Added the Tier 4 Chairman branch with 150 drones, shielded spear elites and four character effects.", "The new chassis temporarily has no crafting cost; its Chairman prerequisite remains."] },
