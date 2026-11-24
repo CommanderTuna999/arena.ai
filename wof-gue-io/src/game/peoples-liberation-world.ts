@@ -21,7 +21,7 @@ export interface LiberationWorld<E extends LiberationEnemy>{
  * once per component. IDs are deduplicated defensively. The result is useful
  * for tests/telemetry only; it is not an award or a network acknowledgement. */
 export function executeLiberationEffect<E extends LiberationEnemy>(world:LiberationWorld<E>,kind:LiberationCharacter,x:number,y:number,levels:LiberationLevels={},damageMultiplier=1):number[]{
- if(!Number.isFinite(x)||!Number.isFinite(y)||!['定','死','爆','天'].includes(kind)||!Number.isFinite(damageMultiplier)||damageMultiplier<0)throw Error('Invalid Liberation effect');
+ if(!Number.isFinite(x)||!Number.isFinite(y)||!['定','死','爆','天'].includes(kind)||Number.isNaN(damageMultiplier)||damageMultiplier<0)throw Error('Invalid Liberation effect');
  const effect=liberationEffectPlan(kind,levels),seen=new Set<number>(),affected:number[]=[];
  for(const enemy of [...world.enemies]){
   if(!enemy || enemy.dead || !Number.isSafeInteger(enemy.id)||seen.has(enemy.id)||![enemy.x,enemy.y,enemy.radius].every(Number.isFinite)||enemy.radius<0||!Number.isSafeInteger(enemy.tier)||enemy.tier<0||enemy.tier>6)continue;

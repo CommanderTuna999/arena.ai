@@ -8,7 +8,7 @@
  *   CHANGELOG and mirror the details in docs/CHANGELOG.md.
  */
 
-export const VERSION = "2.32.4";
+export const VERSION = "2.32.5";
 
 export interface ChangeEntry {
   version: string;
@@ -19,6 +19,7 @@ export interface ChangeEntry {
 }
 
 export const CHANGELOG: ChangeEntry[] = [
+  { version: "2.32.5", date: "23 Nov 2026", title: "Liberation crash fix", points: ["Fixed a character blast crash when infinite admin damage is enabled."] },
   { version: "2.32.4", date: "23 Nov 2026", title: "Elite spear guard", points: ["Unassigned Liberation elites spin rapidly around the player, dealing contact damage with their outward-facing spears."] },
   { version: "2.32.3", date: "23 Nov 2026", title: "Liberation refinements", points: ["Heaven slowly separates enemy components for two seconds before destroying their cores.", "Refined the character shapes and cannon-tree icon, and made Liberation upgrades persist when bought from an admin preview."] },
   { version: "2.32.2", date: "23 Nov 2026", title: "Liberation elites", points: ["Removed post-sun drone armour; the swarm now recharges in orbit automatically.", "Elite spear drones guard the player when unlocked, then travel to and repeatedly attack a scanned target’s core."] },

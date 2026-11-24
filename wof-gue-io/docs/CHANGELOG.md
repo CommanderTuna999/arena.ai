@@ -1,3 +1,7 @@
+## 0.3. v2.32.5 — Liberation crash fix
+
+- Fixed a character blast crash when infinite admin damage is enabled.
+
 ## 0.3. v2.32.4 — Elite spear guard
 
 - Unassigned Liberation elites spin rapidly around the player, dealing contact damage with their outward-facing spears.

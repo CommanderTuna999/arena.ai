@@ -6,4 +6,4 @@ executeLiberationEffect(world,'死',0,0,{coreDmg:10});assert.equal(actions.lengt
 assert.deepEqual(executeLiberationEffect(world,'爆',0,0),[1,2]);assert.deepEqual(actions,[['destroy',1],['destroy',2]]);actions.length=0;
 assert.deepEqual(executeLiberationEffect(world,'爆',0,0,{blastRarity:2,orbRange:2}),[1,2,3,4,6]);actions.length=0;
 assert.deepEqual(executeLiberationEffect(world,'天',0,0),[1,2,3,4,5]);assert.equal(actions.length,5);assert(actions.every(a=>a[0]==='rip'),'world schedules destruction rather than killing instantly');actions.length=0;
-assert.throws(()=>executeLiberationEffect(world,'天',NaN,0));console.log('Four Liberation effects respect radius, rarity, core damage and one action per enemy');
+executeLiberationEffect(world,'死',0,0,{},Infinity);assert(actions.some(a=>a[0]==='damage'&&a[2]===Infinity),'infinite admin damage must not crash after a character blast');assert.throws(()=>executeLiberationEffect(world,'天',NaN,0));assert.throws(()=>executeLiberationEffect(world,'死',0,0,{},NaN));console.log('Four Liberation effects respect radius, rarity, core damage and one action per enemy');
