@@ -121,6 +121,8 @@ export function finishLiberationScan(state:LiberationState,targetAlive:boolean):
  if(state.scanEnemy===null||state.scanElapsed<state.scanDuration)return false;
  state.lockEnemy=targetAlive?state.scanEnemy:null;state.eliteApproach=0;state.elitesClock=0;state.scanEnemy=null;state.scanParts=[];return targetAlive;
 }
+/** Elite guard spin: phase normally advances 1.5 rad/s, so this is 4.5 rad/s. */
+export function liberationGuardAngle(index:number,phase:number){return index/LIBERATION_ELITES*Math.PI*2+phase*3;}
 export function liberationElitePosition(index:number,phase:number,x:number,y:number,radius:number):[number,number]{
  if(!Number.isSafeInteger(index)||index<0||index>=LIBERATION_ELITES)throw Error('Invalid elite index');
  const a=index/LIBERATION_ELITES*Math.PI*2+phase;

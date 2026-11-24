@@ -1,6 +1,6 @@
 /** Rendering primitives for People's Liberation. Kept separate from the world
  * simulation: none of these functions can apply damage or choose targets. */
-import {LIBERATION_ELITES,liberationDronePosition,liberationElitePosition,type LiberationCharacter,type LiberationState} from './peoples-liberation';
+import {LIBERATION_ELITES,liberationDronePosition,liberationElitePosition,liberationGuardAngle,type LiberationCharacter,type LiberationState} from './peoples-liberation';
 
 type Point=[number,number];
 type Stroke=readonly Point[];
@@ -69,7 +69,7 @@ export function drawPeoplesLiberation(ctx:CanvasRenderingContext2D,s:LiberationS
  const locked=!!target&&s.lockEnemy!==null;
  const dronePosition=(i:number):Point=>{
   const center=s.haloCenters?.[i%7]??{x,y};let [dx,dy]=liberationDronePosition(i,n,s.phase,center.x,center.y);
-  if(i<LIBERATION_ELITES&&!active){const a=i/LIBERATION_ELITES*Math.PI*2+s.phase*.12;dx=x+Math.cos(a)*72;dy=y+Math.sin(a)*72;
+  if(i<LIBERATION_ELITES&&!active){const a=liberationGuardAngle(i,s.phase);dx=x+Math.cos(a)*72;dy=y+Math.sin(a)*72;
    if(locked){const [ex,ey]=liberationElitePosition(i,s.phase*.7,target!.x,target!.y,Math.max(48,target!.radius+34)-Math.max(0,Math.sin(t*5+i*.5))*22);const q=smooth(s.eliteApproach);dx=mix(dx,ex,q);dy=mix(dy,ey,q);}}
   return [dx,dy];
  };

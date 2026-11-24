@@ -1,5 +1,5 @@
 import type {LiberationRupture} from './peoples-liberation-render';
-import { createLiberation, tickLiberation, moveLiberationHalos, beginLiberationSun, beginLiberationScan, finishLiberationScan, chooseLiberationLinks, spendLiberationLinks, absorbLiberationHit, liberationDronePosition, liberationElitePosition, type LiberationState, type LiberationLevels, LIBERATION_DOME_MAX } from './peoples-liberation';
+import { createLiberation, tickLiberation, moveLiberationHalos, beginLiberationSun, beginLiberationScan, finishLiberationScan, chooseLiberationLinks, spendLiberationLinks, absorbLiberationHit, liberationDronePosition, liberationElitePosition, liberationGuardAngle, type LiberationState, type LiberationLevels, LIBERATION_DOME_MAX } from './peoples-liberation';
 import {executeLiberationEffect} from './peoples-liberation-world';
 import { createTargetScan, type TargetScan } from "./target-scan";
 import { CHAIRMAN_SHIELD_MAX, spendChairmanDrone, launchChairmanDrone, updateChairmanSwarm, disperseChairmanArmour, damageChairmanArmour, chairmanDronePosition, moveChairmanHalos, chairmanDroneCount, chairmanOrbChance, chairmanOrbRadius, chairmanOrbDamage, chairmanCoreMul, createChairman, syncChairman, tickChairman, type ChairmanState } from "./chairman";
@@ -405,6 +405,7 @@ export class Game {
   t = 0;
   liberation:LiberationState|null=null;
   liberationRuptures:LiberationRupture[]=[];
+  private liberationGuardHits=new WeakMap<Enemy,number[]>();
   private liberationPendingRuptures=new Map<Enemy,number>();
   liberationIsRupturing(e:Enemy){return this.liberationPendingRuptures.has(e)&&!e.dead;}
   private liberationFreezes=new WeakMap<Enemy,{start:number;until:number}>();
@@ -3696,6 +3697,24 @@ export class Game {
     if(cs.scanEnemy!==null && cs.scanElapsed>=cs.scanDuration){const enemy=this.enemies.find(e=>e.id===cs.scanEnemy&&!e.dead&&e.parts[e.coreId]?.alive);finishLiberationScan(cs,!!enemy);}
     const locked=this.enemies.find(e=>e.id===cs.lockEnemy&&!e.dead&&e.parts[e.coreId]?.alive);
     if(cs.lockEnemy!==null && !locked){cs.lockEnemy=null;cs.eliteApproach=0;}
+    if(!locked && (cs.stage==='idle'||cs.stage==='recharging')){
+      // Sweep the protruding spear segment through the frame, rather than
+      // checking only its final position, so fast rotation cannot tunnel.
+      const steps=Math.max(1,Math.ceil(dt*4.5/.08));
+      for(const enemy of this.enemies){
+        if(enemy.dead || Math.hypot(enemy.x-p.x,enemy.y-p.y)>enemy.radius+115)continue;
+        let cooldown=this.liberationGuardHits.get(enemy);if(!cooldown){cooldown=Array(15).fill(-Infinity);this.liberationGuardHits.set(enemy,cooldown);}
+        for(let i=0;i<15&&!enemy.dead;i++){
+          if(this.t<cooldown[i])continue;
+          let hit:Part|null=null,hx=0,hy=0;const ca=Math.cos(enemy.a),sa=Math.sin(enemy.a);
+          for(let k=0;k<=steps&&!hit;k++){
+            const angle=liberationGuardAngle(i,cs.phase-dt*1.5*(1-k/steps)),cos=Math.cos(angle),sin=Math.sin(angle);
+            for(let r=72;r<=112;r+=8){const x=p.x+cos*r,y=p.y+sin*r,dx=x-enemy.x,dy=y-enemy.y;hit=this.partAt(enemy,dx*ca+dy*sa,-dx*sa+dy*ca);if(hit){hx=x;hy=y;break;}}
+          }
+          if(hit){cooldown[i]=this.t+.35;const critical=st.crit>0&&Math.random()<st.crit;this.damagePart(enemy,hit,st.dmg*(hit.kind==='core'?1+.75*(lv.coreDmg??0):1)*(critical?st.critMul:1)*this.dmgMul(),hx,hy,'laser',false,critical);}
+        }
+      }
+    }
     if((cs.stage==='idle'||cs.stage==='recharging') && locked){
       cs.eliteApproach=Math.min(1,cs.eliteApproach+dt/0.8);
       cs.elitesClock-=dt;

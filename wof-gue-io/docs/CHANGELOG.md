@@ -1,3 +1,7 @@
+## 0.3. v2.32.4 — Elite spear guard
+
+- Unassigned Liberation elites spin rapidly around the player, dealing contact damage with their outward-facing spears.
+
 ## 0.3. v2.32.3 — Liberation refinements
 
 - Heaven slowly separates enemy components for two seconds before destroying their cores.
