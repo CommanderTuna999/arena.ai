@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { CHANGELOG, VERSION } from './src/game/changelog';
-assert.equal(VERSION, '2.32.0');
+assert.equal(VERSION, '2.32.1');
 for (const entry of CHANGELOG) {
   const [major, minor, patch] = entry.version.split('.').map(Number);
   if (major !== 2 || minor < 12) continue;

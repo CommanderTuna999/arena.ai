@@ -68,17 +68,6 @@ export function drawPeoplesLiberation(ctx:CanvasRenderingContext2D,s:LiberationS
  const flare=bright?clamp(s.elapsed):slam||expanding?1:forming?.35*formation:0;
  const locked=!!target&&s.lockEnemy!==null;
  ctx.save();ctx.lineCap='round';ctx.lineJoin='round';
- // Multiple tilted halo paths rotate independently; each path has its own
- // phase and bright tracer, rather than a single flat circle around the hull.
- if(!active && stage!=='armour'){
-  for(let ring=0;ring<7;ring++){
-   const r=76+ring*29,tilt=.5+ring*.055,rotation=ring*.56;
-   const center=s.haloCenters?.[ring]??{x,y};ctx.save();ctx.translate(center.x,center.y);ctx.rotate(rotation);ctx.scale(1,tilt);
-   ctx.strokeStyle=color(.12+ring*.017);ctx.lineWidth=(.8+ring*.08)/z;
-   ctx.beginPath();ctx.arc(0,0,r,0,Math.PI*2);ctx.stroke();
-   ctx.strokeStyle=color(.7);ctx.lineWidth=1.5/z;ctx.beginPath();ctx.arc(0,0,r,s.phase*(ring%2?-.45:.55)+ring*.71,s.phase*(ring%2?-.45:.55)+ring*.71+.22);ctx.stroke();ctx.restore();
-  }
- }
  // Dome and inner energy core. Use a single translucent dome, never stacked
  // shield images, so impact detail can be composed by the caller.
  if(s.dome>0){const f=clamp(s.dome/15000);ctx.fillStyle=color(.025+.035*f);ctx.strokeStyle=color(.35+.45*f);ctx.lineWidth=2/z;ctx.beginPath();ctx.arc(x,y,58,0,Math.PI*2);ctx.fill();ctx.stroke();}
@@ -90,7 +79,23 @@ export function drawPeoplesLiberation(ctx:CanvasRenderingContext2D,s:LiberationS
  ctx.fillStyle='#ffd9c9';ctx.beginPath();ctx.arc(x,y,sunR*.34,0,Math.PI*2);ctx.fill();
  // Link traces are based on the exact authoritative drone indices selected by
  // the shot. One chain, followed by the weapon beam in the world renderer.
- if(s.linkFlash>0&&s.links.length){let px=x,py=y;ctx.strokeStyle=color(.5+.4*clamp(s.linkFlash/.32));ctx.lineWidth=2.5/z;ctx.beginPath();ctx.moveTo(px,py);for(const i of s.links){if(i<0||i>=n)continue;const center=s.haloCenters?.[i%7]??{x,y};[px,py]=liberationDronePosition(i,n,s.phase,center.x,center.y);ctx.lineTo(px,py);}ctx.stroke();}
+ if(s.linkFlash>0&&s.links.length){
+  const nodes:Point[]=[[x,y]];
+  for(const i of s.links){if(i<0||i>=n)continue;const center=s.haloCenters?.[i%7]??{x,y};nodes.push(liberationDronePosition(i,n,s.phase,center.x,center.y));}
+  const alpha=clamp(s.linkFlash/.32);
+  for(let k=1;k<nodes.length;k++){
+   const [ax,ay]=nodes[k-1],[bx,by]=nodes[k],dx=bx-ax,dy=by-ay,len=Math.hypot(dx,dy);if(len<1)continue;
+   const nx=-dy/len,ny=dx/len;
+   // Layered conductor, twin rails, transverse braces and travelling sparks.
+   ctx.strokeStyle=color(.14*alpha);ctx.lineWidth=12/z;ctx.beginPath();ctx.moveTo(ax,ay);ctx.lineTo(bx,by);ctx.stroke();
+   ctx.strokeStyle=color(.65*alpha);ctx.lineWidth=1.2/z;
+   for(const side of [-1,1]){ctx.beginPath();ctx.moveTo(ax,ay);ctx.lineTo(ax+dx*.16+nx*side*5,ay+dy*.16+ny*side*5);ctx.lineTo(ax+dx*.84+nx*side*5,ay+dy*.84+ny*side*5);ctx.lineTo(bx,by);ctx.stroke();}
+   ctx.strokeStyle=`rgba(255,225,213,${.95*alpha})`;ctx.lineWidth=1.5/z;ctx.beginPath();ctx.moveTo(ax,ay);ctx.lineTo(bx,by);ctx.stroke();
+   const braces=Math.min(12,Math.max(2,Math.floor(len/22)));ctx.strokeStyle=color(.75*alpha);ctx.lineWidth=.8/z;
+   for(let j=1;j<braces;j++){const q=j/braces,cx=ax+dx*q,cy=ay+dy*q;ctx.beginPath();ctx.moveTo(cx-nx*5,cy-ny*5);ctx.lineTo(cx+nx*5+dx/len*4,cy+ny*5+dy/len*4);ctx.stroke();}
+   const q=(t*3+k*.27)%1,cx=ax+dx*q,cy=ay+dy*q;ctx.fillStyle=`rgba(255,242,215,${alpha})`;ctx.beginPath();ctx.arc(cx,cy,2.5/z,0,Math.PI*2);ctx.fill();
+  }
+ }
  // Draw densely packed individual turret silhouettes; elites are visibly
  // distinct shielded spearheads. Armour form follows the same turret geometry.
  for(let i=0;i<n;i++){
@@ -104,10 +109,14 @@ export function drawPeoplesLiberation(ctx:CanvasRenderingContext2D,s:LiberationS
   if(points){dx=mix(dx,x+points[i][0]*230*expansion,formation);dy=mix(dy,y+points[i][1]*230*expansion,formation);}
   const a=elite&&locked&&!active&&stage==='idle'?Math.atan2(target!.y-dy,target!.x-dx):Math.atan2(dy-y,dx-x),lit=s.drones[i]||active,scale=elite?1.55:1;
   ctx.save();ctx.translate(dx,dy);ctx.rotate(a);ctx.scale(scale,scale);ctx.globalAlpha=lit?.92:.4;
-  ctx.fillStyle=lit?'#4c0a1b':'#170b10';ctx.strokeStyle=lit?'#ff3650':'#68303b';ctx.lineWidth=1/z;
-  ctx.beginPath();ctx.moveTo(9,0);ctx.lineTo(2,-4);ctx.lineTo(-6,-4);ctx.lineTo(-9,0);ctx.lineTo(-6,4);ctx.lineTo(2,4);ctx.closePath();ctx.fill();ctx.stroke();
-  ctx.fillStyle=lit?'#fff0dc':'#54202a';ctx.beginPath();ctx.arc(0,0,1.8,0,Math.PI*2);ctx.fill();
-  if(elite){ctx.strokeStyle='#ffc3b8';ctx.lineWidth=1.3/z;ctx.beginPath();ctx.moveTo(5,0);ctx.lineTo(22,0);ctx.moveTo(15,-2);ctx.lineTo(22,0);ctx.lineTo(15,2);ctx.stroke();ctx.strokeStyle=color(.65);ctx.beginPath();ctx.arc(-1,0,8,-1.1,1.1);ctx.stroke();}
+  // A layered, angular siege-turret silhouette, with outboard fins,
+  // mechanical rails and an exposed luminous reactor. No Chairman geometry.
+  ctx.fillStyle=lit?'#330815':'#140b10';ctx.strokeStyle=lit?'#fa3551':'#61303c';ctx.lineWidth=.85/z;
+  ctx.beginPath();ctx.moveTo(13,0);ctx.lineTo(6,-3);ctx.lineTo(3,-6);ctx.lineTo(-3,-5);ctx.lineTo(-7,-8);ctx.lineTo(-10,-6);ctx.lineTo(-7,-2);ctx.lineTo(-11,0);ctx.lineTo(-7,2);ctx.lineTo(-10,6);ctx.lineTo(-7,8);ctx.lineTo(-3,5);ctx.lineTo(3,6);ctx.lineTo(6,3);ctx.closePath();ctx.fill();ctx.stroke();
+  ctx.fillStyle=lit?'#8b162a':'#35141c';ctx.beginPath();ctx.moveTo(7,0);ctx.lineTo(2,-3.3);ctx.lineTo(-4,-2.6);ctx.lineTo(-7,0);ctx.lineTo(-4,2.6);ctx.lineTo(2,3.3);ctx.closePath();ctx.fill();ctx.stroke();
+  ctx.strokeStyle=lit?'#ff9a91':'#74404b';ctx.lineWidth=.65/z;ctx.beginPath();ctx.moveTo(-7,-5.7);ctx.lineTo(-3,-3.5);ctx.lineTo(3,-4.3);ctx.lineTo(6,-2);ctx.moveTo(-7,5.7);ctx.lineTo(-3,3.5);ctx.lineTo(3,4.3);ctx.lineTo(6,2);ctx.moveTo(4,-1);ctx.lineTo(11,-1);ctx.moveTo(4,1);ctx.lineTo(11,1);ctx.stroke();
+  ctx.fillStyle=lit?'#fff1d7':'#54202a';ctx.beginPath();ctx.arc(-1,0,1.6,0,Math.PI*2);ctx.fill();
+  if(elite){ctx.fillStyle=lit?'#ff6871':'#61303c';ctx.beginPath();ctx.moveTo(7,-2.5);ctx.lineTo(25,0);ctx.lineTo(7,2.5);ctx.closePath();ctx.fill();ctx.strokeStyle='#ffe0c8';ctx.lineWidth=.8/z;ctx.beginPath();ctx.moveTo(8,0);ctx.lineTo(24,0);ctx.moveTo(12,-1.5);ctx.lineTo(16,0);ctx.lineTo(12,1.5);ctx.stroke();ctx.strokeStyle=color(.65);ctx.lineWidth=1/z;ctx.beginPath();ctx.arc(-1,0,10,-1.15,1.15);ctx.stroke();ctx.beginPath();ctx.arc(-1,0,12,-.8,.8);ctx.stroke();}
   ctx.restore();
  }
  // Brief animated drone-chain bindings after the freeze flash. The visual
@@ -122,8 +131,20 @@ export function drawPeoplesLiberation(ctx:CanvasRenderingContext2D,s:LiberationS
  // The broken configuration retains coherent luminous stroke paths and
  // expands before a flash; no font-dependent missing-glyph squares.
  if(selected&&(slam||expanding)){
-  ctx.save();ctx.translate(x,y);ctx.scale(230*expansion,230*expansion);ctx.strokeStyle=selected==='天'?'rgba(255,214,100,.95)':'rgba(255,80,90,.95)';ctx.lineWidth=(3+flare*2)/(230*z);ctx.shadowColor=selected==='天'?'#ffd966':'#ff334d';ctx.shadowBlur=18/z;
-  for(const path of STROKES[selected]){ctx.beginPath();ctx.moveTo(path[0][0],path[0][1]);for(let i=1;i<path.length;i++)ctx.lineTo(path[i][0],path[i][1]);ctx.stroke();}ctx.restore();
+  ctx.save();ctx.translate(x,y);ctx.scale(230*expansion,230*expansion);
+  const gold=selected==='天',unit=1/(230*z),trace=()=>{for(const path of STROKES[selected]){ctx.beginPath();ctx.moveTo(path[0][0],path[0][1]);for(let i=1;i<path.length;i++)ctx.lineTo(path[i][0],path[i][1]);ctx.stroke();}};
+  // A broad engraved body, a bright inner conductor, and repeating inlaid
+  // facets make each stroke read as a constructed character, not a thin font.
+  ctx.strokeStyle=gold?'rgba(255,183,54,.18)':'rgba(255,20,54,.18)';ctx.lineWidth=28*unit;trace();
+  ctx.strokeStyle=gold?'#9a4911':'#700b21';ctx.lineWidth=17*unit;trace();
+  ctx.strokeStyle=gold?'#ffc65b':'#ff5269';ctx.lineWidth=11*unit;trace();
+  ctx.strokeStyle=gold?'#fff3bc':'#ffe3d4';ctx.lineWidth=2.2*unit;trace();
+  for(const path of STROKES[selected])for(let j=1;j<path.length;j++){
+   const a=path[j-1],b=path[j],dx=b[0]-a[0],dy=b[1]-a[1],len=Math.hypot(dx,dy);if(!len)continue;const nx=-dy/len,ny=dx/len,count=Math.max(1,Math.floor(len*12));
+   ctx.strokeStyle=gold?'rgba(255,248,204,.75)':'rgba(255,207,194,.7)';ctx.lineWidth=unit;
+   for(let k=1;k<count;k++){const q=k/count,cx=a[0]+dx*q,cy=a[1]+dy*q,w=5*unit;ctx.beginPath();ctx.moveTo(cx-nx*w,cy-ny*w);ctx.lineTo(cx+nx*w+dx/len*3*unit,cy+ny*w+dy/len*3*unit);ctx.stroke();}
+   ctx.fillStyle=gold?'#fff2be':'#ffe6d8';ctx.beginPath();ctx.arc(a[0],a[1],2.2*unit,0,Math.PI*2);ctx.fill();
+  }ctx.restore();
  }
  if(expanding && s.elapsed>.32){ctx.save();ctx.globalAlpha=.48*smooth((s.elapsed-.32)/.13);ctx.fillStyle=selected==='天'?'#fff4cb':'#fff3ed';ctx.fillRect(x-screenSpan,y-screenSpan,screenSpan*2,screenSpan*2);ctx.restore();}
  ctx.restore();

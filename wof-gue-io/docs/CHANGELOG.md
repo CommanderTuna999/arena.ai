@@ -1,3 +1,8 @@
+## 0.3. v2.32.1 — Liberation detail
+
+- Removed Liberation halo rings and redesigned drones with layered mechanical details.
+- Firing links and character strokes now have intricate glowing conductors and inlaid details.
+
 ## 0.3. v2.32.0 — People’s Liberation
 
 - Added the Tier 4 Chairman branch with 150 drones, shielded spear elites and four character effects.
